@@ -21,6 +21,13 @@ export interface SelectionInfo {
   y: number;
 }
 
+export interface SearchResult {
+  cfi: string;
+  excerpt: string;
+  href: string;
+  label?: string;
+}
+
 const HIGHLIGHT_FILL: Record<HighlightColor, string> = {
   yellow: '#e7c65b',
   green: '#8bb872',
@@ -162,8 +169,52 @@ export class EpubService {
     this.rendition?.on('rendered', (section: any, view: any) => {
       const doc: Document | undefined = view?.document || view?.iframe?.contentDocument;
       this.currentSectionHref = section?.href ?? this.currentSectionHref;
-      if (doc) cb(doc, section?.href);
+      if (doc) {
+        this.injectFonts(doc);
+        cb(doc, section?.href);
+      }
     });
+  }
+
+  /** Each rendered section is its own separate iframe `Document` -- cross-
+   * document iframes never inherit the host page's <style>/<link> tags, so
+   * the app's self-hosted Noto Naskh Arabic (declared in src/index.css) was
+   * never actually reaching the book text itself; `themes.default()` below
+   * only sets which font-family to use, not where its @font-face comes
+   * from, so the reading pane was silently falling back to whatever generic
+   * serif the device has. Injecting the same @font-face rules directly into
+   * every section's document (idempotent per-document, since epub.js gives
+   * each section a fresh one) fixes that at the source. */
+  private injectFonts(doc: Document): void {
+    if (doc.getElementById('ar-reader-fonts')) return;
+    // Always the *host* page's origin, deliberately not the iframe's own --
+    // epub.js renders each section into a sandboxed blob: URL, where
+    // `location.origin` is the literal string "null" (an opaque origin per
+    // spec), which silently corrupted this into a bogus relative URL
+    // (resolved against the section's own blob path) the first time this
+    // was written.
+    const origin = window.location.origin;
+    const style = doc.createElement('style');
+    style.id = 'ar-reader-fonts';
+    style.textContent = `
+      @font-face {
+        font-family: 'Noto Naskh Arabic';
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: swap;
+        src: url('${origin}/fonts/NotoNaskhArabic-arabic.woff2') format('woff2');
+        unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFC;
+      }
+      @font-face {
+        font-family: 'Noto Naskh Arabic';
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: swap;
+        src: url('${origin}/fonts/NotoNaskhArabic-latin.woff2') format('woff2');
+        unicode-range: U+0000-00FF, U+2000-206F;
+      }
+    `;
+    doc.head.appendChild(style);
   }
 
   /** Fires when the reader selects text inside the rendered page — the
@@ -279,6 +330,36 @@ export class EpubService {
 
   getChapterLabelFor(href?: string): string | undefined {
     return href ? this.findTocLabel(href) : undefined;
+  }
+
+  /** Full-book text search. epub.js only keeps the *current* section's
+   * content parsed into a Document -- the rest of the book is just spine
+   * metadata until asked for -- so this loads each section in turn, uses
+   * epub.js's own `Section.find()` (returns CFI-addressable matches with a
+   * short excerpt), then unloads it again before moving on, so a large book
+   * doesn't end up with every chapter's DOM held in memory at once just
+   * because the reader searched it once. */
+  async search(query: string): Promise<SearchResult[]> {
+    const trimmed = query.trim();
+    if (!this.book || !trimmed) return [];
+    const results: SearchResult[] = [];
+    // epub.js's own TS defs don't declare `spineItems` (only its runtime
+    // Spine class does), and Section.find()'s return type isn't declared
+    // either -- both are cast through `any` the same way this file already
+    // does for epub.js internals it doesn't have full types for.
+    const sections = (this.book.spine as any).spineItems as any[];
+    for (const section of sections) {
+      try {
+        await section.load(this.book.load.bind(this.book));
+        const matches = section.find(trimmed) as Array<{ cfi: string; excerpt: string }>;
+        for (const m of matches) {
+          results.push({ cfi: m.cfi, excerpt: m.excerpt, href: section.href, label: this.getChapterLabelFor(section.href) });
+        }
+      } finally {
+        section.unload();
+      }
+    }
+    return results;
   }
 
   private findTocLabel(href: string): string | undefined {

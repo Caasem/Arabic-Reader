@@ -3,6 +3,8 @@ import { libraryService } from '../../library/libraryService';
 import type { BookMeta } from '../../types';
 import './Library.css';
 
+const OFFLINE_NOTICE_DISMISSED_KEY = 'ar-reader-offline-notice-dismissed';
+
 export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }) {
   const [books, setBooks] = useState<BookMeta[]>([]);
   const [progress, setProgress] = useState<Record<string, number>>({});
@@ -10,6 +12,25 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // First-run notice only -- this app's biggest differentiator (a real,
+  // ~136k-entry Arabic dictionary built in, no account or internet needed)
+  // was otherwise completely invisible until you happened to tap a word.
+  const [showOfflineNotice, setShowOfflineNotice] = useState(() => {
+    try {
+      return localStorage.getItem(OFFLINE_NOTICE_DISMISSED_KEY) !== '1';
+    } catch {
+      return true;
+    }
+  });
+
+  function dismissOfflineNotice() {
+    setShowOfflineNotice(false);
+    try {
+      localStorage.setItem(OFFLINE_NOTICE_DISMISSED_KEY, '1');
+    } catch {
+      /* private-browsing or storage disabled -- the notice just reappears next time, harmless */
+    }
+  }
 
   async function refresh() {
     setLoading(true);
@@ -91,6 +112,18 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
           />
         </div>
       </header>
+
+      {showOfflineNotice && (
+        <div className="library__notice">
+          <span>
+            This app includes a full Arabic dictionary (~136,000 entries) built in — works offline, no account, and
+            nothing you read ever leaves your device. Tap any word while reading to look it up.
+          </span>
+          <button className="library__notice-dismiss" onClick={dismissOfflineNotice} aria-label="Dismiss">
+            ×
+          </button>
+        </div>
+      )}
 
       {error && <div className="library__error">{error}</div>}
 

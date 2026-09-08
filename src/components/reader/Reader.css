@@ -13,10 +13,32 @@
   padding: 14px 24px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  transition: opacity 0.4s ease;
+}
+
+/* Focus mode: once idle, fade the whole topbar down to near-invisible
+   rather than removing it — a stray mouse move or a hover on the bar
+   itself (see the onMouseEnter handler in Reader.tsx) brings it right
+   back, so it's never actually unreachable. */
+.reader__topbar--focus.reader__topbar--idle {
+  opacity: 0.06;
+}
+
+.reader__topbar--focus.reader__topbar--idle:hover {
+  opacity: 1;
+}
+
+.reader__topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .reader__back,
 .reader__toc-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   background: none;
   border: none;
   color: var(--ink-soft);
@@ -30,6 +52,59 @@
 .reader__toc-toggle:hover {
   background: var(--accent-soft);
   color: var(--ink);
+}
+
+.reader__focus-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--ink-faint);
+  font-size: 12px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+}
+
+.reader__focus-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.reader__focus-toggle--on {
+  color: var(--accent);
+}
+
+.reader__focus-toggle-track {
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--border);
+  position: relative;
+  transition: background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.reader__focus-toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
+  transition: left 0.15s ease;
+}
+
+.reader__focus-toggle--on .reader__focus-toggle-track {
+  background: var(--accent);
+}
+
+.reader__focus-toggle--on .reader__focus-toggle-knob {
+  left: 14px;
 }
 
 .reader__chapter {
@@ -56,6 +131,70 @@
   overflow-y: auto;
   padding: 16px;
   background: var(--bg-elevated);
+}
+
+.reader__search {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reader__search-form {
+  display: flex;
+  gap: 8px;
+}
+
+.reader__search-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.reader__search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+}
+
+.reader__search-empty {
+  color: var(--ink-faint);
+  font-size: 13px;
+  margin: 4px 0;
+}
+
+.reader__search-result {
+  text-align: right;
+  direction: rtl;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.reader__search-result:hover {
+  background: var(--accent-soft);
+}
+
+.reader__search-result-label {
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-bottom: 2px;
+  direction: ltr;
+  text-align: left;
+}
+
+.reader__search-result-excerpt {
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .toc-list {

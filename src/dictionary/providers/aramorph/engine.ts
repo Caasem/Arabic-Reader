@@ -55,6 +55,9 @@ export class OptimizedDictArray<T> {
     if (!this.map.has(key)) this.map.set(key, []);
     this.map.get(key)!.push(value);
   }
+  get size(): number {
+    return this.map.size;
+  }
 }
 
 interface MorphEntry {
@@ -149,6 +152,22 @@ export class AramorphEngine {
 
   get isReady(): boolean {
     return !!this.tables;
+  }
+
+  /** Word counts per table -- purely for on-device diagnostics (see the
+   * Settings "Test dictionary lookup" button): distinguishes "no tables
+   * loaded at all" from "tables loaded but empty/corrupted", which look
+   * identical from `isReady` alone. */
+  get tableSizes(): Record<keyof AramorphTables, number> | null {
+    if (!this.tables) return null;
+    return {
+      dictstems: this.tables.dictstems.size,
+      dictprefs: this.tables.dictprefs.size,
+      dictsuffs: this.tables.dictsuffs.size,
+      tableab: this.tables.tableab.size,
+      tablebc: this.tables.tablebc.size,
+      tableac: this.tables.tableac.size,
+    };
   }
 
   private isObeysGrammar(prefMorph: string, stemMorph: string, suffMorph: string): boolean {

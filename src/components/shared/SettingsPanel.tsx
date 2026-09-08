@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePreferences } from '../../state/PreferencesContext';
 import { dictionaryManager } from '../../dictionary/DictionaryManager';
 import { aramorphProvider } from '../../dictionary/providers/aramorph/AramorphDictionaryProvider';
+import { DICT_FILE_NAMES, type DictFileName } from '../../dictionary/providers/aramorph/dictFileNames';
 import { isRarityDataReady, enableRarityData, disableRarityData } from '../../vocabRarity/rarity';
 import { pingAnki, getDeckNames, ensureDeck, addNote, AnkiConnectError } from '../../anki/ankiConnect';
 import { vocabularyService } from '../../vocabulary/vocabularyService';
@@ -35,6 +36,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [rarityReady, setRarityReady] = useState<boolean | null>(null);
   const [rarityBusy, setRarityBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [perFileSelection, setPerFileSelection] = useState<Partial<Record<DictFileName, File>>>({});
 
   const [ankiStatus, setAnkiStatus] = useState<string | null>(null);
   const [ankiBusy, setAnkiBusy] = useState(false);
@@ -92,6 +94,30 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
     } finally {
       setImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
+  function handlePerFileChange(name: DictFileName, file: File | null) {
+    setPerFileSelection((prev) => {
+      const next = { ...prev };
+      if (file) next[name] = file;
+      else delete next[name];
+      return next;
+    });
+  }
+
+  async function handleImportPerFile() {
+    setImportError(null);
+    setImporting(true);
+    try {
+      await aramorphProvider.importFileMap(perFileSelection);
+      setAramorphReady(true);
+      setPerFileSelection({});
+      if (!prefs.enabledProviderIds.includes('aramorph')) toggleProvider('aramorph', true);
+    } catch (e) {
+      setImportError(e instanceof Error ? e.message : 'Could not read those files.');
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -325,7 +351,56 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                   Reset to default
                 </button>
               )}
+              <button
+                className="btn btn--ghost"
+                onClick={async () => {
+                  const result = await dictionaryManager.lookup('كان');
+                  const sizes = aramorphProvider.tableSizes;
+                  alert(
+                    `Test word: كان\nEntries found: ${result.entries.length}\n` +
+                      (result.entries[0]?.senses[0]?.gloss ?? '(no gloss — this is the bug)') +
+                      `\n\nLoaded table sizes:\n` +
+                      (sizes
+                        ? Object.entries(sizes)
+                            .map(([k, v]) => `${k}: ${v}`)
+                            .join('\n')
+                        : '(not loaded)')
+                  );
+                }}
+              >
+                Test dictionary lookup
+              </button>
               <input ref={fileInputRef} type="file" multiple hidden onChange={(e) => handleImport(e.target.files)} />
+            </div>
+
+            <div className="settings-aramorph__per-file">
+              <p className="settings-section__note">
+                If picking all six files at once doesn't work well in your file manager, pick them one at a time
+                instead:
+              </p>
+              {DICT_FILE_NAMES.map((name) => (
+                <div className="settings-row" key={name} style={{ flexWrap: 'wrap', gap: 8 }}>
+                  <label className="settings-toggle" style={{ minWidth: 110 }}>
+                    <code>{name}</code>
+                  </label>
+                  <input
+                    type="file"
+                    disabled={importing}
+                    style={{ maxWidth: '100%' }}
+                    onChange={(e) => handlePerFileChange(name, e.target.files?.[0] ?? null)}
+                  />
+                  <span className={'settings-badge' + (perFileSelection[name] ? ' settings-badge--ready' : '')}>
+                    {perFileSelection[name] ? `✓ ${perFileSelection[name]!.name}` : 'Not selected'}
+                  </span>
+                </div>
+              ))}
+              <button
+                className="btn btn--ghost"
+                onClick={handleImportPerFile}
+                disabled={importing || DICT_FILE_NAMES.some((n) => !perFileSelection[n])}
+              >
+                {importing ? 'Reading files…' : 'Import these six files'}
+              </button>
             </div>
             {importError && <div className="settings-aramorph__error">{importError}</div>}
           </div>

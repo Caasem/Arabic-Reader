@@ -1,6 +1,11 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Precache scope decision (see claude/roadmap-next-features.md item 7):
 // the small AraMorph dictionary files (~3.8MB total) are worth guaranteeing
@@ -20,10 +25,54 @@ const DICTIONARY_DATA_FILES = [
   'tablebc',
 ]
 
+// Embeds the six AraMorph data files directly into the JS bundle at build
+// time, as a virtual module, instead of the app having to `fetch()` them
+// from public/dictionary-data/ at runtime. That fetch turned out to be
+// unreliable on at least one real Android/Capacitor WebView -- it would
+// silently resolve with only a tiny fragment of each file's real content
+// (see the "no definition found on Android" investigation), while the
+// exact same files read via the browser's File API (Settings' manual
+// upload) always came through intact. Embedding sidesteps whatever
+// WebView/asset-serving quirk caused that, on every platform, by turning
+// the six fetches into plain synchronous string constants baked into the
+// bundle -- there's no network/asset layer left in the loop to get it
+// wrong. `public/dictionary-data/` remains the single source of truth
+// (this plugin just reads it at build time) and is also still served
+// as-is for the PWA's offline service-worker precache and as a
+// GPL-required plain-text copy of the data.
+function bundledDictDataPlugin(): Plugin {
+  const virtualModuleId = 'virtual:dictionary-data'
+  const resolvedVirtualModuleId = '\0' + virtualModuleId
+  return {
+    name: 'bundled-dict-data',
+    resolveId(id) {
+      if (id === virtualModuleId) return resolvedVirtualModuleId
+    },
+    load(id) {
+      if (id !== resolvedVirtualModuleId) return
+      const entries = DICTIONARY_DATA_FILES.map((name) => {
+        const filePath = path.join(__dirname, 'public/dictionary-data', name)
+        const content = fs.readFileSync(filePath, 'utf8')
+        return `${JSON.stringify(name)}: ${JSON.stringify(content)}`
+      })
+      return `export default {\n${entries.join(',\n')}\n};\n`
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
+  // Worker entries (aramorph.worker.ts, which imports the virtual module
+  // above) are bundled by Vite in a separate build pass that does not
+  // inherit the top-level `plugins` list -- it needs the virtual-module
+  // plugin registered here too, or resolving `virtual:dictionary-data` from
+  // inside the worker fails at build time.
+  worker: {
+    plugins: () => [bundledDictDataPlugin()],
+  },
   plugins: [
     react(),
+    bundledDictDataPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],

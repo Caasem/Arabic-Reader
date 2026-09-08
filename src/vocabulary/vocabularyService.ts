@@ -254,6 +254,17 @@ export class VocabularyService {
     await persistenceService.deleteVocabularyItem(id);
   }
 
+  /** Patches a saved word's own editable fields (meaning / sentence — the
+   * two a learner would reasonably want to correct or personalize after
+   * saving) and persists the result. Kept generic over `VocabularyItem` so
+   * it can't drift out of sync with the type, but callers should really
+   * only ever pass `meaning`/`sentence`. */
+  async updateVocabularyItem(item: VocabularyItem, patch: Partial<Pick<VocabularyItem, 'meaning' | 'sentence'>>): Promise<VocabularyItem> {
+    const updated = { ...item, ...patch };
+    await persistenceService.saveVocabularyItem(updated);
+    return updated;
+  }
+
   async setMastery(item: VocabularyItem, mastery: MasteryLevel): Promise<VocabularyItem> {
     const updated = { ...item, mastery, lastReviewedAt: Date.now() };
     await persistenceService.saveVocabularyItem(updated);

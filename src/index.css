@@ -1,3 +1,29 @@
+/* Self-hosted (see public/fonts/OFL-NOTICE.txt) instead of pulled from
+   fonts.googleapis.com at runtime -- this app is meant to work fully
+   offline, and a remote font request on first paint both slows down first
+   render and silently fails without internet, falling back to a generic
+   serif for all Arabic text. Only the Latin and Arabic Unicode subsets are
+   included (the two this app's UI and book content actually use); Noto
+   Naskh Arabic ships the same glyph outlines for weights 400/500/600/700 in
+   each subset, so one file per subset covers every weight already used via
+   `font-weight` in this stylesheet. */
+@font-face {
+  font-family: 'Noto Naskh Arabic';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/NotoNaskhArabic-arabic.woff2') format('woff2');
+  unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFC;
+}
+@font-face {
+  font-family: 'Noto Naskh Arabic';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/NotoNaskhArabic-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+2000-206F;
+}
+
 :root {
   --bg: #faf7f2;
   --bg-elevated: #ffffff;

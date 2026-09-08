@@ -9,6 +9,7 @@ import type {
   BackupData,
   SpeedReaderPosition,
   SpeedReaderSession,
+  ReadingSession,
 } from '../types';
 
 /**
@@ -30,6 +31,7 @@ class ArabicReaderDB extends Dexie {
   preferences!: Table<{ id: string } & ReaderPreferences, string>;
   speedReaderPositions!: Table<SpeedReaderPosition, string>;
   speedReaderSessions!: Table<SpeedReaderSession, string>;
+  readingSessions!: Table<ReadingSession, string>;
 
   constructor() {
     super('arabic-reader');
@@ -100,6 +102,14 @@ class ArabicReaderDB extends Dexie {
       speedReaderPositions: 'bookId, updatedAt',
       speedReaderSessions: 'id, bookId, endedAt',
     });
+    // v5: the Reading Dashboard's data source — a log of normal-Reader
+    // sessions (see ReadingSession in types/index.ts). Indexed on
+    // `startedAt` since the Dashboard's every query — the heatmap, the
+    // trend charts, the Today/Week/Month/90d/All-time filter — is a range
+    // scan over this field. Purely additive.
+    this.version(5).stores({
+      readingSessions: 'id, bookId, startedAt, endedAt',
+    });
   }
 }
 
@@ -165,6 +175,14 @@ export interface PersistenceService {
   getSpeedReaderPosition(bookId: string): Promise<SpeedReaderPosition | undefined>;
   saveSpeedReaderSession(session: SpeedReaderSession): Promise<void>;
   getSpeedReaderSessions(bookId?: string): Promise<SpeedReaderSession[]>;
+
+  // Reading sessions (normal Reader — Dashboard data source)
+  saveReadingSession(session: ReadingSession): Promise<void>;
+  /** All sessions with `startedAt` in [since, until) — the one query shape
+   * every Dashboard range filter and chart needs, so range filtering lives
+   * here rather than being re-implemented per caller. Omit `since`/`until`
+   * for the full unbounded history ("All time"). */
+  getReadingSessions(range?: { since?: number; until?: number }): Promise<ReadingSession[]>;
 }
 
 const DEFAULT_PREFS: ReaderPreferences = {
@@ -178,7 +196,10 @@ const DEFAULT_PREFS: ReaderPreferences = {
   enabledProviderIds: ['aramorph'],
   readingFlow: 'paginated',
   hoverPreviewEnabled: false,
-  sentenceContextEnabled: false,
+  // On by default — a saved word without the sentence it came from is much
+  // less useful for review later; still toggleable in Settings for anyone
+  // who'd rather not capture surrounding text.
+  sentenceContextEnabled: true,
   quickAddShortcutEnabled: false,
   ankiDeckName: 'Arabic Vocabulary',
   speedReaderWpm: 300,
@@ -348,6 +369,19 @@ class DexiePersistenceService implements PersistenceService {
       ? await db.speedReaderSessions.where('bookId').equals(bookId).toArray()
       : await db.speedReaderSessions.toArray();
     return rows.sort((a, b) => b.endedAt - a.endedAt);
+  }
+
+  async saveReadingSession(session: ReadingSession): Promise<void> {
+    await db.readingSessions.put(session);
+  }
+  async getReadingSessions(range?: { since?: number; until?: number }): Promise<ReadingSession[]> {
+    let collection = db.readingSessions.orderBy('startedAt');
+    if (range?.since !== undefined || range?.until !== undefined) {
+      const since = range?.since ?? -Infinity;
+      const until = range?.until ?? Infinity;
+      collection = collection.filter((s) => s.startedAt >= since && s.startedAt < until);
+    }
+    return collection.toArray();
   }
 }
 

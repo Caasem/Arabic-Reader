@@ -22,6 +22,9 @@
 
 .vocab-levels__collapse-btn,
 .vocab-levels__expand-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: 1px solid var(--border);
   border-radius: 6px;

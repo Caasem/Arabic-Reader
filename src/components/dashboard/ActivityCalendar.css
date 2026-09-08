@@ -1,0 +1,79 @@
+.activity-cal {
+  overflow-x: auto;
+}
+
+.activity-cal__grid {
+  display: flex;
+  gap: 3px;
+  width: max-content;
+}
+
+.activity-cal__week {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.activity-cal__cell {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: none;
+  padding: 0;
+  background: var(--border);
+  cursor: pointer;
+}
+
+.activity-cal__cell:disabled {
+  cursor: default;
+}
+
+.activity-cal__cell--future {
+  background: transparent;
+  visibility: hidden;
+}
+
+.activity-cal__cell--l0 {
+  background: var(--border);
+}
+
+.activity-cal__cell--l1 {
+  background: color-mix(in srgb, var(--accent) 30%, var(--bg));
+}
+
+.activity-cal__cell--l2 {
+  background: color-mix(in srgb, var(--accent) 55%, var(--bg));
+}
+
+.activity-cal__cell--l3 {
+  background: color-mix(in srgb, var(--accent) 78%, var(--bg));
+}
+
+.activity-cal__cell--l4 {
+  background: var(--accent);
+}
+
+.activity-cal__cell--selected {
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
+.activity-cal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+
+.activity-cal__legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.activity-cal__legend-swatch {
+  width: 10px;
+  height: 10px;
+  cursor: default;
+}

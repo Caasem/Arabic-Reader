@@ -354,6 +354,48 @@ export interface SpeedReaderSession {
 }
 
 // ---------------------------------------------------------------------------
+// Reading sessions (normal Reader — the Dashboard's data source)
+// ---------------------------------------------------------------------------
+
+/**
+ * One span of normal (non-Speed-Reader) reading, logged by the Reader
+ * component itself (see Reader.tsx's session-tracking effect) so the
+ * Dashboard has something real to compute reading time, WPM, streaks, and
+ * the activity heatmap from — none of that existed anywhere before this.
+ *
+ * Deliberately mirrors `SpeedReaderSession`'s shape rather than inventing a
+ * different one, and deliberately does NOT duplicate anything vocabulary/
+ * word-instance related — `lookupCount` here is just this session's own
+ * tally (kept because `WordInstance.lookupCount` is overwritten in place
+ * and has no daily history), everything else vocab-side is still read live
+ * from `wordInstances`/`vocabulary` by the stats layer.
+ */
+export interface ReadingSession {
+  id: string;
+  bookId: string;
+  bookTitle: string;
+  startedAt: number;
+  endedAt: number;
+  /** Wall-clock time between startedAt/endedAt, minus any stretch where the
+   * reader was idle (no scroll/click/keydown/page-turn) past the idle
+   * cutoff — see IDLE_TIMEOUT_MS in Reader.tsx. This, not the raw
+   * endedAt-startedAt span, is what "reading time" means throughout the
+   * Dashboard. */
+  activeDurationMs: number;
+  /** Best-effort count of Arabic words rendered on screen during this
+   * session (summed per section as epub.js renders it) — an estimate, not
+   * an exact "words the eye passed over" count, but a real one derived
+   * from the same .ar-word instrumentation the rest of the reader uses,
+   * not a guess from percent-complete deltas alone. */
+  wordsRead: number;
+  /** Dictionary lookups (word taps that resolved a lookup — bubble,
+   * popup, or quick-save) performed during this session. */
+  lookupCount: number;
+  startPercent: number;
+  endPercent: number;
+}
+
+// ---------------------------------------------------------------------------
 // Vocabulary rarity (CAMeL Arabic Frequency Lists — see public/frequency-data)
 // ---------------------------------------------------------------------------
 

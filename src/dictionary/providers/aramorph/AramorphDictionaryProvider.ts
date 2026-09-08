@@ -1,90 +1,122 @@
 import type { DictionaryEntry, DictionaryProvider, MorphologicalAnalysis, MorphologyProvider } from '../../../types';
-import { AramorphEngine, createDictTable, createMorphTableFromText, type AramorphResult } from './engine';
-import { loadCachedDictFiles, readDictFileList, saveDictFiles, clearDictFiles, fetchBundledDictFiles, type DictFileName } from './store';
+import type { AramorphResult, AramorphTables } from './engine';
+import { DICT_FILE_NAMES, readDictFileList, type DictFileName } from './dictFileNames';
+
+type TableSizes = Record<keyof AramorphTables, number>;
+
+type WorkerResponse =
+  | { id: number; type: 'ready' | 'built'; tableSizes: TableSizes | null }
+  | { id: number; type: 'lookupResult'; results: AramorphResult[] }
+  | { id: number; type: 'error'; message: string };
 
 /**
  * The real dictionary: the project's own AraMorph/Buckwalter prefix+stem+
  * suffix engine, ported unchanged from the browser extension. Behaves
  * exactly like the mock providers from the outside (DictionaryProvider /
- * MorphologyProvider) — the reader and DictionaryManager don't know or
- * care that this one needs user-supplied data files before it can answer.
+ * MorphologyProvider) — the reader and DictionaryManager don't know or care
+ * that this one needs user-supplied data files before it can answer.
+ *
+ * The engine itself (parsing ~136k dictionary lines, plus every lookup)
+ * runs inside a dedicated Web Worker (aramorph.worker.ts), not here — this
+ * class is a thin postMessage proxy that keeps the exact same API so
+ * nothing else in the app (DictionaryManager, Settings, the debug hook in
+ * main.tsx) needs to know that changed. That move gets a genuinely large
+ * dictionary-table build off the main thread, so it no longer competes with
+ * rendering the UI at startup or on "Reset to default"/a custom upload.
  */
 export class AramorphDictionaryProvider implements DictionaryProvider, MorphologyProvider {
   id = 'aramorph';
   name = 'Arabic Dictionary (AraMorph)';
-  private engine = new AramorphEngine();
-  private loadingFromCache: Promise<void> | null = null;
+
+  private worker = new Worker(new URL('./aramorph.worker.ts', import.meta.url), { type: 'module' });
+  private nextId = 1;
+  private pending = new Map<number, { resolve: (msg: WorkerResponse) => void; reject: (err: Error) => void }>();
+  private ready = false;
+  private _tableSizes: TableSizes | null = null;
+  private readyPromise: Promise<void>;
 
   constructor() {
-    // Prefer whatever's already cached (a previous upload, or a previously
-    // fetched copy of the bundled default). If nothing's cached yet, fall
-    // back to the bundled dataset shipped under public/dictionary-data/ and
-    // cache it so the next load is a fast IndexedDB read instead of a fetch
-    // + re-parse of ~3.6MB of text.
-    this.loadingFromCache = loadCachedDictFiles().then(async (texts) => {
-      if (texts) {
-        this.buildTables(texts);
-        return;
-      }
-      const bundled = await fetchBundledDictFiles();
-      if (bundled) {
-        this.buildTables(bundled);
-        await saveDictFiles(bundled);
-      }
+    let resolveReady!: () => void;
+    this.readyPromise = new Promise((res) => {
+      resolveReady = res;
     });
+    this.worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
+      const msg = e.data;
+      if (msg.type === 'ready' || msg.type === 'built') {
+        this._tableSizes = msg.tableSizes;
+        this.ready = !!msg.tableSizes;
+        if (msg.type === 'ready') resolveReady();
+      }
+      const waiter = this.pending.get(msg.id);
+      if (!waiter) return; // the initial 'ready' message (id 0) has no caller waiting on it
+      this.pending.delete(msg.id);
+      if (msg.type === 'error') waiter.reject(new Error(msg.message));
+      else waiter.resolve(msg);
+    };
   }
 
   get isReady(): boolean {
-    return this.engine.isReady;
+    return this.ready;
   }
 
-  /** Resolves once any previously-cached files have been loaded (or confirmed absent). */
+  /** See AramorphEngine.tableSizes -- surfaced for the Settings diagnostic button. */
+  get tableSizes(): TableSizes | null {
+    return this._tableSizes;
+  }
+
+  /** Resolves once the worker's initial load (cached custom upload, or the
+   * bundled default) has finished. */
   async whenReady(): Promise<void> {
-    await this.loadingFromCache;
+    await this.readyPromise;
+  }
+
+  private call(type: string, payload: Record<string, unknown> = {}): Promise<WorkerResponse> {
+    const id = this.nextId++;
+    return new Promise((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      this.worker.postMessage({ id, type, ...payload });
+    });
   }
 
   async importFiles(fileList: FileList | File[]): Promise<void> {
     const texts = await readDictFileList(fileList);
-    await saveDictFiles(texts);
-    this.buildTables(texts);
+    await this.call('importTexts', { texts });
+  }
+
+  /** Same as `importFiles`, but for six separately-picked single-file inputs
+   * (one per expected table) instead of one multi-select picker -- some
+   * mobile file-manager apps don't support multi-select well, and this skips
+   * `readDictFileList`'s by-filename matching entirely since the caller
+   * already knows which slot each file belongs to. */
+  async importFileMap(files: Partial<Record<DictFileName, File>>): Promise<void> {
+    const missing = DICT_FILE_NAMES.filter((name) => !files[name]);
+    if (missing.length) {
+      throw new Error(`Missing file(s) for: ${missing.join(', ')} — please select all six dictionary data files.`);
+    }
+    const entries = await Promise.all(DICT_FILE_NAMES.map(async (name) => [name, await files[name]!.text()] as const));
+    const texts = Object.fromEntries(entries) as Record<DictFileName, string>;
+    await this.call('importTexts', { texts });
   }
 
   /** Drops any custom upload and reloads the bundled default dataset. */
   async resetToBundled(): Promise<void> {
-    await clearDictFiles();
-    this.engine = new AramorphEngine();
-    const bundled = await fetchBundledDictFiles();
-    if (bundled) {
-      this.buildTables(bundled);
-      await saveDictFiles(bundled);
-    }
+    await this.call('resetToBundled');
   }
 
   async clear(): Promise<void> {
-    await clearDictFiles();
-    this.engine = new AramorphEngine();
-  }
-
-  private buildTables(texts: Record<DictFileName, string>): void {
-    this.engine.setTables({
-      dictstems: createDictTable(texts.dictstems),
-      dictprefs: createDictTable(texts.dictprefixes),
-      dictsuffs: createDictTable(texts.dictsuffixes),
-      tableab: createMorphTableFromText(texts.tableab),
-      tablebc: createMorphTableFromText(texts.tablebc),
-      tableac: createMorphTableFromText(texts.tableac),
-    });
+    await this.call('clear');
   }
 
   async lookup(word: string): Promise<DictionaryEntry[]> {
-    await this.loadingFromCache;
-    const results = this.engine.lookup(word);
-    return this.groupByWord(results);
+    await this.readyPromise;
+    const msg = await this.call('lookup', { word });
+    return msg.type === 'lookupResult' ? this.groupByWord(msg.results) : [];
   }
 
   async analyze(word: string): Promise<MorphologicalAnalysis[]> {
-    await this.loadingFromCache;
-    const results = this.engine.lookup(word);
+    await this.readyPromise;
+    const msg = await this.call('analyze', { word });
+    const results = msg.type === 'lookupResult' ? msg.results : [];
     return results.slice(0, 5).map((r) => ({
       surfaceForm: r.word,
       lemma: r.word,

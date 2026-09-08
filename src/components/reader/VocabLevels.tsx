@@ -5,6 +5,7 @@ import { getBookVocabIndex } from '../../vocabRarity/bookVocabIndex';
 import { isRarityDataReady, enableRarityData } from '../../vocabRarity/rarity';
 import { formatVocabularyExport, downloadTextFile } from '../../vocabRarity/exportVocabulary';
 import type { IngestProgress } from '../../vocabRarity/frequencyIndex';
+import { IconChevronLeft, IconChevronRight, IconClose } from '../shared/icons';
 import './VocabLevels.css';
 
 const TIERS: { id: VocabTier; label: string }[] = [
@@ -110,7 +111,7 @@ export function VocabLevels({
     return (
       <div className="vocab-levels__collapse-strip">
         <button className="vocab-levels__expand-btn" onClick={onToggleCollapse} aria-label="Expand Vocabulary Levels" title="Expand">
-          ‹
+          <IconChevronLeft size={13} />
         </button>
       </div>
     );
@@ -122,10 +123,10 @@ export function VocabLevels({
         <span className="vocab-levels__title">Vocabulary Levels</span>
         <div className="vocab-levels__header-actions">
           <button className="vocab-levels__collapse-btn" onClick={onToggleCollapse} aria-label="Collapse" title="Collapse">
-            ›
+            <IconChevronRight size={13} />
           </button>
           <button className="vocab-levels__collapse-btn vocab-levels__close-btn" onClick={onClose} aria-label="Close Vocabulary Levels" title="Close">
-            ×
+            <IconClose size={13} />
           </button>
         </div>
       </div>

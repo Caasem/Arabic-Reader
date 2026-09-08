@@ -5,6 +5,7 @@ import { Reader } from './components/reader/Reader';
 import { VocabularyList } from './components/vocabulary/VocabularyList';
 import { HighlightsList } from './components/vocabulary/HighlightsList';
 import { Review } from './components/review/Review';
+import { Dashboard } from './components/dashboard/Dashboard';
 import { SpeedReader } from './components/speedReader/SpeedReader';
 import { SettingsPanel } from './components/shared/SettingsPanel';
 import { BackupReminder } from './components/shared/BackupReminder';
@@ -70,6 +71,7 @@ function App() {
             {view === 'highlights' && <HighlightsList />}
             {view === 'review' && <Review />}
             {view === 'speedReader' && <SpeedReader />}
+            {view === 'dashboard' && <Dashboard />}
           </main>
         </div>
         {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}

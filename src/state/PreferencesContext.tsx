@@ -12,7 +12,7 @@ const FALLBACK_PREFS: ReaderPreferences = {
   enabledProviderIds: ['aramorph'],
   readingFlow: 'paginated',
   hoverPreviewEnabled: false,
-  sentenceContextEnabled: false,
+  sentenceContextEnabled: true,
   quickAddShortcutEnabled: false,
   ankiDeckName: 'Arabic Vocabulary',
   speedReaderWpm: 300,

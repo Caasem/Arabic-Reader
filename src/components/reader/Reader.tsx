@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { EpubService } from '../../reader/epub/EpubService';
+import { EpubService, type SearchResult } from '../../reader/epub/EpubService';
 import { wrapArabicWords, distinctWordsIn } from '../../reader/wordInteraction/wrapWords';
 import { extractSentence } from '../../reader/wordInteraction/extractSentence';
 import { dictionaryManager } from '../../dictionary/DictionaryManager';
@@ -24,6 +24,8 @@ import { SelectionToolbar } from './SelectionToolbar';
 import type { Book } from 'epubjs';
 import { usePreferences } from '../../state/PreferencesContext';
 import { isFootnoteLink } from '../../reader/footnotes/resolveFootnote';
+import { ReadingSessionTracker } from '../../reader/session/ReadingSessionTracker';
+import { IconBack, IconContents, IconFocus, IconSearch } from '../shared/icons';
 import './Reader.css';
 
 /** Hover-intent delay before the condensed preview appears — long enough
@@ -31,6 +33,11 @@ import './Reader.css';
  * flash a preview for every word it crosses. */
 const HOVER_PREVIEW_DELAY_MS = 200;
 const HOVER_PREVIEW_MAX_CHARS = 42;
+
+/** How long the pointer has to sit still before Focus mode fades the
+ * topbar out — matches the "controls fade on stillness" behavior from the
+ * Midnight Study concept. */
+const FOCUS_IDLE_MS = 2200;
 
 const WORD_STYLE = `
   /* manipulation (not just on .ar-word) so a real touchscreen's native
@@ -115,6 +122,10 @@ export function Reader({
   const serviceRef = useRef<EpubService | null>(null);
   const [toc, setToc] = useState<TocItem[]>([]);
   const [tocOpen, setTocOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
+  const [searching, setSearching] = useState(false);
   const [chapterLabel, setChapterLabel] = useState<string | undefined>();
   const [percent, setPercent] = useState(0);
   const [popup, setPopup] = useState<PopupState | null>(null);
@@ -126,6 +137,9 @@ export function Reader({
   const [error, setError] = useState<string | null>(null);
   const [bookHandle, setBookHandle] = useState<Book | null>(null);
   const [vocabPanelCollapsed, setVocabPanelCollapsed] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
+  const [topbarIdle, setTopbarIdle] = useState(false);
+  const focusIdleTimerRef = useRef<number | null>(null);
   const [quickAddToast, setQuickAddToast] = useState<string | null>(null);
   const [touchToast, setTouchToast] = useState<{ message: string; undoItemId: string | null } | null>(null);
   const hoverTimeoutRef = useRef<number | null>(null);
@@ -149,6 +163,11 @@ export function Reader({
   const touchHoldFiredRef = useRef(false);
   const touchSuppressContextMenuRef = useRef(false);
   const lastTapRef = useRef<{ word: string; time: number } | null>(null);
+  // The Dashboard's data source — one tracker per book per mount, started
+  // once the book's saved position is known and stopped (persisting a
+  // ReadingSession row) when the Reader unmounts or switches books. See
+  // ReadingSessionTracker for what it actually measures.
+  const sessionTrackerRef = useRef<ReadingSessionTracker | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -169,6 +188,9 @@ export function Reader({
         setReady(true);
         setBookHandle(svc.getBookHandle());
 
+        sessionTrackerRef.current = new ReadingSessionTracker(book.id, book.title, savedPos?.percent ?? 0);
+        sessionTrackerRef.current.start();
+
         // Re-apply any highlights saved on a previous visit. epub.js queues
         // these and renders them as their section comes into view, so it's
         // safe to register them all up front rather than per-section.
@@ -180,6 +202,7 @@ export function Reader({
           dismissHoverPreview();
           setChapterLabel(loc.chapterLabel);
           setPercent(loc.percent);
+          sessionTrackerRef.current?.recordPercent(loc.percent);
           persistenceService.saveReadingPosition({
             bookId: book.id,
             cfi: loc.cfi,
@@ -198,6 +221,20 @@ export function Reader({
             doc.head.appendChild(style);
           }
           wrapArabicWords(doc);
+
+          // Dashboard word-count contribution for this section (see
+          // ReadingSessionTracker — each section only counts once per
+          // session, so scrolling back over it or a resize re-render
+          // doesn't inflate the total).
+          sessionTrackerRef.current?.recordSectionWords(sectionHref, doc.querySelectorAll('.ar-word').length);
+
+          // Reading-activity signal for the idle cutoff (see
+          // ReadingSessionTracker) — page turns and word taps already
+          // count via onRelocated/the lookup paths below, this covers
+          // plain scrolling/reading-in-place inside the iframe.
+          doc.addEventListener('scroll', () => sessionTrackerRef.current?.recordActivity(), { passive: true });
+          doc.addEventListener('touchmove', () => sessionTrackerRef.current?.recordActivity(), { passive: true });
+          doc.addEventListener('keydown', () => sessionTrackerRef.current?.recordActivity());
 
           // Both of these used to run once *per distinct word* in the
           // section (recordEncounter: a get+put pair; the saved check: a
@@ -464,6 +501,12 @@ export function Reader({
       if (touchToastTimeoutRef.current) window.clearTimeout(touchToastTimeoutRef.current);
       if (touchHoldTimerRef.current) window.clearTimeout(touchHoldTimerRef.current);
       window.removeEventListener('keydown', handleQuickAddKeydown);
+      // Fire-and-forget — the Reader is unmounting (book closed, or
+      // switching to a different book) so there's nothing left to await
+      // into; finish() itself no-ops if the session was too short to be
+      // worth a row (see MIN_SESSION_MS_TO_SAVE).
+      sessionTrackerRef.current?.finish();
+      sessionTrackerRef.current = null;
       svc.destroy();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -473,6 +516,51 @@ export function Reader({
   useEffect(() => {
     if (ready) serviceRef.current?.applyPreferences(prefs);
   }, [ready, prefs.fontSizePct, prefs.lineHeight, prefs.fontFamily, prefs.readingFlow]);
+
+  // Focus mode: the topbar fades out after a moment of stillness and comes
+  // back the instant the pointer moves (or, since the mouse never moves on
+  // a touch device, on any touch) — mirrors the Midnight Study concept's
+  // "controls fade on stillness · move to reveal" behavior. Scoped to the
+  // topbar only; the rest of the reading chrome is untouched.
+  useEffect(() => {
+    if (!focusMode) {
+      setTopbarIdle(false);
+      if (focusIdleTimerRef.current) window.clearTimeout(focusIdleTimerRef.current);
+      return;
+    }
+    function scheduleIdle() {
+      setTopbarIdle(false);
+      if (focusIdleTimerRef.current) window.clearTimeout(focusIdleTimerRef.current);
+      focusIdleTimerRef.current = window.setTimeout(() => setTopbarIdle(true), FOCUS_IDLE_MS);
+    }
+    scheduleIdle();
+    window.addEventListener('mousemove', scheduleIdle);
+    window.addEventListener('touchstart', scheduleIdle);
+    return () => {
+      window.removeEventListener('mousemove', scheduleIdle);
+      window.removeEventListener('touchstart', scheduleIdle);
+      if (focusIdleTimerRef.current) window.clearTimeout(focusIdleTimerRef.current);
+    };
+  }, [focusMode]);
+
+  // Host-page half of the session-activity signal (the iframe half is
+  // wired up per rendered section above) — covers interacting with the
+  // reader's own chrome (footer page-turn buttons, the TOC, etc.) so the
+  // idle cutoff doesn't fire just because the last click landed outside
+  // the epub iframe.
+  useEffect(() => {
+    function record() {
+      sessionTrackerRef.current?.recordActivity();
+    }
+    window.addEventListener('mousemove', record);
+    window.addEventListener('click', record);
+    window.addEventListener('keydown', record);
+    return () => {
+      window.removeEventListener('mousemove', record);
+      window.removeEventListener('click', record);
+      window.removeEventListener('keydown', record);
+    };
+  }, []);
 
   function dismissHoverPreview() {
     if (hoverTimeoutRef.current) {
@@ -497,6 +585,7 @@ export function Reader({
 
   async function handleWordClick(word: string, sectionHref: string, x: number, y: number, sentence?: string) {
     dismissHoverPreview();
+    sessionTrackerRef.current?.recordLookup();
     setPopup({ word, x, y, result: null, instance: null, saved: false, loading: true });
     const [result, saved] = await Promise.all([
       dictionaryManager.lookup(word),
@@ -554,6 +643,7 @@ export function Reader({
    * clobbered by a slower, now-stale lookup for the first word. */
   async function openBubble(word: string, sectionHref: string, x: number, y: number, sentence?: string) {
     dismissHoverPreview();
+    sessionTrackerRef.current?.recordLookup();
     const token = ++bubbleTokenRef.current;
     setBubble({ word, x, y, result: null, instance: null, saved: false, loading: true });
     const [result, saved] = await Promise.all([
@@ -577,6 +667,7 @@ export function Reader({
    * vocabulary entry if the word was already saved (there's no "+" button
    * here to just disable, unlike the popup/bubble). */
   async function quickSaveWord(word: string, sectionHref: string, sentence?: string) {
+    sessionTrackerRef.current?.recordLookup();
     const [result, alreadySaved] = await Promise.all([
       dictionaryManager.lookup(word),
       vocabularyService.isSaved(book.id, word),
@@ -702,16 +793,61 @@ export function Reader({
     lastLookupRef.current = lastLookupRef.current?.word === popup.word ? { ...lastLookupRef.current, saved: true } : lastLookupRef.current;
   }
 
+  async function handleSearch() {
+    const query = searchQuery.trim();
+    if (!query) return;
+    setSearching(true);
+    setSearchResults(null);
+    try {
+      const results = await serviceRef.current?.search(query);
+      setSearchResults(results ?? []);
+    } finally {
+      setSearching(false);
+    }
+  }
+
   return (
     <div className="reader">
-      <header className="reader__topbar">
+      <header
+        className={'reader__topbar' + (focusMode ? ' reader__topbar--focus' : '') + (topbarIdle ? ' reader__topbar--idle' : '')}
+        onMouseEnter={() => setTopbarIdle(false)}
+      >
         <button className="reader__back" onClick={onBack}>
-          ‹ Library
+          <IconBack size={14} /> Library
         </button>
         <div className="reader__chapter">{chapterLabel}</div>
-        <button className="reader__toc-toggle" onClick={() => setTocOpen((v) => !v)}>
-          Contents
-        </button>
+        <div className="reader__topbar-actions">
+          <label className={'reader__focus-toggle' + (focusMode ? ' reader__focus-toggle--on' : '')} title="Focus mode">
+            <input
+              type="checkbox"
+              checked={focusMode}
+              onChange={(e) => setFocusMode(e.target.checked)}
+              aria-label="Toggle focus mode"
+            />
+            <IconFocus size={15} />
+            <span className="reader__focus-toggle-track">
+              <span className="reader__focus-toggle-knob" />
+            </span>
+          </label>
+          <button
+            className="reader__toc-toggle"
+            onClick={() => {
+              setSearchOpen((v) => !v);
+              setTocOpen(false);
+            }}
+          >
+            <IconSearch size={14} /> Search
+          </button>
+          <button
+            className="reader__toc-toggle"
+            onClick={() => {
+              setTocOpen((v) => !v);
+              setSearchOpen(false);
+            }}
+          >
+            <IconContents size={14} /> Contents
+          </button>
+        </div>
       </header>
 
       <div className="reader__body">
@@ -724,6 +860,48 @@ export function Reader({
                 setTocOpen(false);
               }}
             />
+          </aside>
+        )}
+
+        {searchOpen && (
+          <aside className="reader__toc reader__search">
+            <form
+              className="reader__search-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSearch();
+              }}
+            >
+              <input
+                className="reader__search-input"
+                type="search"
+                placeholder="Search this book…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoFocus
+              />
+              <button className="btn btn--ghost" type="submit" disabled={searching || !searchQuery.trim()}>
+                {searching ? 'Searching…' : 'Search'}
+              </button>
+            </form>
+            {searchResults && (
+              <div className="reader__search-results">
+                {searchResults.length === 0 && <p className="reader__search-empty">No matches found.</p>}
+                {searchResults.map((r, i) => (
+                  <button
+                    key={r.cfi + i}
+                    className="reader__search-result"
+                    onClick={() => {
+                      serviceRef.current?.goTo(r.cfi);
+                      setSearchOpen(false);
+                    }}
+                  >
+                    {r.label && <div className="reader__search-result-label">{r.label}</div>}
+                    <div className="reader__search-result-excerpt">{r.excerpt}</div>
+                  </button>
+                ))}
+              </div>
+            )}
           </aside>
         )}
 

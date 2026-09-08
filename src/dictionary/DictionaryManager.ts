@@ -69,15 +69,21 @@ export class DictionaryManager {
 
 // Wire up the default providers: two small mock dictionaries (always
 // available, for demoing without any setup) plus the project's real
-// AraMorph/Buckwalter engine (returns nothing until the user uploads its
-// data files via Settings — see AramorphDictionaryProvider).
+// AraMorph/Buckwalter engine (ships with a bundled default dataset — see
+// AramorphDictionaryProvider — or a user-uploaded one via Settings).
 import { MockDictionaryA } from './providers/mockDictionaryA';
 import { MockDictionaryB } from './providers/mockDictionaryB';
-import { MockMorphologyProvider } from './morphology/mockMorphology';
 import { aramorphProvider } from './providers/aramorph/AramorphDictionaryProvider';
 
 export const dictionaryManager = new DictionaryManager();
 dictionaryManager.registerProvider(new MockDictionaryA());
 dictionaryManager.registerProvider(new MockDictionaryB());
 dictionaryManager.registerProvider(aramorphProvider);
-dictionaryManager.setMorphologyProvider(new MockMorphologyProvider());
+// AraMorph already does real prefix/stem/suffix morphological analysis
+// (root, lemma, POS) against its full dictionary -- previously the app used
+// a separate MockMorphologyProvider here instead, which only matched
+// against the tiny demo lexicon the two mock dictionaries share. Since
+// AraMorph is enabled and loaded by default, using it for morphology too
+// means "Root"/lemma information now works for essentially any real word,
+// not just a handful of demo ones.
+dictionaryManager.setMorphologyProvider(aramorphProvider);

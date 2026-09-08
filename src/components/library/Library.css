@@ -64,6 +64,33 @@
   border-color: var(--ink-faint);
 }
 
+.library__notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.library__notice-dismiss {
+  background: none;
+  border: none;
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+
+.library__notice-dismiss:hover {
+  color: var(--ink);
+}
+
 .library__error {
   background: #f7e6e1;
   color: var(--danger);
