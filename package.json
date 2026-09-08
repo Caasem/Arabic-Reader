@@ -18,7 +18,8 @@
     "electron:build:mac": "npm run build && electron-builder --mac",
     "android:sync": "npm run build && npx cap copy android",
     "android:open": "npm run android:sync && npx cap open android",
-    "android:build": "npm run android:sync && cd android && ./gradlew assembleDebug"
+    "android:run": "npm run build && npx cap run android",
+    "android:build": "npm run android:sync && node scripts/build-android.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.1",

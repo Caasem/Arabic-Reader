@@ -13,12 +13,24 @@ Building it does require the Android SDK and a network connection that can
 reach Google's Maven repo (`dl.google.com`) and Maven Central — the sandbox
 this project was developed in blocks both, so the actual compile step has
 to happen somewhere with normal internet access: your own machine, or CI
-(see the GitHub Actions workflow below).
+(see the GitHub Actions workflow below). The Gradle configuration targets
+Android API 36 and Java 21.
+
+If Android Studio reports that `:capacitor-android` has no matching
+variant, open **Settings → Build, Execution, Deployment → Build Tools →
+Gradle** and set **Gradle JDK** to a Java 21 installation. Android Studio
+2026 may bundle Java 25, which is newer than this project's Gradle 8.14.3
+and Android Gradle Plugin 8.13 toolchain and can prevent the Capacitor
+library project from being configured correctly. From the repository root,
+run `npm install` followed by `npx cap sync android` before reopening the
+`android/` project.
 
 ## Option A — Android Studio (easiest)
 
 1. Install [Android Studio](https://developer.android.com/studio) (it
    bundles the Android SDK, so you don't need to install that separately).
+   Ensure the Android 36 SDK platform/build-tools and a Java 21 JDK are
+   available.
 2. Open this project's `android/` folder directly in Android Studio
    (`File → Open`, point it at this folder, not the repo root).
 3. Let it finish its first Gradle sync (this is the step that needs
@@ -47,6 +59,10 @@ export ANDROID_HOME=/path/to/your/android/sdk   # wherever your SDK lives
 
 Output: `android/app/build/outputs/apk/debug/app-debug.apk`.
 
+On Windows, run `gradlew.bat assembleDebug` from the `android/` directory
+instead. From the repository root, `npm run android:build` selects the
+correct Gradle wrapper automatically.
+
 Whenever the web app itself changes (any edit under `src/`), rebuild and
 re-sync before building the APK again:
 
@@ -58,6 +74,9 @@ npx cap copy android
 (`npx cap sync android` also works and additionally re-checks installed
 Capacitor plugins — copy is enough for this project since it doesn't use
 any native plugins beyond the Android shell itself.)
+
+For an attached emulator or device, use `npm run android:run`; for Android
+Studio, use `npm run android:open`.
 
 ## Option C — GitHub Actions (no local Android Studio at all)
 
