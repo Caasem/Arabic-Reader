@@ -16,6 +16,19 @@
   align-items: center;
 }
 
+/* Focus mode gone idle -- see Reader.tsx's onFocusChromeChange. Collapsed
+   to zero width (not just opacity) so the reading column actually expands
+   to fill the reclaimed space, matching "just the text, nothing else". */
+.navbar--hidden {
+  width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  border-right-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 .navbar--collapsed .navbar__brand {
   padding: 0 0 22px;
 }
@@ -158,6 +171,18 @@
     border-top: 1px solid var(--border);
     padding: 6px 4px;
     order: 2;
+  }
+  /* At this width .navbar is a bottom bar, not a sidebar -- the width:0
+     collapse above would do nothing against this rule's own width:100%
+     (same specificity, and this one comes later), so it needs its own
+     height-based collapse here instead. */
+  .navbar--hidden {
+    width: 100%;
+    height: 0;
+    min-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-top-width: 0;
   }
   .navbar__brand {
     position: absolute;

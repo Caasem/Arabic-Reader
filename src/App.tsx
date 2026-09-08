@@ -22,6 +22,9 @@ function App() {
   // remount epub.js or lose reading position. The nav bar still shows it as
   // its own tab (see the `navActive` computation below).
   const [vocabPanelOpen, setVocabPanelOpen] = useState(false);
+  // Reader's Focus mode has gone idle -- fade the sidebar out too, so
+  // "focus mode" actually means just the text, not just a faded topbar.
+  const [chromeHidden, setChromeHidden] = useState(false);
 
   function openBook(book: BookMeta) {
     setActiveBook(book);
@@ -31,10 +34,12 @@ function App() {
 
   function backToLibrary() {
     setView('library');
+    setChromeHidden(false);
   }
 
   function handleNav(next: ViewName) {
     if ((next === 'read' || next === 'vocabLevels') && !activeBook) return;
+    if (next !== 'read' && next !== 'vocabLevels') setChromeHidden(false);
     if (next === 'vocabLevels') {
       setVocabPanelOpen(true);
       setView('read');
@@ -56,6 +61,7 @@ function App() {
             onSelect={handleNav}
             readDisabled={!activeBook}
             onOpenSettings={() => setSettingsOpen(true)}
+            hidden={view === 'read' && chromeHidden}
           />
           <main className="app__main">
             {view === 'library' && <Library onOpenBook={openBook} />}
@@ -65,6 +71,7 @@ function App() {
                 onBack={backToLibrary}
                 vocabPanelOpen={vocabPanelOpen}
                 onVocabPanelOpenChange={setVocabPanelOpen}
+                onFocusChromeChange={setChromeHidden}
               />
             )}
             {view === 'vocabulary' && <VocabularyList />}

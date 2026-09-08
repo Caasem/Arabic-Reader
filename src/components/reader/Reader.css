@@ -271,6 +271,16 @@
   gap: 16px;
   padding: 10px 24px 18px;
   flex-shrink: 0;
+  transition: opacity 0.4s ease;
+}
+
+/* Same fade-not-remove treatment as .reader__topbar--focus.reader__topbar--idle above. */
+.reader__footer--focus.reader__footer--idle {
+  opacity: 0.06;
+}
+
+.reader__footer--focus.reader__footer--idle:hover {
+  opacity: 1;
 }
 
 .reader__nav-btn {

@@ -21,6 +21,7 @@ import { FootnotePopup } from './FootnotePopup';
 import { HoverPreview } from './HoverPreview';
 import { VocabLevels } from './VocabLevels';
 import { SelectionToolbar } from './SelectionToolbar';
+import { QuickSettingsPopover } from './QuickSettingsPopover';
 import type { Book } from 'epubjs';
 import { usePreferences } from '../../state/PreferencesContext';
 import { isFootnoteLink } from '../../reader/footnotes/resolveFootnote';
@@ -106,6 +107,7 @@ export function Reader({
   onBack,
   vocabPanelOpen = false,
   onVocabPanelOpenChange,
+  onFocusChromeChange,
 }: {
   book: BookMeta;
   onBack: () => void;
@@ -114,6 +116,10 @@ export function Reader({
    * own collapse/expand strip, which is purely local UI state. */
   vocabPanelOpen?: boolean;
   onVocabPanelOpenChange?: (open: boolean) => void;
+  /** Fires whenever Focus mode's idle state changes, so App.tsx can fade
+   * the app-level sidebar out too -- Reader has no way to reach that on its
+   * own, since NavBar is a sibling rendered outside Reader entirely. */
+  onFocusChromeChange?: (hidden: boolean) => void;
 }) {
   const { prefs } = usePreferences();
   const prefsRef = useRef(prefs);
@@ -122,6 +128,7 @@ export function Reader({
   const serviceRef = useRef<EpubService | null>(null);
   const [toc, setToc] = useState<TocItem[]>([]);
   const [tocOpen, setTocOpen] = useState(false);
+  const [quickSettingsOpen, setQuickSettingsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
@@ -140,6 +147,11 @@ export function Reader({
   const [focusMode, setFocusMode] = useState(false);
   const [topbarIdle, setTopbarIdle] = useState(false);
   const focusIdleTimerRef = useRef<number | null>(null);
+  // Always points at the *current* scheduleIdle closure (see the focus-mode
+  // effect below) so listeners attached inside each rendered epub.js iframe
+  // -- which only get set up once per section, not once per render -- can
+  // still reset the idle timer without going stale.
+  const scheduleIdleRef = useRef<() => void>(() => {});
   const [quickAddToast, setQuickAddToast] = useState<string | null>(null);
   const [touchToast, setTouchToast] = useState<{ message: string; undoItemId: string | null } | null>(null);
   const hoverTimeoutRef = useRef<number | null>(null);
@@ -235,6 +247,15 @@ export function Reader({
           doc.addEventListener('scroll', () => sessionTrackerRef.current?.recordActivity(), { passive: true });
           doc.addEventListener('touchmove', () => sessionTrackerRef.current?.recordActivity(), { passive: true });
           doc.addEventListener('keydown', () => sessionTrackerRef.current?.recordActivity());
+
+          // Focus mode's idle timer (see scheduleIdleRef above) lives on
+          // the *host* window, which never sees events dispatched inside
+          // this iframe's own separate document -- without these, tapping
+          // or scrolling the actual book text while chrome is hidden would
+          // never bring it back.
+          doc.addEventListener('touchstart', () => scheduleIdleRef.current(), { passive: true });
+          doc.addEventListener('mousemove', () => scheduleIdleRef.current());
+          doc.addEventListener('scroll', () => scheduleIdleRef.current(), { passive: true });
 
           // Both of these used to run once *per distinct word* in the
           // section (recordEncounter: a get+put pair; the saved check: a
@@ -517,11 +538,15 @@ export function Reader({
     if (ready) serviceRef.current?.applyPreferences(prefs);
   }, [ready, prefs.fontSizePct, prefs.lineHeight, prefs.fontFamily, prefs.readingFlow]);
 
-  // Focus mode: the topbar fades out after a moment of stillness and comes
-  // back the instant the pointer moves (or, since the mouse never moves on
-  // a touch device, on any touch) — mirrors the Midnight Study concept's
-  // "controls fade on stillness · move to reveal" behavior. Scoped to the
-  // topbar only; the rest of the reading chrome is untouched.
+  // Focus mode: all reading chrome (topbar, footer, and — via
+  // onFocusChromeChange — the app-level sidebar) fades out after a moment
+  // of stillness and comes back the instant there's any activity, whether
+  // that's the pointer moving over the host page or a tap/scroll/keypress
+  // inside the book's own iframe (see scheduleIdleRef, used by the
+  // touch/mouse listeners set up per rendered section below). Mirrors the
+  // Midnight Study concept's "controls fade on stillness · move to reveal"
+  // behavior -- and Apple Books' equivalent "just the page, tap for
+  // controls" reading view.
   useEffect(() => {
     if (!focusMode) {
       setTopbarIdle(false);
@@ -533,6 +558,7 @@ export function Reader({
       if (focusIdleTimerRef.current) window.clearTimeout(focusIdleTimerRef.current);
       focusIdleTimerRef.current = window.setTimeout(() => setTopbarIdle(true), FOCUS_IDLE_MS);
     }
+    scheduleIdleRef.current = scheduleIdle;
     scheduleIdle();
     window.addEventListener('mousemove', scheduleIdle);
     window.addEventListener('touchstart', scheduleIdle);
@@ -542,6 +568,19 @@ export function Reader({
       if (focusIdleTimerRef.current) window.clearTimeout(focusIdleTimerRef.current);
     };
   }, [focusMode]);
+
+  useEffect(() => {
+    onFocusChromeChange?.(focusMode && topbarIdle);
+  }, [focusMode, topbarIdle, onFocusChromeChange]);
+
+  // Reset the sidebar/chrome the moment this Reader instance goes away
+  // (navigating back to the library, say) -- otherwise a focus session that
+  // was mid-idle would leave the sidebar hidden behind on a screen that no
+  // longer has any way to reveal it again.
+  useEffect(() => {
+    return () => onFocusChromeChange?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Host-page half of the session-activity signal (the iframe half is
   // wired up per rendered section above) — covers interacting with the
@@ -817,6 +856,15 @@ export function Reader({
         </button>
         <div className="reader__chapter">{chapterLabel}</div>
         <div className="reader__topbar-actions">
+          <button
+            className="reader__toc-toggle"
+            onClick={() => setQuickSettingsOpen((v) => !v)}
+            aria-label="Font and appearance"
+            title="Font and appearance"
+            style={{ fontFamily: 'serif', fontWeight: 600 }}
+          >
+            Aa
+          </button>
           <label className={'reader__focus-toggle' + (focusMode ? ' reader__focus-toggle--on' : '')} title="Focus mode">
             <input
               type="checkbox"
@@ -849,6 +897,8 @@ export function Reader({
           </button>
         </div>
       </header>
+
+      {quickSettingsOpen && <QuickSettingsPopover onClose={() => setQuickSettingsOpen(false)} />}
 
       <div className="reader__body">
         {tocOpen && (
@@ -931,7 +981,10 @@ export function Reader({
         )}
       </div>
 
-      <footer className="reader__footer">
+      <footer
+        className={'reader__footer' + (focusMode ? ' reader__footer--focus' : '') + (topbarIdle ? ' reader__footer--idle' : '')}
+        onMouseEnter={() => setTopbarIdle(false)}
+      >
         {/* Arrow direction follows the book's RTL page-turn direction (› = back
             a page, ‹ = forward a page) — the "Previous"/"Next" text is what
             actually says which way each button moves you. */}

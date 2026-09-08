@@ -50,11 +50,17 @@ export function NavBar({
   onSelect,
   readDisabled,
   onOpenSettings,
+  hidden,
 }: {
   active: ViewName;
   onSelect: (v: ViewName) => void;
   readDisabled?: boolean;
   onOpenSettings: () => void;
+  /** Faded out while the reader's Focus mode has gone idle -- see
+   * Reader.tsx's `onFocusChromeChange`. Kept mounted (not removed), just
+   * visually hidden, so nothing about its own state (collapsed/expanded)
+   * is lost the moment it reappears. */
+  hidden?: boolean;
 }) {
   // Collapsed = a 76px icon-only rail (mirrors the Smart Structure concept's
   // rail), persisted across sessions so the choice sticks.
@@ -76,7 +82,7 @@ export function NavBar({
   }, [collapsed]);
 
   return (
-    <nav className={'navbar' + (collapsed ? ' navbar--collapsed' : '')}>
+    <nav className={'navbar' + (collapsed ? ' navbar--collapsed' : '') + (hidden ? ' navbar--hidden' : '')}>
       <div className="navbar__brand">
         <span className="navbar__mark">ق</span>
         {!collapsed && <span className="navbar__title">Reader</span>}
