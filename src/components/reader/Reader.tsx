@@ -146,12 +146,22 @@ export function Reader({
   const [vocabPanelCollapsed, setVocabPanelCollapsed] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [topbarIdle, setTopbarIdle] = useState(false);
+  // Separate from topbarIdle -- see the focus-mode effect below. The
+  // sidebar only reappears via a deliberate left-edge drag, never from a
+  // plain tap/scroll the way the topbar/footer do, so it needs its own
+  // "revealed right now" flag rather than sharing topbarIdle's.
+  const [sidebarPeek, setSidebarPeek] = useState(false);
   const focusIdleTimerRef = useRef<number | null>(null);
   // Always points at the *current* scheduleIdle closure (see the focus-mode
   // effect below) so listeners attached inside each rendered epub.js iframe
   // -- which only get set up once per section, not once per render -- can
   // still reset the idle timer without going stale.
   const scheduleIdleRef = useRef<() => void>(() => {});
+  // Same staleness problem as scheduleIdleRef, for the left-edge-drag
+  // gesture's pointerdown/move/up handlers.
+  const edgePointerDownRef = useRef<(e: PointerEvent) => void>(() => {});
+  const edgePointerMoveRef = useRef<(e: PointerEvent) => void>(() => {});
+  const edgePointerUpRef = useRef<() => void>(() => {});
   const [quickAddToast, setQuickAddToast] = useState<string | null>(null);
   const [touchToast, setTouchToast] = useState<{ message: string; undoItemId: string | null } | null>(null);
   const hoverTimeoutRef = useRef<number | null>(null);
@@ -248,14 +258,19 @@ export function Reader({
           doc.addEventListener('touchmove', () => sessionTrackerRef.current?.recordActivity(), { passive: true });
           doc.addEventListener('keydown', () => sessionTrackerRef.current?.recordActivity());
 
-          // Focus mode's idle timer (see scheduleIdleRef above) lives on
-          // the *host* window, which never sees events dispatched inside
-          // this iframe's own separate document -- without these, tapping
-          // or scrolling the actual book text while chrome is hidden would
-          // never bring it back.
-          doc.addEventListener('touchstart', () => scheduleIdleRef.current(), { passive: true });
-          doc.addEventListener('mousemove', () => scheduleIdleRef.current());
-          doc.addEventListener('scroll', () => scheduleIdleRef.current(), { passive: true });
+          // Focus mode's listeners (see scheduleIdleRef/edgePointer*Ref
+          // above) live on the *host* window, which never sees events
+          // dispatched inside this iframe's own separate document -- a tap
+          // or edge-drag on the actual book text needs these to still
+          // reach them. A plain click (not scroll/touchmove) is what
+          // reveals the topbar/footer, same deliberate-tap-only rule as
+          // the host-window 'click' listener; the pointer events forward
+          // to the same edge-drag-to-reveal-sidebar logic.
+          doc.addEventListener('click', () => scheduleIdleRef.current());
+          doc.addEventListener('pointerdown', (e) => edgePointerDownRef.current(e));
+          doc.addEventListener('pointermove', (e) => edgePointerMoveRef.current(e));
+          doc.addEventListener('pointerup', () => edgePointerUpRef.current());
+          doc.addEventListener('pointercancel', () => edgePointerUpRef.current());
 
           // Both of these used to run once *per distinct word* in the
           // section (recordEncounter: a get+put pair; the saved check: a
@@ -538,40 +553,82 @@ export function Reader({
     if (ready) serviceRef.current?.applyPreferences(prefs);
   }, [ready, prefs.fontSizePct, prefs.lineHeight, prefs.fontFamily, prefs.readingFlow]);
 
-  // Focus mode: all reading chrome (topbar, footer, and — via
-  // onFocusChromeChange — the app-level sidebar) fades out after a moment
-  // of stillness and comes back the instant there's any activity, whether
-  // that's the pointer moving over the host page or a tap/scroll/keypress
-  // inside the book's own iframe (see scheduleIdleRef, used by the
-  // touch/mouse listeners set up per rendered section below). Mirrors the
-  // Midnight Study concept's "controls fade on stillness · move to reveal"
-  // behavior -- and Apple Books' equivalent "just the page, tap for
-  // controls" reading view.
+  // Focus mode: the topbar/footer fade out after a moment of stillness and
+  // come back on a deliberate tap (see the click handlers below — a plain
+  // click, unlike scroll/touchmove, only fires for an actual tap, not for
+  // scrolling through the book or dragging to turn a page). Mirrors the
+  // Midnight Study concept's "controls fade on stillness" behavior and
+  // Apple Books' "just the page, tap for controls" reading view.
+  //
+  // The sidebar (see onFocusChromeChange, sidebarPeek below) deliberately
+  // does *not* share this tap-to-reveal: it used to come back on any touch
+  // at all, which made it pop back up mid-scroll constantly. Bringing back
+  // a whole extra panel warrants more friction than bringing back a slim
+  // topbar, so it only reappears via an explicit left-edge drag.
   useEffect(() => {
     if (!focusMode) {
       setTopbarIdle(false);
+      setSidebarPeek(false);
       if (focusIdleTimerRef.current) window.clearTimeout(focusIdleTimerRef.current);
       return;
     }
     function scheduleIdle() {
       setTopbarIdle(false);
       if (focusIdleTimerRef.current) window.clearTimeout(focusIdleTimerRef.current);
-      focusIdleTimerRef.current = window.setTimeout(() => setTopbarIdle(true), FOCUS_IDLE_MS);
+      focusIdleTimerRef.current = window.setTimeout(() => {
+        setTopbarIdle(true);
+        setSidebarPeek(false);
+      }, FOCUS_IDLE_MS);
     }
     scheduleIdleRef.current = scheduleIdle;
     scheduleIdle();
-    window.addEventListener('mousemove', scheduleIdle);
-    window.addEventListener('touchstart', scheduleIdle);
+    window.addEventListener('click', scheduleIdle);
+
+    // Left-edge drag to reveal the sidebar -- must start within
+    // EDGE_ZONE_PX of the screen edge and travel at least EDGE_DRAG_PX
+    // mostly-horizontally to count, so an ordinary vertical scroll or a
+    // tap near the edge never triggers it by accident.
+    const EDGE_ZONE_PX = 24;
+    const EDGE_DRAG_PX = 48;
+    let dragStart: { x: number; y: number } | null = null;
+
+    function onPointerDown(e: PointerEvent) {
+      dragStart = e.clientX <= EDGE_ZONE_PX ? { x: e.clientX, y: e.clientY } : null;
+    }
+    function onPointerMove(e: PointerEvent) {
+      if (!dragStart) return;
+      const dx = e.clientX - dragStart.x;
+      const dy = Math.abs(e.clientY - dragStart.y);
+      if (dx > EDGE_DRAG_PX && dy < EDGE_DRAG_PX) {
+        setSidebarPeek(true);
+        scheduleIdle();
+        dragStart = null;
+      }
+    }
+    function onPointerUp() {
+      dragStart = null;
+    }
+    edgePointerDownRef.current = onPointerDown;
+    edgePointerMoveRef.current = onPointerMove;
+    edgePointerUpRef.current = onPointerUp;
+    window.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+
     return () => {
-      window.removeEventListener('mousemove', scheduleIdle);
-      window.removeEventListener('touchstart', scheduleIdle);
+      window.removeEventListener('click', scheduleIdle);
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
       if (focusIdleTimerRef.current) window.clearTimeout(focusIdleTimerRef.current);
     };
   }, [focusMode]);
 
   useEffect(() => {
-    onFocusChromeChange?.(focusMode && topbarIdle);
-  }, [focusMode, topbarIdle, onFocusChromeChange]);
+    onFocusChromeChange?.(focusMode && topbarIdle && !sidebarPeek);
+  }, [focusMode, topbarIdle, sidebarPeek, onFocusChromeChange]);
 
   // Reset the sidebar/chrome the moment this Reader instance goes away
   // (navigating back to the library, say) -- otherwise a focus session that
