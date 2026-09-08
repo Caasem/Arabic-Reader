@@ -17,6 +17,11 @@ import Dexie, { type Table } from 'dexie';
  */
 export const DICT_FILE_NAMES = ['dictprefixes', 'dictstems', 'dictsuffixes', 'tableab', 'tableac', 'tablebc'] as const;
 export type DictFileName = (typeof DICT_FILE_NAMES)[number];
+let bundledDictLoadError: string | null = null;
+
+export function getBundledDictLoadError(): string | null {
+  return bundledDictLoadError;
+}
 
 class AramorphFilesDB extends Dexie {
   files!: Table<{ name: string; content: string }, string>;
@@ -60,16 +65,21 @@ export async function clearDictFiles(): Promise<void> {
  * instead of crashing app startup over a 404.
  */
 export async function fetchBundledDictFiles(): Promise<Record<DictFileName, string> | null> {
+  bundledDictLoadError = null;
   try {
     const entries = await Promise.all(
       DICT_FILE_NAMES.map(async (name) => {
-        const res = await fetch(`/dictionary-data/${name}`);
+        // Resolve from the current document so this works both from Vite's
+        // root URL and Capacitor's https://localhost WebView origin.
+        const url = new URL(`dictionary-data/${name}`, document.baseURI).href;
+        const res = await fetch(url);
         if (!res.ok) throw new Error(`${name}: HTTP ${res.status}`);
         return [name, await res.text()] as const;
       })
     );
     return Object.fromEntries(entries) as Record<DictFileName, string>;
-  } catch {
+  } catch (error) {
+    bundledDictLoadError = error instanceof Error ? error.message : String(error);
     return null;
   }
 }

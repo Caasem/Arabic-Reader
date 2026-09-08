@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { usePreferences } from '../../state/PreferencesContext';
 import { dictionaryManager } from '../../dictionary/DictionaryManager';
 import { aramorphProvider } from '../../dictionary/providers/aramorph/AramorphDictionaryProvider';
+import { getBundledDictLoadError } from '../../dictionary/providers/aramorph/store';
 import { isRarityDataReady, enableRarityData, disableRarityData } from '../../vocabRarity/rarity';
 import { pingAnki, getDeckNames, ensureDeck, addNote, AnkiConnectError } from '../../anki/ankiConnect';
 import { vocabularyService } from '../../vocabulary/vocabularyService';
@@ -32,6 +33,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [importError, setImportError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [aramorphReady, setAramorphReady] = useState(aramorphProvider.isReady);
+  const [aramorphLoadError, setAramorphLoadError] = useState<string | null>(getBundledDictLoadError());
   const [rarityReady, setRarityReady] = useState<boolean | null>(null);
   const [rarityBusy, setRarityBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -69,7 +71,10 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   // bundled default dataset) asynchronously after this component mounts —
   // reflect that once it resolves rather than only after a manual upload.
   useEffect(() => {
-    aramorphProvider.whenReady().then(() => setAramorphReady(aramorphProvider.isReady));
+    aramorphProvider.whenReady().then(() => {
+      setAramorphReady(aramorphProvider.isReady);
+      setAramorphLoadError(getBundledDictLoadError());
+    });
   }, []);
 
   function toggleProvider(id: string, on: boolean) {
@@ -328,6 +333,11 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
               <input ref={fileInputRef} type="file" multiple hidden onChange={(e) => handleImport(e.target.files)} />
             </div>
             {importError && <div className="settings-aramorph__error">{importError}</div>}
+            {aramorphLoadError && !aramorphReady && (
+              <div className="settings-aramorph__error">
+                Bundled dictionary could not be loaded: {aramorphLoadError}
+              </div>
+            )}
           </div>
         </section>
 
