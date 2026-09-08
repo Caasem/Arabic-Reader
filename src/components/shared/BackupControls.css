@@ -1,0 +1,28 @@
+.backup-controls__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.backup-controls__status {
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  line-height: 1.6;
+  margin: 10px 0 0;
+}
+
+/* Compact variant — used inline in the Vocabulary/Review tab headers,
+   where a full section heading + explanatory paragraph (as in Settings)
+   would be out of place. */
+.backup-controls--compact .backup-controls__actions {
+  gap: 6px;
+}
+
+.backup-controls--compact .btn {
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+
+.backup-controls--compact .backup-controls__status {
+  max-width: 320px;
+}

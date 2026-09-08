@@ -1,0 +1,42 @@
+.hover-preview {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 10px));
+  z-index: 35; /* below DictionaryPopup/FootnotePopup (40), above reader content */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 260px;
+  padding: 7px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  direction: rtl;
+  pointer-events: none; /* a peek, not an interactive surface — click still reaches the word underneath */
+  animation: hover-preview-in 0.12s ease-out;
+}
+
+@keyframes hover-preview-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 4px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - 10px));
+  }
+}
+
+.hover-preview__text {
+  font-size: 12.5px;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hover-preview__chevron {
+  color: var(--ink-faint);
+  font-size: 12px;
+  flex-shrink: 0;
+}

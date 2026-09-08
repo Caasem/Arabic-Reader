@@ -1,0 +1,17 @@
+.coming-soon {
+  padding: 40px 48px;
+  max-width: 900px;
+}
+
+.coming-soon h1 {
+  margin: 0 0 4px;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.coming-soon p {
+  color: var(--ink-soft);
+  font-size: 14px;
+  max-width: 480px;
+  line-height: 1.6;
+}

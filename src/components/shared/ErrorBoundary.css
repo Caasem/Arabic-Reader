@@ -1,0 +1,53 @@
+.error-boundary {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 24px;
+}
+
+.error-boundary__card {
+  max-width: 440px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px 28px;
+  text-align: center;
+}
+
+.error-boundary__card h1 {
+  margin: 0 0 12px;
+  font-size: 19px;
+  color: var(--ink);
+}
+
+.error-boundary__card p {
+  margin: 0 0 20px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+.error-boundary__details {
+  margin-top: 18px;
+  text-align: left;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.error-boundary__details summary {
+  cursor: pointer;
+}
+
+.error-boundary__details pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-top: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+}

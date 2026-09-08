@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The app's own background/theme color (see the PWA manifest in
+         vite.config.ts: background_color/theme_color), not Capacitor's
+         default white -- so the adaptive icon reads as this app's, not a
+         generic placeholder. -->
+    <color name="ic_launcher_background">#FAF7F2</color>
+</resources>

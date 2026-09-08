@@ -1,0 +1,34 @@
+CAMeL Arabic Frequency Lists — Attribution & License
+======================================================
+
+This app bundles the Modern Standard Arabic (MSA) frequency list from:
+
+  CAMeL Arabic Frequency Lists
+  https://github.com/CAMeL-Lab/Camel_Arabic_Frequency_Lists
+
+Citation:
+  Khalifa, Salam and Inoue, Go and Alhafni, Bashar and Baimukan, Nurpeiis
+  and Bouamor, Houda and Habash, Nizar. "Camel Arabic Frequency Lists."
+  2021. https://github.com/CAMeL-Lab/Camel_Arabic_Frequency_Lists
+
+Associated paper:
+  Inoue, Go et al. "The Interplay of Variant, Size, and Task Type in
+  Arabic Pre-training." WANLP 2021. https://aclanthology.org/2021.wanlp-1.10/
+
+License: CC BY-SA 4.0 (Creative Commons Attribution-ShareAlike 4.0
+International) — https://creativecommons.org/licenses/by-sa/4.0/
+
+This data file (MSA_freq_lists.tsv.gzbin) is redistributed unmodified except
+for gzip compression, under the terms of CC BY-SA 4.0: attribution to
+CAMeL Lab (NYU Abu Dhabi) is required, and any redistribution of this
+data file (or a derivative of it) must remain under the same CC BY-SA 4.0
+license. This requirement applies to the data file itself, not to this
+application's own source code.
+
+Data derivation: word types + raw frequency counts extracted from the
+same corpora used to pretrain the CAMeLBERT-MSA model (Arabic Gigaword,
+Abu El-Khair Corpus, OSIAN, Arabic Wikipedia, and OSCAR), 11.4M unique
+word types drawn from 12.6B word tokens. Digits, punctuation, and
+non-Arabic-script tokens were excluded by the original authors. Entries
+are pre-sorted by descending frequency; this app uses that ordering
+directly as each word's frequency rank.

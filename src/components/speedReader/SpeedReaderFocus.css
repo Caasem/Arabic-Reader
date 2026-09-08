@@ -1,0 +1,541 @@
+.rsvp-focus {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--bg);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  cursor: default;
+  /* Fullscreen API targets this element; when it's the actual fullscreen
+     element the UA supplies its own background, but this covers the
+     (common) case where requestFullscreen() was refused. */
+}
+
+.rsvp-focus__empty {
+  margin: auto;
+  text-align: center;
+  color: var(--ink-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+/* -------------------------------------------------------------------- */
+/* Top bar                                                                */
+/* -------------------------------------------------------------------- */
+
+.rsvp-focus__topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.rsvp-focus__topbar--hidden {
+  opacity: 0;
+  transform: translateY(-12px);
+  pointer-events: none;
+}
+
+.rsvp-focus__title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+}
+
+.rsvp-focus__book {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60vw;
+}
+
+.rsvp-focus__chapter {
+  font-size: 11px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60vw;
+}
+
+.rsvp-focus__topbar-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.rsvp-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--ink-soft);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rsvp-icon-btn:hover {
+  color: var(--ink);
+  background: var(--accent-soft);
+}
+
+/* -------------------------------------------------------------------- */
+/* Stage — the reading environment itself                                */
+/* -------------------------------------------------------------------- */
+
+.rsvp-focus__stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  padding: 0 24px;
+}
+
+.rsvp-focus__word-zone {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(90vw, 900px);
+  min-height: 30vh;
+  cursor: pointer;
+}
+
+.rsvp-word {
+  font-family: var(--font-arabic);
+  color: var(--ink);
+  line-height: 1.3;
+  user-select: none;
+  max-width: 100%;
+}
+
+.rsvp-word--plain {
+  text-align: center;
+}
+
+.rsvp-word--orp {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: baseline;
+  width: 100%;
+}
+
+.rsvp-word__before {
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.rsvp-word__after {
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.rsvp-word__pivot {
+  color: var(--accent);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* A faint fixed marker above/below the pivot column, so the eye has
+   something to anchor to even before a word appears (and between words). */
+.rsvp-focus__orp-marker {
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  width: 2px;
+  height: 14px;
+  background: var(--accent);
+  opacity: 0.35;
+  transform: translateX(-1px);
+  pointer-events: none;
+}
+
+.rsvp-focus__context {
+  font-family: var(--font-arabic);
+  font-size: 16px;
+  line-height: 1.9;
+  color: var(--ink-faint);
+  text-align: center;
+  max-width: min(80vw, 640px);
+}
+
+.rsvp-focus__context-current {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.rsvp-focus__context-ellipsis {
+  color: var(--ink-faint);
+}
+
+/* -------------------------------------------------------------------- */
+/* Bottom controls                                                       */
+/* -------------------------------------------------------------------- */
+
+.rsvp-focus__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 24px 22px;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.rsvp-focus__controls--hidden {
+  opacity: 0;
+  transform: translateY(16px);
+  pointer-events: none;
+}
+
+.rsvp-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.rsvp-progress__track {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  cursor: pointer;
+  display: flex;
+  flex-direction: row-reverse;
+  overflow: hidden;
+}
+
+.rsvp-progress__fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.15s linear;
+}
+
+.rsvp-progress__label {
+  font-size: 11px;
+  color: var(--ink-faint);
+  direction: ltr;
+}
+
+.rsvp-transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.rsvp-transport__btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--ink);
+  font-size: 17px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rsvp-transport__btn:hover {
+  background: var(--accent-soft);
+}
+
+.rsvp-transport__btn--play {
+  width: 56px;
+  height: 56px;
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-size: 18px;
+}
+
+.rsvp-transport__btn--play:hover {
+  filter: brightness(1.05);
+}
+
+.rsvp-wpm {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.rsvp-wpm__value {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  min-width: 68px;
+  text-align: right;
+  direction: ltr;
+}
+
+.rsvp-wpm__slider {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+/* -------------------------------------------------------------------- */
+/* Popover panels (settings / shortcut help)                             */
+/* -------------------------------------------------------------------- */
+
+.rsvp-panel {
+  position: fixed;
+  top: 66px;
+  right: 20px;
+  width: 280px;
+  max-width: calc(100vw - 40px);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 18px;
+  z-index: 110;
+}
+
+.rsvp-panel h3 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.rsvp-panel__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.rsvp-panel__row--wpm-presets {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.rsvp-panel__presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rsvp-panel__preset {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink-soft);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.rsvp-panel__preset--active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.rsvp-panel__close {
+  width: 100%;
+  margin-top: 12px;
+  padding: 9px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.rsvp-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.rsvp-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.rsvp-switch__track {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 999px;
+  transition: background 0.15s ease;
+}
+
+.rsvp-switch__track::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 2px;
+  top: 2px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.15s ease;
+}
+
+.rsvp-switch input:checked + .rsvp-switch__track {
+  background: var(--accent);
+}
+
+.rsvp-switch input:checked + .rsvp-switch__track::before {
+  transform: translateX(16px);
+}
+
+.rsvp-shortcut-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.rsvp-shortcut-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rsvp-shortcut-list kbd {
+  min-width: 28px;
+  text-align: center;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
+/* -------------------------------------------------------------------- */
+/* Session complete                                                      */
+/* -------------------------------------------------------------------- */
+
+.rsvp-summary {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rsvp-summary__card {
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px 28px;
+  width: min(90vw, 360px);
+  text-align: center;
+}
+
+.rsvp-summary__card h2 {
+  margin: 0 0 20px;
+  font-size: 19px;
+  color: var(--ink);
+}
+
+.rsvp-summary__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 0 0 24px;
+}
+
+.rsvp-summary__stats dt {
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-bottom: 4px;
+}
+
+.rsvp-summary__stats dd {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rsvp-summary__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.rsvp-summary__actions .btn {
+  flex: 1;
+}
+
+/* -------------------------------------------------------------------- */
+/* Responsive                                                            */
+/* -------------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+  .rsvp-focus__word-zone {
+    min-height: 24vh;
+  }
+  .rsvp-focus__book,
+  .rsvp-focus__chapter {
+    max-width: 42vw;
+  }
+  .rsvp-panel {
+    right: 12px;
+    left: 12px;
+    width: auto;
+  }
+  .rsvp-transport__btn {
+    width: 38px;
+    height: 38px;
+    font-size: 15px;
+  }
+  .rsvp-transport__btn--play {
+    width: 50px;
+    height: 50px;
+  }
+}

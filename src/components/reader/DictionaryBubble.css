@@ -1,0 +1,103 @@
+.dict-bubble-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  /* Deliberately does NOT intercept clicks/touches (unlike
+     DictionaryPopup's own backdrop) -- this bubble's whole point is
+     instant, minimal-disruption lookups, and a hit-testing backdrop over
+     the entire reading surface would swallow the *second* tap of a
+     double-tap gesture before it ever reaches the tapped word (the bubble
+     from tap #1 renders synchronously, so tap #2 would land on this
+     backdrop instead of the iframe underneath). Dismissal instead happens
+     through normal state changes: opening a bubble for a different word
+     replaces this one, and Reader's own click/touch handling inside the
+     iframe explicitly clears it on a tap that hits no word at all (see
+     Reader.tsx). */
+  pointer-events: none;
+}
+
+.dict-bubble {
+  position: absolute;
+  /* Re-enable pointer events for the bubble itself -- its backdrop parent
+     is pointer-events: none (see above), which by default would also make
+     this child untappable. */
+  pointer-events: auto;
+  transform: translate(-50%, calc(-100% - 10px));
+  display: flex;
+  align-items: stretch;
+  /* Deliberately NOT `direction: rtl` on this outer flex container — the
+     "+" / "✓" button always stays pinned to the visual right end
+     regardless of the Arabic content's own direction (set on
+     .dict-bubble__def below instead), matching the fixed physical position
+     of DictionaryPopup's own close button. */
+  max-width: min(320px, calc(100vw - 32px));
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.dict-bubble--below {
+  transform: translate(-50%, 10px);
+}
+
+.dict-bubble__def {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  direction: rtl;
+  text-align: right;
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 10px 12px;
+  font-family: var(--font-ui);
+}
+
+.dict-bubble__def:disabled {
+  cursor: default;
+}
+
+.dict-bubble__word {
+  font-family: var(--font-arabic);
+  font-size: 17px;
+  color: var(--ink);
+}
+
+.dict-bubble__gloss {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  direction: ltr;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.dict-bubble__save {
+  flex-shrink: 0;
+  width: 44px;
+  border: none;
+  border-left: 1px solid var(--border);
+  background: var(--ink);
+  color: var(--bg-elevated);
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dict-bubble__save--saved {
+  background: var(--accent-soft);
+  color: var(--accent);
+  cursor: default;
+}
+
+.dict-bubble__save:disabled:not(.dict-bubble__save--saved) {
+  opacity: 0.5;
+  cursor: default;
+}
