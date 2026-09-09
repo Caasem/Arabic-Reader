@@ -73,13 +73,27 @@ export function VocabularyEditModal({
     setContextText(tokens.slice(range[0], range[1] + 1).join(''));
   }
 
-  function handleTokenPointerDown(idx: number) {
+  function handleTokenPointerDown(idx: number, e: React.PointerEvent) {
+    // Prevents the browser from starting its own touch-scroll/text-selection
+    // gesture here, which would otherwise fight with the drag below.
+    e.preventDefault();
     dragAnchorRef.current = idx;
     draggingRef.current = true;
     applySelection([idx, idx]);
   }
-  function handleTokenPointerEnter(idx: number) {
+  // Touch pointers get *implicit capture* on pointerdown: every subsequent
+  // pointer event keeps firing on the element the drag started on, not on
+  // whatever's currently under the finger. That makes per-token
+  // onPointerEnter handlers silently dead on touch (mouse has no such
+  // capture, which is why this looked fine testing with a mouse) -- so
+  // instead of relying on enter events, one move handler on the container
+  // asks the DOM what's under the pointer right now via elementFromPoint.
+  function handleContainerPointerMove(e: React.PointerEvent) {
     if (!draggingRef.current || dragAnchorRef.current === null) return;
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const idxAttr = (el as HTMLElement | null)?.closest('[data-idx]')?.getAttribute('data-idx');
+    if (idxAttr == null) return;
+    const idx = Number(idxAttr);
     const anchor = dragAnchorRef.current;
     applySelection([Math.min(anchor, idx), Math.max(anchor, idx)]);
   }
@@ -88,7 +102,11 @@ export function VocabularyEditModal({
       draggingRef.current = false;
     }
     window.addEventListener('pointerup', stop);
-    return () => window.removeEventListener('pointerup', stop);
+    window.addEventListener('pointercancel', stop);
+    return () => {
+      window.removeEventListener('pointerup', stop);
+      window.removeEventListener('pointercancel', stop);
+    };
   }, []);
 
   function handleRestoreOriginal() {
@@ -147,16 +165,16 @@ export function VocabularyEditModal({
             <div className="vocab-edit__field">
               <span className="vocab-edit__label">Context sentence</span>
               {tokens.length > 0 ? (
-                <div className="vocab-edit__tokens" dir="rtl">
+                <div className="vocab-edit__tokens" dir="rtl" onPointerMove={handleContainerPointerMove}>
                   {tokens.map((t, i) => {
                     if (!t.trim()) return <span key={i}>{t}</span>;
                     const selected = !!selRange && i >= selRange[0] && i <= selRange[1];
                     return (
                       <span
                         key={i}
+                        data-idx={i}
                         className={'vocab-edit__token' + (selected ? ' vocab-edit__token--selected' : '')}
-                        onPointerDown={() => handleTokenPointerDown(i)}
-                        onPointerEnter={() => handleTokenPointerEnter(i)}
+                        onPointerDown={(e) => handleTokenPointerDown(i, e)}
                       >
                         {t}
                       </span>

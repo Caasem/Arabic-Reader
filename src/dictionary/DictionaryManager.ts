@@ -74,11 +74,17 @@ export class DictionaryManager {
 import { MockDictionaryA } from './providers/mockDictionaryA';
 import { MockDictionaryB } from './providers/mockDictionaryB';
 import { aramorphProvider } from './providers/aramorph/AramorphDictionaryProvider';
+import { alWasitProvider } from './providers/alwasit/AlWasitDictionaryProvider';
 
 export const dictionaryManager = new DictionaryManager();
 dictionaryManager.registerProvider(new MockDictionaryA());
 dictionaryManager.registerProvider(new MockDictionaryB());
 dictionaryManager.registerProvider(aramorphProvider);
+// Off by default (see AlWasitDictionaryProvider's docstring for why) --
+// registering it here is enough for it to show up as a toggle in Settings'
+// dictionary list; DEFAULT_PREFS.enabledProviderIds simply doesn't include
+// its id, same mechanism that already backs every other provider toggle.
+dictionaryManager.registerProvider(alWasitProvider);
 // AraMorph already does real prefix/stem/suffix morphological analysis
 // (root, lemma, POS) against its full dictionary -- previously the app used
 // a separate MockMorphologyProvider here instead, which only matched

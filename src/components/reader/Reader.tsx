@@ -340,15 +340,20 @@ export function Reader({
           doc.addEventListener('touchmove', () => sessionTrackerRef.current?.recordActivity(), { passive: true });
           doc.addEventListener('keydown', () => sessionTrackerRef.current?.recordActivity());
 
-          // Focus mode's listeners (see scheduleIdleRef/edgePointer*Ref
-          // above) live on the *host* window, which never sees events
-          // dispatched inside this iframe's own separate document -- a tap
-          // or edge-drag on the actual book text needs these to still
-          // reach them. A plain click (not scroll/touchmove) is what
-          // reveals the topbar/footer, same deliberate-tap-only rule as
-          // the host-window 'click' listener; the pointer events forward
-          // to the same edge-drag-to-reveal-sidebar logic.
-          doc.addEventListener('click', () => scheduleIdleRef.current());
+          // Focus mode's edge-drag-to-reveal-sidebar listeners
+          // (edgePointer*Ref above) live on the *host* window, which never
+          // sees events dispatched inside this iframe's own separate
+          // document -- an edge-drag starting on the actual book text needs
+          // these forwarded to still reach them.
+          //
+          // Deliberately *not* forwarding 'click' here the same way: that
+          // used to reveal the topbar/footer on a tap anywhere in the book
+          // text, including blank space between lines with nothing to tap
+          // on. The page's real margin -- the .reader__epub padding this
+          // iframe sits inside -- is host-document space the window 'click'
+          // listener below already covers, so tapping *that* still reveals
+          // the chrome; a tap on empty space within the page itself no
+          // longer does.
           doc.addEventListener('pointerdown', (e) => edgePointerDownRef.current(e));
           doc.addEventListener('pointermove', (e) => edgePointerMoveRef.current(e));
           doc.addEventListener('pointerup', () => edgePointerUpRef.current());

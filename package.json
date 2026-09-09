@@ -17,12 +17,15 @@
     "electron:build:mac": "npm run build && electron-builder --mac",
     "android:sync": "npm run build && npx cap copy android",
     "android:open": "npm run android:sync && npx cap open android",
-    "android:build": "npm run android:sync && cd android && ./gradlew assembleDebug"
+    "android:build": "npm run android:sync && cd android && ./gradlew assembleDebug",
+    "ios:sync": "npm run build && npx cap copy ios",
+    "ios:open": "npm run ios:sync && npx cap open ios"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.1",
     "@capacitor/cli": "^8.5.1",
     "@capacitor/core": "^8.5.1",
+    "@capacitor/ios": "^8.5.1",
     "dexie": "^4.4.5",
     "epubjs": "^0.3.93",
     "jszip": "^3.10.1",

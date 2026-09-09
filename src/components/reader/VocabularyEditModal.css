@@ -89,6 +89,10 @@
   font-size: 17px;
   line-height: 2;
   user-select: none;
+  /* Without this, a touch press-drag across tokens is interpreted as a
+     scroll gesture by the browser (the modal itself scrolls), which cancels
+     the drag before pointermove ever reaches the handler below. */
+  touch-action: none;
 }
 
 .vocab-edit__token {

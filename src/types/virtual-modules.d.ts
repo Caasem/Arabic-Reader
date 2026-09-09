@@ -8,3 +8,8 @@ declare module 'virtual:vocab-list-data' {
   const tsv: string;
   export default tsv;
 }
+
+declare module 'virtual:alwasit-data' {
+  const tsv: string;
+  export default tsv;
+}

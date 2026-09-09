@@ -56,6 +56,21 @@ function bundledVocabListPlugin(): Plugin {
   })
 }
 
+// Same embedding approach again, for the optional Al-Muʿjam al-Wasīṭ
+// dictionary (see public/alwasit-data/SOURCE-README.md for provenance and
+// licensing notes). At ~7.8MB this is by far the largest of the three
+// bundled datasets, and the feature defaults to off in Settings --
+// AlWasitDictionaryProvider imports this virtual module with a dynamic
+// `import()` on first lookup rather than a static top-level import, so
+// Rollup code-splits it into its own chunk that users who never enable the
+// feature never fetch.
+function bundledAlWasitDataPlugin(): Plugin {
+  return virtualTextFilePlugin('virtual:alwasit-data', (readText) => {
+    const content = readText('public/alwasit-data/alwasit.tsv')
+    return `export default ${JSON.stringify(content)};\n`
+  })
+}
+
 function virtualTextFilePlugin(virtualModuleId: string, build: (readText: (relPath: string) => string) => string): Plugin {
   const resolvedVirtualModuleId = '\0' + virtualModuleId
   const readText = (relPath: string) => fs.readFileSync(path.join(__dirname, relPath), 'utf8')
@@ -85,6 +100,7 @@ export default defineConfig({
     react(),
     bundledDictDataPlugin(),
     bundledVocabListPlugin(),
+    bundledAlWasitDataPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
@@ -109,6 +125,13 @@ export default defineConfig({
         // them (a silent scope miss on offline dictionary data would be a
         // worse failure mode than being explicit).
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // The optional Al-Wasit dictionary chunk (~7.8MB) is deliberately
+        // excluded from the precache list -- it defaults to off, and the
+        // whole point of loading it via dynamic import() is that a user who
+        // never enables the feature never downloads it. Precaching it on
+        // every install would silently defeat that and blow past Workbox's
+        // default 2MB per-file limit besides.
+        globIgnores: ['**/_virtual_alwasit-data-*.js'],
         additionalManifestEntries: DICTIONARY_DATA_FILES.map((name) => ({
           url: `/dictionary-data/${name}`,
           revision: null,

@@ -369,6 +369,12 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
               </div>
             );
           })}
+          <p className="settings-section__note">
+            Al-Muʿjam al-Wasīṭ is off by default: its data (~6,700 entries, looked up by root via the AraMorph
+            analysis above) is only downloaded the first time you switch it on, and its licensing status is less
+            clear-cut than this app's other sources — see <code>alwasit-data/SOURCE-README.md</code> for details
+            before enabling it if you plan to redistribute this app.
+          </p>
 
           <div className="settings-aramorph">
             <p className="settings-section__note">
