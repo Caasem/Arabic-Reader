@@ -66,14 +66,18 @@ export function DictionaryPopup({
     setRarity(null);
     isRarityDataReady().then((ready) => {
       if (!ready || cancelled) return;
-      getWordRarity(normalize(word)).then((r) => {
+      getWordRarity(normalize(word), morphology?.pos).then((r) => {
         if (!cancelled) setRarity(r);
       });
     });
     return () => {
       cancelled = true;
     };
-  }, [word]);
+    // morphology arrives asynchronously alongside `result` -- re-running
+    // once it's in gets the complexity-aware tier instead of a frequency-only
+    // one computed before the analysis was ready.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [word, morphology?.pos]);
 
   // Viewport-safe positioning: rather than guessing the popup's size ahead
   // of time (the old approach — a fixed height estimate — could still clip

@@ -472,6 +472,10 @@ export interface WordRarity {
   /** 0..1, share of the list at least this common (1 = most common), or null if unlisted. */
   percentile: number | null;
   tier: VocabTier;
+  /** Count of attached prefix/suffix morphemes on this exact surface form
+   * (from AraMorph's own affix analysis) -- a heavily-affixed form of a
+   * common lemma can still escalate `tier` by one level; see rarity.ts. */
+  morphComplexity: number;
 }
 
 /** One distinct word found while scanning a book's full text, with every

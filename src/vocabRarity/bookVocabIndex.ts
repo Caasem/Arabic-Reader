@@ -2,6 +2,7 @@ import type { Book } from 'epubjs';
 import type { BookVocabWord, WordOccurrenceLocation } from '../types';
 import { tokenize, normalize } from '../reader/tokenizer/arabicTokenizer';
 import { getWordRarities } from './rarity';
+import { aramorphProvider } from '../dictionary/providers/aramorph/AramorphDictionaryProvider';
 
 /** Very common function words (و, في, من, ...) can occur thousands of times
  * in a single book — storing every single location for those would bloat
@@ -97,7 +98,22 @@ async function buildIndex(book: Book): Promise<BookVocabWord[]> {
   }
 
   const words = Array.from(counts.keys());
-  const rarities = await getWordRarities(words.map((w) => normalize(w)));
+  const normalizedWords = Array.from(new Set(words.map((w) => normalize(w))));
+
+  // Morphology per distinct word, for the rarity system's complexity
+  // escalation (see rarity.ts) -- one batched worker round-trip rather than
+  // one per word, since a book easily has several thousand distinct words.
+  // Best-effort: an analysis failure just means that word's tier falls back
+  // to frequency-only, not a broken index.
+  let posByWord: Map<string, string | undefined> | undefined;
+  try {
+    const analyses = await aramorphProvider.analyzeMany(normalizedWords);
+    posByWord = new Map(normalizedWords.map((w) => [w, analyses.get(w)?.[0]?.pos]));
+  } catch {
+    posByWord = undefined;
+  }
+
+  const rarities = await getWordRarities(normalizedWords, posByWord);
 
   const result: BookVocabWord[] = words.map((word) => {
     const entry = counts.get(word)!;
@@ -105,7 +121,7 @@ async function buildIndex(book: Book): Promise<BookVocabWord[]> {
       word,
       count: entry.count,
       occurrences: entry.occurrences,
-      rarity: rarities.get(normalize(word)) ?? { word: normalize(word), rank: null, percentile: null, tier: 'unlisted' },
+      rarity: rarities.get(normalize(word)) ?? { word: normalize(word), rank: null, percentile: null, tier: 'unlisted', morphComplexity: 0 },
     };
   });
 

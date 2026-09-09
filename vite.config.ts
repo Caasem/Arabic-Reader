@@ -45,10 +45,13 @@ function bundledDictDataPlugin(): Plugin {
   })
 }
 
-// Same embedding approach as the dictionary above, for the ~5,300-entry
-// personal vocabulary-frequency list that replaced the old CAMeL dataset
-// (see that migration's notes) -- at ~270KB this needs none of the
-// dictionary's worker/streaming machinery, just a plain string constant.
+// Same embedding approach as the dictionary above, for the ~23,500-entry
+// KSUCCA-derived vocabulary-frequency list (see
+// public/vocab-list-data/SOURCE-README.md). At ~1.8MB this is loaded via a
+// dynamic import() in frequencyIndex.ts rather than a static one -- the
+// rarity feature is opt-in (see frequencyStore.ts), so this needs the same
+// code-splitting treatment as the AlWasit dictionary data below, not the
+// dictionary-data plugin's eager one.
 function bundledVocabListPlugin(): Plugin {
   return virtualTextFilePlugin('virtual:vocab-list-data', (readText) => {
     const content = readText('public/vocab-list-data/the-list.tsv')
@@ -125,13 +128,13 @@ export default defineConfig({
         // them (a silent scope miss on offline dictionary data would be a
         // worse failure mode than being explicit).
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-        // The optional Al-Wasit dictionary chunk (~7.8MB) is deliberately
-        // excluded from the precache list -- it defaults to off, and the
-        // whole point of loading it via dynamic import() is that a user who
-        // never enables the feature never downloads it. Precaching it on
-        // every install would silently defeat that and blow past Workbox's
-        // default 2MB per-file limit besides.
-        globIgnores: ['**/_virtual_alwasit-data-*.js'],
+        // The optional Al-Wasit dictionary chunk (~7.8MB) and the vocab
+        // frequency-list chunk (~1.8MB) are deliberately excluded from the
+        // precache list -- both default to off, and the whole point of
+        // loading either via dynamic import() is that a user who never
+        // enables the feature never downloads it. Precaching them on every
+        // install would silently defeat that.
+        globIgnores: ['**/_virtual_alwasit-data-*.js', '**/_virtual_vocab-list-data-*.js'],
         additionalManifestEntries: DICTIONARY_DATA_FILES.map((name) => ({
           url: `/dictionary-data/${name}`,
           revision: null,

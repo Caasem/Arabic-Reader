@@ -42,6 +42,7 @@ ready.then(() => {
 
 type Incoming =
   | { id: number; type: 'lookup' | 'analyze'; word: string }
+  | { id: number; type: 'analyzeMany'; words: string[] }
   | { id: number; type: 'importTexts'; texts: Record<DictFileName, string> }
   | { id: number; type: 'resetToBundled' }
   | { id: number; type: 'clear' };
@@ -55,6 +56,19 @@ self.onmessage = async (e: MessageEvent<Incoming>) => {
         await ready;
         const results: AramorphResult[] = engine.lookup(msg.word);
         postMessage({ id: msg.id, type: 'lookupResult', results });
+        break;
+      }
+      case 'analyzeMany': {
+        // One round-trip for many words instead of one per word -- used by
+        // the book-vocabulary indexer (see bookVocabIndex.ts), which needs
+        // morphology for every distinct word in a book (easily thousands)
+        // to grade morphological complexity alongside frequency rank. All
+        // in-memory Map lookups, so looping here is cheap; postMessage
+        // overhead per word is what this avoids.
+        await ready;
+        const resultsByWord: Record<string, AramorphResult[]> = {};
+        for (const word of msg.words) resultsByWord[word] = engine.lookup(word);
+        postMessage({ id: msg.id, type: 'manyResults', resultsByWord });
         break;
       }
       case 'importTexts': {

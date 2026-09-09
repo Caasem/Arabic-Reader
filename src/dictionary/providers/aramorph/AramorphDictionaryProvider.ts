@@ -7,6 +7,7 @@ type TableSizes = Record<keyof AramorphTables, number>;
 type WorkerResponse =
   | { id: number; type: 'ready' | 'built'; tableSizes: TableSizes | null }
   | { id: number; type: 'lookupResult'; results: AramorphResult[] }
+  | { id: number; type: 'manyResults'; resultsByWord: Record<string, AramorphResult[]> }
   | { id: number; type: 'error'; message: string };
 
 /**
@@ -123,6 +124,31 @@ export class AramorphDictionaryProvider implements DictionaryProvider, Morpholog
       root: r.root !== '---' ? r.root : undefined,
       pos: r.pos || undefined,
     }));
+  }
+
+  /** Same as `analyze()`, batched -- one worker round-trip for many distinct
+   * words instead of one per word. Used by bookVocabIndex.ts, which needs
+   * morphology (specifically: how many affix morphemes are attached, for
+   * the rarity system's complexity grading) for every distinct word in a
+   * book at once. */
+  async analyzeMany(words: string[]): Promise<Map<string, MorphologicalAnalysis[]>> {
+    await this.readyPromise;
+    const msg = await this.call('analyzeMany', { words });
+    const out = new Map<string, MorphologicalAnalysis[]>();
+    if (msg.type !== 'manyResults') return out;
+    for (const word of words) {
+      const results = msg.resultsByWord[word] ?? [];
+      out.set(
+        word,
+        results.slice(0, 5).map((r) => ({
+          surfaceForm: r.word,
+          lemma: r.lemma && r.lemma !== '---' ? r.lemma : r.word,
+          root: r.root !== '---' ? r.root : undefined,
+          pos: r.pos || undefined,
+        }))
+      );
+    }
+    return out;
   }
 
   private groupByWord(results: AramorphResult[]): DictionaryEntry[] {
