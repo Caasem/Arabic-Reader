@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { vocabularyService, formatDueIn, type ReviewGrade } from '../../vocabulary/vocabularyService';
 import { BackupControls } from '../shared/BackupControls';
+import { IconEdit } from '../shared/icons';
 import type { VocabularyItem } from '../../types';
 import './Review.css';
+
+type EditableField = 'meaning' | 'sentence';
 
 const STATE_LABELS = ['New', 'Learning', 'Review', 'Relearning'];
 
@@ -28,10 +31,22 @@ export function Review() {
   const [flipped, setFlipped] = useState(false);
   const [sessionDone, setSessionDone] = useState(0);
   const [totalDueAtStart, setTotalDueAtStart] = useState(0);
+  // Inline editing (feature request: no popup for normal flashcard editing)
+  // -- which field is currently being edited, and its in-progress value.
+  // Reuses vocabularyService.updateVocabularyItem, the same call
+  // VocabularyList's own inline editor already uses, rather than a second
+  // editing model.
+  const [editingField, setEditingField] = useState<EditableField | null>(null);
+  const [draftValue, setDraftValue] = useState('');
+  const editInputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
 
   useEffect(() => {
     loadQueue();
   }, []);
+
+  useEffect(() => {
+    if (editingField) editInputRef.current?.focus();
+  }, [editingField]);
 
   function loadQueue() {
     vocabularyService.getDueForReview().then((items) => {
@@ -40,10 +55,35 @@ export function Review() {
       setIndex(0);
       setFlipped(false);
       setSessionDone(0);
+      setEditingField(null);
     });
   }
 
   const current = queue?.[index];
+
+  function startEdit(field: EditableField, e: React.MouseEvent) {
+    e.stopPropagation(); // don't also flip the card
+    if (!current) return;
+    setDraftValue(field === 'meaning' ? current.meaning : current.sentence ?? '');
+    setEditingField(field);
+  }
+
+  async function commitEdit() {
+    if (!current || !editingField) return;
+    const field = editingField;
+    const value = draftValue.trim();
+    setEditingField(null);
+    if (field === 'meaning' && value === current.meaning) return;
+    if (field === 'sentence' && value === (current.sentence ?? '')) return;
+    const updated = await vocabularyService.updateVocabularyItem(current, {
+      [field]: field === 'sentence' ? value || undefined : value,
+    } as Partial<Pick<VocabularyItem, 'meaning' | 'sentence'>>);
+    setQueue((prev) => prev?.map((item) => (item.id === updated.id ? updated : item)) ?? prev);
+  }
+
+  function cancelEdit() {
+    setEditingField(null);
+  }
 
   // Computed once per card (not per render) — previewGrades() runs the
   // scheduler for all four grades, so it's worth memoizing on the card's
@@ -52,6 +92,7 @@ export function Review() {
 
   async function answer(grade: ReviewGrade) {
     if (!current) return;
+    setEditingField(null);
     await vocabularyService.recordReviewResult(current, grade);
     setSessionDone((n) => n + 1);
     setFlipped(false);
@@ -113,8 +154,52 @@ export function Review() {
         {!flipped && <div className="review__card-hint">Tap to reveal</div>}
         {flipped && (
           <div className="review__card-back">
-            <div className="review__card-meaning">{current.meaning}</div>
-            {current.sentence && <div className="review__card-sentence">“{current.sentence}”</div>}
+            {editingField === 'meaning' ? (
+              <input
+                ref={editInputRef as React.RefObject<HTMLInputElement>}
+                className="review__card-edit-input"
+                dir="ltr"
+                value={draftValue}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => setDraftValue(e.target.value)}
+                onBlur={commitEdit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commitEdit();
+                  if (e.key === 'Escape') cancelEdit();
+                }}
+              />
+            ) : (
+              <div className="review__card-field" onClick={(e) => startEdit('meaning', e)}>
+                <span className="review__card-meaning">{current.meaning}</span>
+                <IconEdit size={12} className="review__card-field-icon" />
+              </div>
+            )}
+
+            {editingField === 'sentence' ? (
+              <textarea
+                ref={editInputRef as React.RefObject<HTMLTextAreaElement>}
+                className="review__card-edit-input review__card-edit-input--arabic"
+                dir="rtl"
+                rows={2}
+                value={draftValue}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => setDraftValue(e.target.value)}
+                onBlur={commitEdit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') cancelEdit();
+                }}
+              />
+            ) : current.sentence ? (
+              <div className="review__card-field" onClick={(e) => startEdit('sentence', e)}>
+                <span className="review__card-sentence">“{current.sentence}”</span>
+                <IconEdit size={12} className="review__card-field-icon" />
+              </div>
+            ) : (
+              <button className="review__card-add-sentence" onClick={(e) => startEdit('sentence', e)}>
+                + Add context sentence
+              </button>
+            )}
+
             {current.root && (
               <div className="review__card-root">
                 <span>Root</span> {current.root}

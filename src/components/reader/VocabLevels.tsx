@@ -4,7 +4,6 @@ import type { BookMeta, BookVocabWord, VocabTier } from '../../types';
 import { getBookVocabIndex } from '../../vocabRarity/bookVocabIndex';
 import { isRarityDataReady, enableRarityData } from '../../vocabRarity/rarity';
 import { formatVocabularyExport, downloadTextFile } from '../../vocabRarity/exportVocabulary';
-import type { IngestProgress } from '../../vocabRarity/frequencyIndex';
 import { IconChevronLeft, IconChevronRight, IconClose } from '../shared/icons';
 import './VocabLevels.css';
 
@@ -35,7 +34,6 @@ export function VocabLevels({
 }) {
   const [rarityReady, setRarityReady] = useState<boolean | null>(null);
   const [enabling, setEnabling] = useState(false);
-  const [progress, setProgress] = useState<IngestProgress | null>(null);
   const [enableError, setEnableError] = useState<string | null>(null);
   const [index, setIndex] = useState<BookVocabWord[] | null>(null);
   const [indexing, setIndexing] = useState(false);
@@ -66,10 +64,10 @@ export function VocabLevels({
     setEnabling(true);
     setEnableError(null);
     try {
-      await enableRarityData((p) => setProgress(p));
+      await enableRarityData();
       setRarityReady(true);
     } catch (e) {
-      setEnableError(e instanceof Error ? e.message : 'Could not download the frequency data.');
+      setEnableError(e instanceof Error ? e.message : 'Could not enable vocabulary levels.');
     } finally {
       setEnabling(false);
     }
@@ -133,17 +131,12 @@ export function VocabLevels({
 
       {rarityReady === false && (
         <div className="vocab-levels__status">
-          Rarity tiers are computed from a bundled Arabic word-frequency dataset (~65MB, downloaded once and cached by
-          the browser; takes a few seconds to process each time you open the app).
+          Rarity tiers are computed from a personal, frequency-ordered vocabulary list built into the app — no
+          download, ready instantly.
           <br />
           <button className="vocab-levels__enable-btn" onClick={handleEnable} disabled={enabling}>
             {enabling ? 'Preparing…' : 'Enable vocabulary levels'}
           </button>
-          {enabling && progress && (
-            <div className="vocab-levels__progress">
-              {progress.linesProcessed.toLocaleString()} words processed…
-            </div>
-          )}
           {enableError && <div className="vocab-levels__progress">{enableError}</div>}
         </div>
       )}

@@ -101,6 +101,63 @@
   max-width: 440px;
 }
 
+/* Inline field editing (feature request: tap a field, edit it in place --
+   no popup). The pencil only appears on hover/focus so the review card
+   stays calm and reading-focused otherwise. */
+.review__card-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: text;
+  border-radius: 6px;
+  padding: 2px 6px;
+  max-width: 100%;
+}
+
+.review__card-field:hover {
+  background: var(--accent-soft);
+}
+
+.review__card-field-icon {
+  color: var(--ink-faint);
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.review__card-field:hover .review__card-field-icon {
+  opacity: 1;
+}
+
+.review__card-edit-input {
+  width: 100%;
+  max-width: 440px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  padding: 6px 10px;
+  font-size: 15px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.review__card-edit-input--arabic {
+  font-family: var(--font-arabic);
+}
+
+.review__card-add-sentence {
+  border: none;
+  background: none;
+  color: var(--ink-faint);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.review__card-add-sentence:hover {
+  color: var(--accent);
+}
+
 .review__card-root {
   font-size: 13px;
   color: var(--ink-faint);

@@ -5,7 +5,7 @@ import './QuickSettingsPopover.css';
 const THEME_SWATCHES: { id: ReaderTheme; label: string; bg: string; fg: string }[] = [
   { id: 'light', label: 'Light', bg: '#faf7f2', fg: '#1c1b19' },
   { id: 'sepia', label: 'Sepia', bg: '#f1e6d0', fg: '#4a3a22' },
-  { id: 'dark', label: 'Dark', bg: '#16151a', fg: '#efe9df' },
+  { id: 'dark', label: 'Night', bg: '#16151a', fg: '#efe9df' },
 ];
 
 const FONT_SIZE_MIN = 80;

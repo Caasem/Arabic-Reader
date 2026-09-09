@@ -1,11 +1,14 @@
 import ePub, { type Book, type Rendition, type NavItem } from 'epubjs';
-import type { HighlightColor, ReaderPreferences, ReadingFlow, TocItem } from '../../types';
+import type { HighlightColor, PageDirection, ReaderPreferences, ReadingFlow, TocItem } from '../../types';
 import { resolveFootnote, type FootnoteContent } from '../footnotes/resolveFootnote';
+import { normalizeForSearch } from '../tokenizer/arabicTokenizer';
 
 /** epub.js's own flow keyword for our simpler paginated/scrolled toggle. */
 function epubFlow(flow: ReadingFlow): 'paginated' | 'scrolled-doc' {
   return flow === 'scrolled' ? 'scrolled-doc' : 'paginated';
 }
+
+export type EffectiveDirection = 'rtl' | 'ltr';
 
 export interface RelocatedLocation {
   cfi: string;
@@ -21,11 +24,38 @@ export interface SelectionInfo {
   y: number;
 }
 
+/**
+ * Match-quality tier, in the priority order results should be presented:
+ * an unaccented literal match first, then one that only lines up once
+ * diacritics/hamza-variants are normalized, then a looser word-mode match
+ * (all query words present, not necessarily adjacent). No 'fuzzy' tier is
+ * populated today (see SearchOptions.mode below) -- the type has room for
+ * one so a future edit-distance or root/morphology-based tier could slot
+ * in above the display layer's sort without changing its shape, but none
+ * of the existing dictionary/search backend does that matching today, so
+ * building it now would just be unimplemented surface area.
+ */
+export type SearchMatchType = 'exact' | 'normalized' | 'partial';
+
 export interface SearchResult {
   cfi: string;
   excerpt: string;
   href: string;
   label?: string;
+  matchType: SearchMatchType;
+}
+
+export interface SearchOptions {
+  /** 'phrase' (default): the query must appear as one literal substring,
+   * in order -- what `normalizeForSearch`-based matching already did.
+   * 'word': every whitespace-separated word in the query must appear
+   * somewhere in the same text node, not necessarily adjacent or in
+   * order -- always tiered 'partial' (see SearchMatchType), since it's a
+   * deliberately looser match than a phrase. */
+  mode?: 'phrase' | 'word';
+  /** Restricts the search to one section (href) -- the "Current page"
+   * scope. Omit to search the whole book. */
+  sectionHref?: string;
 }
 
 const HIGHLIGHT_FILL: Record<HighlightColor, string> = {
@@ -61,6 +91,19 @@ export class EpubService {
   // once).
   private destroyed = false;
   private currentFlow: ReadingFlow = 'paginated';
+  private currentDirection: EffectiveDirection = 'rtl';
+
+  /** Resolves the "Page direction" setting against the open book: 'auto'
+   * reads the OPF spine's page-progression-direction (epub.js exposes this
+   * as `book.packaging.metadata.direction`) and falls back to 'rtl' if the
+   * book doesn't declare one -- Arabic books frequently omit it, and this
+   * being an Arabic reader, RTL is the sensible default rather than
+   * epub.js's own 'ltr' default. 'rtl'/'ltr' explicitly override either way. */
+  getEffectiveDirection(pageDirection: PageDirection): EffectiveDirection {
+    if (pageDirection === 'rtl' || pageDirection === 'ltr') return pageDirection;
+    const declared = (this.book as any)?.packaging?.metadata?.direction as string | undefined;
+    return declared === 'ltr' ? 'ltr' : 'rtl';
+  }
 
   async open(file: Blob, container: HTMLElement, startCfi: string | undefined, prefs: ReaderPreferences): Promise<void> {
     const buf = await file.arrayBuffer();
@@ -75,13 +118,17 @@ export class EpubService {
     this.book = book;
 
     this.currentFlow = prefs.readingFlow;
+    this.currentDirection = this.getEffectiveDirection(prefs.pageDirection);
     const rendition = book.renderTo(container, {
       width: '100%',
       height: '100%',
       flow: epubFlow(prefs.readingFlow),
       spread: 'auto',
-      // RTL is set per-book by epub.js from the OPF <spine page-progression-direction>
-      // but Arabic books frequently omit it, so we force it here.
+      // `defaultDirection` is only a *fallback* epub.js uses if the book's
+      // own OPF metadata doesn't declare a direction -- an explicit
+      // RTL/LTR override needs to win outright, so `.direction()` is called
+      // explicitly right below regardless of what this resolves to.
+      defaultDirection: this.currentDirection,
       script: undefined,
     });
     if (this.destroyed) {
@@ -90,6 +137,7 @@ export class EpubService {
       return;
     }
     this.rendition = rendition;
+    rendition.direction(this.currentDirection);
 
     this.applyPreferences(prefs);
 
@@ -100,22 +148,32 @@ export class EpubService {
     await rendition.display(startCfi || undefined);
   }
 
-  /** Reading controls (font/theme/width/flow — Settings panel). Safe to call
-   * at any point after `open()`, including while a section is on-screen. */
+  /** Reading controls (font/theme/width/flow/direction — Settings panel).
+   * Safe to call at any point after `open()`, including while a section is
+   * on-screen. */
   applyPreferences(prefs: ReaderPreferences): void {
     if (!this.rendition) return;
-    // Force RTL page progression + the chosen font/line-height for Arabic
-    // content regardless of what (if anything) the source EPUB declares.
+    const dir = this.getEffectiveDirection(prefs.pageDirection);
     this.rendition.themes.default({
-      html: { direction: 'rtl' },
+      html: { direction: dir },
       body: {
-        direction: 'rtl',
+        direction: dir,
         'font-family': `${prefs.fontFamily} !important`,
         'line-height': `${prefs.lineHeight} !important`,
       },
-      p: { direction: 'rtl', 'text-align': 'right' },
+      p: { direction: dir, 'text-align': dir === 'rtl' ? 'right' : 'left' },
     });
     this.rendition.themes.fontSize(`${prefs.fontSizePct}%`);
+
+    // epub.js's own rendition.direction() drives actual page-turn semantics
+    // (which way next()/prev() advance, spread order, swipe-adjacent
+    // internal math) -- the themes.default() call above only affects how
+    // text renders *within* a page, which is a separate concern from which
+    // way turning the page moves.
+    if (dir !== this.currentDirection) {
+      this.currentDirection = dir;
+      this.rendition.direction(dir);
+    }
 
     // rendition.flow() re-clears and re-displays the current page, so only
     // call it when the setting actually changed — calling it on every
@@ -283,6 +341,58 @@ export class EpubService {
     return this.book;
   }
 
+  /** The direction actually in effect right now (after resolving 'auto')
+   * -- used by the Reader's swipe-gesture handler to know which physical
+   * swipe direction means "next" vs "previous" for the open book. */
+  getCurrentDirection(): EffectiveDirection {
+    return this.currentDirection;
+  }
+
+  /** Restores a previously-generated locations index (see
+   * `serializeLocations`/`generateLocations` below) instead of walking the
+   * whole book's text again -- should be tried first every time a book
+   * opens, falling back to `generateLocations` only when there's nothing
+   * cached yet for this book. */
+  loadLocations(serialized: string): void {
+    (this.book as any)?.locations?.load(serialized);
+  }
+
+  /** Walks the entire book's text to build epub.js's `locations` index --
+   * real, if approximate, page numbers (bookmarks' "minimal location
+   * reference"), computed by splitting the book into fixed-size character
+   * chunks. This is genuinely slow for a long book (it loads and measures
+   * every section), so it's meant to run once per book, in the background,
+   * well after the book is already readable -- never awaited before
+   * displaying anything -- with the result cached via `serializeLocations`
+   * so it isn't repeated on the next open. */
+  async generateLocations(): Promise<number> {
+    if (!this.book) return 0;
+    // 1000 chars/location is a coarser split than epub.js's own default
+    // (150, closer to "screen" than "page") -- meant to land in the same
+    // rough ballpark as a printed page.
+    await (this.book as any).locations.generate(1000);
+    return (this.book as any).locations.total ?? 0;
+  }
+
+  /** Serializes the current locations index (epub.js's own format) for
+   * `loadLocations` to restore later, so `generateLocations`'s full-book
+   * walk only ever has to happen once per book. */
+  serializeLocations(): string | null {
+    const locations = (this.book as any)?.locations;
+    return locations?.total ? locations.save() : null;
+  }
+
+  /** A short "Page N of Total" label for `cfi`, once locations are
+   * available (see above) -- undefined before that (callers fall back to
+   * a percent label, see Reader.tsx's bookmark creation). */
+  getPageLabel(cfi: string): string | undefined {
+    const locations = (this.book as any)?.locations;
+    if (!locations?.total) return undefined;
+    const index = locations.locationFromCfi(cfi);
+    if (typeof index !== 'number' || index < 0) return undefined;
+    return `Page ${index + 1} of ${locations.total + 1}`;
+  }
+
   /** Jumps to a section (by href) and, once it's rendered, scrolls the
    * `indexInSection`-th `.ar-word[data-word=...]` element for `word` into
    * view with a brief highlight flash — used by the Vocabulary Levels
@@ -332,33 +442,116 @@ export class EpubService {
     return href ? this.findTocLabel(href) : undefined;
   }
 
-  /** Full-book text search. epub.js only keeps the *current* section's
-   * content parsed into a Document -- the rest of the book is just spine
-   * metadata until asked for -- so this loads each section in turn, uses
-   * epub.js's own `Section.find()` (returns CFI-addressable matches with a
-   * short excerpt), then unloads it again before moving on, so a large book
-   * doesn't end up with every chapter's DOM held in memory at once just
-   * because the reader searched it once. */
-  async search(query: string): Promise<SearchResult[]> {
+  /** Text search, scoped to the whole book by default or to one section
+   * (SearchOptions.sectionHref -- the "Current page" scope). epub.js only
+   * keeps the *current* section's content parsed into a Document -- the
+   * rest of the book is just spine metadata until asked for -- so this
+   * loads each section in turn, walks its text nodes directly (rather than
+   * epub.js's own `Section.find()`, which does a plain case-insensitive
+   * substring match with no Arabic diacritic/hamza-variant awareness),
+   * then unloads it again before moving on, so a large book doesn't end up
+   * with every chapter's DOM held in memory at once just because the
+   * reader searched it once.
+   *
+   * Diacritic-insensitive and أ/إ/آ/ٱ-folding (see normalizeForSearch):
+   * both the query and each text node's content are normalized before
+   * matching, then a match position in the *normalized* string is mapped
+   * back to a real offset in the *original* text (diacritics are deletions,
+   * so those positions don't otherwise line up) to build a correct DOM
+   * Range/CFI and an excerpt that still shows the real, un-normalized text.
+   *
+   * Results come back sorted by match quality (see SearchMatchType) --
+   * exact literal matches first, then ones that only line up after
+   * normalization, then (mode: 'word' only) loose word-presence matches --
+   * rather than in whatever order sections happen to be walked in. */
+  async search(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
     const trimmed = query.trim();
     if (!this.book || !trimmed) return [];
+    const mode = options.mode ?? 'phrase';
+    const { normalized: normalizedQuery } = normalizeForSearch(trimmed);
+    if (!normalizedQuery) return [];
+    const queryWords = normalizedQuery.split(/\s+/).filter(Boolean);
+    const EXCERPT_LIMIT = 150;
     const results: SearchResult[] = [];
+    const excerptOf = (text: string, origStart: number, origEnd: number) =>
+      text.length <= EXCERPT_LIMIT
+        ? text
+        : '...' +
+          text.slice(Math.max(0, origStart - EXCERPT_LIMIT / 2), Math.min(text.length, origEnd + EXCERPT_LIMIT / 2)) +
+          '...';
+
     // epub.js's own TS defs don't declare `spineItems` (only its runtime
-    // Spine class does), and Section.find()'s return type isn't declared
-    // either -- both are cast through `any` the same way this file already
-    // does for epub.js internals it doesn't have full types for.
-    const sections = (this.book.spine as any).spineItems as any[];
+    // Spine class does) -- cast through `any` the same way this file
+    // already does for epub.js internals it doesn't have full types for.
+    const allSections = (this.book.spine as any).spineItems as any[];
+    const sections = options.sectionHref ? allSections.filter((s) => s.href === options.sectionHref) : allSections;
+
     for (const section of sections) {
       try {
         await section.load(this.book.load.bind(this.book));
-        const matches = section.find(trimmed) as Array<{ cfi: string; excerpt: string }>;
-        for (const m of matches) {
-          results.push({ cfi: m.cfi, excerpt: m.excerpt, href: section.href, label: this.getChapterLabelFor(section.href) });
+        const doc: Document | undefined = section.document;
+        if (!doc) continue;
+        const walker = doc.createTreeWalker(doc, NodeFilter.SHOW_TEXT);
+        let node: Node | null;
+        while ((node = walker.nextNode())) {
+          const text = node.textContent ?? '';
+          if (!text.trim()) continue;
+          const { normalized, toOriginal } = normalizeForSearch(text);
+
+          if (mode === 'word') {
+            // Every query word must appear somewhere in this node -- not
+            // necessarily adjacent or in order, so this is always the
+            // loosest ('partial') tier. Anchored on the first word's first
+            // occurrence for the CFI/excerpt.
+            const firstIdx = normalized.indexOf(queryWords[0]);
+            if (firstIdx === -1) continue;
+            if (!queryWords.every((w) => normalized.includes(w))) continue;
+            const origStart = toOriginal[firstIdx];
+            const matchEndIdx = firstIdx + queryWords[0].length;
+            const origEnd = matchEndIdx < toOriginal.length ? toOriginal[matchEndIdx] : text.length;
+            const range = doc.createRange();
+            range.setStart(node, origStart);
+            range.setEnd(node, origEnd);
+            results.push({
+              cfi: section.cfiFromRange(range),
+              excerpt: excerptOf(text, origStart, origEnd),
+              href: section.href,
+              label: this.getChapterLabelFor(section.href),
+              matchType: 'partial',
+            });
+            continue;
+          }
+
+          let searchFrom = 0;
+          for (;;) {
+            const idx = normalized.indexOf(normalizedQuery, searchFrom);
+            if (idx === -1) break;
+            const origStart = toOriginal[idx];
+            const matchEndIdx = idx + normalizedQuery.length;
+            const origEnd = matchEndIdx < toOriginal.length ? toOriginal[matchEndIdx] : text.length;
+            searchFrom = matchEndIdx;
+
+            const range = doc.createRange();
+            range.setStart(node, origStart);
+            range.setEnd(node, origEnd);
+            const cfi = section.cfiFromRange(range);
+            const matchType: SearchMatchType = text.slice(origStart, origEnd) === trimmed ? 'exact' : 'normalized';
+            results.push({
+              cfi,
+              excerpt: excerptOf(text, origStart, origEnd),
+              href: section.href,
+              label: this.getChapterLabelFor(section.href),
+              matchType,
+            });
+          }
         }
       } finally {
         section.unload();
       }
     }
+
+    const TIER_ORDER: Record<SearchMatchType, number> = { exact: 0, normalized: 1, partial: 2 };
+    results.sort((a, b) => TIER_ORDER[a.matchType] - TIER_ORDER[b.matchType]);
     return results;
   }
 

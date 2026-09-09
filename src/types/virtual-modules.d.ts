@@ -3,3 +3,8 @@ declare module 'virtual:dictionary-data' {
   const data: Record<DictFileName, string>;
   export default data;
 }
+
+declare module 'virtual:vocab-list-data' {
+  const tsv: string;
+  export default tsv;
+}

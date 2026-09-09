@@ -133,16 +133,163 @@
   background: var(--bg-elevated);
 }
 
+/* Search is an overlay, not a docked panel like Contents/Bookmarks -- it
+   should feel temporary and contextual (per the feature request), so it
+   floats above a dimmed page instead of pushing the reading column aside,
+   and the exact reading position underneath is never touched by opening or
+   closing it. */
+.reader__search-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgba(28, 27, 25, 0.28);
+  display: flex;
+  justify-content: center;
+  padding-top: 64px;
+}
+
+:root[data-theme='dark'] .reader__search-backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
 .reader__search {
-  width: 300px;
+  width: 340px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 100px);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+.reader__search-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reader__search-close {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--ink-faint);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+}
+
+.reader__search-close:hover {
+  background: var(--accent-soft);
+  color: var(--ink);
 }
 
 .reader__search-form {
+  flex: 1;
   display: flex;
   gap: 8px;
+  min-width: 0;
+}
+
+/* Scope (page/book/library) and mode (phrase/word) -- deliberately small
+   and secondary to the search input itself, not competing for attention
+   with the primary search interaction above. */
+.reader__search-options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.reader__search-options-group {
+  display: flex;
+  gap: 4px;
+}
+
+.reader__search-option {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink-faint);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.reader__search-option:hover {
+  color: var(--ink);
+}
+
+.reader__search-option--active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.reader__search-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--ink-faint);
+  padding: 0 2px;
+}
+
+.reader__search-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reader__search-nav-controls button {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.reader__search-nav-controls button:hover {
+  background: var(--accent-soft);
+}
+
+.reader__search-history {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.reader__search-history-label {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+.reader__search-history-item {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  direction: rtl;
+}
+
+.reader__search-history-item:hover {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.reader__search-result--active {
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .reader__search-input {
@@ -161,6 +308,8 @@
   flex-direction: column;
   gap: 4px;
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .reader__search-empty {
@@ -195,6 +344,95 @@
 .reader__search-result-excerpt {
   font-size: 14px;
   line-height: 1.6;
+}
+
+.reader__bookmarks {
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reader__bookmarks-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.reader__bookmarks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.reader__bookmark-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reader__bookmark-item-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: right;
+  direction: rtl;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--ink);
+  min-width: 0;
+}
+
+.reader__bookmark-item-main:hover {
+  background: var(--accent-soft);
+}
+
+.reader__bookmark-item-main svg {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.reader__bookmark-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.reader__bookmark-item-chapter {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reader__bookmark-item-location {
+  font-size: 11px;
+  color: var(--ink-faint);
+  direction: ltr;
+  text-align: right;
+}
+
+.reader__bookmark-item-remove {
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  color: var(--ink-faint);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+}
+
+.reader__bookmark-item-remove:hover {
+  color: var(--danger);
+  background: var(--accent-soft);
 }
 
 .toc-list {

@@ -7,15 +7,10 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// Precache scope decision (see claude/roadmap-next-features.md item 7):
-// the small AraMorph dictionary files (~3.8MB total) are worth guaranteeing
-// offline via the service-worker precache — that's the "dictionary included"
-// part of an offline install. The 65MB Vocabulary Levels frequency-rarity
-// file is deliberately NOT precached (would roughly 17x the install size for
-// a feature that's off by default) — it's covered by a runtime CacheFirst
-// rule instead, so once a user has enabled Vocabulary Levels once (which
-// already requires fetching that file), it's cached indefinitely and reused
-// offline from then on, without being forced on everyone up front.
+// Precache scope decision (see claude/roadmap-next-features.md item 7): the
+// small AraMorph dictionary files (~3.8MB total) are worth guaranteeing
+// offline via the service-worker precache — that's the "dictionary
+// included" part of an offline install.
 const DICTIONARY_DATA_FILES = [
   'dictprefixes',
   'dictstems',
@@ -41,21 +36,37 @@ const DICTIONARY_DATA_FILES = [
 // as-is for the PWA's offline service-worker precache and as a
 // GPL-required plain-text copy of the data.
 function bundledDictDataPlugin(): Plugin {
-  const virtualModuleId = 'virtual:dictionary-data'
+  return virtualTextFilePlugin('virtual:dictionary-data', (readText) => {
+    const entries = DICTIONARY_DATA_FILES.map((name) => {
+      const content = readText(path.join('public/dictionary-data', name))
+      return `${JSON.stringify(name)}: ${JSON.stringify(content)}`
+    })
+    return `export default {\n${entries.join(',\n')}\n};\n`
+  })
+}
+
+// Same embedding approach as the dictionary above, for the ~5,300-entry
+// personal vocabulary-frequency list that replaced the old CAMeL dataset
+// (see that migration's notes) -- at ~270KB this needs none of the
+// dictionary's worker/streaming machinery, just a plain string constant.
+function bundledVocabListPlugin(): Plugin {
+  return virtualTextFilePlugin('virtual:vocab-list-data', (readText) => {
+    const content = readText('public/vocab-list-data/the-list.tsv')
+    return `export default ${JSON.stringify(content)};\n`
+  })
+}
+
+function virtualTextFilePlugin(virtualModuleId: string, build: (readText: (relPath: string) => string) => string): Plugin {
   const resolvedVirtualModuleId = '\0' + virtualModuleId
+  const readText = (relPath: string) => fs.readFileSync(path.join(__dirname, relPath), 'utf8')
   return {
-    name: 'bundled-dict-data',
+    name: 'virtual-text-file:' + virtualModuleId,
     resolveId(id) {
       if (id === virtualModuleId) return resolvedVirtualModuleId
     },
     load(id) {
       if (id !== resolvedVirtualModuleId) return
-      const entries = DICTIONARY_DATA_FILES.map((name) => {
-        const filePath = path.join(__dirname, 'public/dictionary-data', name)
-        const content = fs.readFileSync(filePath, 'utf8')
-        return `${JSON.stringify(name)}: ${JSON.stringify(content)}`
-      })
-      return `export default {\n${entries.join(',\n')}\n};\n`
+      return build(readText)
     },
   }
 }
@@ -73,6 +84,7 @@ export default defineConfig({
   plugins: [
     react(),
     bundledDictDataPlugin(),
+    bundledVocabListPlugin(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
@@ -101,19 +113,6 @@ export default defineConfig({
           url: `/dictionary-data/${name}`,
           revision: null,
         })),
-        runtimeCaching: [
-          {
-            // The frequency-rarity data — cached on first fetch (i.e. the
-            // first time a user enables Vocabulary Levels), then served
-            // from cache on every request after that, offline included.
-            urlPattern: /\/frequency-data\/.*\.gzbin$/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'frequency-data-cache',
-              expiration: { maxEntries: 1 },
-            },
-          },
-        ],
         // The bundled JS is already ~700KB; raise Workbox's default 2MB
         // precache-file-size ceiling isn't needed here, but the combined
         // precache list (app shell + dictionary data) is a bit larger

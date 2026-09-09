@@ -10,7 +10,6 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "setup:vocab-data": "node scripts/fetch-vocab-data.mjs",
     "electron:dev": "electron .",
     "electron:build": "npm run build && electron-builder",
     "electron:build:win": "npm run build && electron-builder --win",
@@ -50,8 +49,7 @@
     "asar": true,
     "files": [
       "dist/**/*",
-      "electron/**/*",
-      "!dist/frequency-data/*.gzbin"
+      "electron/**/*"
     ],
     "directories": {
       "output": "release-electron"

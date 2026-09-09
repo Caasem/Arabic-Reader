@@ -206,3 +206,24 @@ export function IconContents({ size = 16, ...rest }: IconProps) {
     </svg>
   );
 }
+
+/** Outline ribbon/flag -- an unbookmarked location, or the "add bookmark"
+ * action. */
+export function IconBookmark({ size = 15, ...rest }: IconProps) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M6 4h12v16l-6-4.2L6 20V4Z" />
+    </svg>
+  );
+}
+
+/** Filled ribbon/flag -- a location that already has a bookmark. Distinct
+ * shape (filled vs outline), not colour alone, so it reads correctly for
+ * anyone who can't rely on colour to tell the two apart. */
+export function IconBookmarkFilled({ size = 15, ...rest }: IconProps) {
+  return (
+    <svg {...base(size)} fill="currentColor" stroke="none" {...rest}>
+      <path d="M6 4h12v16l-6-4.2L6 20V4Z" />
+    </svg>
+  );
+}

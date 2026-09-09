@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { EpubService, type SearchResult } from '../../reader/epub/EpubService';
+import { EpubService, type SearchResult, type RelocatedLocation } from '../../reader/epub/EpubService';
+
+type SearchScope = 'page' | 'book' | 'library';
+type SearchMode = 'phrase' | 'word';
+/** A SearchResult, plus which book it came from -- only meaningful for
+ * `searchScope === 'library'` results, where that isn't necessarily the
+ * book currently open. */
+type AnySearchResult = SearchResult & { book: BookMeta };
+import { bookmarkService } from '../../reader/bookmarks/bookmarkService';
 import { wrapArabicWords, distinctWordsIn } from '../../reader/wordInteraction/wrapWords';
 import { extractSentence } from '../../reader/wordInteraction/extractSentence';
 import { dictionaryManager } from '../../dictionary/DictionaryManager';
@@ -9,10 +17,13 @@ import { persistenceService } from '../../persistence/db';
 import { libraryService } from '../../library/libraryService';
 import type {
   BookMeta,
+  Bookmark,
+  DictionaryEntry,
   DictionaryLookupResult,
   HighlightColor,
   TocItem,
   TouchDictionaryAction,
+  VocabularyItem,
   WordInstance,
 } from '../../types';
 import { DictionaryPopup } from './DictionaryPopup';
@@ -22,11 +33,12 @@ import { HoverPreview } from './HoverPreview';
 import { VocabLevels } from './VocabLevels';
 import { SelectionToolbar } from './SelectionToolbar';
 import { QuickSettingsPopover } from './QuickSettingsPopover';
+import { VocabularyEditModal } from './VocabularyEditModal';
 import type { Book } from 'epubjs';
 import { usePreferences } from '../../state/PreferencesContext';
 import { isFootnoteLink } from '../../reader/footnotes/resolveFootnote';
 import { ReadingSessionTracker } from '../../reader/session/ReadingSessionTracker';
-import { IconBack, IconContents, IconFocus, IconSearch } from '../shared/icons';
+import { IconBack, IconContents, IconFocus, IconSearch, IconBookmark, IconBookmarkFilled, IconTrash, IconClose } from '../shared/icons';
 import './Reader.css';
 
 /** Hover-intent delay before the condensed preview appears — long enough
@@ -40,7 +52,17 @@ const HOVER_PREVIEW_MAX_CHARS = 42;
  * Midnight Study concept. */
 const FOCUS_IDLE_MS = 2200;
 
-const WORD_STYLE = `
+// Saved-vocabulary occurrences get a font-colour-only treatment (no
+// background, no underline) -- reuses the app's own existing muted-red
+// token (--danger in index.css) rather than inventing a new colour, just
+// slightly dimmed for the dark theme so it stays recognisable without
+// glowing against a dark background. Can't reference `var(--danger)`
+// directly: this stylesheet gets injected into each section's own iframe
+// document, which is a separate cascade from the host page's :root.
+const SAVED_WORD_COLOR = { light: '#a8483a', dark: '#c47e70' };
+
+function wordStyle(isDark: boolean): string {
+  return `
   /* manipulation (not just on .ar-word) so a real touchscreen's native
    * double-tap-to-zoom / pinch-zoom gesture recognizer never engages over
    * the reading surface at all -- without this, two quick taps landing
@@ -51,9 +73,10 @@ const WORD_STYLE = `
   html, body { touch-action: manipulation; }
   .ar-word { cursor: pointer; border-radius: 3px; transition: background 0.1s ease; touch-action: manipulation; }
   .ar-word:hover { background: rgba(156, 122, 79, 0.18); }
-  .ar-word--saved { text-decoration: underline; text-decoration-color: rgba(156, 122, 79, 0.6); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+  .ar-word--saved { color: ${isDark ? SAVED_WORD_COLOR.dark : SAVED_WORD_COLOR.light}; }
   .ar-word--jump-flash { background: rgba(230, 170, 60, 0.55) !important; }
 `;
+}
 
 /** How long to wait for a possible second tap on the *same* word before
  * treating a touchend as a plain single tap. Deliberately does NOT delay
@@ -67,6 +90,15 @@ const TOUCH_HOLD_MS = 500;
  * and hands the touch back to native browser behavior (scrolling, or
  * extending a text selection for highlighting). */
 const TOUCH_MOVE_CANCEL_PX = 10;
+/** Minimum horizontal travel before a touch counts as a page-turn swipe --
+ * deliberately much larger than TOUCH_MOVE_CANCEL_PX above (which only
+ * distinguishes "held still" from "moved at all", for word tap/hold) so an
+ * accidental page turn doesn't fire during, say, a slightly wobbly
+ * drag-to-select. Also requires the gesture to be predominantly
+ * horizontal (see SWIPE_MAX_VERTICAL_RATIO) so it doesn't compete with
+ * vertical scrolling in Scrolling layout. */
+const SWIPE_MIN_PX = 60;
+const SWIPE_MAX_VERTICAL_RATIO = 0.5;
 
 interface PopupState {
   word: string;
@@ -108,6 +140,8 @@ export function Reader({
   vocabPanelOpen = false,
   onVocabPanelOpenChange,
   onFocusChromeChange,
+  initialCfiOverride,
+  onOpenBookAt,
 }: {
   book: BookMeta;
   onBack: () => void;
@@ -120,6 +154,15 @@ export function Reader({
    * the app-level sidebar out too -- Reader has no way to reach that on its
    * own, since NavBar is a sibling rendered outside Reader entirely. */
   onFocusChromeChange?: (hidden: boolean) => void;
+  /** Opens this book at a specific CFI instead of its own saved
+   * ReadingPosition -- set by App.tsx when the reader arrived here via a
+   * library-wide search result rather than the normal Library tap. */
+  initialCfiOverride?: string;
+  /** Switches the active book (optionally to a specific location) --
+   * needed for library-wide search results that point at a *different*
+   * book than the one currently open, which Reader can't do on its own
+   * since book-switching is App.tsx's state, not Reader's. */
+  onOpenBookAt?: (book: BookMeta, cfi?: string) => void;
 }) {
   const { prefs } = usePreferences();
   const prefsRef = useRef(prefs);
@@ -130,12 +173,21 @@ export function Reader({
   const [tocOpen, setTocOpen] = useState(false);
   const [quickSettingsOpen, setQuickSettingsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [bookmarksOpen, setBookmarksOpen] = useState(false);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const currentLocationRef = useRef<RelocatedLocation | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
+  const [searchResults, setSearchResults] = useState<AnySearchResult[] | null>(null);
   const [searching, setSearching] = useState(false);
+  const [activeResultIndex, setActiveResultIndex] = useState(0);
+  const [searchScope, setSearchScope] = useState<SearchScope>('book');
+  const [searchMode, setSearchMode] = useState<SearchMode>('phrase');
+  const liveSearchTimerRef = useRef<number | null>(null);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [chapterLabel, setChapterLabel] = useState<string | undefined>();
   const [percent, setPercent] = useState(0);
   const [popup, setPopup] = useState<PopupState | null>(null);
+  const [editingWord, setEditingWord] = useState<PopupState | null>(null);
   const [bubble, setBubble] = useState<PopupState | null>(null);
   const [footnote, setFootnote] = useState<FootnoteState | null>(null);
   const [hoverPreview, setHoverPreview] = useState<HoverPreviewState | null>(null);
@@ -181,6 +233,11 @@ export function Reader({
   // of this needs to trigger a re-render, and it must persist across
   // separate rendered sections (a section per epub.js page/chapter).
   const touchStartRef = useRef<{ x: number; y: number; word: string; el: HTMLElement } | null>(null);
+  // Independent of touchStartRef above -- that one only engages for
+  // touches starting on a word (see its own touchstart handler); a
+  // page-turn swipe needs to work starting from anywhere on the page, so
+  // it tracks every touch itself rather than piggybacking on that system.
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const touchHoldTimerRef = useRef<number | null>(null);
   const touchHoldFiredRef = useRef(false);
   const touchSuppressContextMenuRef = useRef(false);
@@ -201,7 +258,7 @@ export function Reader({
         const file = await libraryService.getBookFile(book.id);
         if (!file || !containerRef.current) throw new Error('Could not read this book file.');
         const savedPos = await persistenceService.getReadingPosition(book.id);
-        await svc.open(file, containerRef.current, savedPos?.cfi, prefsRef.current);
+        await svc.open(file, containerRef.current, initialCfiOverride ?? savedPos?.cfi, prefsRef.current);
         if (cancelled) return;
 
         setToc(svc.getToc());
@@ -212,6 +269,26 @@ export function Reader({
 
         sessionTrackerRef.current = new ReadingSessionTracker(book.id, book.title, savedPos?.percent ?? 0);
         sessionTrackerRef.current.start();
+
+        bookmarkService.listForBook(book.id).then(setBookmarks);
+
+        // Real page numbers for bookmarks (see EpubService.getPageLabel):
+        // restore a previously-generated locations index if this book has
+        // one cached, otherwise generate it now, in the background, well
+        // after the book is already showing -- never blocks reading, and
+        // the (slow, full-book-text) generation only ever happens once per
+        // book since the result gets cached for next time.
+        persistenceService.getBookLocations(book.id).then(async (cached) => {
+          if (cancelled) return;
+          if (cached) {
+            svc.loadLocations(cached.data);
+            return;
+          }
+          const total = await svc.generateLocations();
+          if (cancelled) return;
+          const serialized = svc.serializeLocations();
+          if (serialized) await persistenceService.saveBookLocations(book.id, serialized, total);
+        });
 
         // Re-apply any highlights saved on a previous visit. epub.js queues
         // these and renders them as their section comes into view, so it's
@@ -224,6 +301,7 @@ export function Reader({
           dismissHoverPreview();
           setChapterLabel(loc.chapterLabel);
           setPercent(loc.percent);
+          currentLocationRef.current = loc;
           sessionTrackerRef.current?.recordPercent(loc.percent);
           persistenceService.saveReadingPosition({
             bookId: book.id,
@@ -236,12 +314,16 @@ export function Reader({
         });
 
         svc.onRendered((doc, sectionHref) => {
-          if (!doc.getElementById('ar-word-style')) {
-            const style = doc.createElement('style');
+          let style = doc.getElementById('ar-word-style') as HTMLStyleElement | null;
+          if (!style) {
+            style = doc.createElement('style');
             style.id = 'ar-word-style';
-            style.textContent = WORD_STYLE;
             doc.head.appendChild(style);
           }
+          // Re-set every render (not just on first creation) so a theme
+          // switch is reflected the next time this section re-renders, not
+          // just on sections that haven't been seen yet.
+          style.textContent = wordStyle(document.documentElement.dataset.theme === 'dark');
           wrapArabicWords(doc);
 
           // Dashboard word-count contribution for this section (see
@@ -488,6 +570,52 @@ export function Reader({
             }
           });
 
+          // Horizontal swipe page-turn. Deliberately a fully separate
+          // touchstart/touchend pair from the word-tap system above (which
+          // only tracks touches starting on a word) -- a swipe can start
+          // anywhere on the page. Only ever *reads* the gesture on
+          // touchend and only acts past SWIPE_MIN_PX of predominantly
+          // horizontal travel, so it never competes with a tap, a
+          // long-press, or a drag-to-select for the same touch: those stay
+          // under the threshold (a tap) or move but get their own meaning
+          // from a text selection actually existing (checked below), which
+          // this only fires for when there isn't one.
+          doc.body.addEventListener(
+            'touchstart',
+            (e) => {
+              const t = e.touches[0];
+              swipeStartRef.current = { x: t.clientX, y: t.clientY };
+            },
+            { passive: true }
+          );
+          doc.body.addEventListener(
+            'touchend',
+            (e) => {
+              const start = swipeStartRef.current;
+              swipeStartRef.current = null;
+              if (!start || prefsRef.current.readingFlow !== 'paginated') return;
+              const t = e.changedTouches[0];
+              if (!t) return;
+              const dx = t.clientX - start.x;
+              const dy = t.clientY - start.y;
+              if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dy) > Math.abs(dx) * SWIPE_MAX_VERTICAL_RATIO) return;
+              // A real drag-to-select left an actual selection behind --
+              // respect it, don't also turn the page out from under it.
+              if (doc.getSelection()?.toString()) return;
+
+              const dir = serviceRef.current?.getCurrentDirection() ?? 'rtl';
+              const swipedRight = dx > 0;
+              // RTL: swipe right -> previous, swipe left -> next.
+              // LTR: swipe left -> previous, swipe right -> next.
+              const goingNext = dir === 'rtl' ? !swipedRight : swipedRight;
+              dismissHoverPreview();
+              setBubble(null);
+              if (goingNext) serviceRef.current?.next();
+              else serviceRef.current?.prev();
+            },
+            { passive: true }
+          );
+
           // Capture phase, and *before* the word-click listener above: epub.js
           // attaches its own `onclick` directly on every internal <a> (see
           // resolveFootnote.ts for why), which fires during the target phase —
@@ -551,7 +679,22 @@ export function Reader({
   // Reading controls (Settings panel) apply live, without reopening the book.
   useEffect(() => {
     if (ready) serviceRef.current?.applyPreferences(prefs);
-  }, [ready, prefs.fontSizePct, prefs.lineHeight, prefs.fontFamily, prefs.readingFlow]);
+  }, [ready, prefs.fontSizePct, prefs.lineHeight, prefs.fontFamily, prefs.readingFlow, prefs.pageDirection]);
+
+  // Refresh the saved-word colour in every currently-rendered section the
+  // instant the theme changes, rather than waiting for that section to
+  // re-render on its own (a page turn away and back) -- otherwise a reader
+  // who switches to Night mid-page would see stale (wrong-theme) red text
+  // until the next page turn.
+  useEffect(() => {
+    if (!ready) return;
+    const isDark = prefs.theme === 'dark' || (prefs.theme === 'system' && document.documentElement.dataset.theme === 'dark');
+    containerRef.current?.querySelectorAll('iframe').forEach((iframe) => {
+      const doc = (iframe as HTMLIFrameElement).contentDocument;
+      const style = doc?.getElementById('ar-word-style') as HTMLStyleElement | null;
+      if (style) style.textContent = wordStyle(isDark);
+    });
+  }, [ready, prefs.theme]);
 
   // Focus mode: the topbar/footer fade out after a moment of stillness and
   // come back on a deliberate tap (see the click handlers below — a plain
@@ -702,9 +845,9 @@ export function Reader({
   /** Shared by the popup's "+ Add to vocabulary" button and the quick-add
    * shortcut — both just need a resolved lookup (word + dictionary result +
    * word-instance) to save from. */
-  async function saveWord(target: PopupState) {
-    if (!target.result || target.saved) return;
-    await vocabularyService.saveToVocabulary({
+  async function saveWord(target: PopupState): Promise<VocabularyItem | undefined> {
+    if (!target.result || target.saved) return undefined;
+    return vocabularyService.saveToVocabulary({
       surfaceForm: target.word,
       entries: target.result.entries,
       lemma: target.result.morphology?.[0]?.lemma,
@@ -712,6 +855,42 @@ export function Reader({
       pos: target.result.morphology?.[0]?.pos,
       book,
       wordInstance: target.instance ?? undefined,
+    });
+  }
+
+  /** The popup's per-entry "+" — saves just the one entry the reader tapped,
+   * as its own card, rather than every entry the lookup found (see
+   * saveWord above). Doesn't check/flip `popup.saved`: a word can end up
+   * with several of these alongside (or instead of) the "all entries" card,
+   * so there's no single boolean answer to "is this word saved" any more —
+   * the popup's own per-entry buttons track their own tapped state instead. */
+  async function saveWordEntry(target: PopupState, entry: DictionaryEntry) {
+    if (!target.result) return;
+    await vocabularyService.saveToVocabulary({
+      surfaceForm: target.word,
+      entries: [entry],
+      root: entry.root,
+      lemma: entry.lemma,
+      pos: entry.senses[0]?.pos,
+      book,
+      wordInstance: target.instance ?? undefined,
+    });
+    markWordSavedInDom(target.word, true);
+  }
+
+  /** Toggles the muted-red saved-word styling on every occurrence of `word`
+   * across every currently-rendered section (epub.js can have more than one
+   * mounted at once) -- lets Save/un-save reflect immediately in the
+   * reading text instead of waiting for the next page render's own
+   * `vocabularyService.listForBook` pass (see the `onRendered` setup
+   * above). */
+  function markWordSavedInDom(word: string, isSaved: boolean): void {
+    const iframes = containerRef.current?.querySelectorAll('iframe') ?? [];
+    iframes.forEach((iframe) => {
+      const doc = (iframe as HTMLIFrameElement).contentDocument;
+      doc?.querySelectorAll<HTMLElement>('.ar-word').forEach((el) => {
+        if (el.dataset.word === word) el.classList.toggle('ar-word--saved', isSaved);
+      });
     });
   }
 
@@ -882,11 +1061,55 @@ export function Reader({
     setSelection(null);
   }
 
+  /** The popup's primary "Save Vocabulary" / "✓ Vocabulary" button -- a real
+   * toggle (feature request: removing a word must not require opening
+   * Edit). Saving re-runs the same "all entries, one card" path `saveWord`
+   * always used; un-saving removes every card this word has in this book
+   * (see `removeAllForWord`), not just the "all entries" one, so the
+   * button's own saved/unsaved state stays a simple, honest reflection of
+   * "is this word saved at all" instead of tracking which specific card. */
   async function handleSave() {
     if (!popup) return;
+    if (popup.saved) {
+      await vocabularyService.removeAllForWord(book.id, popup.word);
+      markWordSavedInDom(popup.word, false);
+      setPopup((p) => (p ? { ...p, saved: false } : p));
+      lastLookupRef.current =
+        lastLookupRef.current?.word === popup.word ? { ...lastLookupRef.current, saved: false } : lastLookupRef.current;
+      return;
+    }
     await saveWord(popup);
+    markWordSavedInDom(popup.word, true);
     setPopup((p) => (p ? { ...p, saved: true } : p));
     lastLookupRef.current = lastLookupRef.current?.word === popup.word ? { ...lastLookupRef.current, saved: true } : lastLookupRef.current;
+  }
+
+  /** The Edit modal's own "Save Vocabulary" — works whether the word was
+   * already saved (edits its existing card) or not (Edit can be opened
+   * before ever saving, to customize the card before it exists at all): if
+   * there's no card yet, `saveWord` creates the normal "all entries" one
+   * first, then the edited meaning/sentence are applied on top of it. */
+  async function handleEditSave(patch: { meaning: string; sentence: string | undefined; surfaceForm: string }) {
+    if (!editingWord) return;
+    let item: VocabularyItem | undefined;
+    if (editingWord.saved) {
+      const existing = await vocabularyService.getForWord(book.id, editingWord.word);
+      item = existing.find((i) => i.selectedEntryIndex === undefined) ?? existing[0];
+    } else {
+      item = await saveWord(editingWord);
+    }
+    if (item) {
+      await vocabularyService.updateVocabularyItem(item, {
+        meaning: patch.meaning,
+        sentence: patch.sentence,
+        surfaceForm: patch.surfaceForm,
+      });
+    }
+    markWordSavedInDom(editingWord.word, true);
+    setPopup((p) => (p && p.word === editingWord.word ? { ...p, saved: true } : p));
+    lastLookupRef.current =
+      lastLookupRef.current?.word === editingWord.word ? { ...lastLookupRef.current, saved: true } : lastLookupRef.current;
+    setEditingWord(null);
   }
 
   async function handleSearch() {
@@ -894,12 +1117,155 @@ export function Reader({
     if (!query) return;
     setSearching(true);
     setSearchResults(null);
+    setActiveResultIndex(0);
     try {
-      const results = await serviceRef.current?.search(query);
-      setSearchResults(results ?? []);
+      if (searchScope === 'library') {
+        setSearchResults(await searchLibrary(query, searchMode));
+        return;
+      }
+      const sectionHref = searchScope === 'page' ? serviceRef.current?.getCurrentSectionHref() : undefined;
+      const results = await serviceRef.current?.search(query, { mode: searchMode, sectionHref });
+      setSearchResults((results ?? []).map((r) => ({ ...r, book })));
     } finally {
       setSearching(false);
     }
+  }
+
+  /** "Entire library" scope: opens every other book in a hidden, detached
+   * container just long enough to search it, then tears it down --
+   * reuses the exact same EpubService.search() this reader already uses
+   * for its own book, just against a temporary instance per book, rather
+   * than a second search implementation. Sequential (not parallel) so a
+   * large library doesn't try to hold many books' DOM in memory at once. */
+  async function searchLibrary(query: string, mode: SearchMode): Promise<AnySearchResult[]> {
+    const books = await libraryService.listBooks();
+    const all: AnySearchResult[] = [];
+    for (const b of books) {
+      const file = await libraryService.getBookFile(b.id);
+      if (!file) continue;
+      const container = document.createElement('div');
+      container.style.cssText = 'position:fixed;left:-99999px;top:0;width:400px;height:600px;visibility:hidden;';
+      document.body.appendChild(container);
+      const tempSvc = new EpubService();
+      try {
+        await tempSvc.open(file, container, undefined, prefsRef.current);
+        const results = await tempSvc.search(query, { mode });
+        all.push(...results.map((r) => ({ ...r, book: b })));
+      } catch {
+        // A book that fails to parse/open just contributes no results,
+        // rather than aborting the whole library search over one bad file.
+      } finally {
+        tempSvc.destroy();
+        container.remove();
+      }
+    }
+    return all;
+  }
+
+  function goToResult(index: number) {
+    const results = searchResults;
+    if (!results || results.length === 0) return;
+    const wrapped = ((index % results.length) + results.length) % results.length;
+    setActiveResultIndex(wrapped);
+    const result = results[wrapped];
+    if (result.book.id === book.id) {
+      serviceRef.current?.goTo(result.cfi);
+    } else {
+      // A library-scope result from a different book -- Reader can't
+      // switch the active book itself, that's App.tsx's state.
+      onOpenBookAt?.(result.book, result.cfi);
+    }
+  }
+
+  // Live search (Settings toggle): re-run the search a moment after typing
+  // stops, rather than on every keystroke -- a full-book search walks every
+  // section, so debouncing keeps it from re-scanning the whole book on each
+  // character typed. Never auto-triggers for Library scope regardless of
+  // the setting -- that opens every book in the library per search, which
+  // is far too expensive to re-run on every pause in typing; Library scope
+  // always waits for an explicit Search submit.
+  useEffect(() => {
+    if (!searchOpen || !prefs.liveSearchEnabled || searchScope === 'library') return;
+    if (liveSearchTimerRef.current) window.clearTimeout(liveSearchTimerRef.current);
+    if (!searchQuery.trim()) {
+      setSearchResults(null);
+      return;
+    }
+    liveSearchTimerRef.current = window.setTimeout(() => handleSearch(), 350);
+    return () => {
+      if (liveSearchTimerRef.current) window.clearTimeout(liveSearchTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, prefs.liveSearchEnabled, searchOpen, searchScope, searchMode]);
+
+  // Changing scope/mode invalidates whatever results are showing -- they
+  // were computed under the old scope/mode, so keep them from looking like
+  // (wrong) answers to the new one until the reader searches again.
+  useEffect(() => {
+    setSearchResults(null);
+  }, [searchScope, searchMode]);
+
+  // Esc closes the search overlay (desktop) -- and, per the "search is
+  // temporary/contextual, not a destination" feature request, this and the
+  // X button are the only ways it closes; the underlying reading position
+  // is never touched by opening/closing it.
+  useEffect(() => {
+    if (!searchOpen) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setSearchOpen(false);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [searchOpen]);
+
+  // Remember recent searches (Settings → Search history) -- purely a
+  // reader convenience (reusable from the dropdown below), not shared or
+  // synced anywhere.
+  useEffect(() => {
+    if (searchOpen) {
+      try {
+        setRecentSearches(JSON.parse(localStorage.getItem('ar-reader-search-history') ?? '[]'));
+      } catch {
+        setRecentSearches([]);
+      }
+    }
+  }, [searchOpen]);
+
+  useEffect(() => {
+    if (!prefs.searchHistoryEnabled || !searchResults || searchResults.length === 0) return;
+    const q = searchQuery.trim();
+    if (!q) return;
+    try {
+      const key = 'ar-reader-search-history';
+      const prev: string[] = JSON.parse(localStorage.getItem(key) ?? '[]');
+      const next = [q, ...prev.filter((h) => h !== q)].slice(0, 8);
+      localStorage.setItem(key, JSON.stringify(next));
+      setRecentSearches(next);
+    } catch {
+      /* localStorage unavailable -- history just won't persist, harmless */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchResults]);
+
+  /** Adds a bookmark at the exact current location -- multiple per page are
+   * fine (each gets its own cfi/id), matching the feature request. */
+  async function handleAddBookmark() {
+    const loc = currentLocationRef.current;
+    if (!loc) return;
+    const bm = await bookmarkService.create({
+      book,
+      cfi: loc.cfi,
+      percent: loc.percent,
+      pageLabel: serviceRef.current?.getPageLabel(loc.cfi),
+      chapterHref: loc.chapterHref,
+      chapterLabel: loc.chapterLabel,
+    });
+    setBookmarks((prev) => [...prev, bm]);
+  }
+
+  async function handleRemoveBookmark(id: string) {
+    await bookmarkService.remove(id);
+    setBookmarks((prev) => prev.filter((b) => b.id !== id));
   }
 
   return (
@@ -939,15 +1305,35 @@ export function Reader({
             onClick={() => {
               setSearchOpen((v) => !v);
               setTocOpen(false);
+              setBookmarksOpen(false);
             }}
           >
             <IconSearch size={14} /> Search
           </button>
           <button
             className="reader__toc-toggle"
+            onClick={handleAddBookmark}
+            aria-label="Add bookmark here"
+            title="Add bookmark here"
+          >
+            <IconBookmark size={14} />
+          </button>
+          <button
+            className="reader__toc-toggle"
+            onClick={() => {
+              setBookmarksOpen((v) => !v);
+              setTocOpen(false);
+              setSearchOpen(false);
+            }}
+          >
+            <IconBookmarkFilled size={14} /> Bookmarks{bookmarks.length > 0 ? ` (${bookmarks.length})` : ''}
+          </button>
+          <button
+            className="reader__toc-toggle"
             onClick={() => {
               setTocOpen((v) => !v);
               setSearchOpen(false);
+              setBookmarksOpen(false);
             }}
           >
             <IconContents size={14} /> Contents
@@ -971,42 +1357,157 @@ export function Reader({
         )}
 
         {searchOpen && (
-          <aside className="reader__toc reader__search">
-            <form
-              className="reader__search-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSearch();
-              }}
-            >
-              <input
-                className="reader__search-input"
-                type="search"
-                placeholder="Search this book…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoFocus
-              />
-              <button className="btn btn--ghost" type="submit" disabled={searching || !searchQuery.trim()}>
-                {searching ? 'Searching…' : 'Search'}
-              </button>
-            </form>
-            {searchResults && (
-              <div className="reader__search-results">
-                {searchResults.length === 0 && <p className="reader__search-empty">No matches found.</p>}
-                {searchResults.map((r, i) => (
-                  <button
-                    key={r.cfi + i}
-                    className="reader__search-result"
-                    onClick={() => {
-                      serviceRef.current?.goTo(r.cfi);
-                      setSearchOpen(false);
-                    }}
-                  >
-                    {r.label && <div className="reader__search-result-label">{r.label}</div>}
-                    <div className="reader__search-result-excerpt">{r.excerpt}</div>
-                  </button>
-                ))}
+          <div className="reader__search-backdrop" onClick={() => setSearchOpen(false)}>
+            <aside className="reader__search" onClick={(e) => e.stopPropagation()}>
+              <div className="reader__search-top">
+                <form
+                  className="reader__search-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSearch();
+                  }}
+                >
+                  <input
+                    className="reader__search-input"
+                    type="search"
+                    placeholder={
+                      searchScope === 'page' ? 'Search this page…' : searchScope === 'library' ? 'Search your library…' : 'Search this book…'
+                    }
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    autoFocus
+                  />
+                  {(!prefs.liveSearchEnabled || searchScope === 'library') && (
+                    <button className="btn btn--ghost" type="submit" disabled={searching || !searchQuery.trim()}>
+                      {searching ? 'Searching…' : 'Search'}
+                    </button>
+                  )}
+                </form>
+                <button className="reader__search-close" onClick={() => setSearchOpen(false)} aria-label="Close search">
+                  <IconClose size={14} />
+                </button>
+              </div>
+
+              <div className="reader__search-options">
+                <div className="reader__search-options-group">
+                  {(['page', 'book', 'library'] as SearchScope[]).map((s) => (
+                    <button
+                      key={s}
+                      className={'reader__search-option' + (searchScope === s ? ' reader__search-option--active' : '')}
+                      onClick={() => setSearchScope(s)}
+                    >
+                      {s === 'page' ? 'This page' : s === 'book' ? 'This book' : 'Library'}
+                    </button>
+                  ))}
+                </div>
+                <div className="reader__search-options-group">
+                  {(['phrase', 'word'] as SearchMode[]).map((m) => (
+                    <button
+                      key={m}
+                      className={'reader__search-option' + (searchMode === m ? ' reader__search-option--active' : '')}
+                      onClick={() => setSearchMode(m)}
+                    >
+                      {m === 'phrase' ? 'Exact phrase' : 'Any word'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {searchResults && searchResults.length > 0 && (
+                <div className="reader__search-nav">
+                  <span>{searchResults.length} result{searchResults.length === 1 ? '' : 's'}</span>
+                  <div className="reader__search-nav-controls">
+                    <button onClick={() => goToResult(activeResultIndex - 1)} aria-label="Previous result">
+                      ↑
+                    </button>
+                    <span>
+                      {activeResultIndex + 1} / {searchResults.length}
+                    </span>
+                    <button onClick={() => goToResult(activeResultIndex + 1)} aria-label="Next result">
+                      ↓
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {!searchResults && !searching && prefs.searchHistoryEnabled && recentSearches.length > 0 && (
+                <div className="reader__search-history">
+                  <span className="reader__search-history-label">Recent</span>
+                  {recentSearches.map((h) => (
+                    <button
+                      key={h}
+                      className="reader__search-history-item"
+                      onClick={() => {
+                        setSearchQuery(h);
+                        if (!prefs.liveSearchEnabled) handleSearch();
+                      }}
+                    >
+                      {h}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {searchResults && (
+                <div className="reader__search-results">
+                  {searchResults.length === 0 && <p className="reader__search-empty">No matches found.</p>}
+                  {searchResults.map((r, i) => (
+                    <button
+                      key={r.book.id + r.cfi + i}
+                      className={'reader__search-result' + (i === activeResultIndex ? ' reader__search-result--active' : '')}
+                      onClick={() => goToResult(i)}
+                    >
+                      {(searchScope === 'library' || r.label) && (
+                        <div className="reader__search-result-label">
+                          {searchScope === 'library' ? r.book.title : r.label}
+                          {searchScope === 'library' && r.label ? ` — ${r.label}` : ''}
+                        </div>
+                      )}
+                      <div className="reader__search-result-excerpt">{r.excerpt}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </aside>
+          </div>
+        )}
+
+        {bookmarksOpen && (
+          <aside className="reader__toc reader__bookmarks">
+            <button className="btn btn--ghost reader__bookmarks-add" onClick={handleAddBookmark}>
+              <IconBookmark size={14} /> Add bookmark here
+            </button>
+            {bookmarks.length === 0 ? (
+              <p className="reader__search-empty">No bookmarks in this book yet.</p>
+            ) : (
+              <div className="reader__bookmarks-list">
+                {[...bookmarks]
+                  .sort((a, b) => a.percent - b.percent)
+                  .map((bm) => (
+                    <div className="reader__bookmark-item" key={bm.id}>
+                      <button
+                        className="reader__bookmark-item-main"
+                        onClick={() => {
+                          serviceRef.current?.goTo(bm.cfi);
+                          setBookmarksOpen(false);
+                        }}
+                      >
+                        <IconBookmarkFilled size={13} />
+                        <span className="reader__bookmark-item-text">
+                          {bm.chapterLabel && <span className="reader__bookmark-item-chapter">{bm.chapterLabel}</span>}
+                          <span className="reader__bookmark-item-location">{bm.locationLabel}</span>
+                        </span>
+                      </button>
+                      <button
+                        className="reader__bookmark-item-remove"
+                        onClick={() => handleRemoveBookmark(bm.id)}
+                        aria-label="Remove bookmark"
+                        title="Remove bookmark"
+                      >
+                        <IconTrash size={13} />
+                      </button>
+                    </div>
+                  ))}
               </div>
             )}
           </aside>
@@ -1071,8 +1572,23 @@ export function Reader({
           loading={popup.loading}
           x={popup.x}
           y={popup.y}
+          sizePct={prefs.dictionaryPopupSizePct}
           onClose={() => setPopup(null)}
           onSave={handleSave}
+          onSaveEntry={(entry) => saveWordEntry(popup, entry)}
+          onEdit={() => setEditingWord(popup)}
+        />
+      )}
+
+      {editingWord && (
+        <VocabularyEditModal
+          bookId={book.id}
+          word={editingWord.word}
+          alreadySaved={editingWord.saved}
+          fallbackMeaning={editingWord.result?.entries[0]?.senses[0]?.gloss ?? ''}
+          fallbackSentence={editingWord.instance?.sentence}
+          onCancel={() => setEditingWord(null)}
+          onSave={handleEditSave}
         />
       )}
 

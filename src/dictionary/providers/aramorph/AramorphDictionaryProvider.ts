@@ -119,7 +119,7 @@ export class AramorphDictionaryProvider implements DictionaryProvider, Morpholog
     const results = msg.type === 'lookupResult' ? msg.results : [];
     return results.slice(0, 5).map((r) => ({
       surfaceForm: r.word,
-      lemma: r.word,
+      lemma: r.lemma && r.lemma !== '---' ? r.lemma : r.word,
       root: r.root !== '---' ? r.root : undefined,
       pos: r.pos || undefined,
     }));
@@ -137,6 +137,7 @@ export class AramorphDictionaryProvider implements DictionaryProvider, Morpholog
       providerName: this.name,
       headword: word,
       root: entries.find((e) => e.root && e.root !== '---')?.root,
+      lemma: entries.find((e) => e.lemma && e.lemma !== '---' && e.lemma !== word)?.lemma,
       // `e.pos` is the raw AraMorph affix-analysis string (e.g.
       // "+at/PVSUFF_SUBJ:3FS+hu/PVSUFF_DO:3MS" or "Al/DET+") — it records
       // which prefix/suffix morphemes combined to form this word, for

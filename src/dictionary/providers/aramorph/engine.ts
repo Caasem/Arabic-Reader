@@ -62,6 +62,7 @@ export class OptimizedDictArray<T> {
 
 interface MorphEntry {
   root: string;
+  lemma: string;
   word: string;
   morph: string;
   def: string;
@@ -93,10 +94,20 @@ export function createMorphTableFromText(text: string): OptimizedDictArray<strin
 // of `def` rather than partially retained.
 const POS_TAG = /<pos>([\s\S]*?)<\/pos>/;
 
+// A lemma marker (e.g. `;; katab-u_1`, `;; kAtab_1`) precedes every group of
+// stem lines belonging to one specific lexeme -- the actual citation/
+// dictionary form, distinct from the root marker (`;--- ktb`) that groups
+// every *derived* lexeme sharing those root letters. `_<n>` is a sense
+// index (dropped); a trailing `-u`/`-a`/`-i` (Form I only, its imperfect
+// vowel isn't predictable from the pattern the way it is for Forms II-X) is
+// dropped too, leaving the bare citation-form stem.
+const LEMMA_MARKER_RE = /^;;\s*(\S+?)(?:-[uai])?_\d+\s*$/;
+
 export function createDictTable(text: string): OptimizedDictArray<MorphEntry> {
   const lines = text.split('\n');
   const table = new OptimizedDictArray<MorphEntry>();
   let root = '---';
+  let lemma = '---';
   for (const line of lines) {
     if (line !== '' && line[0] !== ';') {
       const elems = line.split(/\s/);
@@ -106,6 +117,7 @@ export function createDictTable(text: string): OptimizedDictArray<MorphEntry> {
       const gloss = meta.replace(POS_TAG, '').trim();
       const def: MorphEntry = {
         root,
+        lemma,
         word: elems[1].trim(),
         morph: (elems[2] || '').trim(),
         def: gloss.split(/;/).join(', '),
@@ -114,8 +126,13 @@ export function createDictTable(text: string): OptimizedDictArray<MorphEntry> {
       table.addItem(elems[0], def);
     } else if (line !== '' && line.trim() === ';') {
       root = '---';
+      lemma = '---';
     } else if (line !== '' && line.slice(0, 5) === ';--- ') {
       root = line.split(/\s/)[1];
+      lemma = '---';
+    } else {
+      const lemmaMatch = line.match(LEMMA_MARKER_RE);
+      if (lemmaMatch) lemma = lemmaMatch[1];
     }
   }
   return table;
@@ -132,6 +149,11 @@ export interface AramorphTables {
 
 export interface AramorphResult {
   root: string;
+  /** The stem's own citation/dictionary form (e.g. كاتَبَ for a matched
+   * كاتَبْتُهُ) -- distinct from `root`, which is just the bare consonant
+   * skeleton (كتب) shared by every word derived from it. '---' when the
+   * matched stem had no lemma marker in the source data. */
+  lemma: string;
   word: string;
   def: string;
   pos: string;
@@ -199,6 +221,7 @@ export class AramorphEngine {
           if (this.isObeysGrammar(p.morph, s.morph, su.morph)) {
             data.push({
               root: detransliterate(s.root),
+              lemma: detransliterate(s.lemma),
               word: [detransliterate(p.word), detransliterate(s.word), detransliterate(su.word)].join(''),
               def: [bracketify(p.def, 2), s.def, bracketify(su.def, 1)].join(''),
               pos: [p.pos, s.pos, su.pos].filter(Boolean).join(', '),

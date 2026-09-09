@@ -1,6 +1,5 @@
 node_modules/
 dist/
 release-electron/
-public/frequency-data/*.gzbin
 *.log
 .DS_Store

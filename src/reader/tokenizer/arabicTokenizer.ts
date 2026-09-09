@@ -96,6 +96,45 @@ export function normalize(word: string): string {
   return word.replace(DIACRITICS_RE, '').replace(TATWEEL_RE, '');
 }
 
+// Stateless (non-global) clones for single-character membership tests in
+// normalizeForSearch below -- reusing DIACRITICS_RE/TATWEEL_RE directly with
+// `.test()` would be a bug: a global regex's `.test()` advances its own
+// lastIndex on every call, silently alternating true/false across repeated
+// single-character tests.
+const IS_DIACRITIC_RE = new RegExp(DIACRITICS_RE.source);
+const IS_TATWEEL_RE = new RegExp(TATWEEL_RE.source);
+const ALEF_VARIANTS_RE = /[أإآٱ]/;
+
+/**
+ * Search-only normalization (see feature request: diacritic-insensitive
+ * in-book search, safely folding أ/إ/آ/ٱ to ا). Deliberately a *separate*
+ * function from `normalize()` above rather than extending it -- that one
+ * backs dictionary lookups and vocabulary/word-instance keys throughout the
+ * app, which already get correct hamza-variant matching for free from the
+ * bundled AraMorph data itself (it stores duplicate keys for ~99.9% of
+ * hamza-initial stems), so changing its behavior risks unrelated regressions
+ * for no benefit. Search has no such existing safety net, so it normalizes
+ * explicitly.
+ *
+ * Returns both the normalized text and a same-length `toOriginal` index map
+ * (`toOriginal[i]` = the index in `text` that `normalized[i]` came from) so
+ * a match found in the normalized string can be converted back to a real
+ * Range in the original (un-normalized) DOM text -- diacritics are
+ * deletions (variable-length), so a match position in the normalized string
+ * doesn't line up with the same position in the original without this map.
+ */
+export function normalizeForSearch(text: string): { normalized: string; toOriginal: number[] } {
+  let normalized = '';
+  const toOriginal: number[] = [];
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (IS_DIACRITIC_RE.test(ch) || IS_TATWEEL_RE.test(ch)) continue;
+    normalized += ALEF_VARIANTS_RE.test(ch) ? 'ا' : ch;
+    toOriginal.push(i);
+  }
+  return { normalized, toOriginal };
+}
+
 /**
  * Best-effort clitic stripping used only to *suggest* a lemma candidate for
  * mock dictionary providers when no morphology service is wired up yet.

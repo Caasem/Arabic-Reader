@@ -25,9 +25,16 @@ function App() {
   // Reader's Focus mode has gone idle -- fade the sidebar out too, so
   // "focus mode" actually means just the text, not just a faded topbar.
   const [chromeHidden, setChromeHidden] = useState(false);
+  // Set when a search result (Library scope) points at a specific location
+  // in a book that isn't the one currently open -- overrides that book's
+  // own saved ReadingPosition for just this one open, so "jump to this
+  // result" actually lands there instead of wherever the reader left off
+  // last. undefined for a normal Library tap, which resumes as usual.
+  const [pendingCfi, setPendingCfi] = useState<string | undefined>(undefined);
 
-  function openBook(book: BookMeta) {
+  function openBook(book: BookMeta, cfi?: string) {
     setActiveBook(book);
+    setPendingCfi(cfi);
     setView('read');
     setVocabPanelOpen(false);
   }
@@ -72,6 +79,8 @@ function App() {
                 vocabPanelOpen={vocabPanelOpen}
                 onVocabPanelOpenChange={setVocabPanelOpen}
                 onFocusChromeChange={setChromeHidden}
+                initialCfiOverride={pendingCfi}
+                onOpenBookAt={openBook}
               />
             )}
             {view === 'vocabulary' && <VocabularyList />}

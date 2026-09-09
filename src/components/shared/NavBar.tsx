@@ -30,7 +30,12 @@ const NAVBAR_COLLAPSED_KEY = 'navbar-collapsed';
 // jump-to-occurrence) is distinct from 'vocabulary' (the cross-book saved
 // Vocabulary tab that already existed) — both need their own nav entries
 // since they show different things.
-const ITEMS: { id: ViewName; label: string; Icon: (props: { size?: number }) => ReactElement }[] = [
+// Speed Reader is fully implemented and left wired up (App.tsx still routes
+// 'speedReader', the component itself is untouched) but hidden from the nav
+// -- flip this back to true to bring it back rather than re-adding it.
+const SPEED_READER_ENABLED = false;
+
+const ALL_ITEMS: { id: ViewName; label: string; Icon: (props: { size?: number }) => ReactElement }[] = [
   { id: 'library', label: 'Library', Icon: IconLibrary },
   { id: 'read', label: 'Read', Icon: IconRead },
   { id: 'speedReader', label: 'Speed Reader', Icon: IconSpeedReader },
@@ -40,6 +45,7 @@ const ITEMS: { id: ViewName; label: string; Icon: (props: { size?: number }) => 
   { id: 'review', label: 'Review', Icon: IconReview },
   { id: 'dashboard', label: 'Dashboard', Icon: IconDashboard },
 ];
+const ITEMS = SPEED_READER_ENABLED ? ALL_ITEMS : ALL_ITEMS.filter((i) => i.id !== 'speedReader');
 
 // Views that only make sense with a book open — disabled in the nav bar
 // until one is.

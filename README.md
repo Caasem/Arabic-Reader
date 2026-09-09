@@ -16,8 +16,8 @@ rather than a popup, and the dictionary/vocabulary/review pipeline carries over 
 - Personal vocabulary list with per-word encounter history and optional sentence context
 - Spaced-repetition review using FSRS (the same scheduling algorithm modern Anki uses)
 - One-way sync of saved vocabulary to a local Anki install via AnkiConnect
-- Vocabulary Levels — frequency-based rarity badges and beginner/intermediate/advanced word lists (optional, ~65MB
-  dataset fetched on demand)
+- Vocabulary Levels — frequency-based rarity badges and beginner/intermediate/advanced word lists, from a personal
+  ~5,300-word frequency-ordered list built into the app (no download, ready instantly)
 - A fullscreen Arabic speed-reading (RSVP) mode with an Optimal-Recognition-Point display, adjustable WPM, and
   reading statistics
 - Installable as an offline-capable PWA, or packaged as a standalone Windows/macOS/Linux desktop app (Electron)
@@ -32,9 +32,6 @@ npm run dev       # start the dev server
 npm run build      # production build to dist/
 npm run preview    # serve the production build locally
 ```
-
-Optional: `npm run setup:vocab-data` fetches the frequency dataset that powers Vocabulary Levels (only needed if you
-want that feature available without the in-app on-demand download).
 
 ### Desktop build (Electron)
 
@@ -51,9 +48,8 @@ This project is licensed under the **GNU General Public License v2.0** — see [
 
 It bundles Arabic dictionary and morphological-analysis data derived from Tim Buckwalter's AraMorph analyzer (via
 the Linguistic Data Consortium), which is itself GPLv2-licensed; see `public/dictionary-data/GPL.redistributable.txt`
-and `public/dictionary-data/SOURCE-README.md` for that data's own attribution and license text. The optional
-Vocabulary Levels feature uses the CAMeL Arabic Frequency Lists (CAMeL Lab, NYU Abu Dhabi), licensed CC BY-SA 4.0 —
-see `public/frequency-data/CAMEL-NOTICE.txt`.
+and `public/dictionary-data/SOURCE-README.md` for that data's own attribution and license text. The Vocabulary Levels
+feature is powered by a personal, hand-curated Arabic vocabulary list (`public/vocab-list-data/the-list.tsv`).
 
 Because this app bundles GPLv2-licensed data and ships it to your browser, this repository's source code is made
 available here to satisfy the GPL's source-availability requirement for anyone running the built app.

@@ -19,6 +19,10 @@ const FALLBACK_PREFS: ReaderPreferences = {
   speedReaderOrpEnabled: true,
   speedReaderContextEnabled: false,
   touchGestures: { singleTap: 'bubble', doubleTap: 'quickSave', hold: 'none' },
+  pageDirection: 'auto',
+  dictionaryPopupSizePct: 100,
+  liveSearchEnabled: true,
+  searchHistoryEnabled: true,
 };
 
 interface PreferencesContextValue {
@@ -48,8 +52,21 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // 'system' isn't its own CSS palette -- it resolves live to 'dark'/'light'
+  // via the OS's prefers-color-scheme, including tracking a change made
+  // while the app is open (switching the OS theme at night, say).
   useEffect(() => {
-    document.documentElement.dataset.theme = prefs.theme;
+    if (prefs.theme !== 'system') {
+      document.documentElement.dataset.theme = prefs.theme;
+      return;
+    }
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => {
+      document.documentElement.dataset.theme = mql.matches ? 'dark' : 'light';
+    };
+    apply();
+    mql.addEventListener('change', apply);
+    return () => mql.removeEventListener('change', apply);
   }, [prefs.theme]);
 
   function updatePrefs(patch: Partial<ReaderPreferences>) {

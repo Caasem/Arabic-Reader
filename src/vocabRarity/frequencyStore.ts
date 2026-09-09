@@ -2,17 +2,17 @@ import Dexie, { type Table } from 'dexie';
 
 /**
  * Persists only the user's opt-in choice for the vocabulary-rarity feature
- * (see `public/frequency-data/CAMEL-NOTICE.txt` for the dataset's license —
- * CC BY-SA 4.0) — NOT the 11.4M-word dataset itself.
+ * — the actual word list ("The List", ~5,300 entries) is embedded directly
+ * into the bundle (see `frequencyIndex.ts`), not stored here.
  *
- * An earlier version of this stored one IndexedDB row per word (11.4M
- * rows). Benchmarking that against this app's actual IndexedDB backend
- * measured ~3,600 row-writes/sec — 11.4M rows would take the better part
- * of an hour to ingest, which is not a reasonable "one-time" cost. Parsing
- * the same data into a single in-memory `Map` instead takes ~14 seconds
- * (see `frequencyIndex.ts`), so that's what actually backs lookups now;
- * this store just remembers whether the user has enabled the feature, so
- * Settings/the Vocabulary Levels panel don't ask again every session.
+ * This used to back a much larger dataset (the CAMeL Arabic Frequency
+ * Lists, 11.4M words) where per-row IndexedDB storage was benchmarked as
+ * impractical (~3,600 writes/sec would've taken the better part of an
+ * hour) and even an in-memory Map took ~14 seconds to build each session.
+ * Neither concern applies to a list this size, but the opt-in flag itself
+ * is unchanged: Settings/the Vocabulary Levels panel still just check
+ * whether the user has enabled the feature, so they don't ask again every
+ * session.
  */
 interface MetaRow {
   id: 'default';

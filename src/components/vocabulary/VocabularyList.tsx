@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { vocabularyService } from '../../vocabulary/vocabularyService';
+import { vocabularyService, entryMeaning } from '../../vocabulary/vocabularyService';
 import { BackupControls } from '../shared/BackupControls';
 import { IconSearch, IconTrash, IconEdit, IconCheck, IconClose } from '../shared/icons';
 import type { VocabularyItem } from '../../types';
@@ -56,6 +56,23 @@ export function VocabularyList() {
     await vocabularyService.removeFromVocabulary(id);
     setItems((prev) => prev?.filter((i) => i.id !== id) ?? prev);
     if (editingId === id) cancelEdit();
+  }
+
+  /** The "which definition" dropdown, shown only for a word saved with more
+   * than one distinct entry -- either narrows the card down to one specific
+   * entry, or back to every entry combined ("All definitions"). */
+  async function handleSelectEntry(item: VocabularyItem, value: string) {
+    const entryIndex = value === 'all' ? undefined : Number(value);
+    const updated = await vocabularyService.selectVocabularyEntry(item, entryIndex);
+    setItems((prev) => prev?.map((i) => (i.id === updated.id ? updated : i)) ?? prev);
+  }
+
+  /** "Add them all to the list" -- materializes every entry on this card as
+   * its own separate, independently-reviewable card. Purely additive: the
+   * original combined (or single-entry) card is left exactly as it was. */
+  async function handleSplitAll(item: VocabularyItem) {
+    const created = await vocabularyService.splitIntoSeparateCards(item);
+    setItems((prev) => (prev ? [...created, ...prev] : prev));
   }
 
   return (
@@ -154,6 +171,26 @@ export function VocabularyList() {
                   <>
                     <div className="vocab-card__meaning">{item.meaning}</div>
                     {item.sentence && <div className="vocab-card__sentence">“{item.sentence}”</div>}
+                    {item.entries.length > 1 && (
+                      <div className="vocab-card__definitions">
+                        <select
+                          className="vocab-card__definitions-select"
+                          value={item.selectedEntryIndex ?? 'all'}
+                          onChange={(e) => handleSelectEntry(item, e.target.value)}
+                          aria-label="Which definition to show"
+                        >
+                          <option value="all">All definitions ({item.entries.length})</option>
+                          {item.entries.map((entry, i) => (
+                            <option key={i} value={i}>
+                              {entry.headword} — {entryMeaning(entry).slice(0, 40)}
+                            </option>
+                          ))}
+                        </select>
+                        <button className="vocab-card__definitions-split" onClick={() => handleSplitAll(item)}>
+                          Add them all as separate cards
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
 

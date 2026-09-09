@@ -5,6 +5,7 @@ import type {
   WordInstance,
   VocabularyItem,
   Highlight,
+  Bookmark,
   ReaderPreferences,
   BackupData,
   SpeedReaderPosition,
@@ -32,6 +33,8 @@ class ArabicReaderDB extends Dexie {
   speedReaderPositions!: Table<SpeedReaderPosition, string>;
   speedReaderSessions!: Table<SpeedReaderSession, string>;
   readingSessions!: Table<ReadingSession, string>;
+  bookmarks!: Table<Bookmark, string>;
+  bookLocations!: Table<{ bookId: string; data: string; total: number }, string>;
 
   constructor() {
     super('arabic-reader');
@@ -110,6 +113,21 @@ class ArabicReaderDB extends Dexie {
     this.version(5).stores({
       readingSessions: 'id, bookId, startedAt, endedAt',
     });
+    // v6: bookmarks -- explicit, reader-placed markers at a precise
+    // location, independent of both the automatic per-book ReadingPosition
+    // and of highlights. Purely additive.
+    this.version(6).stores({
+      bookmarks: 'id, bookId, createdAt',
+    });
+    // v7: cached epub.js `locations` index per book (see EpubService) --
+    // generating it walks the entire book's text, so it's worth persisting
+    // the result (epub.js's own serialized form, via `.save()`/`.load()`)
+    // rather than recomputing it every time the book is opened. Purely
+    // additive, and small relative to the book file itself (an array of
+    // CFIs, not the text).
+    this.version(7).stores({
+      bookLocations: 'bookId',
+    });
   }
 }
 
@@ -159,6 +177,15 @@ export interface PersistenceService {
   getAllHighlights(): Promise<Highlight[]>;
   deleteHighlight(id: string): Promise<void>;
 
+  // Bookmarks
+  saveBookmark(b: Bookmark): Promise<void>;
+  getBookmarksForBook(bookId: string): Promise<Bookmark[]>;
+  deleteBookmark(id: string): Promise<void>;
+
+  // Cached epub.js locations index (see EpubService) -- for real page numbers.
+  saveBookLocations(bookId: string, data: string, total: number): Promise<void>;
+  getBookLocations(bookId: string): Promise<{ data: string; total: number } | undefined>;
+
   // Preferences
   getPreferences(): Promise<ReaderPreferences>;
   savePreferences(prefs: ReaderPreferences): Promise<void>;
@@ -206,6 +233,10 @@ const DEFAULT_PREFS: ReaderPreferences = {
   speedReaderOrpEnabled: true,
   speedReaderContextEnabled: false,
   touchGestures: { singleTap: 'bubble', doubleTap: 'quickSave', hold: 'none' },
+  pageDirection: 'auto',
+  dictionaryPopupSizePct: 100,
+  liveSearchEnabled: true,
+  searchHistoryEnabled: true,
 };
 
 class DexiePersistenceService implements PersistenceService {
@@ -315,6 +346,24 @@ class DexiePersistenceService implements PersistenceService {
   }
   async deleteHighlight(id: string): Promise<void> {
     await db.highlights.delete(id);
+  }
+
+  async saveBookmark(b: Bookmark): Promise<void> {
+    await db.bookmarks.put(b);
+  }
+  async getBookmarksForBook(bookId: string): Promise<Bookmark[]> {
+    return db.bookmarks.where('bookId').equals(bookId).sortBy('createdAt');
+  }
+  async deleteBookmark(id: string): Promise<void> {
+    await db.bookmarks.delete(id);
+  }
+
+  async saveBookLocations(bookId: string, data: string, total: number): Promise<void> {
+    await db.bookLocations.put({ bookId, data, total });
+  }
+  async getBookLocations(bookId: string): Promise<{ data: string; total: number } | undefined> {
+    const row = await db.bookLocations.get(bookId);
+    return row ? { data: row.data, total: row.total } : undefined;
   }
 
   async getPreferences(): Promise<ReaderPreferences> {

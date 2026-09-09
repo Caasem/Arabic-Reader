@@ -9,17 +9,17 @@ import { getFrequencyIndex, type IngestProgress } from './frequencyIndex';
  * wider "intermediate" band, and everything past that treated as
  * "advanced" (including words absent from the list entirely, see
  * `VocabTier`'s `unlisted`, which is tracked separately but grouped
- * visually with "advanced" — a word that's too rare to be in an
- * 11.4M-word corpus reads as at least as hard as the tail of "advanced").
+ * visually with "advanced").
  *
- * These are reasonable starting defaults, not a tuned scale — vocabulary
- * research on Arabic (and most languages) suggests a few thousand words
- * cover the bulk of everyday text, so beginner/intermediate stay narrow on
- * purpose. Adjust here if real books show the bands feel off.
+ * Scaled to "The List"'s ~5,300 entries (see frequencyIndex.ts) — the
+ * previous cutoffs (2000/10000) were sized for the CAMeL corpus's 11.4M
+ * words, where "intermediate" alone was nearly twice this whole list;
+ * against a list this size they'd have made "advanced" unreachable for any
+ * word actually in it. Adjust here if real books show the bands feel off.
  */
 export const TIER_CUTOFFS = {
-  beginner: 2000,
-  intermediate: 10000,
+  beginner: 1000,
+  intermediate: 3000,
 };
 
 export function tierForRank(rank: number | null): VocabTier {
@@ -64,15 +64,17 @@ export async function getWordRarities(words: string[]): Promise<Map<string, Word
 
 /** Whether the user has opted in — persisted, so Settings/Vocab Levels
  * don't need to ask again next session (see `frequencyStore.ts`). This is
- * about *intent*, not whether the ~14s in-memory build has actually run
- * yet this session — callers that need data now should call
- * `enableRarityData`/`getWordRarity(ies)`, which build it on demand. */
+ * about *intent*, not whether the in-memory index has actually been built
+ * yet this session (now a near-instant, synchronous step either way) —
+ * callers that need data now should call `enableRarityData`/
+ * `getWordRarity(ies)`, which build it on demand. */
 export async function isRarityDataReady(): Promise<boolean> {
   return isEnabled();
 }
 
-/** Records the opt-in choice and (re)builds the in-memory index for this
- * session, reporting progress as it streams through the bundled dataset. */
+/** Records the opt-in choice and builds the in-memory index for this
+ * session (see frequencyIndex.ts — this is now cheap enough to not need
+ * real progress reporting; `onProgress` fires once, immediately). */
 export async function enableRarityData(onProgress?: (p: IngestProgress) => void): Promise<void> {
   await getFrequencyIndex(onProgress);
   await setEnabled();

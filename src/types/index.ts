@@ -90,6 +90,11 @@ export interface DictionaryEntry {
   headword: string; // as shown, vocalized if available
   senses: DictionaryEntrySense[];
   root?: string;
+  /** The word's own citation/dictionary form (e.g. كاتَبَ for a matched
+   * كاتَبْتُهُ) -- distinct from `root`, which is the bare consonant
+   * skeleton (كتب) shared by every word derived from it. Absent when the
+   * provider has no lemma data for this entry. */
+  lemma?: string;
 }
 
 export interface MorphologicalAnalysis {
@@ -133,10 +138,18 @@ export interface VocabularyItem {
   lemma?: string;
   root?: string;
   pos?: string;
-  /** Short primary gloss shown in list views. */
+  /** Short primary gloss shown in list views -- either one specific entry's
+   * senses (see `selectedEntryIndex`) or, when the word had more than one
+   * distinct entry and the reader chose to keep them all, every entry's
+   * senses joined together. */
   meaning: string;
   /** Full set of dictionary entries captured at save time (reference, not a copy-of-truth). */
   entries: DictionaryEntry[];
+  /** Index into `entries` that `meaning`/`root`/`pos` currently reflect.
+   * `undefined` means "all of them" (the combined `meaning` above covers
+   * every entry) -- the Vocabulary tab lets a reader switch between a
+   * single specific entry and this combined view after the fact. */
+  selectedEntryIndex?: number;
 
   bookId: string;
   bookTitle: string;
@@ -224,12 +237,47 @@ export interface Highlight {
 }
 
 // ---------------------------------------------------------------------------
+// Bookmarks
+// ---------------------------------------------------------------------------
+
+/** A precise reading location the reader has explicitly marked -- distinct
+ * from ReadingPosition (the one automatic "where I left off" per book) and
+ * from Highlight (a marked *span of text*, with a colour/note). A book can
+ * have any number of these, including more than one on the same page. */
+export interface Bookmark {
+  id: string;
+  bookId: string;
+  bookTitle: string;
+  cfi: string;
+  percent: number; // 0..1, at the time the bookmark was made
+  /** "Page N of Total" once epub.js's locations index has generated for
+   * this book (see EpubService.getPageLabel/generateLocations) -- an
+   * approximation (epub.js splits by character count, not real print
+   * layout), but a genuine page reference, not just a percentage. Falls
+   * back to a percent label ("62%") if the bookmark was made before that
+   * background generation finished. */
+  locationLabel: string;
+  chapterHref?: string;
+  chapterLabel?: string;
+  createdAt: number;
+}
+
+// ---------------------------------------------------------------------------
 // Preferences
 // ---------------------------------------------------------------------------
 
-export type ReaderTheme = 'light' | 'dark' | 'sepia';
+/** 'dark' is shown to the reader as "Night" (Settings/QuickSettings label
+ * only — the stored value/CSS selector stay 'dark' so nothing needs a data
+ * migration); 'system' follows the OS's prefers-color-scheme live rather
+ * than being resolved once at load. */
+export type ReaderTheme = 'light' | 'dark' | 'sepia' | 'system';
 
 export type ReadingFlow = 'paginated' | 'scrolled';
+
+/** RTL/LTR page-turn direction. 'auto' derives it from the open book (its
+ * OPF spine `page-progression-direction`, same source EpubService already
+ * reads) — RTL/LTR explicitly override that per reader preference. */
+export type PageDirection = 'auto' | 'rtl' | 'ltr';
 
 export interface ReaderPreferences {
   theme: ReaderTheme;
@@ -270,6 +318,17 @@ export interface ReaderPreferences {
    * these have no effect for mouse clicks, which always open the full
    * dictionary popup as before). See TouchGestureBindings. */
   touchGestures: TouchGestureBindings;
+  /** Page-turn direction, independent of the app's own RTL chrome. */
+  pageDirection: PageDirection;
+  /** Dictionary popup size, 100 = normal. Independent of viewport-collision
+   * handling — this is the reader's *intended* size; positioning logic
+   * still keeps it fully on-screen regardless. */
+  dictionaryPopupSizePct: number;
+  /** Search-as-you-type in the in-book search overlay. Off = search only
+   * runs on submit. */
+  liveSearchEnabled: boolean;
+  /** Remember recent in-book searches for reuse. */
+  searchHistoryEnabled: boolean;
 }
 
 // ---------------------------------------------------------------------------

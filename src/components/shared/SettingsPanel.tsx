@@ -7,18 +7,25 @@ import { isRarityDataReady, enableRarityData, disableRarityData } from '../../vo
 import { pingAnki, getDeckNames, ensureDeck, addNote, AnkiConnectError } from '../../anki/ankiConnect';
 import { vocabularyService } from '../../vocabulary/vocabularyService';
 import { BackupControls } from './BackupControls';
-import type { ReaderTheme, ReadingFlow, TouchDictionaryAction } from '../../types';
+import type { PageDirection, ReaderTheme, ReadingFlow, TouchDictionaryAction } from '../../types';
 import './SettingsPanel.css';
 
 const THEMES: { id: ReaderTheme; label: string }[] = [
   { id: 'light', label: 'Light' },
-  { id: 'dark', label: 'Dark' },
+  { id: 'dark', label: 'Night' },
   { id: 'sepia', label: 'Sepia' },
+  { id: 'system', label: 'System' },
 ];
 
 const READING_FLOWS: { id: ReadingFlow; label: string }[] = [
   { id: 'paginated', label: 'Paged' },
   { id: 'scrolled', label: 'Scrolling' },
+];
+
+const PAGE_DIRECTIONS: { id: PageDirection; label: string }[] = [
+  { id: 'auto', label: 'Automatic' },
+  { id: 'rtl', label: 'RTL' },
+  { id: 'ltr', label: 'LTR' },
 ];
 
 const TOUCH_ACTIONS: { id: TouchDictionaryAction; label: string }[] = [
@@ -247,6 +254,21 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="settings-row">
+            <span className="settings-row__label">Page direction</span>
+            <div className="settings-row__control settings-row__control--segmented">
+              {PAGE_DIRECTIONS.map((d) => (
+                <button
+                  key={d.id}
+                  className={'segmented__item' + (prefs.pageDirection === d.id ? ' segmented__item--active' : '')}
+                  onClick={() => updatePrefs({ pageDirection: d.id })}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="settings-row">
             <span className="settings-row__label">Reading width</span>
             <div className="settings-row__control">
               <input
@@ -265,6 +287,25 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <section className="settings-section">
           <h3>Dictionaries</h3>
           <p className="settings-section__note">Choose which dictionaries are queried when you tap a word.</p>
+
+          <div className="settings-row">
+            <span className="settings-row__label">Dictionary popup size</span>
+            <div className="settings-row__control">
+              <input
+                type="range"
+                min={70}
+                max={150}
+                step={5}
+                value={prefs.dictionaryPopupSizePct}
+                onChange={(e) => updatePrefs({ dictionaryPopupSizePct: Number(e.target.value) })}
+              />
+              <span className="settings-row__value">{prefs.dictionaryPopupSizePct}%</span>
+            </div>
+          </div>
+          <p className="settings-section__note">
+            100% is the popup's normal size. The popup always repositions itself to stay fully on-screen regardless
+            of this setting.
+          </p>
 
           <div className="settings-row">
             <label className="settings-toggle">
@@ -410,9 +451,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           <h3>Vocabulary Levels</h3>
           <p className="settings-section__note">
             Powers the rarity badge shown in word lookups and the "Vocab Levels" tab's beginner/intermediate/advanced
-            word lists — derived from the CAMeL Arabic Frequency Lists (CC BY-SA 4.0, CAMeL Lab, NYU Abu Dhabi; see
-            attribution in the app's bundled data). ~65MB, downloaded once and reused from the browser's own cache after
-            that; processing it into a lookup index takes a few seconds each time you open the app.
+            word lists — derived from a personal, frequency-ordered vocabulary list built into the app. Small enough
+            to be ready instantly, no download involved.
           </p>
           {rarityReady === true && (
             <div className="settings-row">
@@ -442,6 +482,32 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             Review tabs.
           </p>
           <BackupControls />
+        </section>
+
+        <section className="settings-section">
+          <h3>Search</h3>
+          <div className="settings-row">
+            <label className="settings-toggle">
+              <input
+                type="checkbox"
+                checked={prefs.liveSearchEnabled}
+                onChange={(e) => updatePrefs({ liveSearchEnabled: e.target.checked })}
+              />
+              <span className="settings-toggle__label">Live search</span>
+            </label>
+          </div>
+          <p className="settings-section__note">Results update while typing, instead of waiting for you to submit.</p>
+          <div className="settings-row">
+            <label className="settings-toggle">
+              <input
+                type="checkbox"
+                checked={prefs.searchHistoryEnabled}
+                onChange={(e) => updatePrefs({ searchHistoryEnabled: e.target.checked })}
+              />
+              <span className="settings-toggle__label">Search history</span>
+            </label>
+          </div>
+          <p className="settings-section__note">Remember recent in-book searches so they can be reused later.</p>
         </section>
 
         <section className="settings-section">

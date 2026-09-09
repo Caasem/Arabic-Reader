@@ -15,6 +15,20 @@ import { fsrs, createEmptyCard, Rating, State, type Card, type Grade } from 'ts-
  */
 const scheduler = fsrs();
 
+/** All of one entry's senses, joined into a single display string -- the
+ * unit both the per-entry "+" (DictionaryPopup) and the Vocabulary tab's
+ * "switch to this definition" dropdown save/show. */
+export function entryMeaning(entry: DictionaryEntry): string {
+  return entry.senses.map((s) => s.gloss).join('; ');
+}
+
+/** Every entry's meaning joined together -- what a word's card shows when
+ * it was saved "as a whole" (the popup's main Add button) or when a reader
+ * switches the Vocabulary tab's dropdown back to "All definitions". */
+export function combinedMeaning(entries: DictionaryEntry[]): string {
+  return entries.map(entryMeaning).join(' | ');
+}
+
 export type ReviewGrade = 'again' | 'hard' | 'good' | 'easy';
 const GRADE_TO_RATING: Record<ReviewGrade, Grade> = {
   again: Rating.Again,
@@ -209,7 +223,15 @@ export class VocabularyService {
     location?: string;
     wordInstance?: WordInstance;
   }): Promise<VocabularyItem> {
-    const meaning = params.entries[0]?.senses[0]?.gloss ?? '';
+    // A single entry (the per-entry "+" in DictionaryPopup, or any word that
+    // only ever had one) just shows that entry's own meaning. More than one
+    // -- the popup's main "+ Add to vocabulary" button, which saves every
+    // entry the lookup found -- shows all of them joined, since there's no
+    // way to know which one the reader actually meant; `selectedEntryIndex`
+    // stays undefined for this "combined" case (see the Vocabulary tab's
+    // dropdown, which lets a reader narrow it down later).
+    const meaning = params.entries.length === 1 ? entryMeaning(params.entries[0]) : combinedMeaning(params.entries);
+    const selectedEntryIndex = params.entries.length === 1 ? 0 : undefined;
     const now = Date.now();
     const freshCard = createEmptyCard(new Date(now));
     const item: VocabularyItem = {
@@ -220,6 +242,7 @@ export class VocabularyService {
       pos: params.pos,
       meaning,
       entries: params.entries,
+      selectedEntryIndex,
       bookId: params.book.id,
       bookTitle: params.book.title,
       chapterHref: params.chapterHref,
@@ -256,13 +279,68 @@ export class VocabularyService {
 
   /** Patches a saved word's own editable fields (meaning / sentence — the
    * two a learner would reasonably want to correct or personalize after
-   * saving) and persists the result. Kept generic over `VocabularyItem` so
-   * it can't drift out of sync with the type, but callers should really
-   * only ever pass `meaning`/`sentence`. */
-  async updateVocabularyItem(item: VocabularyItem, patch: Partial<Pick<VocabularyItem, 'meaning' | 'sentence'>>): Promise<VocabularyItem> {
+   * saving — plus which entry it's currently showing) and persists the
+   * result. Kept generic over `VocabularyItem` so it can't drift out of
+   * sync with the type, but callers should really only ever pass
+   * `meaning`/`sentence`/`selectedEntryIndex`/`root`/`pos`. */
+  async updateVocabularyItem(
+    item: VocabularyItem,
+    patch: Partial<Pick<VocabularyItem, 'meaning' | 'sentence' | 'selectedEntryIndex' | 'root' | 'pos' | 'surfaceForm'>>
+  ): Promise<VocabularyItem> {
     const updated = { ...item, ...patch };
     await persistenceService.saveVocabularyItem(updated);
     return updated;
+  }
+
+  /** Switches a saved word's shown definition to one specific entry
+   * (`entryIndex` into `item.entries`), or back to every entry combined
+   * (`entryIndex` omitted) -- the Vocabulary tab's "change definition"
+   * dropdown for a word that has more than one distinct entry. */
+  async selectVocabularyEntry(item: VocabularyItem, entryIndex?: number): Promise<VocabularyItem> {
+    const entry = entryIndex !== undefined ? item.entries[entryIndex] : undefined;
+    return this.updateVocabularyItem(item, {
+      selectedEntryIndex: entryIndex,
+      meaning: entry ? entryMeaning(entry) : combinedMeaning(item.entries),
+      root: entry ? entry.root : item.entries.find((e) => e.root)?.root,
+      pos: entry ? entry.senses[0]?.pos : undefined,
+    });
+  }
+
+  /** Splits an "all definitions" card into one separate card per entry, so
+   * each can be reviewed (and scheduled by FSRS) independently instead of
+   * testing an ambiguous combined meaning. Does not touch or remove the
+   * original card -- purely additive, per "add them all to the list". */
+  async splitIntoSeparateCards(item: VocabularyItem): Promise<VocabularyItem[]> {
+    const created: VocabularyItem[] = [];
+    for (const entry of item.entries) {
+      const now = Date.now();
+      const freshCard = createEmptyCard(new Date(now));
+      const copy: VocabularyItem = {
+        ...item,
+        id: 'vocab_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+        entries: [entry],
+        meaning: entryMeaning(entry),
+        selectedEntryIndex: 0,
+        root: entry.root,
+        pos: entry.senses[0]?.pos,
+        addedAt: now,
+        mastery: 'new' as MasteryLevel,
+        successfulRecalls: 0,
+        lastReviewedAt: undefined,
+        syncedToAnki: false,
+        fsrsDue: now,
+        fsrsStability: freshCard.stability,
+        fsrsDifficulty: freshCard.difficulty,
+        fsrsScheduledDays: freshCard.scheduled_days,
+        fsrsLearningSteps: freshCard.learning_steps,
+        fsrsReps: freshCard.reps,
+        fsrsLapses: freshCard.lapses,
+        fsrsState: freshCard.state,
+      };
+      await persistenceService.saveVocabularyItem(copy);
+      created.push(copy);
+    }
+    return created;
   }
 
   async setMastery(item: VocabularyItem, mastery: MasteryLevel): Promise<VocabularyItem> {
@@ -287,6 +365,22 @@ export class VocabularyService {
 
   async isSaved(bookId: string, surfaceForm: string): Promise<boolean> {
     return persistenceService.isSaved(surfaceForm, bookId);
+  }
+
+  /** Every saved card for this exact word in this book -- a word can have
+   * more than one (the popup's "all entries" card plus any per-entry ones),
+   * so "un-save this word" (the popup's ✓ Vocabulary toggle) means removing
+   * all of them, not picking one. */
+  async getForWord(bookId: string, surfaceForm: string): Promise<VocabularyItem[]> {
+    const items = await persistenceService.getVocabularyForBook(bookId);
+    return items.filter((i) => i.surfaceForm === surfaceForm);
+  }
+
+  /** Un-saves a word entirely (every card for it in this book) -- the
+   * popup's ✓ Vocabulary → Save Vocabulary toggle. */
+  async removeAllForWord(bookId: string, surfaceForm: string): Promise<void> {
+    const items = await this.getForWord(bookId, surfaceForm);
+    await Promise.all(items.map((i) => persistenceService.deleteVocabularyItem(i.id)));
   }
 
   // -------------------------------------------------------------------
