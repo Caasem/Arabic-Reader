@@ -4,6 +4,16 @@
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+  /* Insets the whole app shell away from the notch/Dynamic Island, status
+     bar, and home-indicator bar on iOS (only nonzero there -- resolves to
+     0px on everything else, including Android/desktop) -- needs
+     viewport-fit=cover on the <meta viewport> tag in index.html to have any
+     effect at all, iOS otherwise reports these as 0 regardless of the
+     actual device. Applied once here rather than per-component (topbar,
+     footer, sidebar, ...) since every one of them lives inside this single
+     flex column and shifts inward together. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
 }
 
 .app__body {
