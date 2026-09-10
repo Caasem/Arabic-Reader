@@ -96,6 +96,7 @@ const HIGHLIGHT_FILL: Record<HighlightColor, string> = {
 export class EpubService {
   private book: Book | null = null;
   private rendition: Rendition | null = null;
+  private container: HTMLElement | null = null;
   private toc: TocItem[] = [];
   private currentSectionHref?: string;
   private renderedAnnotationCfis = new Set<string>();
@@ -137,6 +138,7 @@ export class EpubService {
       return;
     }
     this.book = book;
+    this.container = container;
 
     this.currentFlow = prefs.readingFlow;
     this.currentDirection = this.getEffectiveDirection(prefs.pageDirection);
@@ -240,14 +242,20 @@ export class EpubService {
    * back wide but the layout doesn't. See the ResizeObserver in Reader.tsx
    * that calls this on every actual size change instead of just these. */
   resize(): void {
-    if (!this.rendition) return;
-    // epub.js's own .d.ts declares width/height as plain `number`, but the
-    // real implementation (managers/helpers/stage.js) treats literal `null`
-    // specifically as "measure the containing element" -- `undefined` would
-    // instead silently fall back to whatever size was last cached, which is
-    // exactly the stale-pagination problem this method exists to fix.
-    // @ts-expect-error see above -- `null` is intentional, not a mistake.
-    this.rendition.resize(null, null);
+    if (!this.rendition || !this.container) return;
+    // Deliberately *not* epub.js's own null-triggered auto-measurement --
+    // its Stage.size() reads `this.element.getBoundingClientRect()` (the
+    // full border-box, padding included) and applies that width verbatim to
+    // an *inner* wrapper div it manages inside our container, with no
+    // awareness that our container (.reader__epub) has its own padding
+    // (20px 6%, see Reader.css). That made the inner wrapper -- and the
+    // iframe sized to fill it -- render about 12% wider than the space
+    // actually available, overflowing the reading column horizontally at
+    // Reading width 100 and dragging the whole page (topbar included) into
+    // a shared horizontal scroll along with it. Passing the container's own
+    // *content-box* size (clientWidth/Height, which already excludes
+    // padding) sidesteps that miscalculation entirely.
+    this.rendition.resize(this.container.clientWidth, this.container.clientHeight);
   }
 
   private mapNavItem(item: NavItem): TocItem {
@@ -672,5 +680,6 @@ export class EpubService {
     this.book?.destroy();
     this.rendition = null;
     this.book = null;
+    this.container = null;
   }
 }

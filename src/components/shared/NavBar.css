@@ -184,23 +184,30 @@
     padding-bottom: 0;
     border-top-width: 0;
   }
+  /* The settings gear used to be pulled out of the bar entirely
+     (position: absolute; top: -44px) to float above it in the space beside
+     the mark/title -- but that space is only actually empty on the Library
+     screen. On any screen with its own bottom bar (the reader's
+     Next/Previous footer) there's real content directly above this navbar,
+     and the floated-up gear landed right on top of it. Keeping it in normal
+     flow, alongside the nav items instead of escaping above them, means it
+     can never overlap content it doesn't share a box with. */
   .navbar__brand {
-    position: absolute;
-    top: -44px;
-    right: 8px;
     padding: 0;
+    flex-shrink: 0;
   }
   .navbar__mark,
   .navbar__title {
     display: none;
   }
   .navbar {
-    position: relative;
+    justify-content: space-between;
   }
   .navbar__list {
     flex-direction: row;
-    width: 100%;
+    flex: 1;
     justify-content: space-around;
+    min-width: 0;
   }
   .navbar__item {
     flex-direction: column;

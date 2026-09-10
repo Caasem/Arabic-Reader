@@ -469,6 +469,12 @@
   flex: 1;
   position: relative;
   min-width: 0;
+  /* Contains horizontal overflow to the reading pane itself -- if the book
+     content ever genuinely needs to scroll sideways (a very long unbroken
+     word, an unusual font/size combination), that scrolling should stay
+     local to this pane rather than the topbar/footer sharing the same
+     horizontal scroll and visibly sliding along with it. */
+  overflow-x: auto;
 }
 
 .reader__epub-frame {

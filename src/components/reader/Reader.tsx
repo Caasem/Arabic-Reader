@@ -695,11 +695,23 @@ export function Reader({
   // text after opening or (especially) closing Vocab Levels.
   useEffect(() => {
     if (!ready || !containerRef.current) return;
+    // Debounced past the side panels' own 0.15s width transition (see
+    // VocabLevels.css) -- calling epub.js's resize() mid-transition (it
+    // clears and re-lays-out the view, see EpubService.resize()) measures a
+    // transient, not-yet-settled container size, which was observed to
+    // leave the just-resized iframe briefly larger than its final flex box
+    // and intercepting clicks meant for e.g. the panel's own expand button
+    // sitting where the iframe transiently still overlapped.
+    let debounce: number | null = null;
     const observer = new ResizeObserver(() => {
-      serviceRef.current?.resize();
+      if (debounce) window.clearTimeout(debounce);
+      debounce = window.setTimeout(() => serviceRef.current?.resize(), 200);
     });
     observer.observe(containerRef.current);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (debounce) window.clearTimeout(debounce);
+    };
   }, [ready]);
 
   // Refresh the saved-word colour in every currently-rendered section the
@@ -1566,17 +1578,22 @@ export function Reader({
       >
         {/* Arrow direction follows the book's RTL page-turn direction (› = back
             a page, ‹ = forward a page) — the "Previous"/"Next" text is what
-            actually says which way each button moves you. */}
-        <button className="reader__nav-btn" onClick={() => serviceRef.current?.prev()} aria-label="Previous page">
-          <span className="reader__nav-btn-icon">›</span>
-          <span className="reader__nav-btn-label">Previous</span>
+            actually says which way each button moves you. Next sits on the
+            left and Previous on the right (the reverse of an LTR app's
+            usual left=back convention) to match the RTL reading direction
+            this app is built around -- your eye moves right to left through
+            the book, so "further in" (Next) being the left-hand button
+            reads the same way the page-turn itself does. */}
+        <button className="reader__nav-btn" onClick={() => serviceRef.current?.next()} aria-label="Next page">
+          <span className="reader__nav-btn-label">Next</span>
+          <span className="reader__nav-btn-icon">‹</span>
         </button>
         <div className="reader__progress">
           <div className="reader__progress-bar" style={{ width: `${Math.round(percent * 100)}%` }} />
         </div>
-        <button className="reader__nav-btn" onClick={() => serviceRef.current?.next()} aria-label="Next page">
-          <span className="reader__nav-btn-label">Next</span>
-          <span className="reader__nav-btn-icon">‹</span>
+        <button className="reader__nav-btn" onClick={() => serviceRef.current?.prev()} aria-label="Previous page">
+          <span className="reader__nav-btn-icon">›</span>
+          <span className="reader__nav-btn-label">Previous</span>
         </button>
       </footer>
 
