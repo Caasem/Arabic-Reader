@@ -10,31 +10,74 @@
  * main-thread proxy (AramorphDictionaryProvider) can match responses back
  * to the call that asked for them.
  */
-import { AramorphEngine, createDictTable, createMorphTableFromText, type AramorphResult } from './engine';
-import { loadCachedDictFiles, saveDictFiles, clearDictFiles } from './store';
-import type { DictFileName } from './dictFileNames';
+import {
+  AramorphEngine,
+  createDictTable,
+  createMorphTableFromText,
+  serializeTables,
+  deserializeTables,
+  type AramorphResult,
+  type AramorphTables,
+  type SerializedAramorphTables,
+} from './engine';
+import { loadCachedDictFiles, saveDictFiles, clearDictFiles, loadCachedParsedTables, saveParsedTables } from './store';
+import { DICT_FILE_NAMES, type DictFileName } from './dictFileNames';
 import bundledDictData from 'virtual:dictionary-data';
 
 let engine = new AramorphEngine();
 
-function buildTables(texts: Record<DictFileName, string>): void {
-  engine.setTables({
+// Cheap FNV-1a-style hash over each of the six source texts, combined with
+// their lengths -- identifies "this exact dataset" well enough to safely
+// reuse a cached parse, without needing a real crypto hash for six files
+// that only ever change via a code change (a custom upload) or an app
+// update (the bundled default). Run once per buildTables() call, not per
+// lookup, so its own cost is irrelevant next to the parse it's replacing.
+function fingerprintTexts(texts: Record<DictFileName, string>): string {
+  return DICT_FILE_NAMES.map((name) => `${name}:${texts[name].length}:${hash(texts[name])}`).join('|');
+}
+function hash(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
+/** Builds (or reuses a cached parse of) the lookup tables for `texts` and
+ * installs them on `engine`. The bundled default dataset used to be
+ * reparsed from scratch on *every* app launch -- the raw-text cache in
+ * store.ts only ever held a custom upload, never the bundled data, and
+ * even for a custom upload only the text was cached, not the parsed
+ * result. This checks a parsed-table cache first (keyed by a fingerprint
+ * of the exact source text, so a different dataset is correctly treated
+ * as a miss) and only falls through to the real `createDictTable` parse
+ * pass when nothing matches, caching the result afterward either way. */
+async function buildTables(texts: Record<DictFileName, string>): Promise<void> {
+  const fingerprint = fingerprintTexts(texts);
+  const cached = await loadCachedParsedTables(fingerprint);
+  if (cached) {
+    engine.setTables(deserializeTables(cached as SerializedAramorphTables));
+    return;
+  }
+
+  const tables: AramorphTables = {
     dictstems: createDictTable(texts.dictstems),
     dictprefs: createDictTable(texts.dictprefixes),
     dictsuffs: createDictTable(texts.dictsuffixes),
     tableab: createMorphTableFromText(texts.tableab),
     tablebc: createMorphTableFromText(texts.tablebc),
     tableac: createMorphTableFromText(texts.tableac),
-  });
+  };
+  engine.setTables(tables);
+  await saveParsedTables(fingerprint, serializeTables(tables));
 }
 
 // Prefer a previously-uploaded custom dataset if one's cached; otherwise the
 // bundled default, embedded directly in this worker's own chunk at build
 // time (see vite.config.ts's bundledDictDataPlugin) -- no network fetch
 // involved either way.
-const ready = loadCachedDictFiles().then((cached) => {
-  buildTables(cached ?? bundledDictData);
-});
+const ready = loadCachedDictFiles().then((cached) => buildTables(cached ?? bundledDictData));
 
 ready.then(() => {
   postMessage({ id: 0, type: 'ready', tableSizes: engine.tableSizes });
@@ -74,7 +117,7 @@ self.onmessage = async (e: MessageEvent<Incoming>) => {
       case 'importTexts': {
         await ready;
         await saveDictFiles(msg.texts);
-        buildTables(msg.texts);
+        await buildTables(msg.texts);
         postMessage({ id: msg.id, type: 'built', tableSizes: engine.tableSizes });
         break;
       }
@@ -82,7 +125,7 @@ self.onmessage = async (e: MessageEvent<Incoming>) => {
         await ready;
         await clearDictFiles();
         engine = new AramorphEngine();
-        buildTables(bundledDictData);
+        await buildTables(bundledDictData);
         postMessage({ id: msg.id, type: 'built', tableSizes: engine.tableSizes });
         break;
       }

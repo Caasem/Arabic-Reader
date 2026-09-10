@@ -17,9 +17,17 @@ import { DICT_FILE_NAMES, type DictFileName } from './dictFileNames';
  */
 class AramorphFilesDB extends Dexie {
   files!: Table<{ name: string; content: string }, string>;
+  // Single-row cache ('current' is the only id ever used) of whichever
+  // dataset (bundled or custom-uploaded) was last *parsed*, keyed by a
+  // fingerprint of its source text so a different dataset (a custom upload
+  // replacing the bundled default, or a build shipping updated dictionary
+  // data) is detected as a miss and rebuilt rather than serving stale
+  // tables. See aramorph.worker.ts.
+  parsedTables!: Table<{ id: string; fingerprint: string; data: unknown }, string>;
   constructor() {
     super('arabic-reader-aramorph-files');
     this.version(1).stores({ files: 'name' });
+    this.version(2).stores({ files: 'name', parsedTables: 'id' });
   }
 }
 
@@ -47,6 +55,26 @@ export async function loadCachedDictFiles(): Promise<Record<DictFileName, string
 
 export async function clearDictFiles(): Promise<void> {
   await db.files.clear();
+  // A custom dataset being cleared/replaced means whatever parsed-table
+  // cache exists is for a dataset that's about to stop being active --
+  // dropping it here (rather than leaving it to age out via fingerprint
+  // mismatch) keeps the two caches from ever visibly disagreeing.
+  await db.parsedTables.clear();
+}
+
+/** Previously-*parsed* tables (not just cached raw text) for whichever
+ * dataset's source text hashes to `fingerprint` -- the whole point of this
+ * cache is skipping `createDictTable`'s ~136k-line parse pass on every
+ * app launch, which is otherwise unavoidable even for the bundled default
+ * dataset (the raw-text cache above only ever holds a *custom* upload). */
+export async function loadCachedParsedTables(fingerprint: string): Promise<unknown | null> {
+  const row = await db.parsedTables.get('current');
+  if (!row || row.fingerprint !== fingerprint) return null;
+  return row.data;
+}
+
+export async function saveParsedTables(fingerprint: string, data: unknown): Promise<void> {
+  await db.parsedTables.put({ id: 'current', fingerprint, data });
 }
 
 export { DICT_FILE_NAMES, type DictFileName } from './dictFileNames';

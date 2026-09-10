@@ -35,10 +35,18 @@ function detransliterate(word: string): string {
   for (const p of buck2uniPatterns) result = result.replace(p.pattern, p.value);
   return result;
 }
+// Reverse of buck2uniPatterns -- built once at module load instead of a
+// fresh `new RegExp` per key on every single `transliterate()` call (this
+// runs on every `lookup()`, so it was recompiling ~40 regexes per word
+// looked up, including every word in a book-vocabulary batch).
+const uni2buckPatterns = Object.entries(buck2uni).map(([key, value]) => ({
+  pattern: new RegExp(value.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'g'),
+  value: key,
+}));
 function transliterate(word: string): string {
   if (!word) return word;
   let result = word;
-  for (const key in buck2uni) result = result.replace(new RegExp(buck2uni[key], 'g'), key);
+  for (const p of uni2buckPatterns) result = result.replace(p.pattern, p.value);
   return result;
 }
 function removeDiacriticsBuckwalter(word: string): string {
@@ -57,6 +65,23 @@ export class OptimizedDictArray<T> {
   }
   get size(): number {
     return this.map.size;
+  }
+  /** Plain array-of-tuples, not the Map itself or a plain object keyed by
+   * dictionary entries -- IndexedDB's structured clone can store a Map
+   * directly, but relying on that across every WebView this app targets
+   * (see the Android fetch-corruption history) is the kind of assumption
+   * worth not making; a plain array serializes identically everywhere. A
+   * plain *object* would work too but risks a real Arabic dictionary key
+   * colliding with a JS prototype property name (`constructor`, etc). */
+  toEntries(): [string, T[]][] {
+    return Array.from(this.map.entries());
+  }
+  static fromEntries<T>(entries: [string, T[]][]): OptimizedDictArray<T> {
+    const table = new OptimizedDictArray<T>();
+    for (const [key, values] of entries) {
+      for (const v of values) table.addItem(key, v);
+    }
+    return table;
   }
 }
 
@@ -145,6 +170,41 @@ export interface AramorphTables {
   tableab: OptimizedDictArray<string>;
   tablebc: OptimizedDictArray<string>;
   tableac: OptimizedDictArray<string>;
+}
+
+/** Plain-data mirror of `AramorphTables`, safe to hand to IndexedDB (see
+ * store.ts's parsed-table cache) or `postMessage` -- an `OptimizedDictArray`
+ * itself is a class instance wrapping a Map, not something either of those
+ * can round-trip reliably on their own. */
+export interface SerializedAramorphTables {
+  dictstems: [string, MorphEntry[]][];
+  dictprefs: [string, MorphEntry[]][];
+  dictsuffs: [string, MorphEntry[]][];
+  tableab: [string, string[]][];
+  tablebc: [string, string[]][];
+  tableac: [string, string[]][];
+}
+
+export function serializeTables(tables: AramorphTables): SerializedAramorphTables {
+  return {
+    dictstems: tables.dictstems.toEntries(),
+    dictprefs: tables.dictprefs.toEntries(),
+    dictsuffs: tables.dictsuffs.toEntries(),
+    tableab: tables.tableab.toEntries(),
+    tablebc: tables.tablebc.toEntries(),
+    tableac: tables.tableac.toEntries(),
+  };
+}
+
+export function deserializeTables(data: SerializedAramorphTables): AramorphTables {
+  return {
+    dictstems: OptimizedDictArray.fromEntries(data.dictstems),
+    dictprefs: OptimizedDictArray.fromEntries(data.dictprefs),
+    dictsuffs: OptimizedDictArray.fromEntries(data.dictsuffs),
+    tableab: OptimizedDictArray.fromEntries(data.tableab),
+    tablebc: OptimizedDictArray.fromEntries(data.tablebc),
+    tableac: OptimizedDictArray.fromEntries(data.tableac),
+  };
 }
 
 export interface AramorphResult {
