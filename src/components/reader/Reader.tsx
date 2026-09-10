@@ -686,6 +686,22 @@ export function Reader({
     if (ready) serviceRef.current?.applyPreferences(prefs);
   }, [ready, prefs.fontSizePct, prefs.lineHeight, prefs.fontFamily, prefs.readingFlow, prefs.pageDirection, prefs.theme]);
 
+  // Re-paginate whenever the reading column itself actually changes size --
+  // not just on window resize (epub.js listens for that on its own), but
+  // also when a *sibling* panel (TOC, Bookmarks, Vocab Levels) mounts or
+  // unmounts and reflows `.reader__epub` via flexbox, which fires no resize
+  // event at all. Without this, epub.js keeps paginating against whatever
+  // width it last measured, which is what showed up as jumbled/overlapping
+  // text after opening or (especially) closing Vocab Levels.
+  useEffect(() => {
+    if (!ready || !containerRef.current) return;
+    const observer = new ResizeObserver(() => {
+      serviceRef.current?.resize();
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [ready]);
+
   // Refresh the saved-word colour in every currently-rendered section the
   // instant the theme changes, rather than waiting for that section to
   // re-render on its own (a page turn away and back) -- otherwise a reader

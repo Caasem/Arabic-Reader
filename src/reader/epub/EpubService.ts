@@ -217,6 +217,28 @@ export class EpubService {
     }
   }
 
+  /** Re-measures the container and re-paginates against its current size.
+   * epub.js computes column width/page breaks from the container's pixel
+   * size at open() time and doesn't repeat that on its own when a *sibling*
+   * element changes size (the TOC/Bookmarks/Vocab Levels side panels all
+   * resize `.reader__epub` via flexbox, not the window itself, so epub.js's
+   * own window-resize listener never fires for it) -- without this, opening
+   * or closing one of those panels leaves the rendition paginating against
+   * a stale width, which is what shows up as jumbled/overlapping text,
+   * often worst right after *closing* the panel since the container snaps
+   * back wide but the layout doesn't. See the ResizeObserver in Reader.tsx
+   * that calls this on every actual size change instead of just these. */
+  resize(): void {
+    if (!this.rendition) return;
+    // epub.js's own .d.ts declares width/height as plain `number`, but the
+    // real implementation (managers/helpers/stage.js) treats literal `null`
+    // specifically as "measure the containing element" -- `undefined` would
+    // instead silently fall back to whatever size was last cached, which is
+    // exactly the stale-pagination problem this method exists to fix.
+    // @ts-expect-error see above -- `null` is intentional, not a mistake.
+    this.rendition.resize(null, null);
+  }
+
   private mapNavItem(item: NavItem): TocItem {
     return {
       href: item.href,
