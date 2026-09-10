@@ -41,10 +41,44 @@
   color: var(--ink);
   margin-bottom: 12px;
   padding-left: 20px;
+  /* Clears .dict-popup__header-actions (right: 12px, two 22px circles plus
+     gap) the same way padding-left already clears .dict-popup__close. */
+  padding-right: 60px;
   display: flex;
   align-items: baseline;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.dict-popup__header-actions {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  display: flex;
+  gap: 6px;
+}
+
+/* Quick-access header shortcuts -- same quiet circular-icon treatment as
+   the per-entry save button, so they read as secondary controls rather
+   than competing with the word itself for attention. */
+.dict-popup__header-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--accent);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dict-popup__header-btn:hover {
+  background: var(--accent-soft);
 }
 
 .dict-popup__rarity {
@@ -81,40 +115,54 @@
   padding: 8px 0;
 }
 
-.dict-popup__entry {
+.dict-popup__group {
   padding: 10px 0;
   border-top: 1px solid var(--border);
 }
 
-.dict-popup__entry:first-of-type {
+.dict-popup__group:first-of-type {
   border-top: none;
+  padding-top: 0;
+}
+
+.dict-popup__group-header {
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+/* Entries within one provider's group get a lighter divider than the
+   heavier one between groups (handled by .dict-popup__group's border-top
+   above), so multiple definitions from the same provider still read as
+   visually distinct without competing with the group boundary. */
+.dict-popup__entry + .dict-popup__entry {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
 }
 
 .dict-popup__entry-head {
   display: flex;
-  justify-content: space-between;
   align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 4px;
+}
+
+/* Only the save button pins to the row's far edge -- headword and
+   root/form flow together right after it, so root/form reads as sitting
+   next to the headword rather than spread away from it. */
+.dict-popup__entry-save {
+  margin-inline-start: auto;
 }
 
 .dict-popup__headword {
   font-family: var(--font-arabic);
   font-size: 16px;
   color: var(--accent);
-}
-
-.dict-popup__provider {
-  font-size: 10.5px;
-  color: var(--ink-faint);
-  font-family: var(--font-ui);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.dict-popup__entry-head-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .dict-popup__entry-save {
@@ -155,19 +203,48 @@
 }
 
 .dict-popup__entry-morph {
-  display: flex;
-  gap: 10px;
-  font-size: 11.5px;
+  display: inline-flex;
+  gap: 8px;
+  font-size: 9.5px;
   color: var(--ink-faint);
-  margin-bottom: 4px;
 }
 
 .dict-popup__entry-morph-value {
   font-family: var(--font-arabic);
-  font-size: 13px;
+  font-size: 11px;
   font-style: normal;
   color: var(--ink-soft);
-  margin-inline-start: 3px;
+}
+
+.dict-popup__morph-item {
+  cursor: pointer;
+}
+
+/* Both faces share one grid cell so they overlap exactly and crossfade in
+   place, sized by whichever is larger -- no layout shift when the label
+   swaps in. */
+.dict-popup__morph-swap {
+  display: inline-grid;
+}
+
+.dict-popup__morph-face {
+  grid-area: 1 / 1;
+  transition: opacity 0.18s ease;
+  opacity: 1;
+}
+
+.dict-popup__morph-face--label {
+  opacity: 0;
+  font-family: var(--font-ui);
+  color: var(--ink-faint);
+}
+
+.dict-popup__morph-swap--label .dict-popup__entry-morph-value {
+  opacity: 0;
+}
+
+.dict-popup__morph-swap--label .dict-popup__morph-face--label {
+  opacity: 1;
 }
 
 /* Badges variant (Settings → "Root/form display") -- same markup, same

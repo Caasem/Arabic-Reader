@@ -227,4 +227,17 @@
     width: 100%;
     padding: 6px 4px;
   }
+  /* .navbar__settings--collapsed's margin-top: auto / margin-bottom: 12px
+     (set above, outside this media query) push it to the bottom of a
+     *column* flex sidebar -- the desktop collapsed-rail layout. The
+     collapsed preference persists in localStorage independent of window
+     width, so a narrow-but-not-quite-phone-sized window can land here
+     still "collapsed", and those same vertical margins applied inside this
+     block's *row* flex layout instead pushed the gear out of the row and
+     down over whatever sits below the tab bar (the reader's footer
+     Next/Previous buttons). Resetting the margins here lets it sit flush
+     in the row exactly like the non-collapsed gear already does. */
+  .navbar__settings--collapsed {
+    margin: 0;
+  }
 }

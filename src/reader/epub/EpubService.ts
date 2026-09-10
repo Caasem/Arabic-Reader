@@ -152,6 +152,16 @@ export class EpubService {
       // window width, not "sometimes two columns depending how wide you've
       // sized the window", which is what 'auto' would otherwise give for free.
       spread: prefs.twoColumnEnabled ? 'always' : 'none',
+      // epub.js's Layout.calculate() only actually splits into two columns
+      // when width >= minSpreadWidth (defaults to 800px) -- 'always' mode
+      // does NOT skip that check, it just changes what triggers it. Left
+      // at the default, a phone's ~360-400px portrait viewport never
+      // qualifies and the toggle silently does nothing. Since the user
+      // explicitly asked for two columns this should be unconditional, but
+      // epub.js's own `min` handling (both here and in `.spread()` below)
+      // uses `if (min)`/`||`, which treats 0 as "not set" -- so 1px instead
+      // of a true 0, which is effectively the same for any real viewport.
+      minSpreadWidth: prefs.twoColumnEnabled ? 1 : undefined,
       // `defaultDirection` is only a *fallback* epub.js uses if the book's
       // own OPF metadata doesn't declare a direction -- an explicit
       // RTL/LTR override needs to win outright, so `.direction()` is called
@@ -226,7 +236,9 @@ export class EpubService {
 
     if (prefs.twoColumnEnabled !== this.currentTwoColumn) {
       this.currentTwoColumn = prefs.twoColumnEnabled;
-      this.rendition.spread(prefs.twoColumnEnabled ? 'always' : 'none');
+      // Second arg overrides _minSpreadWidth (default 800px) -- see the
+      // matching comment on `renderTo()`'s own `spread` option above.
+      this.rendition.spread(prefs.twoColumnEnabled ? 'always' : 'none', prefs.twoColumnEnabled ? 1 : undefined);
     }
   }
 
@@ -255,7 +267,24 @@ export class EpubService {
     // a shared horizontal scroll along with it. Passing the container's own
     // *content-box* size (clientWidth/Height, which already excludes
     // padding) sidesteps that miscalculation entirely.
-    this.rendition.resize(this.container.clientWidth, this.container.clientHeight);
+    // `rendition.resize()` calls straight through to the view manager's own
+    // resize(), which -- unlike next()/prev() -- is NOT run through
+    // `rendition.q` (epub.js's internal task queue that serializes page
+    // turns). Manager.resize() calls `.clear()` on the currently rendered
+    // views before repaginating; if that lands while a next()/prev() is
+    // still in flight (queued but not yet resolved), it yanks the view out
+    // from under it, leaving the manager's current-page state stale -- every
+    // next() after that computes against a view that's already gone and
+    // silently no-ops. Android WebView appears far likelier than desktop
+    // Chrome to fire our ResizeObserver mid-page-turn (viewport insets
+    // settling, system bars), which matches "next works, then stops after a
+    // few turns". Routing this resize through the same queue next()/prev()
+    // use means it always waits for any in-flight page turn to finish first.
+    const rendition = this.rendition;
+    const container = this.container;
+    (rendition as unknown as { q: { enqueue: (task: () => void) => Promise<void> } }).q.enqueue(() => {
+      rendition.resize(container.clientWidth, container.clientHeight);
+    });
   }
 
   private mapNavItem(item: NavItem): TocItem {

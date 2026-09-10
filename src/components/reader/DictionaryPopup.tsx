@@ -3,10 +3,72 @@ import type { DictionaryEntry, DictionaryLookupResult, WordInstance, WordRarity 
 import { getWordRarity, isRarityDataReady, TIER_LABELS } from '../../vocabRarity/rarity';
 import { normalize } from '../../reader/tokenizer/arabicTokenizer';
 import { usePreferences } from '../../state/PreferencesContext';
+import { IconEdit } from '../shared/icons';
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
 const WORD_GAP = 14;
+
+/** Folds consecutive same-provider entries into one group so the popup can
+ * show the provider name once per group instead of once per entry. Keeps
+ * each entry's original index (needed for the per-entry save-state Set,
+ * which is keyed by position in the flat `result.entries` array). */
+/** A root/lemma value that shows the Arabic text by default; tapping it
+ * crossfades to the "root"/"form" label in the exact same spot, then fades
+ * back to the value after a moment. Replaces a static always-visible label
+ * — the label only appears when asked for, right where the value was. */
+function MorphValue({ kind, value }: { kind: 'form' | 'root'; value: string }) {
+  const [revealed, setRevealed] = useState(false);
+  const timeoutRef = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(timeoutRef.current), []);
+
+  function handleTap() {
+    setRevealed(true);
+    window.clearTimeout(timeoutRef.current);
+    timeoutRef.current = window.setTimeout(() => setRevealed(false), 1400);
+  }
+
+  return (
+    <span
+      className="dict-popup__morph-item"
+      onClick={handleTap}
+      role="button"
+      tabIndex={0}
+      aria-label={`${kind}: ${value}`}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleTap();
+        }
+      }}
+    >
+      <span className={'dict-popup__morph-swap' + (revealed ? ' dict-popup__morph-swap--label' : '')}>
+        <bdi className="dict-popup__entry-morph-value dict-popup__morph-face" aria-hidden={revealed}>
+          {value}
+        </bdi>
+        <span className="dict-popup__morph-face dict-popup__morph-face--label" aria-hidden={!revealed}>
+          {kind}
+        </span>
+      </span>
+    </span>
+  );
+}
+
+function groupEntriesByProvider(
+  entries: DictionaryEntry[],
+): { providerId: string; providerName: string; entries: { entry: DictionaryEntry; index: number }[] }[] {
+  const groups: { providerId: string; providerName: string; entries: { entry: DictionaryEntry; index: number }[] }[] = [];
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    const last = groups[groups.length - 1];
+    if (last && last.providerId === entry.providerId) {
+      last.entries.push({ entry, index: i });
+    } else {
+      groups.push({ providerId: entry.providerId, providerName: entry.providerName, entries: [{ entry, index: i }] });
+    }
+  }
+  return groups;
+}
 
 export function DictionaryPopup({
   word,
@@ -136,6 +198,21 @@ export function DictionaryPopup({
           ×
         </button>
 
+        {/* Quick-access header shortcuts, alongside the full "Save
+            Vocabulary"/"Edit" buttons in the footer below -- these exist for
+            reaching either action without scrolling down past a long entry
+            list, not as a replacement for the footer pair. */}
+        <div className="dict-popup__header-actions">
+          <button className="dict-popup__header-btn" onClick={onSave} aria-label="Add to vocabulary" title="Add to vocabulary">
+            +
+          </button>
+          {onEdit && (
+            <button className="dict-popup__header-btn" onClick={onEdit} aria-label="Edit" title="Edit">
+              <IconEdit size={12} />
+            </button>
+          )}
+        </div>
+
         <div className="dict-popup__word">
           {word}
           {rarity && (
@@ -153,67 +230,75 @@ export function DictionaryPopup({
         )}
 
         {!loading &&
-          result?.entries.map((entry, i) => (
-            <div className="dict-popup__entry" key={entry.providerId + i}>
-              <div className="dict-popup__entry-head">
-                <span className="dict-popup__headword">{entry.headword}</span>
-                <span className="dict-popup__entry-head-right">
-                  <span className="dict-popup__provider">{entry.providerName}</span>
-                  {onSaveEntry && result.entries.length > 1 && (
-                    <button
-                      className="dict-popup__entry-save"
-                      onClick={() => {
-                        onSaveEntry(entry);
-                        setSavedEntryKeys((prev) => new Set(prev).add(i));
-                      }}
-                      disabled={savedEntryKeys.has(i)}
-                      aria-label={`Add just "${entry.headword}" to vocabulary`}
-                      title="Add just this definition"
-                    >
-                      {savedEntryKeys.has(i) ? '✓' : '+'}
-                    </button>
-                  )}
-                </span>
-              </div>
-              {/* Per-entry, not a single shared header -- different entries
-                  can genuinely come from different roots/lemmas (e.g. an
-                  unvocalized verb form that's ambiguous between Form I and
-                  Form IV), so one root shown once at the popup level would
-                  misrepresent entries that don't share it. Only shown when
-                  it says something the headword doesn't already -- a plain
-                  root-keyed entry (e.g. Al-Wasit) would otherwise repeat its
-                  own headword right back as "root". */}
-              {((entry.lemma && entry.lemma !== entry.headword) || (entry.root && entry.root !== entry.headword)) && (
-                <div
-                  className={
-                    'dict-popup__entry-morph' +
-                    (prefs.morphDisplayStyle === 'badges' ? ' dict-popup__entry-morph--badges' : '')
-                  }
-                >
-                  {entry.lemma && entry.lemma !== entry.headword && (
-                    <span>
-                      form <bdi className="dict-popup__entry-morph-value">{entry.lemma}</bdi>
-                    </span>
-                  )}
-                  {entry.root && entry.root !== entry.headword && (
-                    <span>
-                      root <bdi className="dict-popup__entry-morph-value">{entry.root}</bdi>
-                    </span>
-                  )}
-                </div>
-              )}
-              <ul className="dict-popup__senses">
-                {entry.senses.map((s, i) => (
-                  <li key={i}>
-                    {s.gloss}
-                    {(s.pos || s.gender) && (
-                      <span className="dict-popup__tag">
-                        {[s.pos, s.gender].filter(Boolean).join(' · ')}
+          // Grouped by provider under one shared header instead of repeating
+          // "AraMorph"/"Al-Wasit" etc. on every single entry -- entries stay
+          // in DictionaryManager's own flattening order (all of one
+          // provider's entries before the next provider's), so a new group
+          // starts exactly when providerId changes from the previous entry.
+          groupEntriesByProvider(result?.entries ?? []).map((group) => (
+            <div className="dict-popup__group" key={group.providerId}>
+              <div className="dict-popup__group-header">{group.providerName}</div>
+              {group.entries.map(({ entry, index: i }) => (
+                <div className="dict-popup__entry" key={entry.providerId + i}>
+                  <div className="dict-popup__entry-head">
+                    <span className="dict-popup__headword">{entry.headword}</span>
+                    {/* Sits between the headword and the per-entry save
+                        button -- root before form (read first, right next to
+                        the headword it belongs to), both smaller than the
+                        headword since they're a secondary identifier, not
+                        the entry's main content. Different entries in the
+                        same provider's group can genuinely come from
+                        different roots/lemmas (e.g. an unvocalized verb form
+                        ambiguous between Form I and Form IV), so this stays
+                        per-entry rather than folded into the group header.
+                        Only shown when it says something the headword
+                        doesn't already -- a plain root-keyed entry (e.g.
+                        Al-Wasit) would otherwise repeat its own headword
+                        right back as "root". */}
+                    {((entry.lemma && entry.lemma !== entry.headword) || (entry.root && entry.root !== entry.headword)) && (
+                      <span
+                        className={
+                          'dict-popup__entry-morph' +
+                          (prefs.morphDisplayStyle === 'badges' ? ' dict-popup__entry-morph--badges' : '')
+                        }
+                      >
+                        {entry.root && entry.root !== entry.headword && (
+                          <MorphValue kind="root" value={entry.root} />
+                        )}
+                        {entry.lemma && entry.lemma !== entry.headword && (
+                          <MorphValue kind="form" value={entry.lemma} />
+                        )}
                       </span>
                     )}
-                  </li>
-                ))}
-              </ul>
+                    {onSaveEntry && result!.entries.length > 1 && (
+                      <button
+                        className="dict-popup__entry-save"
+                        onClick={() => {
+                          onSaveEntry(entry);
+                          setSavedEntryKeys((prev) => new Set(prev).add(i));
+                        }}
+                        disabled={savedEntryKeys.has(i)}
+                        aria-label={`Add just "${entry.headword}" to vocabulary`}
+                        title="Add just this definition"
+                      >
+                        {savedEntryKeys.has(i) ? '✓' : '+'}
+                      </button>
+                    )}
+                  </div>
+                  <ul className="dict-popup__senses">
+                    {entry.senses.map((s, i) => (
+                      <li key={i}>
+                        {s.gloss}
+                        {(s.pos || s.gender) && (
+                          <span className="dict-popup__tag">
+                            {[s.pos, s.gender].filter(Boolean).join(' · ')}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
           ))}
 

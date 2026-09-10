@@ -578,6 +578,13 @@
   background: var(--border);
   border-radius: 2px;
   overflow: hidden;
+  /* The fill bar below is a plain block with an inline `width: %` -- with
+     no direction set it anchors to the left (LTR default) and grows
+     rightward, the wrong way for a book read right-to-left. `rtl` here
+     makes the block's inline-start edge (where it anchors) the right side
+     instead, so it fills right-to-left as `percent` grows, matching the
+     book's own page-turn direction (Next is already the left-hand button). */
+  direction: rtl;
 }
 
 .reader__progress-bar {
