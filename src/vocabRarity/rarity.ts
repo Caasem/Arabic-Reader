@@ -1,6 +1,7 @@
 import type { VocabTier, WordRarity } from '../types';
 import { isEnabled, setEnabled, setDisabled } from './frequencyStore';
 import { getFrequencyIndex, type IngestProgress } from './frequencyIndex';
+import { normalize } from '../reader/tokenizer/arabicTokenizer';
 
 /**
  * Rank cutoffs for the three learner-facing tiers, chosen to mirror how a
@@ -62,6 +63,24 @@ export const TIER_LABELS: Record<VocabTier, string> = {
   unlisted: 'Advanced', // shown grouped with advanced in tier-picker UI; kept distinct in data (see VocabTier doc)
 };
 
+/** Looks up a word's rank directly, falling back to its AraMorph-resolved
+ * lemma when the raw surface form isn't one of the list's captured forms.
+ * This matters even after fixing the top-N-forms-per-lemma cap (see git
+ * history) because Arabic proclitics stack combinatorially (و/ف + ال + stem
+ * + enclitic pronoun) -- no finite captured-forms list can ever cover every
+ * valid combination a reader might encounter (e.g. فالكاتب, "and so the
+ * writer", never attested often enough in the corpus to make its lemma's
+ * top-40 forms, even though كاتب itself is common). The lemma fallback
+ * sidesteps that ceiling entirely: AraMorph resolves *any* surface form its
+ * grammar can parse to the same lemma spelling regardless of which
+ * particular combination of clitics happened to be attached. */
+function lookupRank(word: string, lemma: string | undefined, ranks: Map<string, number>): number | null {
+  const direct = ranks.get(word);
+  if (direct !== undefined) return direct;
+  if (!lemma) return null;
+  return ranks.get(normalize(lemma)) ?? null;
+}
+
 function toRarity(word: string, rank: number | null, total: number, pos?: string): WordRarity {
   const morphComplexity = countAffixMorphemes(pos);
   return {
@@ -73,26 +92,31 @@ function toRarity(word: string, rank: number | null, total: number, pos?: string
   };
 }
 
-/** `pos` is AraMorph's raw affix-analysis string for this exact surface
- * form, when the caller already has it (e.g. from a dictionary lookup's
- * `MorphologicalAnalysis`) -- optional, since not every caller has run
+/** `pos`/`lemma` are AraMorph's own analysis of this exact surface form,
+ * when the caller already has it (e.g. from a dictionary lookup's
+ * `MorphologicalAnalysis`) -- both optional, since not every caller has run
  * morphology on the word, and rarity should still degrade gracefully
- * (frequency rank only, no complexity escalation) rather than fail. */
-export async function getWordRarity(word: string, pos?: string): Promise<WordRarity> {
+ * (frequency rank only, no lemma fallback or complexity escalation) rather
+ * than fail. */
+export async function getWordRarity(word: string, pos?: string, lemma?: string): Promise<WordRarity> {
   const { ranks, total } = await getFrequencyIndex();
-  return toRarity(word, ranks.get(word) ?? null, total, pos);
+  return toRarity(word, lookupRank(word, lemma, ranks), total, pos);
 }
 
 /** Batch version for building a whole book's vocabulary index — cheap here
  * since the underlying index is just one shared in-memory Map either way,
  * but keeps callers symmetrical with the earlier per-row-lookup API.
- * `posByWord` mirrors `getWordRarity`'s optional `pos` -- per-word affix
- * analysis, when the caller has it (see bookVocabIndex.ts). */
-export async function getWordRarities(words: string[], posByWord?: Map<string, string | undefined>): Promise<Map<string, WordRarity>> {
+ * `posByWord`/`lemmaByWord` mirror `getWordRarity`'s optional `pos`/`lemma`
+ * -- per-word morphology, when the caller has it (see bookVocabIndex.ts). */
+export async function getWordRarities(
+  words: string[],
+  posByWord?: Map<string, string | undefined>,
+  lemmaByWord?: Map<string, string | undefined>
+): Promise<Map<string, WordRarity>> {
   const { ranks, total } = await getFrequencyIndex();
   const out = new Map<string, WordRarity>();
   for (const word of words) {
-    out.set(word, toRarity(word, ranks.get(word) ?? null, total, posByWord?.get(word)));
+    out.set(word, toRarity(word, lookupRank(word, lemmaByWord?.get(word), ranks), total, posByWord?.get(word)));
   }
   return out;
 }

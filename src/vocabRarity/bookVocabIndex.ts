@@ -101,19 +101,22 @@ async function buildIndex(book: Book): Promise<BookVocabWord[]> {
   const normalizedWords = Array.from(new Set(words.map((w) => normalize(w))));
 
   // Morphology per distinct word, for the rarity system's complexity
-  // escalation (see rarity.ts) -- one batched worker round-trip rather than
-  // one per word, since a book easily has several thousand distinct words.
-  // Best-effort: an analysis failure just means that word's tier falls back
-  // to frequency-only, not a broken index.
+  // escalation and lemma-fallback lookup (see rarity.ts) -- one batched
+  // worker round-trip rather than one per word, since a book easily has
+  // several thousand distinct words. Best-effort: an analysis failure just
+  // means that word's tier falls back to frequency-only, not a broken index.
   let posByWord: Map<string, string | undefined> | undefined;
+  let lemmaByWord: Map<string, string | undefined> | undefined;
   try {
     const analyses = await aramorphProvider.analyzeMany(normalizedWords);
     posByWord = new Map(normalizedWords.map((w) => [w, analyses.get(w)?.[0]?.pos]));
+    lemmaByWord = new Map(normalizedWords.map((w) => [w, analyses.get(w)?.[0]?.lemma]));
   } catch {
     posByWord = undefined;
+    lemmaByWord = undefined;
   }
 
-  const rarities = await getWordRarities(normalizedWords, posByWord);
+  const rarities = await getWordRarities(normalizedWords, posByWord, lemmaByWord);
 
   const result: BookVocabWord[] = words.map((word) => {
     const entry = counts.get(word)!;
