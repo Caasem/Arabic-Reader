@@ -59,9 +59,13 @@ export class LibraryService {
     await persistenceService.deleteBook(id);
   }
 
-  async progressFor(bookId: string): Promise<number> {
+  /** One round-trip for both the Library grid's progress bar and its
+   * "Recently read" sort -- `updatedAt` is undefined for a book that's
+   * never been opened (no ReadingPosition row yet), distinct from having
+   * been opened but not reported reading it (percent 0). */
+  async readingInfoFor(bookId: string): Promise<{ percent: number; lastReadAt?: number }> {
     const pos = await persistenceService.getReadingPosition(bookId);
-    return pos?.percent ?? 0;
+    return { percent: pos?.percent ?? 0, lastReadAt: pos?.updatedAt };
   }
 }
 
