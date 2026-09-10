@@ -7,7 +7,7 @@ import { isRarityDataReady, enableRarityData, disableRarityData } from '../../vo
 import { pingAnki, getDeckNames, ensureDeck, addNote, AnkiConnectError } from '../../anki/ankiConnect';
 import { vocabularyService } from '../../vocabulary/vocabularyService';
 import { BackupControls } from './BackupControls';
-import type { PageDirection, ReaderTheme, ReadingFlow, TouchDictionaryAction } from '../../types';
+import type { MorphDisplayStyle, PageDirection, ReaderTheme, ReadingFlow, TouchDictionaryAction } from '../../types';
 import './SettingsPanel.css';
 
 const THEMES: { id: ReaderTheme; label: string }[] = [
@@ -26,6 +26,11 @@ const PAGE_DIRECTIONS: { id: PageDirection; label: string }[] = [
   { id: 'auto', label: 'Automatic' },
   { id: 'rtl', label: 'RTL' },
   { id: 'ltr', label: 'LTR' },
+];
+
+const MORPH_DISPLAY_STYLES: { id: MorphDisplayStyle; label: string }[] = [
+  { id: 'caption', label: 'Caption' },
+  { id: 'badges', label: 'Badges' },
 ];
 
 const TOUCH_ACTIONS: { id: TouchDictionaryAction; label: string }[] = [
@@ -305,6 +310,25 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           <p className="settings-section__note">
             100% is the popup's normal size. The popup always repositions itself to stay fully on-screen regardless
             of this setting.
+          </p>
+
+          <div className="settings-row">
+            <span className="settings-row__label">Root/form display</span>
+            <div className="settings-row__control settings-row__control--segmented">
+              {MORPH_DISPLAY_STYLES.map((s) => (
+                <button
+                  key={s.id}
+                  className={'segmented__item' + (prefs.morphDisplayStyle === s.id ? ' segmented__item--active' : '')}
+                  onClick={() => updatePrefs({ morphDisplayStyle: s.id })}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="settings-section__note">
+            When a dictionary entry's root or dictionary form differs from the word shown, this is how the popup
+            displays it — a small caption line, or a pair of small badges.
           </p>
 
           <div className="settings-row">

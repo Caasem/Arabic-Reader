@@ -237,6 +237,7 @@ const DEFAULT_PREFS: ReaderPreferences = {
   dictionaryPopupSizePct: 100,
   liveSearchEnabled: true,
   searchHistoryEnabled: true,
+  morphDisplayStyle: 'caption',
 };
 
 class DexiePersistenceService implements PersistenceService {

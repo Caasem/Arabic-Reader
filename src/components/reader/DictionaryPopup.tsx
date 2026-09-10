@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { DictionaryEntry, DictionaryLookupResult, WordInstance, WordRarity } from '../../types';
 import { getWordRarity, isRarityDataReady, TIER_LABELS } from '../../vocabRarity/rarity';
 import { normalize } from '../../reader/tokenizer/arabicTokenizer';
+import { usePreferences } from '../../state/PreferencesContext';
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
@@ -43,6 +44,8 @@ export function DictionaryPopup({
    * card. */
   onEdit?: () => void;
 }) {
+  const { prefs } = usePreferences();
+
   // Purely local, resets whenever the popup moves to a new word -- not
   // meant to track "is this permanently saved" (that's `saved`, computed
   // from vocabularyService for the word as a whole), just enough feedback
@@ -51,10 +54,7 @@ export function DictionaryPopup({
   useEffect(() => {
     setSavedEntryKeys(new Set());
   }, [word]);
-  const primary = result?.entries[0];
   const morphology = result?.morphology?.[0];
-  const root = primary?.root ?? morphology?.root;
-  const lemma = primary?.lemma;
 
   // Rarity badge — a small, best-effort enrichment on top of the dictionary
   // lookup, not the popup's main purpose, so it fails silently (no badge)
@@ -175,6 +175,33 @@ export function DictionaryPopup({
                   )}
                 </span>
               </div>
+              {/* Per-entry, not a single shared header -- different entries
+                  can genuinely come from different roots/lemmas (e.g. an
+                  unvocalized verb form that's ambiguous between Form I and
+                  Form IV), so one root shown once at the popup level would
+                  misrepresent entries that don't share it. Only shown when
+                  it says something the headword doesn't already -- a plain
+                  root-keyed entry (e.g. Al-Wasit) would otherwise repeat its
+                  own headword right back as "root". */}
+              {((entry.lemma && entry.lemma !== entry.headword) || (entry.root && entry.root !== entry.headword)) && (
+                <div
+                  className={
+                    'dict-popup__entry-morph' +
+                    (prefs.morphDisplayStyle === 'badges' ? ' dict-popup__entry-morph--badges' : '')
+                  }
+                >
+                  {entry.lemma && entry.lemma !== entry.headword && (
+                    <span>
+                      form <bdi className="dict-popup__entry-morph-value">{entry.lemma}</bdi>
+                    </span>
+                  )}
+                  {entry.root && entry.root !== entry.headword && (
+                    <span>
+                      root <bdi className="dict-popup__entry-morph-value">{entry.root}</bdi>
+                    </span>
+                  )}
+                </div>
+              )}
               <ul className="dict-popup__senses">
                 {entry.senses.map((s, i) => (
                   <li key={i}>
@@ -189,23 +216,6 @@ export function DictionaryPopup({
               </ul>
             </div>
           ))}
-
-        {(root || lemma) && (
-          <div className="dict-popup__root">
-            {lemma && (
-              <div className="dict-popup__root-row">
-                <span className="dict-popup__root-label">Dictionary form</span>
-                <span className="dict-popup__root-value">{lemma}</span>
-              </div>
-            )}
-            {root && (
-              <div className="dict-popup__root-row">
-                <span className="dict-popup__root-label">Root</span>
-                <span className="dict-popup__root-value">{root}</span>
-              </div>
-            )}
-          </div>
-        )}
 
         {instance?.sentence && <div className="dict-popup__sentence">“{instance.sentence}”</div>}
 

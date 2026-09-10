@@ -279,6 +279,12 @@ export type ReadingFlow = 'paginated' | 'scrolled';
  * reads) — RTL/LTR explicitly override that per reader preference. */
 export type PageDirection = 'auto' | 'rtl' | 'ltr';
 
+/** How each dictionary-popup entry shows its root/dictionary-form, when it
+ * differs from the entry's own headword. 'caption' -- a small muted text
+ * line ("form كَتَب · root كتب"). 'badges' -- the same information as small
+ * rounded pill chips instead. */
+export type MorphDisplayStyle = 'caption' | 'badges';
+
 export interface ReaderPreferences {
   theme: ReaderTheme;
   fontSizePct: number; // 100 = default
@@ -329,6 +335,8 @@ export interface ReaderPreferences {
   liveSearchEnabled: boolean;
   /** Remember recent in-book searches for reuse. */
   searchHistoryEnabled: boolean;
+  /** See `MorphDisplayStyle`. */
+  morphDisplayStyle: MorphDisplayStyle;
 }
 
 // ---------------------------------------------------------------------------

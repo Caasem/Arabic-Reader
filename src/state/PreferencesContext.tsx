@@ -23,6 +23,7 @@ const FALLBACK_PREFS: ReaderPreferences = {
   dictionaryPopupSizePct: 100,
   liveSearchEnabled: true,
   searchHistoryEnabled: true,
+  morphDisplayStyle: 'caption',
 };
 
 interface PreferencesContextValue {

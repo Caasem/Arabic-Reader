@@ -154,31 +154,44 @@
   margin-inline-start: 6px;
 }
 
-.dict-popup__root {
+.dict-popup__entry-morph {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 12.5px;
-  color: var(--ink-soft);
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-  margin-top: 4px;
-}
-
-.dict-popup__root-row {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-}
-
-.dict-popup__root-label {
+  gap: 10px;
+  font-size: 11.5px;
   color: var(--ink-faint);
+  margin-bottom: 4px;
 }
 
-.dict-popup__root-value {
+.dict-popup__entry-morph-value {
   font-family: var(--font-arabic);
-  font-size: 15px;
-  color: var(--ink);
+  font-size: 13px;
+  font-style: normal;
+  color: var(--ink-soft);
+  margin-inline-start: 3px;
+}
+
+/* Badges variant (Settings → "Root/form display") -- same markup, same
+   information, just each <span> styled as a small pill instead of plain
+   inline text. */
+.dict-popup__entry-morph--badges {
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dict-popup__entry-morph--badges > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  background: var(--accent-soft);
+  color: var(--ink-soft);
+  border-radius: 10px;
+  padding: 2px 8px;
+}
+
+.dict-popup__entry-morph--badges .dict-popup__entry-morph-value {
+  margin-inline-start: 0;
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .dict-popup__sentence {
