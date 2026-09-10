@@ -18,6 +18,7 @@
     "android:sync": "npm run build && npx cap copy android",
     "android:open": "npm run android:sync && npx cap open android",
     "android:build": "npm run android:sync && cd android && ./gradlew assembleDebug",
+    "android:install": "npm run android:build && adb install -r android/app/build/outputs/apk/debug/app-debug.apk",
     "ios:sync": "npm run build && npx cap copy ios",
     "ios:open": "npm run ios:sync && npx cap open ios"
   },
