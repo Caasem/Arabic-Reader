@@ -98,3 +98,8 @@
   color: var(--ink);
   border-color: var(--accent);
 }
+
+.quick-settings__flow:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

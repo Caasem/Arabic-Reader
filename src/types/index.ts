@@ -337,6 +337,11 @@ export interface ReaderPreferences {
   searchHistoryEnabled: boolean;
   /** See `MorphDisplayStyle`. */
   morphDisplayStyle: MorphDisplayStyle;
+  /** Two-page spread in paginated mode, forced on/off rather than left to
+   * epub.js's own width-based auto-detection -- an explicit toggle is more
+   * predictable than "maybe two columns depending on how wide the window
+   * happens to be". Has no visual effect in scrolled reading flow. */
+  twoColumnEnabled: boolean;
 }
 
 // ---------------------------------------------------------------------------

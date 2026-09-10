@@ -684,7 +684,7 @@ export function Reader({
   // Reading controls (Settings panel) apply live, without reopening the book.
   useEffect(() => {
     if (ready) serviceRef.current?.applyPreferences(prefs);
-  }, [ready, prefs.fontSizePct, prefs.lineHeight, prefs.fontFamily, prefs.readingFlow, prefs.pageDirection, prefs.theme]);
+  }, [ready, prefs.fontSizePct, prefs.lineHeight, prefs.fontFamily, prefs.readingFlow, prefs.pageDirection, prefs.theme, prefs.twoColumnEnabled]);
 
   // Re-paginate whenever the reading column itself actually changes size --
   // not just on window resize (epub.js listens for that on its own), but

@@ -238,6 +238,7 @@ const DEFAULT_PREFS: ReaderPreferences = {
   liveSearchEnabled: true,
   searchHistoryEnabled: true,
   morphDisplayStyle: 'caption',
+  twoColumnEnabled: false,
 };
 
 class DexiePersistenceService implements PersistenceService {

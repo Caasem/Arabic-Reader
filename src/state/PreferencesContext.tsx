@@ -24,6 +24,7 @@ const FALLBACK_PREFS: ReaderPreferences = {
   liveSearchEnabled: true,
   searchHistoryEnabled: true,
   morphDisplayStyle: 'caption',
+  twoColumnEnabled: false,
 };
 
 interface PreferencesContextValue {

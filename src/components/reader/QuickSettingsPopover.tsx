@@ -84,6 +84,23 @@ export function QuickSettingsPopover({ onClose }: { onClose: () => void }) {
             Scrolling
           </button>
         </div>
+
+        <div className="quick-settings__row">
+          <button
+            className={'quick-settings__flow' + (!prefs.twoColumnEnabled ? ' quick-settings__flow--active' : '')}
+            disabled={prefs.readingFlow === 'scrolled'}
+            onClick={() => updatePrefs({ twoColumnEnabled: false })}
+          >
+            1 column
+          </button>
+          <button
+            className={'quick-settings__flow' + (prefs.twoColumnEnabled ? ' quick-settings__flow--active' : '')}
+            disabled={prefs.readingFlow === 'scrolled'}
+            onClick={() => updatePrefs({ twoColumnEnabled: true })}
+          >
+            2 columns
+          </button>
+        </div>
       </div>
     </div>
   );

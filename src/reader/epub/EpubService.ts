@@ -112,6 +112,7 @@ export class EpubService {
   private destroyed = false;
   private currentFlow: ReadingFlow = 'paginated';
   private currentDirection: EffectiveDirection = 'rtl';
+  private currentTwoColumn = false;
 
   /** Resolves the "Page direction" setting against the open book: 'auto'
    * reads the OPF spine's page-progression-direction (epub.js exposes this
@@ -139,11 +140,16 @@ export class EpubService {
 
     this.currentFlow = prefs.readingFlow;
     this.currentDirection = this.getEffectiveDirection(prefs.pageDirection);
+    this.currentTwoColumn = prefs.twoColumnEnabled;
     const rendition = book.renderTo(container, {
       width: '100%',
       height: '100%',
       flow: epubFlow(prefs.readingFlow),
-      spread: 'auto',
+      // Forced on/off (see `twoColumnEnabled`'s doc comment), not epub.js's
+      // own 'auto' -- an explicit toggle should be predictable regardless of
+      // window width, not "sometimes two columns depending how wide you've
+      // sized the window", which is what 'auto' would otherwise give for free.
+      spread: prefs.twoColumnEnabled ? 'always' : 'none',
       // `defaultDirection` is only a *fallback* epub.js uses if the book's
       // own OPF metadata doesn't declare a direction -- an explicit
       // RTL/LTR override needs to win outright, so `.direction()` is called
@@ -214,6 +220,11 @@ export class EpubService {
     if (prefs.readingFlow !== this.currentFlow) {
       this.currentFlow = prefs.readingFlow;
       this.rendition.flow(epubFlow(prefs.readingFlow));
+    }
+
+    if (prefs.twoColumnEnabled !== this.currentTwoColumn) {
+      this.currentTwoColumn = prefs.twoColumnEnabled;
+      this.rendition.spread(prefs.twoColumnEnabled ? 'always' : 'none');
     }
   }
 

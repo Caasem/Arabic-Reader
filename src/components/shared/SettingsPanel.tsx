@@ -229,6 +229,22 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           </div>
 
           <div className="settings-row">
+            <label className="settings-toggle">
+              <input
+                type="checkbox"
+                checked={prefs.twoColumnEnabled}
+                disabled={prefs.readingFlow === 'scrolled'}
+                onChange={(e) => updatePrefs({ twoColumnEnabled: e.target.checked })}
+              />
+              <span className="settings-toggle__label">Two-column layout</span>
+            </label>
+          </div>
+          <p className="settings-section__note">
+            Shows two pages side by side, like an open book — only has an effect in Paged layout.
+            {prefs.readingFlow === 'scrolled' && ' Switch to Paged above to use it.'}
+          </p>
+
+          <div className="settings-row">
             <span className="settings-row__label">Font size</span>
             <div className="settings-row__control">
               <input
