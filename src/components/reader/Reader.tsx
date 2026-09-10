@@ -684,7 +684,7 @@ export function Reader({
   // Reading controls (Settings panel) apply live, without reopening the book.
   useEffect(() => {
     if (ready) serviceRef.current?.applyPreferences(prefs);
-  }, [ready, prefs.fontSizePct, prefs.lineHeight, prefs.fontFamily, prefs.readingFlow, prefs.pageDirection]);
+  }, [ready, prefs.fontSizePct, prefs.lineHeight, prefs.fontFamily, prefs.readingFlow, prefs.pageDirection, prefs.theme]);
 
   // Refresh the saved-word colour in every currently-rendered section the
   // instant the theme changes, rather than waiting for that section to

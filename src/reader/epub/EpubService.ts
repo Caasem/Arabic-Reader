@@ -8,6 +8,26 @@ function epubFlow(flow: ReadingFlow): 'paginated' | 'scrolled-doc' {
   return flow === 'scrolled' ? 'scrolled-doc' : 'paginated';
 }
 
+// Book text/background color, mirrored from index.css's :root custom
+// properties (--bg/--ink per theme) as literal values -- CSS custom
+// properties don't cross into epub.js's sandboxed per-section iframes (a
+// separate document each), so `var(--ink)` here would simply fail to
+// resolve. Keep in sync with index.css if that palette ever changes.
+const BOOK_THEME_COLORS: Record<'light' | 'dark' | 'sepia', { bg: string; ink: string }> = {
+  light: { bg: '#faf7f2', ink: '#1c1b19' },
+  dark: { bg: '#16151a', ink: '#efe9df' },
+  sepia: { bg: '#f1e7d3', ink: '#3a2e1e' },
+};
+
+/** 'system' resolves the same way the host app's own theme does (see
+ * PreferencesContext) -- via the <html> `data-theme` attribute it keeps in
+ * sync with the OS preference, since epub.js's rendition has no view of
+ * that media query itself. */
+function resolveBookTheme(theme: ReaderPreferences['theme']): 'light' | 'dark' | 'sepia' {
+  if (theme !== 'system') return theme;
+  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+}
+
 export type EffectiveDirection = 'rtl' | 'ltr';
 
 export interface RelocatedLocation {
@@ -154,14 +174,26 @@ export class EpubService {
   applyPreferences(prefs: ReaderPreferences): void {
     if (!this.rendition) return;
     const dir = this.getEffectiveDirection(prefs.pageDirection);
+    const { bg, ink } = BOOK_THEME_COLORS[resolveBookTheme(prefs.theme)];
     this.rendition.themes.default({
-      html: { direction: dir },
+      html: { background: `${bg} !important` },
       body: {
         direction: dir,
         'font-family': `${prefs.fontFamily} !important`,
         'line-height': `${prefs.lineHeight} !important`,
+        background: `${bg} !important`,
+        color: `${ink} !important`,
       },
-      p: { direction: dir, 'text-align': dir === 'rtl' ? 'right' : 'left' },
+      // Some EPUBs' stylesheets set paragraph text color explicitly (often
+      // literally `color: #000`, common from Word-to-EPUB converters) --
+      // body's inherited color loses to that, so it's forced here too.
+      // Deliberately *not* extended down to span/a/etc: an element's own
+      // explicitly-set color already beats an inherited value regardless of
+      // !important (inheritance isn't a competing declaration), so intentional
+      // per-span coloring -- including this app's own saved-word highlight,
+      // see wordStyle() in Reader.tsx -- keeps working without needing to be
+      // named here individually.
+      p: { direction: dir, 'text-align': dir === 'rtl' ? 'right' : 'left', color: `${ink} !important` },
     });
     this.rendition.themes.fontSize(`${prefs.fontSizePct}%`);
 
