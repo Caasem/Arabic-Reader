@@ -1,14 +1,20 @@
 # Arabic Reader
 
-It's a bit tedious to read... in another language especially so; reading a book with a dictionary open, even more; recording words from the dictionary whilst trying to read, eveeen more. With the costs of being efficient, this makes it more efficient to read in Arabic as an English speaker.
+<p align="center">
+  <img src="./docs-assets/arabic-reader-library.png" alt="Arabic Reader library" width="900">
+</p>
 
-Arabic Reader is a browser-based (and optionally desktop, via Electron) Arabic ebook reader with an integrated
-dictionary, vocabulary tracking, and FSRS spaced-repetition review.
+It's a bit tedious to read... in another language especially so; reading a book with a dictionary open, even more;
+recording words from the dictionary whilst trying to read, eveeen more. With the costs of being efficient, this makes
+it more efficient to read in Arabic as an English speaker.
+
+Arabic Reader is a browser-based (and optionally desktop, via Electron) Arabic ebook reader with an integrated dictionary,
+vocabulary tracking, and FSRS spaced-repetition review.
 
 ## Main features
 
-- **Instant dictionary lookup:** tap or click a word while reading, save it to your vocabulary, and review it later with
-  FSRS spaced repetition.
+- **Instant dictionary lookup:** tap or click a word while reading and save it to your vocabulary.
+- **FSRS spaced repetition:** review the words you encounter on a schedule designed to help them stick.
 
 ## Benefits
 
