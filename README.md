@@ -3,31 +3,17 @@
 It's a bit tedious to read... in another language especially so; reading a book with a dictionary open, even more; recording words from the dictionary whilst trying to read, eveeen more. With the costs of being efficient, this makes it more efficient to read in Arabic as an English speaker.
 
 Arabic Reader is a browser-based (and optionally desktop, via Electron) Arabic ebook reader with an integrated
-dictionary, vocabulary tracking, spaced-repetition review (FSRS), Anki sync, and a fullscreen Arabic speed-reading
-(RSVP) mode. Everything runs client-side — books, vocabulary, and progress are stored locally in the browser
-(IndexedDB); nothing is sent to a server.
+dictionary and a fullscreen Arabic speed-reading mode.
 
-If you're learning Arabic, welcome. The aim is to make reading a little less tedious and help you keep moving
-without constantly breaking your flow.
+## Main features
 
-This is the spiritual successor to an earlier browser-extension version of the same idea (see `anki.js`,
-`background.js`, `panel.html` and friends in this project's history) — the reading experience is now a full app
-rather than a popup, and the dictionary/vocabulary/review pipeline carries over from it.
+- **Instant dictionary lookup:** tap or click a word while reading, save it to your vocabulary, and review it later.
+- **Arabic speed reading:** use RSVP mode to read at your own pace with a clear focus on each word.
 
-## Features
+## Benefits
 
-- EPUB reading with tap/click-to-look-up dictionary integration (multiple dictionary providers, including a bundled
-  offline Arabic morphological analyzer)
-- Personal vocabulary list with per-word encounter history and optional sentence context
-- Spaced-repetition review using FSRS (the same scheduling algorithm modern Anki uses)
-- One-way sync of saved vocabulary to a local Anki install via AnkiConnect
-- Vocabulary Levels — frequency-based rarity badges and beginner/intermediate/advanced word lists, from a personal
-  ~5,300-word frequency-ordered list built into the app (no download, ready instantly)
-- A fullscreen Arabic speed-reading (RSVP) mode with an Optimal-Recognition-Point display, adjustable WPM, and
-  reading statistics
-- Installable as an offline-capable PWA, or packaged as a standalone Windows/macOS/Linux desktop app (Electron)
-- Export/import your vocabulary and progress as a JSON backup at any time — there is no cloud account and no
-  server-side copy of your data
+- **Keep your reading flow:** look up and save unfamiliar words without constantly switching between apps.
+- **Build lasting vocabulary:** revisit the words you encounter through spaced-repetition review.
 
 ## Getting started
 
