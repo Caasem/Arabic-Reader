@@ -3,13 +3,12 @@
 It's a bit tedious to read... in another language especially so; reading a book with a dictionary open, even more; recording words from the dictionary whilst trying to read, eveeen more. With the costs of being efficient, this makes it more efficient to read in Arabic as an English speaker.
 
 Arabic Reader is a browser-based (and optionally desktop, via Electron) Arabic ebook reader with an integrated
-dictionary and a fullscreen Arabic speed-reading mode.
+dictionary, vocabulary tracking, and FSRS spaced-repetition review.
 
 ## Main features
 
 - **Instant dictionary lookup:** tap or click a word while reading, save it to your vocabulary, and review it later with
   FSRS spaced repetition.
-- **Arabic speed reading:** use RSVP mode to read at your own pace with a clear focus on each word.
 
 ## Benefits
 
