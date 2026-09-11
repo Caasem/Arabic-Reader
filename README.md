@@ -7,13 +7,14 @@ dictionary and a fullscreen Arabic speed-reading mode.
 
 ## Main features
 
-- **Instant dictionary lookup:** tap or click a word while reading, save it to your vocabulary, and review it later.
+- **Instant dictionary lookup:** tap or click a word while reading, save it to your vocabulary, and review it later with
+  FSRS spaced repetition.
 - **Arabic speed reading:** use RSVP mode to read at your own pace with a clear focus on each word.
 
 ## Benefits
 
 - **Keep your reading flow:** look up and save unfamiliar words without constantly switching between apps.
-- **Build lasting vocabulary:** revisit the words you encounter through spaced-repetition review.
+- **Build lasting vocabulary:** revisit the words you encounter through FSRS spaced-repetition review.
 
 ## Getting started
 
