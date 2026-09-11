@@ -1,9 +1,14 @@
 # Arabic Reader
 
-A browser-based (and optionally desktop, via Electron) Arabic ebook reader with an integrated dictionary, vocabulary
-tracking, spaced-repetition review (FSRS), Anki sync, and a fullscreen Arabic speed-reading (RSVP) mode. Everything
-runs client-side — books, vocabulary, and progress are stored locally in the browser (IndexedDB); nothing is sent to
-a server.
+It's a bit tedious to read... in another language especially so; reading a book with a dictionary open, even more; recording words from the dictionary whilst trying to read, eveeen more. With the costs of being efficient, this makes it more efficient to read in Arabic as an English speaker.
+
+Arabic Reader is a browser-based (and optionally desktop, via Electron) Arabic ebook reader with an integrated
+dictionary, vocabulary tracking, spaced-repetition review (FSRS), Anki sync, and a fullscreen Arabic speed-reading
+(RSVP) mode. Everything runs client-side — books, vocabulary, and progress are stored locally in the browser
+(IndexedDB); nothing is sent to a server.
+
+If you're learning Arabic, welcome. The aim is to make reading a little less tedious and help you keep moving
+without constantly breaking your flow.
 
 This is the spiritual successor to an earlier browser-extension version of the same idea (see `anki.js`,
 `background.js`, `panel.html` and friends in this project's history) — the reading experience is now a full app
