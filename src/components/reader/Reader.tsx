@@ -355,6 +355,12 @@ export function Reader({
           // window error/unhandledrejection listeners. Remove together with
           // the rest of this debug instrumentation.
           try {
+          // TEMPORARY -- unconditional, target-agnostic: fires for *any*
+          // touch/click anywhere in this document at all, to tell apart
+          // "touches never reach this document" from "they reach it but
+          // never match a .ar-word target". Remove with the rest of this.
+          doc.addEventListener('touchstart', () => dbg('RAW touchstart'), { capture: true, passive: true });
+          doc.addEventListener('click', () => dbg('RAW click'), { capture: true });
           let style = doc.getElementById('ar-word-style') as HTMLStyleElement | null;
           if (!style) {
             style = doc.createElement('style');
@@ -422,6 +428,7 @@ export function Reader({
           doc.body.addEventListener('click', (e) => {
             const target = (e.target as HTMLElement).closest('.ar-word') as HTMLElement | null;
             if (!target) {
+              dbg(`click:miss target=${(e.target as HTMLElement)?.tagName}.${(e.target as HTMLElement)?.className}`);
               // Tapped/clicked reading content that isn't a word -- with
               // the bubble's own backdrop now click-through (see
               // DictionaryBubble.css), this is what actually dismisses an
@@ -518,6 +525,7 @@ export function Reader({
               const target = (e.target as HTMLElement).closest('.ar-word') as HTMLElement | null;
               const word = target?.dataset.word;
               if (!target || !word) {
+                dbg(`touchstart:miss target=${(e.target as HTMLElement)?.tagName}.${(e.target as HTMLElement)?.className}`);
                 touchStartRef.current = null;
                 return;
               }
