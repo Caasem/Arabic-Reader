@@ -71,7 +71,17 @@ function wordStyle(isDark: boolean): string {
    * double-tap-zoom, which resizes the visual viewport and makes epub.js
    * re-layout/re-render the current page out from under the gesture. */
   html, body { touch-action: manipulation; }
-  .ar-word { cursor: pointer; border-radius: 3px; transition: background 0.1s ease; touch-action: manipulation; }
+  /* -webkit-touch-callout: iOS Safari's default behavior for a tap on plain
+   * text is to try to select the word and show its own "Copy / Look Up /
+   * Share..." callout -- racing against this app's own touchstart/touchend
+   * dictionary-lookup handling for the same tap, and usually winning,
+   * which is what showed up as "the word gets highlighted but no
+   * dictionary comes up" on iOS. This property is WebKit-only and simply
+   * ignored (not an error) by Blink/Chromium and Firefox, so it's a no-op
+   * on Android/desktop -- deliberately *not* pairing it with
+   * user-select: none here, since that would also block the drag-to-
+   * select gesture this app uses for highlighting (see SelectionToolbar). */
+  .ar-word { cursor: pointer; border-radius: 3px; transition: background 0.1s ease; touch-action: manipulation; -webkit-touch-callout: none; }
   .ar-word:hover { background: rgba(156, 122, 79, 0.18); }
   .ar-word--saved { color: ${isDark ? SAVED_WORD_COLOR.dark : SAVED_WORD_COLOR.light}; }
   .ar-word--jump-flash { background: rgba(230, 170, 60, 0.55) !important; }
