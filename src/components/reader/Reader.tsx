@@ -346,6 +346,15 @@ export function Reader({
         });
 
         svc.onRendered((doc, sectionHref) => {
+          // TEMPORARY -- wraps the entire callback (word-wrapping AND every
+          // tap/click listener attachment below) so that if anything throws
+          // partway through on iOS (e.g. doc.body being unexpectedly null
+          // at this exact point), it's guaranteed to surface here instead
+          // of possibly being silently swallowed by epub.js's own internal
+          // event-emission/Promise chain before it would ever reach the
+          // window error/unhandledrejection listeners. Remove together with
+          // the rest of this debug instrumentation.
+          try {
           let style = doc.getElementById('ar-word-style') as HTMLStyleElement | null;
           if (!style) {
             style = doc.createElement('style');
@@ -685,6 +694,10 @@ export function Reader({
             },
             true
           );
+          dbg('onRendered:listeners-attached');
+          } catch (err) {
+            dbg(`onRendered:ERR ${err instanceof Error ? err.message : err}`);
+          }
         });
 
         svc.onSelected((info) => {
