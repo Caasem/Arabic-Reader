@@ -91,6 +91,13 @@ function virtualTextFilePlugin(virtualModuleId: string, build: (readText: (relPa
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Relative, not '/': this app is also deployed as a GitHub Pages project
+  // site (https://<user>.github.io/<repo>/), which serves from a subpath,
+  // not the domain root. An absolute '/' base would resolve every asset
+  // against the domain root instead and 404 there, while still happening
+  // to work in local dev (which *is* served from root) -- '.' avoids that
+  // trap by working the same way at any base path, including root.
+  base: './',
   // Worker entries (aramorph.worker.ts, which imports the virtual module
   // above) are bundled by Vite in a separate build pass that does not
   // inherit the top-level `plugins` list -- it needs the virtual-module
@@ -111,14 +118,18 @@ export default defineConfig({
         name: 'Arabic Reader',
         short_name: 'Arabic Reader',
         description: 'An Arabic-language ebook reader with built-in dictionary lookup and vocabulary tracking.',
-        start_url: '/',
+        // Relative ('.'), matching `base` above -- an absolute '/' here
+        // would point an installed GitHub Pages PWA at the domain root
+        // instead of /<repo>/, which isn't this app.
+        start_url: '.',
+        scope: '.',
         display: 'standalone',
         background_color: '#faf7f2',
         theme_color: '#9c7a4f',
         icons: [
-          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
@@ -136,7 +147,7 @@ export default defineConfig({
         // install would silently defeat that.
         globIgnores: ['**/_virtual_alwasit-data-*.js', '**/_virtual_vocab-list-data-*.js'],
         additionalManifestEntries: DICTIONARY_DATA_FILES.map((name) => ({
-          url: `/dictionary-data/${name}`,
+          url: `dictionary-data/${name}`,
           revision: null,
         })),
         // The bundled JS is already ~700KB; raise Workbox's default 2MB

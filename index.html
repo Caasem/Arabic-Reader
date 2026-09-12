@@ -8,6 +8,12 @@
     <meta name="theme-color" content="#9c7a4f" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Arabic Reader" />
+    <!-- iOS ignores the web manifest for "Add to Home Screen" -- these meta
+         tags are what actually make it install as a standalone app there
+         instead of just bookmarking a Safari tab. black-translucent draws
+         content under the status bar; safe-area insets are already handled
+         elsewhere (see the notch/home-indicator fix), so this is safe. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Arabic Reader</title>
   </head>
   <body>

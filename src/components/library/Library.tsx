@@ -99,7 +99,12 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
     setError(null);
     setImporting(true);
     try {
-      const res = await fetch('/sample-book.epub');
+      // BASE_URL (not a literal '/') -- this runtime fetch string isn't
+      // rewritten by Vite's build-time base handling the way a static
+      // <script src="/..."> in index.html is, so it needs the app's actual
+      // deployed base path (root locally, /<repo>/ on GitHub Pages) spelled
+      // out explicitly or this 404s there.
+      const res = await fetch(`${import.meta.env.BASE_URL}sample-book.epub`);
       const blob = await res.blob();
       const file = new File([blob], 'قرية الفتى القوي.epub', { type: 'application/epub+zip' });
       const meta = await libraryService.importEpub(file);

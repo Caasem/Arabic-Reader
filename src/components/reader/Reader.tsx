@@ -693,19 +693,53 @@ export function Reader({
   // event at all. Without this, epub.js keeps paginating against whatever
   // width it last measured, which is what showed up as jumbled/overlapping
   // text after opening or (especially) closing Vocab Levels.
+  //
+  // Two guards keep this from over-firing (each resize() is a full
+  // clear-and-redisplay-at-the-last-CFI cycle -- see EpubService.resize --
+  // which is a visible flash even when it lands back in the right place,
+  // and in paginated mode a slightly different column width can round the
+  // same CFI onto a different page, which reads as "jumping"):
+  //
+  // 1. Skip entirely when `window.innerWidth/innerHeight` also changed --
+  //    that means this was a real viewport resize, which epub.js's own
+  //    internal Stage listener already reacts to on its own. Without this
+  //    check, both listeners fire for the same event and independently
+  //    clear-and-redisplay, twice, each with its own page-rounding risk --
+  //    on Android specifically, the visible viewport commonly changes on
+  //    its own (system nav bar / gesture bar showing or hiding during a
+  //    scroll) with no interaction from the reader at all, which is a
+  //    plausible source of pages appearing to turn on their own.
+  // 2. Skip when the container's own box hasn't actually changed size from
+  //    the last time this effect acted on it -- otherwise a container size
+  //    that settles back to a previous value (e.g. a transient scrollbar
+  //    appearing then disappearing after the reflow it caused) triggers
+  //    another identical resize() for no layout reason.
   useEffect(() => {
     if (!ready || !containerRef.current) return;
-    // Debounced past the side panels' own 0.15s width transition (see
-    // VocabLevels.css) -- calling epub.js's resize() mid-transition (it
-    // clears and re-lays-out the view, see EpubService.resize()) measures a
-    // transient, not-yet-settled container size, which was observed to
-    // leave the just-resized iframe briefly larger than its final flex box
-    // and intercepting clicks meant for e.g. the panel's own expand button
-    // sitting where the iframe transiently still overlapped.
     let debounce: number | null = null;
+    let lastSize = { w: containerRef.current.clientWidth, h: containerRef.current.clientHeight };
+    let lastViewport = { w: window.innerWidth, h: window.innerHeight };
     const observer = new ResizeObserver(() => {
       if (debounce) window.clearTimeout(debounce);
-      debounce = window.setTimeout(() => serviceRef.current?.resize(), 200);
+      // Debounced past the side panels' own 0.15s width transition (see
+      // VocabLevels.css) -- calling epub.js's resize() mid-transition (it
+      // clears and re-lays-out the view) measures a transient, not-yet-
+      // settled container size, which was observed to leave the just-
+      // resized iframe briefly larger than its final flex box and
+      // intercepting clicks meant for e.g. the panel's own expand button.
+      debounce = window.setTimeout(() => {
+        const el = containerRef.current;
+        if (!el) return;
+        const viewport = { w: window.innerWidth, h: window.innerHeight };
+        const viewportChanged = viewport.w !== lastViewport.w || viewport.h !== lastViewport.h;
+        lastViewport = viewport;
+        if (viewportChanged) return;
+
+        const size = { w: el.clientWidth, h: el.clientHeight };
+        if (size.w === lastSize.w && size.h === lastSize.h) return;
+        lastSize = size;
+        serviceRef.current?.resize();
+      }, 200);
     });
     observer.observe(containerRef.current);
     return () => {
