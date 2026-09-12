@@ -1,13 +1,18 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { DictionaryEntry, DictionaryLookupResult, WordInstance, WordRarity } from '../../types';
 import { getWordRarity, isRarityDataReady, TIER_LABELS } from '../../vocabRarity/rarity';
 import { normalize } from '../../reader/tokenizer/arabicTokenizer';
 import { usePreferences } from '../../state/PreferencesContext';
-import { IconEdit } from '../shared/icons';
+import { IconEdit, IconChevronLeft, IconChevronRight } from '../shared/icons';
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
 const WORD_GAP = 14;
+
+// Below this, there isn't room for a genuine two-column side-by-side split
+// (see the popup's own width cap, calc(100vw - 24px)) -- Split falls back
+// to a tab switcher between dictionaries instead of expanding sideways.
+const NARROW_BREAKPOINT_PX = 480;
 
 // See the matching constant/comment in DictionaryBubble.tsx -- iOS Safari's
 // trailing synthetic 'click' for the tap that opened this popup can land on
@@ -17,10 +22,8 @@ const WORD_GAP = 14;
 // after mount avoids that without delaying a genuine later dismiss tap.
 const IGNORE_DISMISS_MS = 400;
 
-/** Folds consecutive same-provider entries into one group so the popup can
- * show the provider name once per group instead of once per entry. Keeps
- * each entry's original index (needed for the per-entry save-state Set,
- * which is keyed by position in the flat `result.entries` array). */
+type EntryGroup = { providerId: string; providerName: string; entries: { entry: DictionaryEntry; index: number }[] };
+
 /** A root/lemma value that shows the Arabic text by default; tapping it
  * crossfades to the "root"/"form" label in the exact same spot, then fades
  * back to the value after a moment. Replaces a static always-visible label
@@ -62,10 +65,12 @@ function MorphValue({ kind, value }: { kind: 'form' | 'root'; value: string }) {
   );
 }
 
-function groupEntriesByProvider(
-  entries: DictionaryEntry[],
-): { providerId: string; providerName: string; entries: { entry: DictionaryEntry; index: number }[] }[] {
-  const groups: { providerId: string; providerName: string; entries: { entry: DictionaryEntry; index: number }[] }[] = [];
+/** Folds consecutive same-provider entries into one group so the popup can
+ * show the provider name once per group instead of once per entry. Keeps
+ * each entry's original index (needed for the per-entry save-state Set,
+ * which is keyed by position in the flat `result.entries` array). */
+function groupEntriesByProvider(entries: DictionaryEntry[]): EntryGroup[] {
+  const groups: EntryGroup[] = [];
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
     const last = groups[groups.length - 1];
@@ -114,7 +119,7 @@ export function DictionaryPopup({
    * card. */
   onEdit?: () => void;
 }) {
-  const { prefs } = usePreferences();
+  const { prefs, updatePrefs } = usePreferences();
 
   // Purely local, resets whenever the popup moves to a new word -- not
   // meant to track "is this permanently saved" (that's `saved`, computed
@@ -149,6 +154,45 @@ export function DictionaryPopup({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [word, morphology?.pos, morphology?.lemma]);
 
+  // Settings → "Multiple dictionaries" (see DictionaryPanelLayout): 'merged'
+  // stacks every provider's entries in one list (unchanged, longstanding
+  // behavior); 'split' rearranges that *same* information into two columns
+  // (or a tab switcher below NARROW_BREAKPOINT_PX, where there's no room
+  // for a real side-by-side split); 'single' filters down to one chosen
+  // provider. Nothing is ever hidden by 'merged' or 'split' -- only
+  // 'single' actually removes information from view.
+  const allGroups = groupEntriesByProvider(result?.entries ?? []);
+  const canSplit = allGroups.length > 1;
+  const effectiveLayout: 'merged' | 'split' | 'single' =
+    prefs.dictionaryPanelLayout === 'single' ? 'single' : prefs.dictionaryPanelLayout === 'split' && canSplit ? 'split' : 'merged';
+
+  const singleGroups =
+    effectiveLayout === 'single'
+      ? allGroups.filter((g) => g.providerId === prefs.dictionaryPanelSingleProviderId).length > 0
+        ? allGroups.filter((g) => g.providerId === prefs.dictionaryPanelSingleProviderId)
+        : allGroups.slice(0, 1)
+      : [];
+  const [primaryGroup, ...restGroups] = allGroups;
+  const secondaryGroups = restGroups;
+
+  const [isNarrow, setIsNarrow] = useState(() => window.matchMedia(`(max-width: ${NARROW_BREAKPOINT_PX}px)`).matches);
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${NARROW_BREAKPOINT_PX}px)`);
+    const apply = () => setIsNarrow(mql.matches);
+    apply();
+    mql.addEventListener('change', apply);
+    return () => mql.removeEventListener('change', apply);
+  }, []);
+
+  // Which dictionary's entries the narrow-screen tab switcher currently
+  // shows -- resets to the first provider whenever the popup moves to a
+  // new word, same as savedEntryKeys above.
+  const [activeTab, setActiveTab] = useState<string | null>(null);
+  useEffect(() => {
+    setActiveTab(null);
+  }, [word]);
+  const activeTabId = activeTab ?? primaryGroup?.providerId;
+
   // Viewport-safe positioning: rather than guessing the popup's size ahead
   // of time (the old approach — a fixed height estimate — could still clip
   // a genuinely tall entry list, and didn't account for the size
@@ -163,7 +207,7 @@ export function DictionaryPopup({
     visibility: 'hidden',
   });
 
-  useLayoutEffect(() => {
+  const recalcPosition = useCallback(() => {
     const el = popupRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -187,10 +231,18 @@ export function DictionaryPopup({
     top = Math.min(Math.max(top, VIEWPORT_MARGIN), vh - rect.height - VIEWPORT_MARGIN);
 
     setStyle({ left, top, visibility: 'visible' });
+  }, [x, y]);
+
+  useLayoutEffect(() => {
+    recalcPosition();
     // Re-measure whenever the word, loading state, or size preference
-    // changes the popup's content/size, or the target point moves.
+    // changes the popup's content/size, the target point moves, or Split
+    // toggles (which changes the popup's own width). The Split->width
+    // change is animated (~300ms CSS transition, see .dict-popup--split),
+    // so this call catches the *start* of that resize -- the transitionend
+    // handler on the popup element below catches the settled end of it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [word, loading, result, x, y, sizePct]);
+  }, [word, loading, result, x, y, sizePct, effectiveLayout, isNarrow]);
 
   const scale = sizePct / 100;
 
@@ -200,14 +252,92 @@ export function DictionaryPopup({
     onClose();
   }
 
+  function toggleSplit() {
+    updatePrefs({ dictionaryPanelLayout: prefs.dictionaryPanelLayout === 'split' ? 'merged' : 'split' });
+  }
+
+  function renderGroupList(groups: EntryGroup[]) {
+    return groups.map((group) => (
+      <div className="dict-popup__group" key={group.providerId}>
+        <div className="dict-popup__group-header">{group.providerName}</div>
+        {group.entries.map(({ entry, index: i }) => (
+          <div className="dict-popup__entry" key={entry.providerId + i}>
+            <div className="dict-popup__entry-head">
+              <span className="dict-popup__headword">{entry.headword}</span>
+              {/* Sits between the headword and the per-entry save
+                  button -- root before form (read first, right next to
+                  the headword it belongs to), both smaller than the
+                  headword since they're a secondary identifier, not
+                  the entry's main content. Different entries in the
+                  same provider's group can genuinely come from
+                  different roots/lemmas (e.g. an unvocalized verb form
+                  ambiguous between Form I and Form IV), so this stays
+                  per-entry rather than folded into the group header.
+                  Only shown when it says something the headword
+                  doesn't already -- a plain root-keyed entry (e.g.
+                  Al-Wasit) would otherwise repeat its own headword
+                  right back as "root". */}
+              {((entry.lemma && entry.lemma !== entry.headword) || (entry.root && entry.root !== entry.headword)) && (
+                <span
+                  className={
+                    'dict-popup__entry-morph' + (prefs.morphDisplayStyle === 'badges' ? ' dict-popup__entry-morph--badges' : '')
+                  }
+                >
+                  {entry.root && entry.root !== entry.headword && <MorphValue kind="root" value={entry.root} />}
+                  {entry.lemma && entry.lemma !== entry.headword && <MorphValue kind="form" value={entry.lemma} />}
+                </span>
+              )}
+              {onSaveEntry && result!.entries.length > 1 && (
+                <button
+                  className="dict-popup__entry-save"
+                  onClick={() => {
+                    onSaveEntry(entry);
+                    setSavedEntryKeys((prev) => new Set(prev).add(i));
+                  }}
+                  disabled={savedEntryKeys.has(i)}
+                  aria-label={`Add just "${entry.headword}" to vocabulary`}
+                  title="Add just this definition"
+                >
+                  {savedEntryKeys.has(i) ? '✓' : '+'}
+                </button>
+              )}
+            </div>
+            <ul className="dict-popup__senses">
+              {entry.senses.map((s, i) => (
+                <li key={i}>
+                  {s.gloss}
+                  {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    ));
+  }
+
   return (
     <div className="dict-popup-backdrop" onClick={handleBackdropClick}>
       <div
         ref={popupRef}
-        className="dict-popup"
+        className={'dict-popup' + (effectiveLayout === 'split' && !isNarrow ? ' dict-popup--split' : '')}
         style={{ left: style.left, top: style.top, visibility: style.visibility, transform: `scale(${scale})`, transformOrigin: 'top left' }}
         onClick={(e) => e.stopPropagation()}
+        onTransitionEnd={(e) => {
+          if (e.propertyName === 'width') recalcPosition();
+        }}
       >
+        {canSplit && effectiveLayout !== 'single' && (
+          <button
+            className="dict-popup__chevron"
+            onClick={toggleSplit}
+            aria-label={effectiveLayout === 'split' ? 'Show one dictionary column' : 'Compare dictionaries side by side'}
+            title={effectiveLayout === 'split' ? 'Collapse' : 'Compare dictionaries'}
+          >
+            {effectiveLayout === 'split' ? <IconChevronRight size={13} /> : <IconChevronLeft size={13} />}
+          </button>
+        )}
+
         <button className="dict-popup__close" onClick={onClose} aria-label="Close">
           ×
         </button>
@@ -239,89 +369,48 @@ export function DictionaryPopup({
 
         {loading && <div className="dict-popup__loading">Looking up…</div>}
 
-        {!loading && !result?.entries.length && (
-          <div className="dict-popup__empty">No entry found for this word yet.</div>
-        )}
+        {!loading && !result?.entries.length && <div className="dict-popup__empty">No entry found for this word yet.</div>}
 
-        {!loading &&
-          // Grouped by provider under one shared header instead of repeating
-          // "AraMorph"/"Al-Wasit" etc. on every single entry -- entries stay
-          // in DictionaryManager's own flattening order (all of one
-          // provider's entries before the next provider's), so a new group
-          // starts exactly when providerId changes from the previous entry.
-          groupEntriesByProvider(result?.entries ?? []).map((group) => (
-            <div className="dict-popup__group" key={group.providerId}>
-              <div className="dict-popup__group-header">{group.providerName}</div>
-              {group.entries.map(({ entry, index: i }) => (
-                <div className="dict-popup__entry" key={entry.providerId + i}>
-                  <div className="dict-popup__entry-head">
-                    <span className="dict-popup__headword">{entry.headword}</span>
-                    {/* Sits between the headword and the per-entry save
-                        button -- root before form (read first, right next to
-                        the headword it belongs to), both smaller than the
-                        headword since they're a secondary identifier, not
-                        the entry's main content. Different entries in the
-                        same provider's group can genuinely come from
-                        different roots/lemmas (e.g. an unvocalized verb form
-                        ambiguous between Form I and Form IV), so this stays
-                        per-entry rather than folded into the group header.
-                        Only shown when it says something the headword
-                        doesn't already -- a plain root-keyed entry (e.g.
-                        Al-Wasit) would otherwise repeat its own headword
-                        right back as "root". */}
-                    {((entry.lemma && entry.lemma !== entry.headword) || (entry.root && entry.root !== entry.headword)) && (
-                      <span
-                        className={
-                          'dict-popup__entry-morph' +
-                          (prefs.morphDisplayStyle === 'badges' ? ' dict-popup__entry-morph--badges' : '')
-                        }
-                      >
-                        {entry.root && entry.root !== entry.headword && (
-                          <MorphValue kind="root" value={entry.root} />
-                        )}
-                        {entry.lemma && entry.lemma !== entry.headword && (
-                          <MorphValue kind="form" value={entry.lemma} />
-                        )}
-                      </span>
-                    )}
-                    {onSaveEntry && result!.entries.length > 1 && (
-                      <button
-                        className="dict-popup__entry-save"
-                        onClick={() => {
-                          onSaveEntry(entry);
-                          setSavedEntryKeys((prev) => new Set(prev).add(i));
-                        }}
-                        disabled={savedEntryKeys.has(i)}
-                        aria-label={`Add just "${entry.headword}" to vocabulary`}
-                        title="Add just this definition"
-                      >
-                        {savedEntryKeys.has(i) ? '✓' : '+'}
-                      </button>
-                    )}
-                  </div>
-                  <ul className="dict-popup__senses">
-                    {entry.senses.map((s, i) => (
-                      <li key={i}>
-                        {s.gloss}
-                        {(s.pos || s.gender) && (
-                          <span className="dict-popup__tag">
-                            {[s.pos, s.gender].filter(Boolean).join(' · ')}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+        {!loading && result?.entries.length ? (
+          effectiveLayout === 'split' ? (
+            isNarrow ? (
+              <>
+                <div className="dict-popup__tabs">
+                  {allGroups.map((g) => (
+                    <button
+                      key={g.providerId}
+                      className={'dict-popup__tab' + (g.providerId === activeTabId ? ' dict-popup__tab--active' : '')}
+                      onClick={() => setActiveTab(g.providerId)}
+                    >
+                      {g.providerName}
+                    </button>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ))}
+                {renderGroupList(allGroups.filter((g) => g.providerId === activeTabId))}
+              </>
+            ) : (
+              <div className="dict-popup__split-cols">
+                <div className="dict-popup__split-col">{renderGroupList(primaryGroup ? [primaryGroup] : [])}</div>
+                <div className="dict-popup__split-col">{renderGroupList(secondaryGroups)}</div>
+              </div>
+            )
+          ) : effectiveLayout === 'single' ? (
+            renderGroupList(singleGroups)
+          ) : (
+            renderGroupList(allGroups)
+          )
+        ) : null}
 
         {instance?.sentence && <div className="dict-popup__sentence">“{instance.sentence}”</div>}
 
         <div className="dict-popup__stats">
-          <span>{instance?.encounterCount ?? 1} encounter{(instance?.encounterCount ?? 1) === 1 ? '' : 's'}</span>
+          <span>
+            {instance?.encounterCount ?? 1} encounter{(instance?.encounterCount ?? 1) === 1 ? '' : 's'}
+          </span>
           <span className="dict-popup__stats-dot">·</span>
-          <span>{instance?.lookupCount ?? 1} lookup{(instance?.lookupCount ?? 1) === 1 ? '' : 's'}</span>
+          <span>
+            {instance?.lookupCount ?? 1} lookup{(instance?.lookupCount ?? 1) === 1 ? '' : 's'}
+          </span>
         </div>
 
         <div className="dict-popup__actions">

@@ -285,6 +285,16 @@ export type PageDirection = 'auto' | 'rtl' | 'ltr';
  * rounded pill chips instead. */
 export type MorphDisplayStyle = 'caption' | 'badges';
 
+/** How the dictionary popup arranges results when more than one provider
+ * has entries for a word. 'merged' -- today's default -- stacks every
+ * provider's entries together in one list, grouped by a provider header.
+ * 'split' rearranges that *same* information into two side-by-side columns
+ * (a tab switcher on narrow screens) for easier comparison, nothing hidden
+ * either way. 'single' filters the popup down to just one chosen provider
+ * (see `dictionaryPanelSingleProviderId`) -- the only mode that actually
+ * hides information, for a reader who only ever wants one source. */
+export type DictionaryPanelLayout = 'merged' | 'split' | 'single';
+
 export interface ReaderPreferences {
   theme: ReaderTheme;
   fontSizePct: number; // 100 = default
@@ -342,6 +352,12 @@ export interface ReaderPreferences {
    * predictable than "maybe two columns depending on how wide the window
    * happens to be". Has no visual effect in scrolled reading flow. */
   twoColumnEnabled: boolean;
+  /** See `DictionaryPanelLayout`. */
+  dictionaryPanelLayout: DictionaryPanelLayout;
+  /** Which provider id to show exclusively when `dictionaryPanelLayout` is
+   * 'single'. null means "not chosen yet" -- the popup falls back to
+   * whichever provider would otherwise be first. */
+  dictionaryPanelSingleProviderId: string | null;
 }
 
 // ---------------------------------------------------------------------------

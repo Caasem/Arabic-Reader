@@ -239,6 +239,8 @@ const DEFAULT_PREFS: ReaderPreferences = {
   searchHistoryEnabled: true,
   morphDisplayStyle: 'caption',
   twoColumnEnabled: false,
+  dictionaryPanelLayout: 'merged',
+  dictionaryPanelSingleProviderId: null,
 };
 
 class DexiePersistenceService implements PersistenceService {

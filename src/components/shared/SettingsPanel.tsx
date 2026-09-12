@@ -7,7 +7,14 @@ import { isRarityDataReady, enableRarityData, disableRarityData } from '../../vo
 import { pingAnki, getDeckNames, ensureDeck, addNote, AnkiConnectError } from '../../anki/ankiConnect';
 import { vocabularyService } from '../../vocabulary/vocabularyService';
 import { BackupControls } from './BackupControls';
-import type { MorphDisplayStyle, PageDirection, ReaderTheme, ReadingFlow, TouchDictionaryAction } from '../../types';
+import type {
+  DictionaryPanelLayout,
+  MorphDisplayStyle,
+  PageDirection,
+  ReaderTheme,
+  ReadingFlow,
+  TouchDictionaryAction,
+} from '../../types';
 import './SettingsPanel.css';
 
 const THEMES: { id: ReaderTheme; label: string }[] = [
@@ -31,6 +38,12 @@ const PAGE_DIRECTIONS: { id: PageDirection; label: string }[] = [
 const MORPH_DISPLAY_STYLES: { id: MorphDisplayStyle; label: string }[] = [
   { id: 'caption', label: 'Caption' },
   { id: 'badges', label: 'Badges' },
+];
+
+const DICTIONARY_PANEL_LAYOUTS: { id: DictionaryPanelLayout; label: string }[] = [
+  { id: 'merged', label: 'Merged' },
+  { id: 'split', label: 'Split' },
+  { id: 'single', label: 'Single' },
 ];
 
 const TOUCH_ACTIONS: { id: TouchDictionaryAction; label: string }[] = [
@@ -346,6 +359,46 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             When a dictionary entry's root or dictionary form differs from the word shown, this is how the popup
             displays it — a small caption line, or a pair of small badges.
           </p>
+
+          <div className="settings-row">
+            <span className="settings-row__label">Multiple dictionaries</span>
+            <div className="settings-row__control settings-row__control--segmented">
+              {DICTIONARY_PANEL_LAYOUTS.map((l) => (
+                <button
+                  key={l.id}
+                  className={'segmented__item' + (prefs.dictionaryPanelLayout === l.id ? ' segmented__item--active' : '')}
+                  onClick={() => updatePrefs({ dictionaryPanelLayout: l.id })}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="settings-section__note">
+            When more than one dictionary has an entry for a word: <strong>Merged</strong> stacks every dictionary's
+            entries together (the default) — <strong>Split</strong> shows the exact same entries side by side instead
+            (a switcher between them on narrow screens), for comparing sources directly — <strong>Single</strong>
+            shows only one dictionary and hides the rest.
+          </p>
+          {prefs.dictionaryPanelLayout === 'single' && (
+            <div className="settings-row">
+              <span className="settings-row__label">Which dictionary</span>
+              <select
+                className="settings-row__select"
+                value={prefs.dictionaryPanelSingleProviderId ?? ''}
+                onChange={(e) => updatePrefs({ dictionaryPanelSingleProviderId: e.target.value || null })}
+              >
+                <option value="">First available</option>
+                {providers
+                  .filter((p) => prefs.enabledProviderIds.includes(p.id))
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
 
           <div className="settings-row">
             <label className="settings-toggle">

@@ -25,6 +25,8 @@ const FALLBACK_PREFS: ReaderPreferences = {
   searchHistoryEnabled: true,
   morphDisplayStyle: 'caption',
   twoColumnEnabled: false,
+  dictionaryPanelLayout: 'merged',
+  dictionaryPanelSingleProviderId: null,
 };
 
 interface PreferencesContextValue {

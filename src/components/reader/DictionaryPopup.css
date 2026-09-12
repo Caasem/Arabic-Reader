@@ -21,6 +21,46 @@
   box-shadow: var(--shadow);
   padding: 20px 20px 16px;
   direction: rtl;
+  /* Animates the Split <-> Merged width change (see .dict-popup--split) --
+     harmless the rest of the time, since width isn't otherwise changing. */
+  transition: width 300ms ease;
+}
+
+/* Settings → "Multiple dictionaries": Split, on a wide-enough screen --
+   room for a second column at .dict-popup__chevron's left edge. Doubled
+   plus the divider's width; still safely capped by max-width above on any
+   viewport this narrow enough to matter (see NARROW_BREAKPOINT_PX, which
+   switches to a tab layout well before max-width would meaningfully bite). */
+.dict-popup--split {
+  width: 600px;
+}
+
+/* Attached to the card's left edge, straddling the border like a handle --
+   same quiet circular-icon treatment as the header/entry-save buttons.
+   Points left ("there's more this way") when collapsed, right (toward
+   center, "collapse back") when Split is open. */
+.dict-popup__chevron {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--accent);
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow);
+  z-index: 1;
+}
+
+.dict-popup__chevron:hover {
+  background: var(--accent-soft);
 }
 
 .dict-popup__close {
@@ -335,4 +375,54 @@
 .dict-popup__edit:hover {
   background: var(--accent-soft);
   color: var(--ink);
+}
+
+/* Split, wide screens: primary column renders first in DOM (rightmost in
+   this RTL layout), secondary column(s) second (leftmost) -- the sibling
+   selector below puts the divider on whichever column comes after another,
+   which is always the secondary one here, without needing to know which
+   specific column that is. */
+.dict-popup__split-cols {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.dict-popup__split-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.dict-popup__split-col + .dict-popup__split-col {
+  border-right: 1px solid var(--border);
+  padding-right: 14px;
+}
+
+/* Split, narrow screens: no room for a real side-by-side split (see
+   NARROW_BREAKPOINT_PX), so this switches which single dictionary's
+   entries show instead of splitting the popup's width. */
+.dict-popup__tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.dict-popup__tab {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--ink-faint);
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.dict-popup__tab--active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: transparent;
 }
