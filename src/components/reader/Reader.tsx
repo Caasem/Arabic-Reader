@@ -196,6 +196,13 @@ export function Reader({
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [chapterLabel, setChapterLabel] = useState<string | undefined>();
   const [percent, setPercent] = useState(0);
+  // TEMPORARY diagnostic overlay for the iOS "tap does nothing" bug -- logs
+  // each checkpoint in the tap -> dictionary pipeline on screen (not just
+  // the console, which isn't reachable without a Mac + Safari remote
+  // inspector) so a screen recording on the actual device shows exactly
+  // where the chain stops. Remove once the cause is confirmed.
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+  const dbg = (msg: string) => setDebugLog((prev) => [...prev.slice(-7), `${new Date().toISOString().slice(14, 23)} ${msg}`]);
   const [popup, setPopup] = useState<PopupState | null>(null);
   const [editingWord, setEditingWord] = useState<PopupState | null>(null);
   const [bubble, setBubble] = useState<PopupState | null>(null);
@@ -257,6 +264,21 @@ export function Reader({
   // ReadingSession row) when the Reader unmounts or switches books. See
   // ReadingSessionTracker for what it actually measures.
   const sessionTrackerRef = useRef<ReadingSessionTracker | null>(null);
+
+  // TEMPORARY -- surfaces anything that throws/rejects outside the paths
+  // already instrumented with dbg() above, in case the iOS tap issue is
+  // something neither of those covers. Remove together with the rest of
+  // this debug overlay.
+  useEffect(() => {
+    const onError = (e: ErrorEvent) => dbg(`window:error ${e.message}`);
+    const onRejection = (e: PromiseRejectionEvent) => dbg(`window:unhandledrejection ${e.reason}`);
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onRejection);
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRejection);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -401,13 +423,14 @@ export function Reader({
             }
             const word = target.dataset.word;
             if (!word) return;
+            dbg(`click:${word}`);
             const iframeEl = doc.defaultView?.frameElement as HTMLIFrameElement | undefined;
             const iframeRect = iframeEl?.getBoundingClientRect();
             const targetRect = target.getBoundingClientRect();
             const x = (iframeRect?.left ?? 0) + targetRect.left + targetRect.width / 2;
             const y = (iframeRect?.top ?? 0) + targetRect.top;
             const sentence = prefsRef.current.sentenceContextEnabled ? extractSentence(target) ?? undefined : undefined;
-            handleWordClick(word, sectionHref, x, y, sentence);
+            handleWordClick(word, sectionHref, x, y, sentence).catch((err) => dbg(`handleWordClick(click):ERR ${err}`));
           });
 
           // Quick-add shortcut (opt-in — see Settings): saves the most
@@ -489,6 +512,7 @@ export function Reader({
                 touchStartRef.current = null;
                 return;
               }
+              dbg(`touchstart:${word}`);
               const t = e.touches[0];
               touchStartRef.current = { x: t.clientX, y: t.clientY, word, el: target };
 
@@ -523,6 +547,7 @@ export function Reader({
                 }
                 // A real drag (scrolling, or extending a text selection) —
                 // hand this touch back to native handling entirely.
+                dbg('touchmove:cancel');
                 touchStartRef.current = null;
               }
             },
@@ -532,14 +557,19 @@ export function Reader({
           doc.body.addEventListener(
             'touchend',
             (e) => {
+              dbg('touchend');
               if (touchHoldTimerRef.current) {
                 window.clearTimeout(touchHoldTimerRef.current);
                 touchHoldTimerRef.current = null;
               }
               const start = touchStartRef.current;
               touchStartRef.current = null;
-              if (!start) return;
+              if (!start) {
+                dbg('touchend:no-start');
+                return;
+              }
               if (touchHoldFiredRef.current) {
+                dbg('touchend:hold-already-fired');
                 e.preventDefault(); // hold already handled this touch
                 return;
               }
@@ -554,6 +584,7 @@ export function Reader({
               lastTapRef.current = isDoubleTap ? null : { word, time: now };
 
               const action = isDoubleTap ? prefsRef.current.touchGestures.doubleTap : prefsRef.current.touchGestures.singleTap;
+              dbg(`touchend:action=${action} double=${isDoubleTap}`);
               if (action === 'none') return; // fall back to the native click -> full popup
 
               if (isDoubleTap) {
@@ -900,13 +931,16 @@ export function Reader({
   }
 
   async function handleWordClick(word: string, sectionHref: string, x: number, y: number, sentence?: string) {
+    dbg('handleWordClick:start');
     dismissHoverPreview();
     sessionTrackerRef.current?.recordLookup();
     setPopup({ word, x, y, result: null, instance: null, saved: false, loading: true });
+    dbg('handleWordClick:setPopup(loading)');
     const [result, saved] = await Promise.all([
       dictionaryManager.lookup(word),
       vocabularyService.isSaved(book.id, word),
     ]);
+    dbg(`handleWordClick:lookup-done entries=${result.entries.length}`);
     const morphology = result.morphology?.[0];
     const instance = await vocabularyService.recordLookup(book.id, word, {
       chapterHref: sectionHref,
@@ -916,6 +950,7 @@ export function Reader({
     });
     const resolved: PopupState = { word, x, y, result, instance, saved, loading: false };
     setPopup(resolved);
+    dbg('handleWordClick:setPopup(resolved)');
     lastLookupRef.current = resolved;
   }
 
@@ -983,9 +1018,10 @@ export function Reader({
     y: number,
     sentence?: string
   ) {
-    if (action === 'bubble') openBubble(word, sectionHref, x, y, sentence);
-    else if (action === 'openDictionary') handleWordClick(word, sectionHref, x, y, sentence);
-    else if (action === 'quickSave') quickSaveWord(word, sectionHref, sentence);
+    dbg(`dispatch:${action} x=${Math.round(x)} y=${Math.round(y)}`);
+    if (action === 'bubble') openBubble(word, sectionHref, x, y, sentence).catch((err) => dbg(`openBubble:ERR ${err}`));
+    else if (action === 'openDictionary') handleWordClick(word, sectionHref, x, y, sentence).catch((err) => dbg(`handleWordClick:ERR ${err}`));
+    else if (action === 'quickSave') quickSaveWord(word, sectionHref, sentence).catch((err) => dbg(`quickSave:ERR ${err}`));
   }
 
   /** The condensed DictionaryBubble's lookup — same primitives as
@@ -994,14 +1030,17 @@ export function Reader({
    * a fast second tap on a *different* word can't have its bubble
    * clobbered by a slower, now-stale lookup for the first word. */
   async function openBubble(word: string, sectionHref: string, x: number, y: number, sentence?: string) {
+    dbg('openBubble:start');
     dismissHoverPreview();
     sessionTrackerRef.current?.recordLookup();
     const token = ++bubbleTokenRef.current;
     setBubble({ word, x, y, result: null, instance: null, saved: false, loading: true });
+    dbg('openBubble:setBubble(loading)');
     const [result, saved] = await Promise.all([
       dictionaryManager.lookup(word),
       vocabularyService.isSaved(book.id, word),
     ]);
+    dbg(`openBubble:lookup-done entries=${result.entries.length}`);
     const morphology = result.morphology?.[0];
     const instance = await vocabularyService.recordLookup(book.id, word, {
       chapterHref: sectionHref,
@@ -1009,8 +1048,12 @@ export function Reader({
       lemma: morphology?.lemma,
       root: morphology?.root ?? result.entries[0]?.root,
     });
-    if (token !== bubbleTokenRef.current) return; // superseded by a newer tap
+    if (token !== bubbleTokenRef.current) {
+      dbg('openBubble:stale-token');
+      return; // superseded by a newer tap
+    }
     setBubble({ word, x, y, result, instance, saved, loading: false });
+    dbg('openBubble:setBubble(resolved)');
   }
 
   /** Looks a word up and saves it straight to vocabulary with no bubble or
@@ -1347,6 +1390,28 @@ export function Reader({
 
   return (
     <div className="reader">
+      {/* TEMPORARY diagnostic overlay -- see the debugLog/dbg() declaration
+          above. Remove together with it once the iOS tap issue is found. */}
+      {debugLog.length > 0 && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            zIndex: 99999,
+            background: 'rgba(0,0,0,0.75)',
+            color: '#0f0',
+            fontSize: 9,
+            fontFamily: 'monospace',
+            padding: '4px 6px',
+            maxWidth: '100vw',
+            pointerEvents: 'none',
+            whiteSpace: 'pre-wrap',
+          }}
+        >
+          {debugLog.join('\n')}
+        </div>
+      )}
       <header
         className={'reader__topbar' + (focusMode ? ' reader__topbar--focus' : '') + (topbarIdle ? ' reader__topbar--idle' : '')}
         onMouseEnter={() => setTopbarIdle(false)}
