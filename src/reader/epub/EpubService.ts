@@ -168,6 +168,20 @@ export class EpubService {
       // explicitly right below regardless of what this resolves to.
       defaultDirection: this.currentDirection,
       script: undefined,
+      // TEMPORARY DIAGNOSTIC -- without this, epub.js sandboxes every
+      // section's iframe as `sandbox="allow-same-origin"` with no
+      // `allow-scripts` (see node_modules/epubjs/src/managers/views/
+      // iframe.js), and WebKit/iOS appears to withhold dispatching touch/
+      // click events into that iframe's content entirely -- even to
+      // listeners the host page itself attached -- while Chromium doesn't
+      // enforce that the same way, which would explain why tapping a word
+      // does nothing on iPhone but works fine on Android/desktop. This
+      // flag is here ONLY to confirm that diagnosis; combined with the
+      // existing `allow-same-origin`, it also lets a malicious EPUB's own
+      // embedded <script> run with same-origin access to this app's
+      // IndexedDB (vocabulary, highlights, every saved book) -- NOT safe
+      // to ship as-is. Remove or replace with a narrower fix once confirmed.
+      allowScriptedContent: true,
     });
     if (this.destroyed) {
       rendition.destroy();
