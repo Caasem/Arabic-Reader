@@ -1391,27 +1391,29 @@ export function Reader({
   return (
     <div className="reader">
       {/* TEMPORARY diagnostic overlay -- see the debugLog/dbg() declaration
-          above. Remove together with it once the iOS tap issue is found. */}
-      {debugLog.length > 0 && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            zIndex: 99999,
-            background: 'rgba(0,0,0,0.75)',
-            color: '#0f0',
-            fontSize: 9,
-            fontFamily: 'monospace',
-            padding: '4px 6px',
-            maxWidth: '100vw',
-            pointerEvents: 'none',
-            whiteSpace: 'pre-wrap',
-          }}
-        >
-          {debugLog.join('\n')}
-        </div>
-      )}
+          above. Remove together with it once the iOS tap issue is found.
+          Always rendered (not gated on debugLog.length > 0) so its mere
+          presence on screen -- even before tapping anything -- tells us
+          whether the overlay itself can render on iOS at all, separate
+          from whether any tap ever reaches the JS that would log to it. */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          zIndex: 99999,
+          background: 'rgba(0,0,0,0.75)',
+          color: '#0f0',
+          fontSize: 9,
+          fontFamily: 'monospace',
+          padding: '4px 6px',
+          maxWidth: '100vw',
+          pointerEvents: 'none',
+          whiteSpace: 'pre-wrap',
+        }}
+      >
+        {debugLog.length > 0 ? debugLog.join('\n') : 'debug overlay ready -- waiting for a tap...'}
+      </div>
       <header
         className={'reader__topbar' + (focusMode ? ' reader__topbar--focus' : '') + (topbarIdle ? ' reader__topbar--idle' : '')}
         onMouseEnter={() => setTopbarIdle(false)}
