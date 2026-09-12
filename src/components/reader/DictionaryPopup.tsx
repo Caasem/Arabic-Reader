@@ -9,6 +9,14 @@ import './DictionaryPopup.css';
 const VIEWPORT_MARGIN = 12;
 const WORD_GAP = 14;
 
+// See the matching constant/comment in DictionaryBubble.tsx -- iOS Safari's
+// trailing synthetic 'click' for the tap that opened this popup can land on
+// this backdrop (freshly inserted at that exact screen point, in the host
+// document rather than the epub iframe's) and immediately dismiss the popup
+// the same tap just opened. Ignoring a dismiss-click in the first instant
+// after mount avoids that without delaying a genuine later dismiss tap.
+const IGNORE_DISMISS_MS = 400;
+
 /** Folds consecutive same-provider entries into one group so the popup can
  * show the provider name once per group instead of once per entry. Keeps
  * each entry's original index (needed for the per-entry save-state Set,
@@ -186,8 +194,14 @@ export function DictionaryPopup({
 
   const scale = sizePct / 100;
 
+  const mountedAtRef = useRef(Date.now());
+  function handleBackdropClick() {
+    if (Date.now() - mountedAtRef.current < IGNORE_DISMISS_MS) return;
+    onClose();
+  }
+
   return (
-    <div className="dict-popup-backdrop" onClick={onClose}>
+    <div className="dict-popup-backdrop" onClick={handleBackdropClick}>
       <div
         ref={popupRef}
         className="dict-popup"
