@@ -223,6 +223,7 @@ const DEFAULT_PREFS: ReaderPreferences = {
   enabledProviderIds: ['aramorph'],
   readingFlow: 'paginated',
   continuousScrollEnabled: false,
+  showPageBoundaries: false,
   hoverPreviewEnabled: false,
   // On by default — a saved word without the sentence it came from is much
   // less useful for review later; still toggleable in Settings for anyone

@@ -35,6 +35,15 @@ export interface RelocatedLocation {
   percent: number;
   chapterHref?: string;
   chapterLabel?: string;
+  /** Paginated flow only (undefined in scrolled flow, where "page" isn't a
+   * meaningful concept -- see Reader.tsx's own scroll-position-based
+   * end-of-section detection for that case instead). True when the
+   * currently-displayed page is the last page of its section/chapter --
+   * epub.js's own per-section `displayed.page`/`displayed.total` (computed
+   * from that section's own pagination, independent of whether this is
+   * also the very last section in the book). Used only for the optional
+   * end-of-page indicator (see `showPageBoundaries`). */
+  atPageEnd?: boolean;
 }
 
 export interface SelectionInfo {
@@ -358,11 +367,18 @@ export class EpubService {
       const href = location?.start?.href as string | undefined;
       const chapter = href ? this.findTocLabel(href) : undefined;
       this.currentSectionHref = href;
+      const displayedPage = location?.end?.displayed?.page;
+      const displayedTotal = location?.end?.displayed?.total;
+      const atPageEnd =
+        this.currentFlow === 'paginated' && typeof displayedPage === 'number' && typeof displayedTotal === 'number'
+          ? displayedPage >= displayedTotal
+          : undefined;
       cb({
         cfi: location?.start?.cfi,
         percent: typeof location?.start?.percentage === 'number' ? location.start.percentage : 0,
         chapterHref: href,
         chapterLabel: chapter,
+        atPageEnd,
       });
     });
   }

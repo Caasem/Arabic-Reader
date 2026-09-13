@@ -314,6 +314,12 @@ export interface ReaderPreferences {
    * direction/spread, epub.js has no supported way to swap view managers
    * on an already-rendered rendition. */
   continuousScrollEnabled: boolean;
+  /** Shows a subtle horizontal divider at the bottom of the reading area
+   * when the reader is at the end of the current page (Paged layout) or
+   * has scrolled to the end of the current chapter (Scrolling layout).
+   * Off by default — opt-in via Settings, so existing readers don't get
+   * new visual clutter unasked for. */
+  showPageBoundaries: boolean;
   /** Show a condensed translation preview on hover, in addition to the full
    * popup on click/tap. Off by default — opt-in via Settings. */
   hoverPreviewEnabled: boolean;

@@ -276,6 +276,21 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           </p>
 
           <div className="settings-row">
+            <label className="settings-toggle">
+              <input
+                type="checkbox"
+                checked={prefs.showPageBoundaries}
+                onChange={(e) => updatePrefs({ showPageBoundaries: e.target.checked })}
+              />
+              <span className="settings-toggle__label">End-of-page indicator</span>
+            </label>
+          </div>
+          <p className="settings-section__note">
+            Shows a subtle divider at the bottom of the reading area when you reach the end of the current page (Paged
+            layout) or the end of a chapter (Scrolling layout).
+          </p>
+
+          <div className="settings-row">
             <span className="settings-row__label">Font size</span>
             <div className="settings-row__control">
               <input

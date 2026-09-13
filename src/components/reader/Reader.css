@@ -600,6 +600,24 @@
 
 .reader__progress {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Subtle by design (see the feature's own "help tell if Next is broken"
+   rationale in Reader.tsx) -- small and low-contrast, a glance-target, not
+   something meant to compete with the nav buttons either side of it. */
+.reader__progress-label {
+  font-size: 10px;
+  color: var(--ink-faint);
+  direction: ltr;
+  line-height: 1;
+}
+
+.reader__progress-track {
+  width: 100%;
   height: 3px;
   background: var(--border);
   border-radius: 2px;
@@ -616,6 +634,27 @@
 .reader__progress-bar {
   height: 100%;
   background: var(--accent);
+}
+
+/* End-of-page/section boundary indicator (Settings → "End-of-page
+   indicator", off by default) -- a plain divider, deliberately no text (see
+   Reader.tsx's own comment on why). Always in the DOM, faded in/out via
+   opacity rather than conditionally rendered, so its appearance never
+   itself shifts the reading column's layout. */
+.reader__end-indicator {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 10px;
+  height: 1px;
+  background: var(--border);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.reader__end-indicator--visible {
+  opacity: 1;
 }
 
 @media (max-width: 860px) {

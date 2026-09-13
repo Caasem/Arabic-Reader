@@ -196,6 +196,20 @@ export function Reader({
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [chapterLabel, setChapterLabel] = useState<string | undefined>();
   const [percent, setPercent] = useState(0);
+  // A real "Page N of Total" once epub.js's locations index has finished
+  // generating for this book (see EpubService.getPageLabel); undefined
+  // before that, in which case the footer falls back to the percent above.
+  const [pageLabel, setPageLabel] = useState<string | undefined>();
+  // End-of-page-boundary indicator (see `showPageBoundaries`) -- two
+  // independent flags since the two reading flows need entirely different
+  // detection (see EpubService.onRelocated's own doc comment for why
+  // paginated has a real `atPageEnd` and scrolled doesn't): atPageEnd comes
+  // straight from epub.js's relocated event, atSectionScrollEnd is this
+  // component's own scroll-position check inside each rendered section
+  // (see svc.onRendered below). Only one is ever actually read at a time,
+  // per the current `prefs.readingFlow`.
+  const [atPageEnd, setAtPageEnd] = useState(false);
+  const [atSectionScrollEnd, setAtSectionScrollEnd] = useState(false);
   const [popup, setPopup] = useState<PopupState | null>(null);
   const [editingWord, setEditingWord] = useState<PopupState | null>(null);
   const [bubble, setBubble] = useState<PopupState | null>(null);
@@ -318,6 +332,8 @@ export function Reader({
           dismissHoverPreview();
           setChapterLabel(loc.chapterLabel);
           setPercent(loc.percent);
+          setPageLabel(svc.getPageLabel(loc.cfi));
+          setAtPageEnd(!!loc.atPageEnd);
           currentLocationRef.current = loc;
           sessionTrackerRef.current?.recordPercent(loc.percent);
           persistenceService.saveReadingPosition({
@@ -356,6 +372,24 @@ export function Reader({
           doc.addEventListener('scroll', () => sessionTrackerRef.current?.recordActivity(), { passive: true });
           doc.addEventListener('touchmove', () => sessionTrackerRef.current?.recordActivity(), { passive: true });
           doc.addEventListener('keydown', () => sessionTrackerRef.current?.recordActivity());
+
+          // End-of-section detection for Scrolling layout's own boundary
+          // indicator (see `showPageBoundaries`) -- paginated layout uses
+          // epub.js's own per-page atPageEnd from onRelocated instead (see
+          // that doc comment for why one mechanism can't serve both: this
+          // section's own iframe document simply doesn't scroll at all in
+          // paginated layout, which would make this check trivially "always
+          // at end"). A fresh section starts not-at-end regardless of scroll
+          // restoration timing below.
+          setAtSectionScrollEnd(false);
+          const NEAR_BOTTOM_PX = 4;
+          function checkSectionScrollEnd() {
+            const scroller = doc.scrollingElement || doc.documentElement;
+            if (!scroller) return;
+            setAtSectionScrollEnd(scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight <= NEAR_BOTTOM_PX);
+          }
+          checkSectionScrollEnd();
+          doc.addEventListener('scroll', checkSectionScrollEnd, { passive: true });
 
           // Focus mode's edge-drag-to-reveal-sidebar listeners
           // (edgePointer*Ref above) live on the *host* window, which never
@@ -1377,6 +1411,9 @@ export function Reader({
     setBookmarks((prev) => prev.filter((b) => b.id !== id));
   }
 
+  const showEndIndicator =
+    prefs.showPageBoundaries && (prefs.readingFlow === 'paginated' ? atPageEnd : atSectionScrollEnd);
+
   return (
     <div className="reader">
       <header
@@ -1634,6 +1671,14 @@ export function Reader({
           <div className="reader__epub-frame" style={{ width: `${prefs.readingWidthPct}%` }}>
             <div className="reader__epub" ref={containerRef} />
           </div>
+          {/* Settings → "End-of-page indicator" -- a plain divider, no text
+              (deliberately: this reader's own book content is Arabic, but
+              this line is app chrome, not book content, so it stays
+              language-neutral rather than picking English or Arabic for a
+              label nobody asked for). Fades in/out with the boundary state
+              rather than mounting/unmounting, so it never itself causes a
+              layout shift. */}
+          <div className={'reader__end-indicator' + (showEndIndicator ? ' reader__end-indicator--visible' : '')} />
         </div>
 
         {vocabPanelOpen && (
@@ -1671,7 +1716,15 @@ export function Reader({
           <span className="reader__nav-btn-icon">‹</span>
         </button>
         <div className="reader__progress">
-          <div className="reader__progress-bar" style={{ width: `${Math.round(percent * 100)}%` }} />
+          {/* Subtle, always-on progress readout -- "Page N of Total" once
+              locations have finished generating for this book, the percent
+              otherwise. Also doubles as a quick sanity check that page
+              turns are actually landing: if this stops changing while
+              pressing Next/Previous, the button isn't working. */}
+          <div className="reader__progress-label">{pageLabel ?? `${Math.round(percent * 100)}%`}</div>
+          <div className="reader__progress-track">
+            <div className="reader__progress-bar" style={{ width: `${Math.round(percent * 100)}%` }} />
+          </div>
         </div>
         <button className="reader__nav-btn" onClick={() => serviceRef.current?.prev()} aria-label="Previous page">
           <span className="reader__nav-btn-icon">›</span>
