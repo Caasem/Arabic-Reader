@@ -7,6 +7,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// package.json's `version` field, read at build time rather than imported
+// as JSON directly into app code -- resolveJsonModule/rootDir would need
+// widening to reach a file outside src/ just for this one string. Exposed
+// to the app as the __APP_VERSION__ global (declared in
+// src/types/virtual-modules.d.ts) via the `define` below.
+const appVersion = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version as string
+
 // Precache scope decision (see claude/roadmap-next-features.md item 7): the
 // small AraMorph dictionary files (~3.8MB total) are worth guaranteeing
 // offline via the service-worker precache — that's the "dictionary
@@ -98,6 +105,9 @@ export default defineConfig({
   // to work in local dev (which *is* served from root) -- '.' avoids that
   // trap by working the same way at any base path, including root.
   base: './',
+  define: {
+    __APP_VERSION__: JSON.stringify(appVersion),
+  },
   // Worker entries (aramorph.worker.ts, which imports the virtual module
   // above) are bundled by Vite in a separate build pass that does not
   // inherit the top-level `plugins` list -- it needs the virtual-module

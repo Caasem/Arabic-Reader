@@ -183,8 +183,9 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
       {showOfflineNotice && (
         <div className="library__notice">
           <span>
-            This app includes a full Arabic dictionary (~136,000 entries) built in — works offline, no account, and
-            nothing you read ever leaves your device. Tap any word while reading to look it up.
+            <span className="library__notice-version">V{__APP_VERSION__}</span> This app includes a full Arabic
+            dictionary (~136,000 entries) built in — works offline, no account, and nothing you read ever leaves your
+            device. Tap any word while reading to look it up.
           </span>
           <button className="library__notice-dismiss" onClick={dismissOfflineNotice} aria-label="Dismiss">
             ×

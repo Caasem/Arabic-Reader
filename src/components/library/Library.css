@@ -76,6 +76,12 @@
   margin-bottom: 20px;
 }
 
+.library__notice-version {
+  font-weight: 600;
+  color: var(--accent);
+  margin-inline-end: 2px;
+}
+
 .library__notice-dismiss {
   background: none;
   border: none;
