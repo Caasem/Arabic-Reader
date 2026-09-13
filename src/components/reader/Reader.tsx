@@ -114,6 +114,11 @@ interface PopupState {
   word: string;
   x: number;
   y: number;
+  /** The tapped word's own bounding rect, when known -- lets DictionaryPopup
+   * position itself without covering the word (see its own recalcPosition).
+   * Undefined for paths that only ever had a point (e.g. DictionaryBubble,
+   * which stays simple/compact and doesn't need this). */
+  wordRect?: { top: number; bottom: number; left: number; right: number };
   result: DictionaryLookupResult | null;
   instance: WordInstance | null;
   saved: boolean;
@@ -447,8 +452,14 @@ export function Reader({
             const targetRect = target.getBoundingClientRect();
             const x = (iframeRect?.left ?? 0) + targetRect.left + targetRect.width / 2;
             const y = (iframeRect?.top ?? 0) + targetRect.top;
+            const wordRect = {
+              top: (iframeRect?.top ?? 0) + targetRect.top,
+              bottom: (iframeRect?.top ?? 0) + targetRect.bottom,
+              left: (iframeRect?.left ?? 0) + targetRect.left,
+              right: (iframeRect?.left ?? 0) + targetRect.right,
+            };
             const sentence = prefsRef.current.sentenceContextEnabled ? extractSentence(target) ?? undefined : undefined;
-            handleWordClick(word, sectionHref, x, y, sentence);
+            handleWordClick(word, sectionHref, x, y, sentence, wordRect);
           });
 
           // Quick-add shortcut (opt-in — see Settings): saves the most
@@ -513,6 +524,12 @@ export function Reader({
             return {
               x: (iframeRect?.left ?? 0) + targetRect.left + targetRect.width / 2,
               y: (iframeRect?.top ?? 0) + targetRect.top,
+              wordRect: {
+                top: (iframeRect?.top ?? 0) + targetRect.top,
+                bottom: (iframeRect?.top ?? 0) + targetRect.bottom,
+                left: (iframeRect?.left ?? 0) + targetRect.left,
+                right: (iframeRect?.left ?? 0) + targetRect.right,
+              },
             };
           }
 
@@ -539,9 +556,9 @@ export function Reader({
                   if (!touchStartRef.current || touchStartRef.current.word !== word) return;
                   touchHoldFiredRef.current = true;
                   touchSuppressContextMenuRef.current = true;
-                  const { x, y } = computeWordXY(target);
+                  const { x, y, wordRect } = computeWordXY(target);
                   const sentence = prefsRef.current.sentenceContextEnabled ? extractSentence(target) ?? undefined : undefined;
-                  dispatchTouchAction(holdAction, word, sectionHref, x, y, sentence);
+                  dispatchTouchAction(holdAction, word, sectionHref, x, y, sentence, wordRect);
                 }, TOUCH_HOLD_MS);
               }
             },
@@ -608,9 +625,9 @@ export function Reader({
               }
 
               e.preventDefault();
-              const { x, y } = computeWordXY(el);
+              const { x, y, wordRect } = computeWordXY(el);
               const sentence = prefsRef.current.sentenceContextEnabled ? extractSentence(el) ?? undefined : undefined;
-              dispatchTouchAction(action, word, sectionHref, x, y, sentence);
+              dispatchTouchAction(action, word, sectionHref, x, y, sentence, wordRect);
             },
             { passive: false }
           );
@@ -947,10 +964,17 @@ export function Reader({
     setHoverPreview({ word, x, y, gloss: condensed });
   }
 
-  async function handleWordClick(word: string, sectionHref: string, x: number, y: number, sentence?: string) {
+  async function handleWordClick(
+    word: string,
+    sectionHref: string,
+    x: number,
+    y: number,
+    sentence?: string,
+    wordRect?: PopupState['wordRect']
+  ) {
     dismissHoverPreview();
     sessionTrackerRef.current?.recordLookup();
-    setPopup({ word, x, y, result: null, instance: null, saved: false, loading: true });
+    setPopup({ word, x, y, wordRect, result: null, instance: null, saved: false, loading: true });
     const [result, saved] = await Promise.all([
       dictionaryManager.lookup(word),
       vocabularyService.isSaved(book.id, word),
@@ -1047,10 +1071,11 @@ export function Reader({
     sectionHref: string,
     x: number,
     y: number,
-    sentence?: string
+    sentence?: string,
+    wordRect?: PopupState['wordRect']
   ) {
     if (action === 'bubble') openBubble(word, sectionHref, x, y, sentence);
-    else if (action === 'openDictionary') handleWordClick(word, sectionHref, x, y, sentence);
+    else if (action === 'openDictionary') handleWordClick(word, sectionHref, x, y, sentence, wordRect);
     else if (action === 'quickSave') quickSaveWord(word, sectionHref, sentence);
   }
 
@@ -1745,6 +1770,7 @@ export function Reader({
           loading={popup.loading}
           x={popup.x}
           y={popup.y}
+          wordRect={popup.wordRect}
           sizePct={prefs.dictionaryPopupSizePct}
           onClose={() => setPopup(null)}
           onSave={handleSave}

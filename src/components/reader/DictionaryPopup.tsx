@@ -149,6 +149,7 @@ export function DictionaryPopup({
   loading,
   x,
   y,
+  wordRect,
   sizePct = 100,
   onClose,
   onSave,
@@ -161,8 +162,16 @@ export function DictionaryPopup({
   instance: WordInstance | null;
   saved: boolean;
   loading: boolean;
+  /** Fallback anchor point (word's horizontal center, top edge) used only
+   * when `wordRect` isn't supplied -- kept so any caller that hasn't been
+   * updated to measure the word's full rect still gets *a* position. */
   x: number;
   y: number;
+  /** The tapped `.ar-word` element's own `getBoundingClientRect()` (already
+   * adjusted for the epub.js iframe's own offset, same as x/y above) --
+   * lets recalcPosition below place the popup above/below/beside the word
+   * without covering it, rather than just centering on a single point. */
+  wordRect?: { top: number; bottom: number; left: number; right: number };
   /** Settings → "Dictionary popup size" -- 100 = the popup's normal size. */
   sizePct?: number;
   onClose: () => void;
@@ -438,25 +447,69 @@ export function DictionaryPopup({
     const rect = el.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    const clampLeft = (left: number) => Math.min(Math.max(left, VIEWPORT_MARGIN), Math.max(VIEWPORT_MARGIN, vw - rect.width - VIEWPORT_MARGIN));
+    const clampTop = (top: number) => Math.min(Math.max(top, VIEWPORT_MARGIN), Math.max(VIEWPORT_MARGIN, vh - rect.height - VIEWPORT_MARGIN));
 
-    let left = x - rect.width / 2;
-    left = Math.min(Math.max(left, VIEWPORT_MARGIN), vw - rect.width - VIEWPORT_MARGIN);
+    if (wordRect) {
+      // Word-aware placement: below the word, then above, then beside it,
+      // each tried only if the popup would land fully on-screen there --
+      // the last resort (clamp only) is the one place this can still cover
+      // the word, same graceful-degradation the feature accepts for small
+      // screens/Split layout's narrower columns rather than never showing
+      // a usable popup at all.
+      const centerLeft = clampLeft((wordRect.left + wordRect.right) / 2 - rect.width / 2);
 
+      const belowTop = wordRect.bottom + WORD_GAP;
+      if (belowTop + rect.height <= vh - VIEWPORT_MARGIN) {
+        setStyle({ left: centerLeft, top: belowTop, visibility: 'visible' });
+        return;
+      }
+
+      const aboveTop = wordRect.top - WORD_GAP - rect.height;
+      if (aboveTop >= VIEWPORT_MARGIN) {
+        setStyle({ left: centerLeft, top: aboveTop, visibility: 'visible' });
+        return;
+      }
+
+      // Neither direction has room (a short landscape viewport, typically)
+      // -- shift beside the word instead, vertically centered on it. This
+      // app's own chrome is RTL, so "forward" is the left side (matching
+      // e.g. the reader footer's Next button already being on the left) --
+      // tried first, then the right, whichever actually has room for the
+      // popup's width.
+      const sideTop = clampTop((wordRect.top + wordRect.bottom) / 2 - rect.height / 2);
+      const spaceLeft = wordRect.left - VIEWPORT_MARGIN;
+      const spaceRight = vw - VIEWPORT_MARGIN - wordRect.right;
+      if (spaceLeft >= rect.width + WORD_GAP) {
+        setStyle({ left: wordRect.left - WORD_GAP - rect.width, top: sideTop, visibility: 'visible' });
+        return;
+      }
+      if (spaceRight >= rect.width + WORD_GAP) {
+        setStyle({ left: wordRect.right + WORD_GAP, top: sideTop, visibility: 'visible' });
+        return;
+      }
+
+      // Popup doesn't fit anywhere without covering the word (a small
+      // screen, or a narrow Split-layout column) -- fall back to simply
+      // keeping it fully on-screen, word visibility no longer guaranteed.
+      setStyle({ left: centerLeft, top: clampTop(wordRect.top), visibility: 'visible' });
+      return;
+    }
+
+    // No measured word rect (a caller that only has a point, not the
+    // element itself) -- the old point-based heuristic: prefer above the
+    // point, then below, then vertically centered on it, always clamped.
+    const left = clampLeft(x - rect.width / 2);
     const fitsAbove = y - WORD_GAP - rect.height >= VIEWPORT_MARGIN;
     let top: number;
     if (fitsAbove) {
       top = y - WORD_GAP - rect.height;
     } else {
-      // Not enough room above -- try below, then fall back to whichever
-      // side has more room, clamped so the popup is always fully visible
-      // (never permanently clipped) even if that means covering the word.
       const fitsBelow = y + WORD_GAP + rect.height <= vh - VIEWPORT_MARGIN;
-      top = fitsBelow ? y + WORD_GAP : Math.min(Math.max(y - rect.height / 2, VIEWPORT_MARGIN), vh - rect.height - VIEWPORT_MARGIN);
+      top = fitsBelow ? y + WORD_GAP : clampTop(y - rect.height / 2);
     }
-    top = Math.min(Math.max(top, VIEWPORT_MARGIN), vh - rect.height - VIEWPORT_MARGIN);
-
-    setStyle({ left, top, visibility: 'visible' });
-  }, [x, y]);
+    setStyle({ left, top: clampTop(top), visibility: 'visible' });
+  }, [x, y, wordRect]);
 
   useLayoutEffect(() => {
     recalcPosition();
@@ -467,7 +520,7 @@ export function DictionaryPopup({
     // so this call catches the *start* of that resize -- the transitionend
     // handler on the popup element below catches the settled end of it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [word, loading, result, x, y, sizePct, effectiveLayout, isNarrow]);
+  }, [word, loading, result, x, y, wordRect, sizePct, effectiveLayout, isNarrow]);
 
   const scale = sizePct / 100;
 
