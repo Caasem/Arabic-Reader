@@ -1,5 +1,5 @@
 import type { DictionaryEntry, DictionaryProvider } from '../../../types';
-import { normalize } from '../../../reader/tokenizer/arabicTokenizer';
+import { foldAlefHamza, normalize } from '../../../reader/tokenizer/arabicTokenizer';
 import { aramorphProvider } from '../aramorph/AramorphDictionaryProvider';
 
 interface AlWasitRow {
@@ -15,6 +15,11 @@ interface AlWasitRow {
 
 interface AlWasitData {
   byKey: Map<string, AlWasitRow[]>;
+  /** Same rows as `byKey`, additionally keyed with alef/hamza variants folded
+   * to ا -- lets AraMorph's resolved root/lemma (e.g. مرا for امرأة) find a
+   * headword Al-Wasīṭ spells with hamza-on-alef instead (مرأ). See
+   * lookup()'s use of this as a fallback only, not the primary match. */
+  byFoldedKey: Map<string, AlWasitRow[]>;
 }
 
 /**
@@ -49,7 +54,7 @@ export class AlWasitDictionaryProvider implements DictionaryProvider {
   }
 
   async lookup(word: string): Promise<DictionaryEntry[]> {
-    const { byKey } = await this.getData();
+    const { byKey, byFoldedKey } = await this.getData();
 
     const keys = new Set<string>([normalize(word)]);
     try {
@@ -65,6 +70,11 @@ export class AlWasitDictionaryProvider implements DictionaryProvider {
     const matched = new Map<number, AlWasitRow>();
     for (const key of keys) {
       for (const row of byKey.get(key) ?? []) matched.set(row.id, row);
+    }
+    if (matched.size === 0) {
+      for (const key of keys) {
+        for (const row of byFoldedKey.get(foldAlefHamza(key)) ?? []) matched.set(row.id, row);
+      }
     }
 
     return Array.from(matched.values()).map((row) => {
@@ -96,6 +106,12 @@ export class AlWasitDictionaryProvider implements DictionaryProvider {
 
 function parseAlWasitTsv(raw: string): AlWasitData {
   const byKey = new Map<string, AlWasitRow[]>();
+  const byFoldedKey = new Map<string, AlWasitRow[]>();
+  const addTo = (map: Map<string, AlWasitRow[]>, key: string, row: AlWasitRow) => {
+    const list = map.get(key);
+    if (list) list.push(row);
+    else map.set(key, [row]);
+  };
   const lines = raw.split('\n');
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -106,12 +122,11 @@ function parseAlWasitTsv(raw: string): AlWasitData {
     for (const part of row.word.split('|')) {
       const key = normalize(part.trim());
       if (!key) continue;
-      const list = byKey.get(key);
-      if (list) list.push(row);
-      else byKey.set(key, [row]);
+      addTo(byKey, key, row);
+      addTo(byFoldedKey, foldAlefHamza(key), row);
     }
   }
-  return { byKey };
+  return { byKey, byFoldedKey };
 }
 
 export const alWasitProvider = new AlWasitDictionaryProvider();

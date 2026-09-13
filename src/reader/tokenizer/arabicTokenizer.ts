@@ -136,6 +136,17 @@ export function normalizeForSearch(text: string): { normalized: string; toOrigin
 }
 
 /**
+ * Folds أ/إ/آ/ٱ to ا, same as `normalizeForSearch` does internally. Exposed
+ * separately for callers that need just the alef-variant folding (not the
+ * diacritic stripping or original-index map) -- e.g. AlWasitDictionaryProvider
+ * folding AraMorph's root/lemma keys to match Al-Wasīṭ's own headword
+ * spelling, without changing `normalize()`'s app-wide, conservative behavior.
+ */
+export function foldAlefHamza(text: string): string {
+  return text.replace(new RegExp(ALEF_VARIANTS_RE.source, 'g'), 'ا');
+}
+
+/**
  * Best-effort clitic stripping used only to *suggest* a lemma candidate for
  * mock dictionary providers when no morphology service is wired up yet.
  * Real morphological resolution (prefix+stem+suffix grammar, as in the
