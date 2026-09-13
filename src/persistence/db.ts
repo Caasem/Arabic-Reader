@@ -245,18 +245,14 @@ const DEFAULT_PREFS: ReaderPreferences = {
   dictionaryPopupPinFooter: false,
 };
 
-/** A comfortable line length varies a lot by device -- 100% (the flat
- * default above) is about right on a narrow phone screen, but the same
- * 100% on a tablet or a desktop window stretches lines to a width that's
- * noticeably harder to read. Only consulted the very first time a device
- * has no saved preferences at all (see getPreferences below); once saved,
- * the reader's own Settings choice always wins from then on, including a
- * deliberate 100% pick on a wide screen. */
+/** 65% by default on every device, phones included -- 100% (the flat
+ * default above) runs to distractingly long lines on a wide screen, and a
+ * narrower column reads better even on a phone. Only consulted the very
+ * first time a device has no saved preferences at all (see getPreferences
+ * below); once saved, the reader's own Settings choice always wins from
+ * then on, including a deliberate 100% pick. */
 function defaultReadingWidthPctForDevice(): number {
-  const width = typeof window !== 'undefined' ? window.innerWidth : 0;
-  if (width >= 1100) return 65; // desktop -- unrestricted runs to distractingly long lines
-  if (width >= 700) return 80; // tablet
-  return 100; // phone -- already narrow enough that less would waste the screen
+  return 65;
 }
 
 class DexiePersistenceService implements PersistenceService {
