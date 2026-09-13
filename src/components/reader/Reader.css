@@ -499,12 +499,23 @@
   height: 100%;
   max-width: 100%;
   transition: width 0.15s ease;
+  /* Page backdrop: subtle shadow creates depth */
+  box-shadow:
+    inset 0 0 30px rgba(0, 0, 0, 0.08),
+    0 20px 40px rgba(0, 0, 0, 0.1);
+  background: var(--bg);
 }
 
 .reader__epub {
   position: absolute;
   inset: 0;
   padding: 20px 6%;
+  /* Constrain text to readable page width (max ~800px) while maintaining
+     responsive behavior. On wider screens, centers the content with equal
+     margins; on narrower screens, uses full available width minus padding. */
+  max-width: 900px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .reader__loading,
