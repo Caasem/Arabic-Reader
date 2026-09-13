@@ -11,6 +11,7 @@ const FALLBACK_PREFS: ReaderPreferences = {
   readingWidthPct: 100,
   enabledProviderIds: ['aramorph'],
   readingFlow: 'paginated',
+  continuousScrollEnabled: false,
   hoverPreviewEnabled: false,
   sentenceContextEnabled: true,
   quickAddShortcutEnabled: false,

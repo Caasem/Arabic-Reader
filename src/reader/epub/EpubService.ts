@@ -147,6 +147,19 @@ export class EpubService {
       width: '100%',
       height: '100%',
       flow: epubFlow(prefs.readingFlow),
+      // epub.js's "default" manager (its default regardless of flow --
+      // there's no separate default for scrolled mode) only ever keeps the
+      // *current* section's content in the DOM: in scrolled-doc flow that
+      // makes scrolling stop dead at the section (chapter) boundary, since
+      // there's nothing past it to scroll into. "continuous" stitches
+      // adjacent sections together into one scrollable feed instead, which
+      // is what "scroll through the whole book" actually needs -- see
+      // `continuousScrollEnabled`'s own doc comment for why this is a
+      // reopen-on-change setting rather than something toggled live like
+      // flow/direction below. Left at 'default' for paginated mode
+      // regardless of this preference: continuous scrolling isn't a
+      // meaningful concept for page turns.
+      manager: prefs.readingFlow === 'scrolled' && prefs.continuousScrollEnabled ? 'continuous' : 'default',
       // Forced on/off (see `twoColumnEnabled`'s doc comment), not epub.js's
       // own 'auto' -- an explicit toggle should be predictable regardless of
       // window width, not "sometimes two columns depending how wide you've
@@ -229,6 +242,23 @@ export class EpubService {
     });
     this.rendition.themes.fontSize(`${prefs.fontSizePct}%`);
 
+    // epub.js's own rendition.direction()/.flow()/.spread() all mutate the
+    // view manager directly and synchronously -- unlike next()/prev()/
+    // display()/this class's own resize() below, none of them go through
+    // `rendition.q` (epub.js's internal task queue that serializes page
+    // turns). If one of these lands while a next()/prev() call is still
+    // in-flight (queued but not yet resolved), it can clear the manager's
+    // views out from under that in-flight call the same way an unqueued
+    // resize() used to (see resize()'s own comment for that original bug)
+    // -- except next()/prev() silently no-op on an empty view list rather
+    // than throwing, so nothing ever repopulates it and *every* next()/
+    // prev() after that keeps silently doing nothing, permanently, until
+    // the whole book is reopened. Routing these through the same queue
+    // resize() already uses means they always wait for any in-flight page
+    // turn to finish first, closing that race.
+    const rendition = this.rendition;
+    const q = (rendition as unknown as { q: { enqueue: (task: () => void) => Promise<void> } }).q;
+
     // epub.js's own rendition.direction() drives actual page-turn semantics
     // (which way next()/prev() advance, spread order, swipe-adjacent
     // internal math) -- the themes.default() call above only affects how
@@ -236,7 +266,7 @@ export class EpubService {
     // way turning the page moves.
     if (dir !== this.currentDirection) {
       this.currentDirection = dir;
-      this.rendition.direction(dir);
+      q.enqueue(() => rendition.direction(dir));
     }
 
     // rendition.flow() re-clears and re-displays the current page, so only
@@ -245,14 +275,14 @@ export class EpubService {
     // reset scroll/page position on every tick.
     if (prefs.readingFlow !== this.currentFlow) {
       this.currentFlow = prefs.readingFlow;
-      this.rendition.flow(epubFlow(prefs.readingFlow));
+      q.enqueue(() => rendition.flow(epubFlow(prefs.readingFlow)));
     }
 
     if (prefs.twoColumnEnabled !== this.currentTwoColumn) {
       this.currentTwoColumn = prefs.twoColumnEnabled;
       // Second arg overrides _minSpreadWidth (default 800px) -- see the
       // matching comment on `renderTo()`'s own `spread` option above.
-      this.rendition.spread(prefs.twoColumnEnabled ? 'always' : 'none', prefs.twoColumnEnabled ? 1 : undefined);
+      q.enqueue(() => rendition.spread(prefs.twoColumnEnabled ? 'always' : 'none', prefs.twoColumnEnabled ? 1 : undefined));
     }
   }
 

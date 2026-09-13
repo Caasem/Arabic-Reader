@@ -79,9 +79,28 @@ export function QuickSettingsPopover({ onClose }: { onClose: () => void }) {
           </button>
           <button
             className={'quick-settings__flow' + (prefs.readingFlow === 'scrolled' ? ' quick-settings__flow--active' : '')}
-            onClick={() => updatePrefs({ readingFlow: 'scrolled' })}
+            // Reuses this one button for both reading-flow states instead of
+            // adding a third "Scroll all" button: tapping it while already
+            // scrolled toggles between the two continuous-scroll behaviors
+            // (see `continuousScrollEnabled`'s doc comment), and its own
+            // label reflects whichever is currently in effect. Tapping it
+            // from Paged just switches to Scrolling, same as before.
+            onClick={() =>
+              updatePrefs(
+                prefs.readingFlow === 'scrolled'
+                  ? { continuousScrollEnabled: !prefs.continuousScrollEnabled }
+                  : { readingFlow: 'scrolled' }
+              )
+            }
+            title={
+              prefs.readingFlow === 'scrolled'
+                ? prefs.continuousScrollEnabled
+                  ? 'Scrolls through the whole book — tap for chapter-by-chapter scrolling'
+                  : 'Scrolls one chapter at a time — tap to scroll through the whole book'
+                : undefined
+            }
           >
-            Scrolling
+            {prefs.readingFlow === 'scrolled' && prefs.continuousScrollEnabled ? 'Scroll all' : 'Scrolling'}
           </button>
         </div>
 

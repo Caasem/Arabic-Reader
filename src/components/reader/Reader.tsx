@@ -268,7 +268,14 @@ export function Reader({
         const file = await libraryService.getBookFile(book.id);
         if (!file || !containerRef.current) throw new Error('Could not read this book file.');
         const savedPos = await persistenceService.getReadingPosition(book.id);
-        await svc.open(file, containerRef.current, initialCfiOverride ?? savedPos?.cfi, prefsRef.current);
+        // currentLocationRef, when already populated, means this effect is
+        // re-running because a setting that requires reopening the book
+        // changed (see `continuousScrollEnabled`) rather than because the
+        // Reader just mounted -- resume exactly where the reader was, not
+        // back at initialCfiOverride/savedPos (a stale, one-time-only
+        // starting point from the original mount).
+        const startCfi = currentLocationRef.current?.cfi ?? initialCfiOverride ?? savedPos?.cfi;
+        await svc.open(file, containerRef.current, startCfi, prefsRef.current);
         if (cancelled) return;
 
         setToc(svc.getToc());
@@ -689,7 +696,7 @@ export function Reader({
       svc.destroy();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [book.id]);
+  }, [book.id, prefs.continuousScrollEnabled]);
 
   // Reading controls (Settings panel) apply live, without reopening the book.
   useEffect(() => {
@@ -1569,6 +1576,12 @@ export function Reader({
 
         {bookmarksOpen && (
           <aside className="reader__toc reader__bookmarks">
+            <div className="reader__bookmarks-header">
+              <span className="reader__bookmarks-title">Bookmarks</span>
+              <button className="reader__search-close" onClick={() => setBookmarksOpen(false)} aria-label="Close bookmarks">
+                <IconClose size={14} />
+              </button>
+            </div>
             <button className="btn btn--ghost reader__bookmarks-add" onClick={handleAddBookmark}>
               <IconBookmark size={14} /> Add bookmark here
             </button>

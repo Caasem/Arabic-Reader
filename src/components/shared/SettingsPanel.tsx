@@ -258,6 +258,24 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           </p>
 
           <div className="settings-row">
+            <label className="settings-toggle">
+              <input
+                type="checkbox"
+                checked={prefs.continuousScrollEnabled}
+                disabled={prefs.readingFlow !== 'scrolled'}
+                onChange={(e) => updatePrefs({ continuousScrollEnabled: e.target.checked })}
+              />
+              <span className="settings-toggle__label">Scroll through whole book</span>
+            </label>
+          </div>
+          <p className="settings-section__note">
+            Off: scrolling stops at each chapter's end. On: chapters flow into each other, so scrolling carries
+            straight through into the next one — only has an effect in Scrolling layout.
+            {prefs.readingFlow !== 'scrolled' && ' Switch to Scrolling above to use it.'}
+            {' '}Also available as the Scrolling button's second state in the reader's own Aa menu.
+          </p>
+
+          <div className="settings-row">
             <span className="settings-row__label">Font size</span>
             <div className="settings-row__control">
               <input

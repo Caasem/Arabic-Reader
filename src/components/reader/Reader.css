@@ -353,6 +353,21 @@
   gap: 10px;
 }
 
+/* The panel's own close control -- reachable even when the topbar toggle
+   that opened it is faded out (Focus mode) or scrolled out of view on a
+   small screen, so opening Bookmarks never leaves no way back out. */
+.reader__bookmarks-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reader__bookmarks-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+}
+
 .reader__bookmarks-add {
   display: flex;
   align-items: center;

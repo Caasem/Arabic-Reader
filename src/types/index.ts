@@ -305,6 +305,15 @@ export interface ReaderPreferences {
   enabledProviderIds: string[];
   /** Page-flip vs continuous vertical scroll. */
   readingFlow: ReadingFlow;
+  /** Only meaningful when `readingFlow` is 'scrolled'. false (default,
+   * "Scrolling") -- scrolling stops at each chapter boundary, same as
+   * epub.js's own default view manager. true ("Scroll all") -- chapters
+   * are stitched into one continuous scrollable feed spanning the whole
+   * book (epub.js's "continuous" manager). Changing this reopens the book
+   * at its current position rather than applying live -- unlike flow/
+   * direction/spread, epub.js has no supported way to swap view managers
+   * on an already-rendered rendition. */
+  continuousScrollEnabled: boolean;
   /** Show a condensed translation preview on hover, in addition to the full
    * popup on click/tap. Off by default — opt-in via Settings. */
   hoverPreviewEnabled: boolean;

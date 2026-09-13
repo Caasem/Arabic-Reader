@@ -73,12 +73,36 @@ body,
   height: 100%;
 }
 
+/* Pins the whole app viewport so it can never itself scroll -- without
+   this, iOS Safari's elastic overscroll/rubber-banding treats `body` as a
+   scrollable surface, so a horizontal swipe that starts inside the reader's
+   own scrollable content (.reader__stage, see Reader.css) can bleed past it
+   and drag the *entire page* sideways, taking supposedly-fixed chrome like
+   the reader's topbar along with it before it snaps back. `overflow: hidden`
+   plus pinning `body` to the viewport with `position: fixed` (the standard
+   fix for this class of iOS bug) keeps every actual scroll gesture confined
+   to whichever inner container declares its own overflow, exactly as the
+   layout already intends. `overscroll-behavior` is the modern equivalent
+   (newer engines only) and costs nothing to set alongside it. */
+html {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  overflow: hidden;
 }
 
 button {

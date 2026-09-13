@@ -222,6 +222,7 @@ const DEFAULT_PREFS: ReaderPreferences = {
   // dictionaries are still registered and can be re-enabled in Settings.
   enabledProviderIds: ['aramorph'],
   readingFlow: 'paginated',
+  continuousScrollEnabled: false,
   hoverPreviewEnabled: false,
   // On by default — a saved word without the sentence it came from is much
   // less useful for review later; still toggleable in Settings for anyone
@@ -243,6 +244,20 @@ const DEFAULT_PREFS: ReaderPreferences = {
   dictionaryPanelSingleProviderId: null,
   dictionaryPopupPinFooter: false,
 };
+
+/** A comfortable line length varies a lot by device -- 100% (the flat
+ * default above) is about right on a narrow phone screen, but the same
+ * 100% on a tablet or a desktop window stretches lines to a width that's
+ * noticeably harder to read. Only consulted the very first time a device
+ * has no saved preferences at all (see getPreferences below); once saved,
+ * the reader's own Settings choice always wins from then on, including a
+ * deliberate 100% pick on a wide screen. */
+function defaultReadingWidthPctForDevice(): number {
+  const width = typeof window !== 'undefined' ? window.innerWidth : 0;
+  if (width >= 1100) return 65; // desktop -- unrestricted runs to distractingly long lines
+  if (width >= 700) return 80; // tablet
+  return 100; // phone -- already narrow enough that less would waste the screen
+}
 
 class DexiePersistenceService implements PersistenceService {
   async saveBook(meta: BookMeta, file: Blob): Promise<void> {
@@ -373,7 +388,7 @@ class DexiePersistenceService implements PersistenceService {
 
   async getPreferences(): Promise<ReaderPreferences> {
     const row = await db.preferences.get('default');
-    if (!row) return DEFAULT_PREFS;
+    if (!row) return { ...DEFAULT_PREFS, readingWidthPct: defaultReadingWidthPctForDevice() };
     const { id: _id, ...rest } = row;
     // Merge over defaults so preferences saved before a new field existed
     // (e.g. enabledProviderIds) don't come back missing it.
