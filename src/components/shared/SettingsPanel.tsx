@@ -404,6 +404,21 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             <label className="settings-toggle">
               <input
                 type="checkbox"
+                checked={prefs.dictionaryPopupPinFooter}
+                onChange={(e) => updatePrefs({ dictionaryPopupPinFooter: e.target.checked })}
+              />
+              <span className="settings-toggle__label">Pin Save/Edit buttons</span>
+            </label>
+          </div>
+          <p className="settings-section__note">
+            Keeps the stats line and Save Vocabulary/Edit buttons fixed at the bottom of the popup instead of
+            scrolling away with a long entry list.
+          </p>
+
+          <div className="settings-row">
+            <label className="settings-toggle">
+              <input
+                type="checkbox"
                 checked={prefs.hoverPreviewEnabled}
                 onChange={(e) => updatePrefs({ hoverPreviewEnabled: e.target.checked })}
               />

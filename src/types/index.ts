@@ -358,6 +358,9 @@ export interface ReaderPreferences {
    * 'single'. null means "not chosen yet" -- the popup falls back to
    * whichever provider would otherwise be first. */
   dictionaryPanelSingleProviderId: string | null;
+  /** Keeps the popup's stats line + Save Vocabulary/Edit buttons fixed at
+   * the bottom instead of scrolling away with a long entry list. */
+  dictionaryPopupPinFooter: boolean;
 }
 
 // ---------------------------------------------------------------------------

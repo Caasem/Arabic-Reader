@@ -27,6 +27,7 @@ const FALLBACK_PREFS: ReaderPreferences = {
   twoColumnEnabled: false,
   dictionaryPanelLayout: 'merged',
   dictionaryPanelSingleProviderId: null,
+  dictionaryPopupPinFooter: false,
 };
 
 interface PreferencesContextValue {

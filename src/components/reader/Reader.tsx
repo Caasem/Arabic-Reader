@@ -941,6 +941,24 @@ export function Reader({
    * with several of these alongside (or instead of) the "all entries" card,
    * so there's no single boolean answer to "is this word saved" any more —
    * the popup's own per-entry buttons track their own tapped state instead. */
+  /** For a long dictionary entry (Al-Wasit's own paragraphs commonly run
+   * several sub-senses together) where only part of it is actually what the
+   * reader was looking for -- saves just the selected text as the card's
+   * definition, reusing the entry's own headword/root/lemma so it's still
+   * recognizably "this word, this source", not a bare snippet. */
+  async function saveWordSelection(target: PopupState, entry: DictionaryEntry, selectedText: string) {
+    if (!target.result) return;
+    await vocabularyService.saveToVocabulary({
+      surfaceForm: target.word,
+      entries: [{ ...entry, senses: [{ gloss: selectedText }] }],
+      root: entry.root,
+      lemma: entry.lemma,
+      pos: entry.senses[0]?.pos,
+      book,
+      wordInstance: target.instance ?? undefined,
+    });
+  }
+
   async function saveWordEntry(target: PopupState, entry: DictionaryEntry) {
     if (!target.result) return;
     await vocabularyService.saveToVocabulary({
@@ -1658,6 +1676,7 @@ export function Reader({
           onClose={() => setPopup(null)}
           onSave={handleSave}
           onSaveEntry={(entry) => saveWordEntry(popup, entry)}
+          onSaveSelection={(entry, selectedText) => saveWordSelection(popup, entry, selectedText)}
           onEdit={() => setEditingWord(popup)}
         />
       )}

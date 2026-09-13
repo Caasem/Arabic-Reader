@@ -241,6 +241,7 @@ const DEFAULT_PREFS: ReaderPreferences = {
   twoColumnEnabled: false,
   dictionaryPanelLayout: 'merged',
   dictionaryPanelSingleProviderId: null,
+  dictionaryPopupPinFooter: false,
 };
 
 class DexiePersistenceService implements PersistenceService {

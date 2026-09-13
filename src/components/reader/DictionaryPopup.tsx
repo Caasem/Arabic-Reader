@@ -95,6 +95,7 @@ export function DictionaryPopup({
   onClose,
   onSave,
   onSaveEntry,
+  onSaveSelection,
   onEdit,
 }: {
   word: string;
@@ -115,6 +116,10 @@ export function DictionaryPopup({
    * word has more than one genuinely distinct meaning and the reader only
    * wants the one they're looking at. */
   onSaveEntry?: (entry: DictionaryEntry) => void;
+  /** For a long entry (Al-Wasit's paragraphs commonly run several
+   * sub-senses together) where only part of it is relevant -- saves just
+   * the text the reader selected, instead of the whole entry. */
+  onSaveSelection?: (entry: DictionaryEntry, selectedText: string) => void;
   /** Opens the compact edit modal for this word's saved (or not-yet-saved)
    * card. */
   onEdit?: () => void;
@@ -193,6 +198,30 @@ export function DictionaryPopup({
   }, [word]);
   const activeTabId = activeTab ?? primaryGroup?.providerId;
 
+  // Split view: each column scrolls independently (a long Al-Wasit entry
+  // shouldn't force AraMorph's shorter column to match its height) --
+  // except a narrow strip along the *inner* edge (the one touching the
+  // shared divider between them), which scrolls both together so the two
+  // stay aligned for side-by-side comparison. Primary renders first in DOM
+  // (rightmost in this RTL layout) so its inner edge is its left; secondary
+  // renders second (leftmost) so its inner edge is its right.
+  const SYNC_ZONE_PX = 28;
+  const primaryColRef = useRef<HTMLDivElement>(null);
+  const secondaryColRef = useRef<HTMLDivElement>(null);
+  function handleColumnWheel(e: React.WheelEvent<HTMLDivElement>, isPrimary: boolean) {
+    const selfEl = isPrimary ? primaryColRef.current : secondaryColRef.current;
+    const otherEl = isPrimary ? secondaryColRef.current : primaryColRef.current;
+    if (!selfEl) return;
+    const rect = selfEl.getBoundingClientRect();
+    const inSyncZone = isPrimary ? e.clientX - rect.left < SYNC_ZONE_PX : rect.right - e.clientX < SYNC_ZONE_PX;
+    if (inSyncZone) {
+      e.preventDefault();
+      selfEl.scrollTop += e.deltaY;
+      if (otherEl) otherEl.scrollTop += e.deltaY;
+    }
+    // Outer zone: no-op here -- native per-column scrolling already handles it.
+  }
+
   // Viewport-safe positioning: rather than guessing the popup's size ahead
   // of time (the old approach — a fixed height estimate — could still clip
   // a genuinely tall entry list, and didn't account for the size
@@ -201,6 +230,45 @@ export function DictionaryPopup({
   // past that still scrolls inside the popup (see .dict-popup's
   // max-height/overflow-y in the stylesheet) rather than growing off-screen.
   const popupRef = useRef<HTMLDivElement>(null);
+
+  // Select-and-save: for a long entry (Al-Wasit's own paragraphs commonly
+  // run several sub-senses together) where only part of it is relevant,
+  // selecting text inside it surfaces a small floating button to save just
+  // that selection instead of the whole entry. `data-entry-index` on each
+  // .dict-popup__entry (added in renderGroupList below) is the same flat
+  // index into result.entries that savedEntryKeys already uses, so this
+  // only needs to walk up to that ancestor to know which entry it was.
+  const [selectionInfo, setSelectionInfo] = useState<{ entry: DictionaryEntry; text: string; x: number; y: number } | null>(null);
+  useEffect(() => {
+    if (!onSaveSelection) return;
+    function handleSelectionChange() {
+      const sel = document.getSelection();
+      if (!sel || sel.isCollapsed || !sel.anchorNode || !popupRef.current?.contains(sel.anchorNode)) {
+        setSelectionInfo(null);
+        return;
+      }
+      const text = sel.toString().trim();
+      if (!text) {
+        setSelectionInfo(null);
+        return;
+      }
+      const range = sel.getRangeAt(0);
+      const node = range.commonAncestorContainer;
+      const el = node instanceof Element ? node : node.parentElement;
+      const entryEl = el?.closest<HTMLElement>('.dict-popup__entry');
+      const entryIndex = entryEl ? Number(entryEl.dataset.entryIndex) : NaN;
+      const entry = result?.entries[entryIndex];
+      if (!entry) {
+        setSelectionInfo(null);
+        return;
+      }
+      const rect = range.getBoundingClientRect();
+      setSelectionInfo({ entry, text, x: rect.left + rect.width / 2, y: rect.top });
+    }
+    document.addEventListener('selectionchange', handleSelectionChange);
+    return () => document.removeEventListener('selectionchange', handleSelectionChange);
+  }, [onSaveSelection, result]);
+
   const [style, setStyle] = useState<{ left: number; top: number; visibility: 'hidden' | 'visible' }>({
     left: x,
     top: y,
@@ -261,7 +329,7 @@ export function DictionaryPopup({
       <div className="dict-popup__group" key={group.providerId}>
         <div className="dict-popup__group-header">{group.providerName}</div>
         {group.entries.map(({ entry, index: i }) => (
-          <div className="dict-popup__entry" key={entry.providerId + i}>
+          <div className="dict-popup__entry" data-entry-index={i} key={entry.providerId + i}>
             <div className="dict-popup__entry-head">
               <span className="dict-popup__headword">{entry.headword}</span>
               {/* Sits between the headword and the per-entry save
@@ -316,11 +384,40 @@ export function DictionaryPopup({
     ));
   }
 
+  const footer = (
+    <>
+      <div className="dict-popup__stats">
+        <span>
+          {instance?.encounterCount ?? 1} encounter{(instance?.encounterCount ?? 1) === 1 ? '' : 's'}
+        </span>
+        <span className="dict-popup__stats-dot">·</span>
+        <span>
+          {instance?.lookupCount ?? 1} lookup{(instance?.lookupCount ?? 1) === 1 ? '' : 's'}
+        </span>
+      </div>
+
+      <div className="dict-popup__actions">
+        <button className={'dict-popup__save' + (saved ? ' dict-popup__save--saved' : '')} onClick={onSave}>
+          {saved ? '✓ Vocabulary' : 'Save Vocabulary'}
+        </button>
+        {onEdit && (
+          <button className="dict-popup__edit" onClick={onEdit}>
+            Edit
+          </button>
+        )}
+      </div>
+    </>
+  );
+
   return (
     <div className="dict-popup-backdrop" onClick={handleBackdropClick}>
       <div
         ref={popupRef}
-        className={'dict-popup' + (effectiveLayout === 'split' && !isNarrow ? ' dict-popup--split' : '')}
+        className={
+          'dict-popup' +
+          (effectiveLayout === 'split' && !isNarrow ? ' dict-popup--split' : '') +
+          (prefs.dictionaryPopupPinFooter ? ' dict-popup--pinned-footer' : '')
+        }
         style={{ left: style.left, top: style.top, visibility: style.visibility, transform: `scale(${scale})`, transformOrigin: 'top left' }}
         onClick={(e) => e.stopPropagation()}
         onTransitionEnd={(e) => {
@@ -338,6 +435,7 @@ export function DictionaryPopup({
           </button>
         )}
 
+      <div className="dict-popup__scroll">
         <button className="dict-popup__close" onClick={onClose} aria-label="Close">
           ×
         </button>
@@ -390,8 +488,12 @@ export function DictionaryPopup({
               </>
             ) : (
               <div className="dict-popup__split-cols">
-                <div className="dict-popup__split-col">{renderGroupList(primaryGroup ? [primaryGroup] : [])}</div>
-                <div className="dict-popup__split-col">{renderGroupList(secondaryGroups)}</div>
+                <div className="dict-popup__split-col" ref={primaryColRef} onWheel={(e) => handleColumnWheel(e, true)}>
+                  {renderGroupList(primaryGroup ? [primaryGroup] : [])}
+                </div>
+                <div className="dict-popup__split-col" ref={secondaryColRef} onWheel={(e) => handleColumnWheel(e, false)}>
+                  {renderGroupList(secondaryGroups)}
+                </div>
               </div>
             )
           ) : effectiveLayout === 'single' ? (
@@ -403,27 +505,28 @@ export function DictionaryPopup({
 
         {instance?.sentence && <div className="dict-popup__sentence">“{instance.sentence}”</div>}
 
-        <div className="dict-popup__stats">
-          <span>
-            {instance?.encounterCount ?? 1} encounter{(instance?.encounterCount ?? 1) === 1 ? '' : 's'}
-          </span>
-          <span className="dict-popup__stats-dot">·</span>
-          <span>
-            {instance?.lookupCount ?? 1} lookup{(instance?.lookupCount ?? 1) === 1 ? '' : 's'}
-          </span>
-        </div>
-
-        <div className="dict-popup__actions">
-          <button className={'dict-popup__save' + (saved ? ' dict-popup__save--saved' : '')} onClick={onSave}>
-            {saved ? '✓ Vocabulary' : 'Save Vocabulary'}
-          </button>
-          {onEdit && (
-            <button className="dict-popup__edit" onClick={onEdit}>
-              Edit
-            </button>
-          )}
-        </div>
+        {/* Settings → "Pin Save/Edit buttons": unpinned (default), this
+            stays right here and scrolls away with a long entry list, same
+            as always. Pinned, it renders outside .dict-popup__scroll
+            instead (below), fixed at the bottom regardless of scroll. */}
+        {!prefs.dictionaryPopupPinFooter && footer}
       </div>
+      {prefs.dictionaryPopupPinFooter && <div className="dict-popup__footer-pinned">{footer}</div>}
+      </div>
+      {selectionInfo && onSaveSelection && (
+        <button
+          className="dict-popup__save-selection"
+          style={{ left: selectionInfo.x, top: selectionInfo.y }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSaveSelection(selectionInfo.entry, selectionInfo.text);
+            setSelectionInfo(null);
+            document.getSelection()?.removeAllRanges();
+          }}
+        >
+          + Save selection
+        </button>
+      )}
     </div>
   );
 }

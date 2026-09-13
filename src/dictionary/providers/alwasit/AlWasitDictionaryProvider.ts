@@ -74,8 +74,18 @@ export class AlWasitDictionaryProvider implements DictionaryProvider {
         providerName: this.name,
         headword,
         root: headword,
+        // Al-Wasit's own meanings field already separates senses with <br>,
+        // but a single <br> block can still run several sub-senses together
+        // as one long paragraph, each introduced by its own "و-" marker
+        // (classical dictionary notation for "and also:") -- e.g. "تحَرّكَ.
+        // و- القلبُ: نَبَضَ. و- العِرْقُ: هاجَ..." is three sub-senses under
+        // one <br> block. Splitting on that marker too (kept, not
+        // stripped, to stay faithful to the source text) turns one long
+        // run-on block into several short list items, same as if the
+        // source data had used <br> between them in the first place.
         senses: row.meanings
           .split(/<br\s*\/?>/i)
+          .flatMap((block) => block.split(/(?=\sو-\s)/))
           .map((s) => s.trim())
           .filter(Boolean)
           .map((gloss) => ({ gloss })),
