@@ -120,6 +120,28 @@ export function QuickSettingsPopover({ onClose }: { onClose: () => void }) {
             2 columns
           </button>
         </div>
+
+        <div className="quick-settings__divider" />
+
+        {/* Reading width -- deliberately no icon, label, or percentage (see
+            the feature's own design brief): an iOS Control Center-style
+            slider is meant to be read by feel/position, not by a number.
+            min/max match the Settings panel's own reading-width slider
+            (same underlying pref, readingWidthPct); step is finer here
+            (1 vs Settings' 5) since dragging is this control's whole
+            reason to exist. */}
+        <div className="quick-settings__row">
+          <input
+            type="range"
+            className="quick-settings__width-slider"
+            min={50}
+            max={100}
+            step={1}
+            value={prefs.readingWidthPct}
+            onChange={(e) => updatePrefs({ readingWidthPct: Number(e.target.value) })}
+            aria-label="Reading width"
+          />
+        </div>
       </div>
     </div>
   );

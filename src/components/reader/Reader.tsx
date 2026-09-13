@@ -703,35 +703,26 @@ export function Reader({
     if (ready) serviceRef.current?.applyPreferences(prefs);
   }, [ready, prefs.fontSizePct, prefs.lineHeight, prefs.fontFamily, prefs.readingFlow, prefs.pageDirection, prefs.theme, prefs.twoColumnEnabled]);
 
-  // Re-paginate whenever the reading column itself actually changes size --
-  // not just on window resize (epub.js listens for that on its own), but
-  // also when a *sibling* panel (TOC, Bookmarks, Vocab Levels) mounts or
-  // unmounts and reflows `.reader__epub` via flexbox, which fires no resize
-  // event at all. Without this, epub.js keeps paginating against whatever
-  // width it last measured, which is what showed up as jumbled/overlapping
-  // text after opening or (especially) closing Vocab Levels.
+  // EXPERIMENT (see the manual reading-width-slider branch): the general
+  // ResizeObserver that used to catch *any* `.reader__epub` size change --
+  // including a sibling panel (TOC, Bookmarks, Vocab Levels) mounting or
+  // unmounting and reflowing it via flexbox, which fires no resize event at
+  // all -- is disabled here. That observer was the only thing keeping
+  // epub.js's pagination in sync with the container after one of those
+  // panel toggles; without it, expect the exact "jumbled/overlapping text"
+  // regression its own removed comment used to warn about, in exchange for
+  // no more resize-triggered flash when a panel opens/closes. Kept as a
+  // clearly-marked block (not deleted outright) so reverting this
+  // experiment is a one-line change back to restoring it.
   //
-  // Two guards keep this from over-firing (each resize() is a full
-  // clear-and-redisplay-at-the-last-CFI cycle -- see EpubService.resize --
-  // which is a visible flash even when it lands back in the right place,
-  // and in paginated mode a slightly different column width can round the
-  // same CFI onto a different page, which reads as "jumping"):
-  //
-  // 1. Skip entirely when `window.innerWidth/innerHeight` also changed --
-  //    that means this was a real viewport resize, which epub.js's own
-  //    internal Stage listener already reacts to on its own. Without this
-  //    check, both listeners fire for the same event and independently
-  //    clear-and-redisplay, twice, each with its own page-rounding risk --
-  //    on Android specifically, the visible viewport commonly changes on
-  //    its own (system nav bar / gesture bar showing or hiding during a
-  //    scroll) with no interaction from the reader at all, which is a
-  //    plausible source of pages appearing to turn on their own.
-  // 2. Skip when the container's own box hasn't actually changed size from
-  //    the last time this effect acted on it -- otherwise a container size
-  //    that settles back to a previous value (e.g. a transient scrollbar
-  //    appearing then disappearing after the reflow it caused) triggers
-  //    another identical resize() for no layout reason.
+  // What replaces it: only the reading-width slider itself (Settings and
+  // the new Aa popover control) now triggers a resize, via the effect right
+  // below, debounced so a drag doesn't fire a clear-and-redisplay cycle
+  // (see EpubService.resize()'s own comment on why that's a visible flash)
+  // on every single percentage point.
+  const DISABLE_RESIZE_OBSERVER_EXPERIMENT = true;
   useEffect(() => {
+    if (DISABLE_RESIZE_OBSERVER_EXPERIMENT) return;
     if (!ready || !containerRef.current) return;
     let debounce: number | null = null;
     let lastSize = { w: containerRef.current.clientWidth, h: containerRef.current.clientHeight };
@@ -763,7 +754,23 @@ export function Reader({
       observer.disconnect();
       if (debounce) window.clearTimeout(debounce);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
+
+  // Reading-width slider's own resize trigger -- with the general observer
+  // above disabled, this is now the *only* thing that tells epub.js the
+  // container changed size when `readingWidthPct` changes (window resizes
+  // and device rotation still reach epub.js on their own, via its internal
+  // Stage listener -- this experiment can't and doesn't try to suppress
+  // that). Debounced past the slider's own drag cadence so dragging feels
+  // smooth (the CSS width itself, see `.reader__epub-frame` below, tracks
+  // the pref immediately either way) while the expensive clear-and-
+  // redisplay only happens once dragging settles.
+  useEffect(() => {
+    if (!ready) return;
+    const timer = window.setTimeout(() => serviceRef.current?.resize(), 150);
+    return () => window.clearTimeout(timer);
+  }, [ready, prefs.readingWidthPct]);
 
   // Refresh the saved-word colour in every currently-rendered section the
   // instant the theme changes, rather than waiting for that section to
