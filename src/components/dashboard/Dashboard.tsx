@@ -6,6 +6,8 @@ import { CurrentFocusSection } from './CurrentFocusSection';
 import { ReadingStatsSection } from './ReadingStatsSection';
 import { CalendarSection } from './CalendarSection';
 import { TrendCharts } from './TrendCharts';
+import { PomodoroStatsSection } from './PomodoroStatsSection';
+import { getPomodoroTotals, type PomodoroTotals } from '../../pomodoro/pomodoroStats';
 import {
   getArabicProfile,
   getReadingTotals,
@@ -35,6 +37,7 @@ export function Dashboard() {
   const [totals, setTotals] = useState<ReadingTotals | null>(null);
   const [vocabSaved, setVocabSaved] = useState<number | null>(null);
   const [trend, setTrend] = useState<TrendPoint[] | null>(null);
+  const [pomodoroTotals, setPomodoroTotals] = useState<PomodoroTotals | null>(null);
 
   // Range-independent — an Arabic learner's cumulative profile, the weak-word
   // list, streaks, and the full activity log don't reset when the filter
@@ -53,12 +56,14 @@ export function Dashboard() {
     setTotals(null);
     setVocabSaved(null);
     setTrend(null);
-    Promise.all([getReadingTotals(range), getVocabularySavedInRange(range), getTrend(range)]).then(
-      ([t, v, tr]) => {
+    setPomodoroTotals(null);
+    Promise.all([getReadingTotals(range), getVocabularySavedInRange(range), getTrend(range), getPomodoroTotals(range)]).then(
+      ([t, v, tr, pt]) => {
         if (cancelled) return;
         setTotals(t);
         setVocabSaved(v);
         setTrend(tr);
+        setPomodoroTotals(pt);
       }
     );
     return () => {
@@ -87,6 +92,10 @@ export function Dashboard() {
 
         <CollapsibleSection id="stats" title="Reading Statistics" subtitle={rangeSubtitle(range)}>
           <ReadingStatsSection totals={totals} vocabularySaved={vocabSaved} streak={streak} />
+        </CollapsibleSection>
+
+        <CollapsibleSection id="pomodoro" title="Pomodoro" subtitle={rangeSubtitle(range)}>
+          <PomodoroStatsSection totals={pomodoroTotals} />
         </CollapsibleSection>
 
         <CollapsibleSection id="calendar" title="Calendar" subtitle="Reading activity">

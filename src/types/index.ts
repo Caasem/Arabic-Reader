@@ -376,6 +376,65 @@ export interface ReaderPreferences {
   /** Keeps the popup's stats line + Save Vocabulary/Edit buttons fixed at
    * the bottom instead of scrolling away with a long entry list. */
   dictionaryPopupPinFooter: boolean;
+  /** See PomodoroTimer / pomodoroService. */
+  pomodoroWorkMinutes: number;
+  pomodoroBreakMinutes: number;
+  /** On: the next phase (work<->break) starts on its own when the current
+   * one's time runs out. Off: the timer pauses at 00:00 and waits for the
+   * reader to press Start for the next phase. */
+  pomodoroAutoCycle: boolean;
+  pomodoroNotification: 'toast' | 'sound' | 'silent';
+  /** Whether the timer widget shows the current phase label (Work/Break)
+   * above the countdown -- the countdown and play/pause/stop controls
+   * always show, this is the one piece the spec calls out as optional. */
+  pomodoroShowPhaseLabel: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Pomodoro
+// ---------------------------------------------------------------------------
+
+export type PomodoroPhase = 'work' | 'break';
+export type PomodoroSessionStatus = 'completed' | 'abandoned';
+
+/** One work-or-break run. A full Pomodoro (work, optionally its following
+ * break) is two rows, not one -- keeping phases as separate sessions means
+ * stats (completed/abandoned counts, total focus time) never have to guess
+ * which part of a row was which. `bookId`/`bookTitle` are null for a
+ * session started with no book open ("General Study" in stats, per the
+ * feature's own no-book-open case). */
+export interface PomodoroSession {
+  id: string;
+  phase: PomodoroPhase;
+  bookId: string | null;
+  bookTitle: string | null;
+  targetDurationMs: number;
+  /** Wall-clock time actually spent running (paused time excluded) --
+   * what "completed" (>= targetDurationMs) is judged against, and what
+   * stats sum for total focus time. */
+  activeDurationMs: number;
+  status: PomodoroSessionStatus;
+  startedAt: number;
+  endedAt: number;
+}
+
+/** A phase in progress -- persisted so a reload/app-close can resume it
+ * (see pomodoroService.ts) rather than silently losing an in-flight
+ * session. Exactly one of these exists at a time, keyed by a fixed id. */
+export interface PomodoroSnapshot {
+  phase: PomodoroPhase;
+  bookId: string | null;
+  bookTitle: string | null;
+  targetDurationMs: number;
+  /** Active (non-paused) time already elapsed as of `lastTickAt`. */
+  activeDurationMs: number;
+  /** True while running -- when false, `activeDurationMs` is exact as-is
+   * and no further time should accrue until resumed. */
+  running: boolean;
+  /** Wall-clock time `activeDurationMs` was last computed at, so a resume
+   * (or app reload while running) can add the elapsed time since without
+   * needing a live interval to have kept ticking the whole time. */
+  lastTickAt: number;
 }
 
 // ---------------------------------------------------------------------------

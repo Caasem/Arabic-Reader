@@ -30,6 +30,11 @@ const FALLBACK_PREFS: ReaderPreferences = {
   dictionaryPanelLayout: 'merged',
   dictionaryPanelSingleProviderId: null,
   dictionaryPopupPinFooter: false,
+  pomodoroWorkMinutes: 25,
+  pomodoroBreakMinutes: 5,
+  pomodoroAutoCycle: true,
+  pomodoroNotification: 'toast',
+  pomodoroShowPhaseLabel: true,
 };
 
 interface PreferencesContextValue {

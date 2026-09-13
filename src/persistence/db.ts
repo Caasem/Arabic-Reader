@@ -11,6 +11,7 @@ import type {
   SpeedReaderPosition,
   SpeedReaderSession,
   ReadingSession,
+  PomodoroSession,
 } from '../types';
 
 /**
@@ -35,6 +36,7 @@ class ArabicReaderDB extends Dexie {
   readingSessions!: Table<ReadingSession, string>;
   bookmarks!: Table<Bookmark, string>;
   bookLocations!: Table<{ bookId: string; data: string; total: number }, string>;
+  pomodoroSessions!: Table<PomodoroSession, string>;
 
   constructor() {
     super('arabic-reader');
@@ -128,6 +130,11 @@ class ArabicReaderDB extends Dexie {
     this.version(7).stores({
       bookLocations: 'bookId',
     });
+    // v8: Pomodoro timer sessions (see PomodoroSession in types/index.ts) --
+    // one row per completed-or-abandoned work/break phase. Purely additive.
+    this.version(8).stores({
+      pomodoroSessions: 'id, bookId, phase, status, startedAt',
+    });
   }
 }
 
@@ -210,6 +217,12 @@ export interface PersistenceService {
    * here rather than being re-implemented per caller. Omit `since`/`until`
    * for the full unbounded history ("All time"). */
   getReadingSessions(range?: { since?: number; until?: number }): Promise<ReadingSession[]>;
+
+  // Pomodoro timer
+  savePomodoroSession(session: PomodoroSession): Promise<void>;
+  /** All sessions (both phases) with `startedAt` in [since, until) -- same
+   * shape as getReadingSessions above. Omit for full unbounded history. */
+  getPomodoroSessions(range?: { since?: number; until?: number }): Promise<PomodoroSession[]>;
 }
 
 const DEFAULT_PREFS: ReaderPreferences = {
@@ -244,6 +257,11 @@ const DEFAULT_PREFS: ReaderPreferences = {
   dictionaryPanelLayout: 'merged',
   dictionaryPanelSingleProviderId: null,
   dictionaryPopupPinFooter: false,
+  pomodoroWorkMinutes: 25,
+  pomodoroBreakMinutes: 5,
+  pomodoroAutoCycle: true,
+  pomodoroNotification: 'toast',
+  pomodoroShowPhaseLabel: true,
 };
 
 /** A comfortable line length varies a lot by device -- 100% (the flat
@@ -446,6 +464,19 @@ class DexiePersistenceService implements PersistenceService {
   }
   async getReadingSessions(range?: { since?: number; until?: number }): Promise<ReadingSession[]> {
     let collection = db.readingSessions.orderBy('startedAt');
+    if (range?.since !== undefined || range?.until !== undefined) {
+      const since = range?.since ?? -Infinity;
+      const until = range?.until ?? Infinity;
+      collection = collection.filter((s) => s.startedAt >= since && s.startedAt < until);
+    }
+    return collection.toArray();
+  }
+
+  async savePomodoroSession(session: PomodoroSession): Promise<void> {
+    await db.pomodoroSessions.put(session);
+  }
+  async getPomodoroSessions(range?: { since?: number; until?: number }): Promise<PomodoroSession[]> {
+    let collection = db.pomodoroSessions.orderBy('startedAt');
     if (range?.since !== undefined || range?.until !== undefined) {
       const since = range?.since ?? -Infinity;
       const until = range?.until ?? Infinity;

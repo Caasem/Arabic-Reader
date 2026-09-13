@@ -33,6 +33,7 @@ import { HoverPreview } from './HoverPreview';
 import { VocabLevels } from './VocabLevels';
 import { SelectionToolbar } from './SelectionToolbar';
 import { QuickSettingsPopover } from './QuickSettingsPopover';
+import { PomodoroTimer } from '../pomodoro/PomodoroTimer';
 import { VocabularyEditModal } from './VocabularyEditModal';
 import type { Book } from 'epubjs';
 import { usePreferences } from '../../state/PreferencesContext';
@@ -187,6 +188,7 @@ export function Reader({
   const [toc, setToc] = useState<TocItem[]>([]);
   const [tocOpen, setTocOpen] = useState(false);
   const [quickSettingsOpen, setQuickSettingsOpen] = useState(false);
+  const [pomodoroOpen, setPomodoroOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [bookmarksOpen, setBookmarksOpen] = useState(false);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
@@ -1459,6 +1461,14 @@ export function Reader({
           >
             Aa
           </button>
+          <button
+            className="reader__toc-toggle"
+            onClick={() => setPomodoroOpen((v) => !v)}
+            aria-label="Start Pomodoro"
+            title="Start Pomodoro"
+          >
+            Pomodoro
+          </button>
           <label className={'reader__focus-toggle' + (focusMode ? ' reader__focus-toggle--on' : '')} title="Focus mode">
             <input
               type="checkbox"
@@ -1513,6 +1523,7 @@ export function Reader({
       </header>
 
       {quickSettingsOpen && <QuickSettingsPopover onClose={() => setQuickSettingsOpen(false)} />}
+      {pomodoroOpen && <PomodoroTimer book={book} onClose={() => setPomodoroOpen(false)} />}
 
       <div className="reader__body">
         {tocOpen && (

@@ -40,3 +40,37 @@
   font-size: 13px;
   padding: 8px 0;
 }
+
+.stat-tile--wide {
+  grid-column: 1 / -1;
+}
+
+.pomodoro-book-breakdown {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pomodoro-book-breakdown li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.pomodoro-book-breakdown__title {
+  direction: rtl;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pomodoro-book-breakdown__detail {
+  flex-shrink: 0;
+  color: var(--ink-faint);
+  font-size: 12px;
+}

@@ -40,6 +40,12 @@ const MORPH_DISPLAY_STYLES: { id: MorphDisplayStyle; label: string }[] = [
   { id: 'badges', label: 'Badges' },
 ];
 
+const POMODORO_NOTIFICATIONS: { id: 'toast' | 'sound' | 'silent'; label: string }[] = [
+  { id: 'toast', label: 'Toast' },
+  { id: 'sound', label: 'Sound' },
+  { id: 'silent', label: 'Silent' },
+];
+
 const DICTIONARY_PANEL_LAYOUTS: { id: DictionaryPanelLayout; label: string }[] = [
   { id: 'merged', label: 'Merged' },
   { id: 'split', label: 'Split' },
@@ -347,6 +353,81 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 onChange={(e) => updatePrefs({ readingWidthPct: Number(e.target.value) })}
               />
               <span className="settings-row__value">{prefs.readingWidthPct}%</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="settings-section">
+          <h3>Pomodoro</h3>
+
+          <div className="settings-row">
+            <span className="settings-row__label">Work duration</span>
+            <div className="settings-row__control">
+              <input
+                type="range"
+                min={5}
+                max={60}
+                step={5}
+                value={prefs.pomodoroWorkMinutes}
+                onChange={(e) => updatePrefs({ pomodoroWorkMinutes: Number(e.target.value) })}
+              />
+              <span className="settings-row__value">{prefs.pomodoroWorkMinutes} min</span>
+            </div>
+          </div>
+
+          <div className="settings-row">
+            <span className="settings-row__label">Break duration</span>
+            <div className="settings-row__control">
+              <input
+                type="range"
+                min={1}
+                max={30}
+                step={1}
+                value={prefs.pomodoroBreakMinutes}
+                onChange={(e) => updatePrefs({ pomodoroBreakMinutes: Number(e.target.value) })}
+              />
+              <span className="settings-row__value">{prefs.pomodoroBreakMinutes} min</span>
+            </div>
+          </div>
+
+          <div className="settings-row">
+            <label className="settings-toggle">
+              <input
+                type="checkbox"
+                checked={prefs.pomodoroAutoCycle}
+                onChange={(e) => updatePrefs({ pomodoroAutoCycle: e.target.checked })}
+              />
+              <span className="settings-toggle__label">Auto-start next phase</span>
+            </label>
+          </div>
+          <p className="settings-section__note">
+            On: break starts automatically when work ends, and vice versa. Off: the timer waits for you to start the
+            next phase yourself.
+          </p>
+
+          <div className="settings-row">
+            <label className="settings-toggle">
+              <input
+                type="checkbox"
+                checked={prefs.pomodoroShowPhaseLabel}
+                onChange={(e) => updatePrefs({ pomodoroShowPhaseLabel: e.target.checked })}
+              />
+              <span className="settings-toggle__label">Show phase label (Work / Break)</span>
+            </label>
+          </div>
+
+          <div className="settings-row">
+            <span className="settings-row__label">Notification</span>
+            <div className="settings-row__control settings-row__control--segmented">
+              {POMODORO_NOTIFICATIONS.map((n) => (
+                <button
+                  key={n.id}
+                  className={'segmented__item' + (prefs.pomodoroNotification === n.id ? ' segmented__item--active' : '')}
+                  onClick={() => updatePrefs({ pomodoroNotification: n.id })}
+                >
+                  {n.label}
+                </button>
+              ))}
             </div>
           </div>
         </section>
