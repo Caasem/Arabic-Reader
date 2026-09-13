@@ -159,6 +159,14 @@
   background: var(--accent-soft);
 }
 
+/* A word selection is active somewhere in this lookup -- see
+   .dict-popup__save--selection below for the matching footer-button state. */
+.dict-popup__header-btn--selection {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg-elevated);
+}
+
 .dict-popup__rarity {
   font-family: system-ui, sans-serif;
   font-size: 10.5px;
@@ -266,12 +274,57 @@
   cursor: default;
 }
 
+/* This entry currently has a non-empty word selection -- clicking the
+   button now saves just that selection instead of the whole entry, so it
+   needs to visually stand out from its own plain "+" state above. */
+.dict-popup__entry-save--selection {
+  width: auto;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg-elevated);
+  font-size: 11px;
+}
+
 .dict-popup__senses {
   margin: 0;
   padding-inline-start: 18px;
   font-size: 13.5px;
   color: var(--ink);
   line-height: 1.6;
+}
+
+/* Al-Wasit only -- tokenized, clickable/draggable replacement for
+   .dict-popup__senses above (see DictionaryPopup.tsx's DefinitionToken /
+   buildEntryTokenSenses). user-select/touch-action are the same "stop the
+   browser's own selection or scroll gesture from fighting the drag"
+   treatment VocabularyEditModal's own token container uses. */
+.dict-popup__tokens {
+  font-size: 13.5px;
+  color: var(--ink);
+  line-height: 1.7;
+  user-select: none;
+  touch-action: none;
+}
+
+.dict-popup__token-sense {
+  margin-bottom: 2px;
+}
+
+.dict-popup__token {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 1px 2px;
+}
+
+.dict-popup__token:hover {
+  background: var(--accent-soft);
+}
+
+.dict-popup__token--selected {
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .dict-popup__tag {
@@ -399,6 +452,15 @@
   color: var(--accent);
 }
 
+/* A word selection is active in one of this lookup's entries -- overrides
+   --saved when both would otherwise apply, since "there's a selection
+   waiting to be saved" is the more actionable thing to communicate right
+   now than "the full definition is already saved". */
+.dict-popup__save--selection {
+  background: var(--accent);
+  color: var(--bg-elevated);
+}
+
 .dict-popup__edit {
   padding: 10px 14px;
   border-radius: 10px;
@@ -476,25 +538,26 @@
   border-color: transparent;
 }
 
-/* Floating "+ Save selection" -- appears above whatever text the reader
-   just selected inside a long entry (see the selectionchange handling in
-   the component). left/top are set inline from the selection's own
-   bounding rect, in viewport coordinates -- position: fixed here (not
-   absolute) so it isn't affected by .dict-popup's own scale() transform,
-   which would otherwise skew a child's fixed-position math. */
+/* "+ Save selection (N)" -- appears right under an Al-Wasit entry's own
+   tokens once at least one word in it is selected (see hasSelection in the
+   component). An ordinary inline button rather than the old free-form-
+   selection version's floating, cursor-anchored one: tokens don't produce a
+   native browser Selection/Range to anchor a floating button's position
+   off of in the first place, and sitting right under the entry it belongs
+   to reads at least as clearly for a selection that can now be
+   non-contiguous and scattered across the whole entry. */
 .dict-popup__save-selection {
-  position: fixed;
-  transform: translate(-50%, -130%);
-  z-index: 50;
-  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 5px 10px;
   border-radius: 999px;
   border: none;
   background: var(--ink);
   color: var(--bg-elevated);
   font-family: var(--font-ui);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
-  box-shadow: var(--shadow);
 }

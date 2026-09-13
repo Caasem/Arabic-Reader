@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DictionaryEntry, DictionaryLookupResult, WordInstance, WordRarity } from '../../types';
 import { getWordRarity, isRarityDataReady, TIER_LABELS } from '../../vocabRarity/rarity';
 import { normalize } from '../../reader/tokenizer/arabicTokenizer';
@@ -23,6 +23,64 @@ const NARROW_BREAKPOINT_PX = 480;
 const IGNORE_DISMISS_MS = 400;
 
 type EntryGroup = { providerId: string; providerName: string; entries: { entry: DictionaryEntry; index: number }[] };
+
+/** One tokenized word or whitespace run inside an Al-Wasit entry's
+ * definition -- `globalIdx` indexes into that entry's flat token stream
+ * (spanning every sense, not just one), which is what the click/drag
+ * selection below tracks and what reconstructSelection walks. Punctuation
+ * stays attached to its word rather than becoming its own token, same as
+ * VocabularyEditModal's context-sentence tokenizer. */
+interface DefinitionToken {
+  text: string;
+  isWord: boolean;
+  globalIdx: number;
+}
+
+/** Flattens every sense in an Al-Wasit entry into one token stream (senses
+ * joined by a single space so a selection spanning two senses doesn't run
+ * their text together), alongside the same tokens grouped back by sense
+ * for rendering each sense on its own line -- `bySense[i]` holds the exact
+ * same token objects as `flat`, just grouped, so a globalIdx assigned once
+ * stays correct in both views. */
+function buildEntryTokenSenses(entry: DictionaryEntry): { flat: DefinitionToken[]; bySense: DefinitionToken[][] } {
+  const flat: DefinitionToken[] = [];
+  const bySense: DefinitionToken[][] = [];
+  entry.senses.forEach((s, si) => {
+    if (si > 0) flat.push({ text: ' ', isWord: false, globalIdx: flat.length });
+    const senseTokens: DefinitionToken[] = [];
+    for (const part of s.gloss.split(/(\s+)/).filter((t) => t.length > 0)) {
+      const token: DefinitionToken = { text: part, isWord: !!part.trim(), globalIdx: flat.length };
+      flat.push(token);
+      senseTokens.push(token);
+    }
+    bySense.push(senseTokens);
+  });
+  return { flat, bySense };
+}
+
+/** Rebuilds saveable text from a (possibly non-contiguous) set of selected
+ * word-token indices. Two selected words that were already directly
+ * adjacent in the original text keep their exact original spacing between
+ * them; a gap that skipped over unselected words collapses to a single
+ * normalizing space instead of running them together or keeping the
+ * skipped text. */
+function reconstructSelection(tokens: DefinitionToken[], selected: Set<number>): string {
+  let out = '';
+  let lastIncluded = -2;
+  for (let idx = 0; idx < tokens.length; idx++) {
+    const t = tokens[idx];
+    if (t.isWord) {
+      if (!selected.has(idx)) continue;
+      if (out && lastIncluded !== idx - 1) out += ' ';
+      out += t.text;
+      lastIncluded = idx;
+    } else if (lastIncluded === idx - 1 && selected.has(idx + 1)) {
+      out += t.text;
+      lastIncluded = idx;
+    }
+  }
+  return out;
+}
 
 /** A root/lemma value that shows the Arabic text by default; tapping it
  * crossfades to the "root"/"form" label in the exact same spot, then fades
@@ -233,41 +291,140 @@ export function DictionaryPopup({
 
   // Select-and-save: for a long entry (Al-Wasit's own paragraphs commonly
   // run several sub-senses together) where only part of it is relevant,
-  // selecting text inside it surfaces a small floating button to save just
-  // that selection instead of the whole entry. `data-entry-index` on each
-  // .dict-popup__entry (added in renderGroupList below) is the same flat
-  // index into result.entries that savedEntryKeys already uses, so this
-  // only needs to walk up to that ancestor to know which entry it was.
-  const [selectionInfo, setSelectionInfo] = useState<{ entry: DictionaryEntry; text: string; x: number; y: number } | null>(null);
+  // clicking/dragging across its words builds a (possibly non-contiguous)
+  // selection to save instead of the whole entry -- see DefinitionToken and
+  // buildEntryTokenSenses above. Keyed by entry index (the same flat index
+  // into result.entries savedEntryKeys already uses) so a scattered
+  // selection in one entry survives switching to look at another entry;
+  // only a genuinely new word/lookup clears it.
+  const [tokenSelections, setTokenSelections] = useState<Map<number, Set<number>>>(new Map());
+  // Which entry a footer/header-level "Save" action should act on when more
+  // than one entry could theoretically have an active selection at once --
+  // always the entry most recently touched, mirroring how there's only ever
+  // one *effectively current* selection even though the Map can hold more.
+  const [activeSelectionEntry, setActiveSelectionEntry] = useState<number | null>(null);
   useEffect(() => {
-    if (!onSaveSelection) return;
-    function handleSelectionChange() {
-      const sel = document.getSelection();
-      if (!sel || sel.isCollapsed || !sel.anchorNode || !popupRef.current?.contains(sel.anchorNode)) {
-        setSelectionInfo(null);
-        return;
+    setTokenSelections(new Map());
+    setActiveSelectionEntry(null);
+  }, [word]);
+
+  const entryTokenData = useMemo(() => {
+    const map = new Map<number, { flat: DefinitionToken[]; bySense: DefinitionToken[][] }>();
+    result?.entries.forEach((e, i) => {
+      if (e.providerId === 'alwasit') map.set(i, buildEntryTokenSenses(e));
+    });
+    return map;
+  }, [result]);
+
+  function toggleToken(entryIdx: number, idx: number) {
+    setTokenSelections((prev) => {
+      const next = new Map(prev);
+      const set = new Set(next.get(entryIdx) ?? []);
+      if (set.has(idx)) set.delete(idx);
+      else set.add(idx);
+      if (set.size === 0) next.delete(entryIdx);
+      else next.set(entryIdx, set);
+      return next;
+    });
+    setActiveSelectionEntry(entryIdx);
+  }
+
+  function addTokenRange(entryIdx: number, lo: number, hi: number) {
+    const tokens = entryTokenData.get(entryIdx)?.flat;
+    if (!tokens) return;
+    setTokenSelections((prev) => {
+      const next = new Map(prev);
+      const set = new Set(next.get(entryIdx) ?? []);
+      for (let idx = lo; idx <= hi; idx++) {
+        if (tokens[idx]?.isWord) set.add(idx);
       }
-      const text = sel.toString().trim();
-      if (!text) {
-        setSelectionInfo(null);
-        return;
+      next.set(entryIdx, set);
+      return next;
+    });
+    setActiveSelectionEntry(entryIdx);
+  }
+
+  function clearEntrySelection(entryIdx: number) {
+    setTokenSelections((prev) => {
+      const next = new Map(prev);
+      next.delete(entryIdx);
+      return next;
+    });
+    setActiveSelectionEntry((prev) => (prev === entryIdx ? null : prev));
+  }
+
+  // Drag tracking mirrors VocabularyEditModal's own pointer-based range
+  // selection (see its own comment for why plain refs, not state, and why
+  // touch needs elementFromPoint rather than per-token pointerenter) --
+  // except a plain click here must *toggle* the one token under it rather
+  // than always adding, so pointerdown only records the anchor; pointerup
+  // decides which happened based on whether the pointer ever actually moved
+  // to a different token in between.
+  const dragAnchorRef = useRef<{ entry: number; idx: number } | null>(null);
+  const dragMovedRef = useRef(false);
+  const draggingRef = useRef(false);
+
+  function handleTokenPointerDown(entryIdx: number, idx: number, e: React.PointerEvent) {
+    e.preventDefault();
+    dragAnchorRef.current = { entry: entryIdx, idx };
+    dragMovedRef.current = false;
+    draggingRef.current = true;
+  }
+
+  function handleTokensPointerMove(e: React.PointerEvent) {
+    if (!draggingRef.current || !dragAnchorRef.current) return;
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    const tokenEl = (el as HTMLElement | null)?.closest<HTMLElement>('[data-idx]');
+    if (!tokenEl) return;
+    const entryAttr = tokenEl.dataset.entry;
+    const idxAttr = tokenEl.dataset.idx;
+    if (entryAttr == null || idxAttr == null) return;
+    const entry = Number(entryAttr);
+    if (entry !== dragAnchorRef.current.entry) return; // never extend a drag across entries
+    const idx = Number(idxAttr);
+    if (idx === dragAnchorRef.current.idx && !dragMovedRef.current) return;
+    dragMovedRef.current = true;
+    addTokenRange(entry, Math.min(dragAnchorRef.current.idx, idx), Math.max(dragAnchorRef.current.idx, idx));
+  }
+
+  useEffect(() => {
+    function stop() {
+      if (draggingRef.current && dragAnchorRef.current && !dragMovedRef.current) {
+        toggleToken(dragAnchorRef.current.entry, dragAnchorRef.current.idx);
       }
-      const range = sel.getRangeAt(0);
-      const node = range.commonAncestorContainer;
-      const el = node instanceof Element ? node : node.parentElement;
-      const entryEl = el?.closest<HTMLElement>('.dict-popup__entry');
-      const entryIndex = entryEl ? Number(entryEl.dataset.entryIndex) : NaN;
-      const entry = result?.entries[entryIndex];
-      if (!entry) {
-        setSelectionInfo(null);
-        return;
-      }
-      const rect = range.getBoundingClientRect();
-      setSelectionInfo({ entry, text, x: rect.left + rect.width / 2, y: rect.top });
+      draggingRef.current = false;
+      dragAnchorRef.current = null;
+      dragMovedRef.current = false;
     }
-    document.addEventListener('selectionchange', handleSelectionChange);
-    return () => document.removeEventListener('selectionchange', handleSelectionChange);
-  }, [onSaveSelection, result]);
+    window.addEventListener('pointerup', stop);
+    window.addEventListener('pointercancel', stop);
+    return () => {
+      window.removeEventListener('pointerup', stop);
+      window.removeEventListener('pointercancel', stop);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const activeSelection = activeSelectionEntry !== null ? tokenSelections.get(activeSelectionEntry) : undefined;
+  const activeSelectionCount = activeSelection?.size ?? 0;
+
+  /** The main "Save Vocabulary" (and its header-shortcut twin) button's
+   * click handler -- when a selection is active, saves *only* that
+   * selection instead of the whole lookup, so the safety this feature
+   * promises ("won't accidentally save more than intended") actually
+   * covers every save path, not just the per-entry one. */
+  function handleMainSave() {
+    if (activeSelectionEntry !== null && activeSelection && activeSelection.size > 0 && onSaveSelection) {
+      const entry = result?.entries[activeSelectionEntry];
+      const tokens = entryTokenData.get(activeSelectionEntry)?.flat;
+      if (entry && tokens) {
+        onSaveSelection(entry, reconstructSelection(tokens, activeSelection));
+        clearEntrySelection(activeSelectionEntry);
+        return;
+      }
+    }
+    onSave();
+  }
 
   const [style, setStyle] = useState<{ left: number; top: number; visibility: 'hidden' | 'visible' }>({
     left: x,
@@ -328,58 +485,108 @@ export function DictionaryPopup({
     return groups.map((group) => (
       <div className="dict-popup__group" key={group.providerId}>
         <div className="dict-popup__group-header">{group.providerName}</div>
-        {group.entries.map(({ entry, index: i }) => (
-          <div className="dict-popup__entry" data-entry-index={i} key={entry.providerId + i}>
-            <div className="dict-popup__entry-head">
-              <span className="dict-popup__headword">{entry.headword}</span>
-              {/* Sits between the headword and the per-entry save
-                  button -- root before form (read first, right next to
-                  the headword it belongs to), both smaller than the
-                  headword since they're a secondary identifier, not
-                  the entry's main content. Different entries in the
-                  same provider's group can genuinely come from
-                  different roots/lemmas (e.g. an unvocalized verb form
-                  ambiguous between Form I and Form IV), so this stays
-                  per-entry rather than folded into the group header.
-                  Only shown when it says something the headword
-                  doesn't already -- a plain root-keyed entry (e.g.
-                  Al-Wasit) would otherwise repeat its own headword
-                  right back as "root". */}
-              {((entry.lemma && entry.lemma !== entry.headword) || (entry.root && entry.root !== entry.headword)) && (
-                <span
-                  className={
-                    'dict-popup__entry-morph' + (prefs.morphDisplayStyle === 'badges' ? ' dict-popup__entry-morph--badges' : '')
-                  }
-                >
-                  {entry.root && entry.root !== entry.headword && <MorphValue kind="root" value={entry.root} />}
-                  {entry.lemma && entry.lemma !== entry.headword && <MorphValue kind="form" value={entry.lemma} />}
-                </span>
+        {group.entries.map(({ entry, index: i }) => {
+          // Non-contiguous word selection (click to toggle, drag to add a
+          // range) -- Al-Wasit only, and only while a save-selection
+          // callback actually exists to hand it to. Every other provider's
+          // entries keep the plain, non-interactive sense list below.
+          const tokenData = entry.providerId === 'alwasit' ? entryTokenData.get(i) : undefined;
+          const sel = tokenData ? tokenSelections.get(i) : undefined;
+          const hasSelection = !!sel && sel.size > 0;
+
+          function saveThisSelection() {
+            if (!tokenData || !sel || !onSaveSelection) return;
+            onSaveSelection(entry, reconstructSelection(tokenData.flat, sel));
+            clearEntrySelection(i);
+          }
+
+          return (
+            <div className="dict-popup__entry" data-entry-index={i} key={entry.providerId + i}>
+              <div className="dict-popup__entry-head">
+                <span className="dict-popup__headword">{entry.headword}</span>
+                {/* Sits between the headword and the per-entry save
+                    button -- root before form (read first, right next to
+                    the headword it belongs to), both smaller than the
+                    headword since they're a secondary identifier, not
+                    the entry's main content. Different entries in the
+                    same provider's group can genuinely come from
+                    different roots/lemmas (e.g. an unvocalized verb form
+                    ambiguous between Form I and Form IV), so this stays
+                    per-entry rather than folded into the group header.
+                    Only shown when it says something the headword
+                    doesn't already -- a plain root-keyed entry (e.g.
+                    Al-Wasit) would otherwise repeat its own headword
+                    right back as "root". */}
+                {((entry.lemma && entry.lemma !== entry.headword) || (entry.root && entry.root !== entry.headword)) && (
+                  <span
+                    className={
+                      'dict-popup__entry-morph' + (prefs.morphDisplayStyle === 'badges' ? ' dict-popup__entry-morph--badges' : '')
+                    }
+                  >
+                    {entry.root && entry.root !== entry.headword && <MorphValue kind="root" value={entry.root} />}
+                    {entry.lemma && entry.lemma !== entry.headword && <MorphValue kind="form" value={entry.lemma} />}
+                  </span>
+                )}
+                {onSaveEntry && result!.entries.length > 1 && (
+                  <button
+                    className={'dict-popup__entry-save' + (hasSelection ? ' dict-popup__entry-save--selection' : '')}
+                    onClick={() => {
+                      if (hasSelection) {
+                        saveThisSelection();
+                        return;
+                      }
+                      onSaveEntry(entry);
+                      setSavedEntryKeys((prev) => new Set(prev).add(i));
+                    }}
+                    disabled={!hasSelection && savedEntryKeys.has(i)}
+                    aria-label={hasSelection ? `Save just the ${sel!.size} selected words for "${entry.headword}"` : `Add just "${entry.headword}" to vocabulary`}
+                    title={hasSelection ? 'Will save only the selected words, not the full definition' : 'Add just this definition'}
+                  >
+                    {hasSelection ? '✓ sel' : savedEntryKeys.has(i) ? '✓' : '+'}
+                  </button>
+                )}
+              </div>
+              {tokenData ? (
+                <div className="dict-popup__tokens" dir="rtl" onPointerMove={handleTokensPointerMove}>
+                  {entry.senses.map((s, si) => (
+                    <div className="dict-popup__token-sense" key={si}>
+                      {tokenData.bySense[si].map((t) =>
+                        !t.isWord ? (
+                          <span key={t.globalIdx}>{t.text}</span>
+                        ) : (
+                          <span
+                            key={t.globalIdx}
+                            data-entry={i}
+                            data-idx={t.globalIdx}
+                            className={'dict-popup__token' + (sel?.has(t.globalIdx) ? ' dict-popup__token--selected' : '')}
+                            onPointerDown={(e) => handleTokenPointerDown(i, t.globalIdx, e)}
+                          >
+                            {t.text}
+                          </span>
+                        )
+                      )}
+                      {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <ul className="dict-popup__senses">
+                  {entry.senses.map((s, si) => (
+                    <li key={si}>
+                      {s.gloss}
+                      {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
+                    </li>
+                  ))}
+                </ul>
               )}
-              {onSaveEntry && result!.entries.length > 1 && (
-                <button
-                  className="dict-popup__entry-save"
-                  onClick={() => {
-                    onSaveEntry(entry);
-                    setSavedEntryKeys((prev) => new Set(prev).add(i));
-                  }}
-                  disabled={savedEntryKeys.has(i)}
-                  aria-label={`Add just "${entry.headword}" to vocabulary`}
-                  title="Add just this definition"
-                >
-                  {savedEntryKeys.has(i) ? '✓' : '+'}
+              {hasSelection && (
+                <button className="dict-popup__save-selection" onClick={saveThisSelection}>
+                  + Save selection ({sel!.size})
                 </button>
               )}
             </div>
-            <ul className="dict-popup__senses">
-              {entry.senses.map((s, i) => (
-                <li key={i}>
-                  {s.gloss}
-                  {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
+          );
+        })}
       </div>
     ));
   }
@@ -397,8 +604,22 @@ export function DictionaryPopup({
       </div>
 
       <div className="dict-popup__actions">
-        <button className={'dict-popup__save' + (saved ? ' dict-popup__save--saved' : '')} onClick={onSave}>
-          {saved ? '✓ Vocabulary' : 'Save Vocabulary'}
+        <button
+          className={
+            'dict-popup__save' + (saved ? ' dict-popup__save--saved' : '') + (activeSelectionCount > 0 ? ' dict-popup__save--selection' : '')
+          }
+          onClick={handleMainSave}
+          title={
+            activeSelectionCount > 0
+              ? `Will save only the ${activeSelectionCount} selected word${activeSelectionCount === 1 ? '' : 's'}, not the full definition`
+              : undefined
+          }
+        >
+          {activeSelectionCount > 0
+            ? `Save selection (${activeSelectionCount})`
+            : saved
+              ? '✓ Vocabulary'
+              : 'Save Vocabulary'}
         </button>
         {onEdit && (
           <button className="dict-popup__edit" onClick={onEdit}>
@@ -445,7 +666,12 @@ export function DictionaryPopup({
             reaching either action without scrolling down past a long entry
             list, not as a replacement for the footer pair. */}
         <div className="dict-popup__header-actions">
-          <button className="dict-popup__header-btn" onClick={onSave} aria-label="Add to vocabulary" title="Add to vocabulary">
+          <button
+            className={'dict-popup__header-btn' + (activeSelectionCount > 0 ? ' dict-popup__header-btn--selection' : '')}
+            onClick={handleMainSave}
+            aria-label={activeSelectionCount > 0 ? `Save just the ${activeSelectionCount} selected words` : 'Add to vocabulary'}
+            title={activeSelectionCount > 0 ? 'Will save only the selected words, not the full definition' : 'Add to vocabulary'}
+          >
             +
           </button>
           {onEdit && (
@@ -513,20 +739,6 @@ export function DictionaryPopup({
       </div>
       {prefs.dictionaryPopupPinFooter && <div className="dict-popup__footer-pinned">{footer}</div>}
       </div>
-      {selectionInfo && onSaveSelection && (
-        <button
-          className="dict-popup__save-selection"
-          style={{ left: selectionInfo.x, top: selectionInfo.y }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onSaveSelection(selectionInfo.entry, selectionInfo.text);
-            setSelectionInfo(null);
-            document.getSelection()?.removeAllRanges();
-          }}
-        >
-          + Save selection
-        </button>
-      )}
     </div>
   );
 }
