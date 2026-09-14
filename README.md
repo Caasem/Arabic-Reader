@@ -39,7 +39,7 @@ pipeline that made the extension useful in the first place.
 **Speed reading**
 
 - A fullscreen RSVP mode for Arabic, with an optimal recognition point, adjustable speed, and a summary when
-  you're done.
+  you're done. Built and working, currently unlinked from navigation (`NavBar.tsx`'s `SPEED_READER_ENABLED`).
 
 **Your data**
 
@@ -53,7 +53,9 @@ npm install
 npm run dev       # start the dev server
 npm run build     # production build to dist/
 npm run preview   # serve the production build locally
-npm test          # run the Playwright test suite
+npm run lint      # oxlint
+npm run test:unit # vitest
+npm test          # run the Playwright end-to-end suite
 ```
 
 ### Android
