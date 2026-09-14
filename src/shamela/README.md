@@ -76,11 +76,27 @@ Modify the CSS in [epubBuilder.ts](/src/shamela/epubBuilder.ts) `pageToXhtml()` 
 - **Local Storage** - Downloaded EPUBs are stored locally; no data sent to external servers
 - **User Control** - Must be explicitly enabled in Settings
 
+## Known Limitations
+
+**Search API:** The public search endpoint (`/ajax/book/`) currently returns empty results. This may be due to:
+- Shamela server restrictions on direct API access
+- Changes in the API since the KOReader plugin was written
+- Rate limiting or CORS policies
+
+**Workaround:** 
+- Browse books by category on shamela.ws directly
+- Copy book IDs from URLs (e.g., `shamela.ws/book/6387` → ID `6387`)
+- Use the book ID to download via direct page content API
+- Future: Implement category browsing in the UI
+
 ## Testing
 
 1. Enable in Settings > Shamela Library (Beta)
 2. Go to Library tab
-3. Search for a book (e.g., "قرآن", "حديث", "فقه")
-4. Click download
-5. Book appears in your library after completion
-6. Read offline like any other EPUB
+3. Search for a book (currently limited due to API restrictions)
+4. Alternative: Use a known book ID or wait for category browsing UI
+
+**Note:** Full functionality depends on Shamela's public API being accessible. If search doesn't work, check:
+- Shamela.ws is online and accessible
+- No network/firewall blocks to shamela.ws
+- Your ISP/region doesn't restrict access

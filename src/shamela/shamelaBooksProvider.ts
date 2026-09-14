@@ -2,7 +2,7 @@ import type { ShamelaCatalogBook, ShamelaPgeContent, ShamlaSearchOptions } from 
 import { ShamelaBrowseError } from './types';
 
 const SHAMELA_BASE = 'https://shamela.ws';
-const USER_AGENT = 'Mozilla/5.0 (compatible; Arabic-Reader Shamela)';
+const USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36';
 
 /**
  * API client for Shamela Library. Uses public endpoints without requiring

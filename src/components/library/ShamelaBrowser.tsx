@@ -60,6 +60,13 @@ export function ShamelaBrowser({ onBookAdded, onError }: Props) {
   return (
     <div className="shamela-browser">
       <h2>Browse Shamela Library (Beta)</h2>
+      <p className="shamela-note" style={{ fontSize: '0.9em', color: '#666', margin: '0 0 1rem 0' }}>
+        ⚠️ Search functionality is limited due to Shamela API restrictions. For best results, visit{' '}
+        <a href="https://shamela.ws" target="_blank" rel="noopener noreferrer" style={{ color: '#2196f3' }}>
+          shamela.ws
+        </a>
+        {' '}directly to browse books.
+      </p>
 
       <form onSubmit={handleSearch} className="shamela-search-form">
         <input
