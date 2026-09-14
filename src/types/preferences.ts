@@ -92,4 +92,6 @@ export interface ReaderPreferences {
   pomodoroNotification: PomodoroNotification;
   /** Show "Work"/"Break" above the countdown. */
   pomodoroShowPhaseLabel: boolean;
+  /** Enable Shamela Library integration (beta). */
+  shamelaEnabled: boolean;
 }

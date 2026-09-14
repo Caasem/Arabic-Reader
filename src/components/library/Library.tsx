@@ -5,6 +5,8 @@ import { invalidateTokenStream } from '../../speedReader/tokenStream';
 import type { BookMeta } from '../../types';
 import { readString, STORAGE_KEYS, writeString } from '../../utils/storage';
 import { useEscapeKey } from '../shared/useEscapeKey';
+import { usePreferences } from '../../state/PreferencesContext';
+import { ShamelaBrowser } from './ShamelaBrowser';
 import './Library.css';
 
 type SortOrder = 'added' | 'lastRead' | 'title' | 'progress';
@@ -36,6 +38,7 @@ async function loadLibrary(): Promise<{ list: BookMeta[]; info: Record<string, R
 }
 
 export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }) {
+  const { prefs } = usePreferences();
   const [books, setBooks] = useState<BookMeta[]>([]);
   const [readingInfo, setReadingInfo] = useState<Record<string, ReadingInfo>>({});
   const [loading, setLoading] = useState(true);
@@ -61,6 +64,13 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
     writeString(STORAGE_KEYS.offlineNoticeDismissed, '1');
   }
 
+  function reloadLibrary() {
+    loadLibrary().then(({ list, info }) => {
+      setBooks(list);
+      setReadingInfo(info);
+    });
+  }
+
   useEffect(() => {
     let cancelled = false;
     loadLibrary().then(({ list, info }) => {
@@ -73,6 +83,15 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
       cancelled = true;
     };
   }, []);
+
+  function handleShamelaBokAdded() {
+    reloadLibrary();
+    setError(null);
+  }
+
+  function handleShamelaBrowseError(err: Error) {
+    setError(err.message);
+  }
 
   async function handleFiles(files: FileList | null) {
     if (!files || !files.length) return;
@@ -203,6 +222,13 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
       )}
 
       {error && <div className="library__error">{error}</div>}
+
+      {!loading && prefs.shamelaEnabled && (
+        <ShamelaBrowser
+          onBookAdded={handleShamelaBokAdded}
+          onError={handleShamelaBrowseError}
+        />
+      )}
 
       {!loading && books.length > 0 && (
         <div className="library__toolbar">
