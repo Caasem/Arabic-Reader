@@ -8,6 +8,7 @@ import { VocabLevelsSettings } from './settings/VocabLevelsSettings';
 import { SearchSettings } from './settings/SearchSettings';
 import { TouchGestureSettings } from './settings/TouchGestureSettings';
 import { AnkiSettings } from './settings/AnkiSettings';
+import { DiagnosticsSettings } from './settings/DiagnosticsSettings';
 import './SettingsPanel.css';
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
@@ -45,6 +46,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <SearchSettings />
         <TouchGestureSettings />
         <AnkiSettings />
+        <DiagnosticsSettings />
       </div>
     </div>
   );

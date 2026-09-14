@@ -5,7 +5,8 @@ import { ReadingSessionTracker } from '../../../reader/session/ReadingSessionTra
 import { annotationService } from '../../../reader/annotations/annotationService';
 import { libraryService } from '../../../library/libraryService';
 import { persistenceService } from '../../../persistence/db';
-import type { BookMeta, Highlight, ReaderPreferences, TocItem } from '../../../types';
+import type { BookMeta, ReaderPreferences, TocItem } from '../../../types';
+import { logDiagnostic } from '../../../diagnostics/diagnosticsLog';
 import type { ResolvedTheme } from '../../../state/PreferencesContext';
 
 export interface ReaderLocation {
@@ -29,7 +30,6 @@ interface Options {
   onSectionRendered(doc: Document, sectionHref: string): void;
   onRelocated(location: RelocatedLocation): void;
   onSelected(info: SelectionInfo): void;
-  onHighlightClick?(highlight: Highlight, event: Event): void;
 }
 
 /**
@@ -112,9 +112,9 @@ export function useEpubReader(options: Options) {
           .listForBook(book.id)
           .then((highlights) => {
             if (cancelled) return;
-            for (const h of highlights) svc.renderHighlight(h.cfiRange, h.color, (e) => eventsRef.current.onHighlightClick?.(h, e));
+            for (const h of highlights) svc.renderHighlight(h.cfiRange, h.color);
           })
-          .catch(() => {});
+          .catch((e) => logDiagnostic('warn', 'reader', 'Could not load saved book data', e));
 
         // Page numbers: restore the cached locations index, or build it in the
         // background (it walks the whole book) and cache it for next time.
@@ -130,9 +130,11 @@ export function useEpubReader(options: Options) {
             const serialized = cancelled ? null : svc.serializeLocations();
             if (serialized) await persistenceService.saveBookLocations(book.id, serialized, total);
           })
-          .catch(() => {});
+          .catch((e) => logDiagnostic('warn', 'reader', 'Could not load saved book data', e));
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not open this book.');
+        if (cancelled) return;
+        logDiagnostic('error', 'reader', `Could not open "${book.title}"`, e);
+        setError(e instanceof Error ? e.message : 'Could not open this book.');
       }
     })();
 

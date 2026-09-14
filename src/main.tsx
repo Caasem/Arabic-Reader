@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/shared/ErrorBoundary.tsx'
+import { installGlobalErrorLogging } from './diagnostics/diagnosticsLog'
+
+installGlobalErrorLogging()
 
 // Dev-only console handle on the live dictionary singletons, e.g.
 // `await __dbg.dictionaryManager.lookup('كان')`. Never shipped: production

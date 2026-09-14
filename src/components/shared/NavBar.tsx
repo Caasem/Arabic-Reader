@@ -76,7 +76,10 @@ export function NavBar({
   }, [collapsed]);
 
   return (
-    <nav className={'navbar' + (collapsed ? ' navbar--collapsed' : '') + (hidden ? ' navbar--hidden' : '')}>
+    <nav
+      className={'navbar' + (collapsed ? ' navbar--collapsed' : '') + (hidden ? ' navbar--hidden' : '')}
+      aria-label="Main"
+    >
       <div className="navbar__brand">
         <span className="navbar__mark">ق</span>
         {!collapsed && <span className="navbar__title">Reader</span>}
@@ -98,6 +101,8 @@ export function NavBar({
               disabled={REQUIRES_BOOK.includes(item.id) && readDisabled}
               onClick={() => onSelect(item.id)}
               title={collapsed ? item.label : undefined}
+              aria-label={collapsed ? item.label : undefined}
+              aria-current={active === item.id ? 'page' : undefined}
             >
               <span className="navbar__icon" aria-hidden="true">
                 <item.Icon size={18} />

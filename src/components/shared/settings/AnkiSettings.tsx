@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { usePreferences } from '../../../state/PreferencesContext';
 import { AnkiConnectError, ensureDeck, getDeckNames, pingAnki } from '../../../anki/ankiConnect';
 import { syncToAnki } from '../../../anki/ankiSync';
+import { logDiagnostic } from '../../../diagnostics/diagnosticsLog';
 import { vocabularyService } from '../../../vocabulary/vocabularyService';
 import { Note, SettingsSection } from './controls';
 
@@ -41,6 +42,7 @@ export function AnkiSettings() {
       if (failed) parts.push(`${failed} couldn't be added — try syncing again.`);
       setStatus(parts.join(' '));
     } catch (e) {
+      logDiagnostic('warn', 'anki', 'Anki sync failed', e);
       setStatus(e instanceof AnkiConnectError || e instanceof Error ? e.message : 'Sync failed.');
     } finally {
       setBusy(false);

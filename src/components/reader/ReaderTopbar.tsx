@@ -39,7 +39,9 @@ export function ReaderTopbar({
       <button className="reader__back" onClick={onBack}>
         <IconBack size={14} /> Library
       </button>
-      <div className="reader__chapter">{chapterLabel}</div>
+      <div className="reader__chapter" dir="auto">
+        {chapterLabel}
+      </div>
       <div className="reader__topbar-actions">
         <button
           className="reader__toc-toggle"

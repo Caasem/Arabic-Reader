@@ -1,5 +1,6 @@
 import type { HighlightColor } from '../../types';
 import { anchoredPosition } from '../shared/anchoredPosition';
+import { useEscapeKey } from '../shared/useEscapeKey';
 import './SelectionToolbar.css';
 
 const COLORS: HighlightColor[] = ['yellow', 'green', 'blue', 'purple', 'red'];
@@ -15,12 +16,15 @@ export function SelectionToolbar({
   onPick: (color: HighlightColor) => void;
   onDismiss: () => void;
 }) {
+  useEscapeKey(onDismiss);
   const { left, top, below } = anchoredPosition(x, y, { halfWidth: 120, flipBelowY: 90, bottomMarginBelow: 30 });
 
   return (
     <div className="selection-toolbar-backdrop" onClick={onDismiss}>
       <div
         className={'selection-toolbar' + (below ? ' selection-toolbar--below' : '')}
+        role="toolbar"
+        aria-label="Highlight color"
         style={{ left, top }}
         onClick={(e) => e.stopPropagation()}
       >

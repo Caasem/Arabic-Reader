@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { dictionaryManager } from '../../../dictionary/DictionaryManager';
+import { logDiagnostic } from '../../../diagnostics/diagnosticsLog';
 import { aramorphProvider } from '../../../dictionary/providers/aramorph/AramorphDictionaryProvider';
 import { DICT_FILE_NAMES, type DictFileName } from '../../../dictionary/providers/aramorph/dictFileNames';
 import { Note } from './controls';
@@ -26,6 +26,7 @@ export function AramorphDataSettings({ ready, onReadyChange, onImported }: Props
       onReadyChange(true);
       onImported();
     } catch (e) {
+      logDiagnostic('error', 'dictionary', 'Custom AraMorph import failed', e);
       setImportError(e instanceof Error ? e.message : 'Could not read those files.');
     } finally {
       setImporting(false);
@@ -65,21 +66,6 @@ export function AramorphDataSettings({ ready, onReadyChange, onImported }: Props
     }
   }
 
-  async function testLookup() {
-    const result = await dictionaryManager.lookup('كان');
-    const sizes = aramorphProvider.tableSizes;
-    alert(
-      `Test word: كان\nEntries found: ${result.entries.length}\n` +
-        (result.entries[0]?.senses[0]?.gloss ?? '(no gloss)') +
-        `\n\nLoaded table sizes:\n` +
-        (sizes
-          ? Object.entries(sizes)
-              .map(([k, v]) => `${k}: ${v}`)
-              .join('\n')
-          : '(not loaded)')
-    );
-  }
-
   return (
     <div className="settings-aramorph">
       <Note>
@@ -103,9 +89,6 @@ export function AramorphDataSettings({ ready, onReadyChange, onImported }: Props
             Reset to default
           </button>
         )}
-        <button className="btn btn--ghost" onClick={testLookup}>
-          Test dictionary lookup
-        </button>
         <input ref={fileInputRef} type="file" multiple hidden onChange={(e) => importSelectedFiles(e.target.files)} />
       </div>
 

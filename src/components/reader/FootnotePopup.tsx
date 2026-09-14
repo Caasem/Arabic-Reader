@@ -1,4 +1,5 @@
 import { anchoredPosition } from '../shared/anchoredPosition';
+import { useEscapeKey } from '../shared/useEscapeKey';
 import './FootnotePopup.css';
 
 const POPUP_HEIGHT_ESTIMATE = 200;
@@ -22,12 +23,15 @@ export function FootnotePopup({
   /** Falls back to normal in-book navigation when we couldn't resolve the note inline. */
   onGoToNote: () => void;
 }) {
+  useEscapeKey(onClose);
   const { left, top, below } = anchoredPosition(x, y, { halfWidth: 160, flipBelowY: POPUP_HEIGHT_ESTIMATE + 24 });
 
   return (
     <div className="footnote-popup-backdrop" onClick={onClose}>
       <div
         className={'footnote-popup' + (below ? ' footnote-popup--below' : '')}
+        role="dialog"
+        aria-label="Note"
         style={{ left, top }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -39,7 +43,7 @@ export function FootnotePopup({
         {loading && <div className="footnote-popup__loading">Loading note…</div>}
 
         {!loading && !failed && html && (
-          <div className="footnote-popup__body" dangerouslySetInnerHTML={{ __html: html }} />
+          <div className="footnote-popup__body" dir="auto" dangerouslySetInnerHTML={{ __html: html }} />
         )}
 
         {!loading && failed && (

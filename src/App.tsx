@@ -5,7 +5,8 @@ import { Reader } from './components/reader/Reader';
 import { BackupReminder } from './components/shared/BackupReminder';
 import { PomodoroNotifier } from './components/pomodoro/PomodoroNotifier';
 import { PreferencesProvider } from './state/PreferencesProvider';
-import type { BookMeta } from './types';
+import { libraryService } from './library/libraryService';
+import type { BookMeta, Highlight } from './types';
 import './App.css';
 
 // Everything except the Library and Reader loads on first visit.
@@ -41,9 +42,18 @@ function App() {
     setChromeHidden(false);
   }
 
+  async function openHighlight(highlight: Highlight): Promise<boolean> {
+    const book = (await libraryService.listBooks()).find((b) => b.id === highlight.bookId);
+    if (!book) return false;
+    openBook(book, highlight.cfiRange);
+    return true;
+  }
+
   function handleNav(next: ViewName) {
     if ((next === 'read' || next === 'vocabLevels') && !activeBook) return;
     if (next !== 'read' && next !== 'vocabLevels') setChromeHidden(false);
+    // The nav tabs return to the reading position, not an earlier jump target.
+    else setPendingCfi(undefined);
     if (next === 'vocabLevels') {
       setVocabPanelOpen(true);
       setView('read');
@@ -82,7 +92,7 @@ function App() {
                 />
               )}
               {view === 'vocabulary' && <VocabularyList />}
-              {view === 'highlights' && <HighlightsList />}
+              {view === 'highlights' && <HighlightsList onOpenInBook={openHighlight} />}
               {view === 'review' && <Review />}
               {view === 'speedReader' && <SpeedReader />}
               {view === 'dashboard' && <Dashboard />}

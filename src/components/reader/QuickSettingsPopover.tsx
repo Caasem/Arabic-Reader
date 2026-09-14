@@ -1,5 +1,6 @@
 import { usePreferences, type ResolvedTheme } from '../../state/PreferencesContext';
 import { PAGE_COLORS } from '../../theme/tokens';
+import { useEscapeKey } from '../shared/useEscapeKey';
 import './QuickSettingsPopover.css';
 
 const THEME_SWATCHES: { id: ResolvedTheme; label: string }[] = [
@@ -22,6 +23,7 @@ const FONT_SIZE_STEP = 10;
  */
 export function QuickSettingsPopover({ onClose }: { onClose: () => void }) {
   const { prefs, updatePrefs } = usePreferences();
+  useEscapeKey(onClose);
 
   function stepFontSize(delta: number) {
     const next = Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, prefs.fontSizePct + delta));
@@ -30,7 +32,12 @@ export function QuickSettingsPopover({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="quick-settings-backdrop" onClick={onClose}>
-      <div className="quick-settings" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="quick-settings"
+        role="dialog"
+        aria-label="Font and appearance"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="quick-settings__row">
           <button
             className="quick-settings__aa quick-settings__aa--small"

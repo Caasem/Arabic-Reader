@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { pomodoroService } from '../../pomodoro/pomodoroService';
 import { usePreferences } from '../../state/PreferencesContext';
 import type { BookMeta } from '../../types';
+import { useEscapeKey } from '../shared/useEscapeKey';
 import './PomodoroTimer.css';
 
 function formatTime(ms: number): string {
@@ -15,6 +16,7 @@ function formatTime(ms: number): string {
  * (and announces phase ends via PomodoroNotifier) when this is closed. */
 export function PomodoroTimer({ book, onClose }: { book: BookMeta | null; onClose: () => void }) {
   const { prefs } = usePreferences();
+  useEscapeKey(onClose);
   // The service mutates its snapshot in place, so re-render on every change.
   const [, forceRender] = useState(0);
   const snapshot = pomodoroService.getSnapshot();
@@ -25,9 +27,16 @@ export function PomodoroTimer({ book, onClose }: { book: BookMeta | null; onClos
 
   return (
     <div className="pomodoro-backdrop" onClick={onClose}>
-      <div className="pomodoro" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="pomodoro"
+        role="dialog"
+        aria-labelledby="pomodoro-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="pomodoro__header">
-          <span className="pomodoro__title">Pomodoro</span>
+          <span className="pomodoro__title" id="pomodoro-title">
+            Pomodoro
+          </span>
           <button className="pomodoro__close" onClick={onClose} aria-label="Close">
             ×
           </button>
@@ -47,7 +56,9 @@ export function PomodoroTimer({ book, onClose }: { book: BookMeta | null; onClos
                 {snapshot.phase === 'work' ? 'Work' : 'Break'}
               </div>
             )}
-            <div className="pomodoro__time">{formatTime(remainingMs)}</div>
+            <div className="pomodoro__time" role="timer">
+              {formatTime(remainingMs)}
+            </div>
             {snapshot.bookTitle && <div className="pomodoro__book">{snapshot.bookTitle}</div>}
             <div className="pomodoro__controls">
               {snapshot.running ? (

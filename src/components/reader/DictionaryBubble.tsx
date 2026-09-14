@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { DictionaryLookupResult } from '../../types';
 import { anchoredPosition } from '../shared/anchoredPosition';
+import { useEscapeKey } from '../shared/useEscapeKey';
 import './DictionaryBubble.css';
 
 /** Condensed bubble shown for touch gestures bound to "Show definition
@@ -53,6 +54,7 @@ export function DictionaryBubble({
   const condensed =
     gloss && gloss.length > BUBBLE_GLOSS_MAX_CHARS ? gloss.slice(0, BUBBLE_GLOSS_MAX_CHARS - 1) + '…' : gloss;
 
+  useEscapeKey(onDismiss);
   const mountedAtRef = useRef(0);
   useEffect(() => {
     mountedAtRef.current = Date.now();
@@ -68,11 +70,15 @@ export function DictionaryBubble({
     <div className="dict-bubble-backdrop" onClick={handleBackdropClick}>
       <div
         className={'dict-bubble' + (below ? ' dict-bubble--below' : '')}
+        role="dialog"
+        aria-label={`Definition of ${word}`}
         style={{ left, top }}
         onClick={(e) => e.stopPropagation()}
       >
         <button className="dict-bubble__def" onClick={onOpenFull} disabled={loading} aria-label={`${word} — open full entry`}>
-          <span className="dict-bubble__word">{word}</span>
+          <span className="dict-bubble__word" lang="ar">
+            {word}
+          </span>
           <span className="dict-bubble__gloss">
             {loading ? 'Looking up…' : (condensed ?? 'No definition found — tap for more')}
           </span>

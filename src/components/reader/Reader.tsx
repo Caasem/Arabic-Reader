@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { BookMeta, HighlightColor } from '../../types';
+import type { BookMeta, Highlight, HighlightColor } from '../../types';
 import { usePreferences } from '../../state/PreferencesContext';
 import { annotationService } from '../../reader/annotations/annotationService';
 import { vocabularyService } from '../../vocabulary/vocabularyService';
@@ -20,6 +20,7 @@ import { useHoverPreview } from './hooks/useHoverPreview';
 import { useWordLookups } from './hooks/useWordLookups';
 import { useFocusMode } from './hooks/useFocusMode';
 import { useBookmarks } from './hooks/useBookmarks';
+import { useBookHighlights } from './hooks/useBookHighlights';
 import { useBookSearch, type SearchMode } from './hooks/useBookSearch';
 import { ReaderTopbar } from './ReaderTopbar';
 import { ReaderFooter } from './ReaderFooter';
@@ -103,6 +104,7 @@ export function Reader({
   const savedWords = useSavedWords(book.id, containerRef);
   const lookups = useWordLookups({ book, trackerRef, savedWords, prefsRef, onLookupStart: hover.dismiss });
   const { bookmarks, add: addBookmark, remove: removeBookmark } = useBookmarks(book);
+  const bookHighlights = useBookHighlights(book.id);
 
   // Section listeners are attached once per rendered section; they call
   // through this ref so they always reach the latest handlers.
@@ -190,7 +192,11 @@ export function Reader({
     onFootnoteClick: (anchor, doc, sectionHref, rect) => void openFootnote(anchor, doc, sectionHref, rect),
     onActivity: () => trackerRef.current?.recordActivity(),
     onScrollEndChange: setAtSectionScrollEnd,
-    onKeyDown: (e) => void lookups.handleQuickAddKey(e),
+    onKeyDown: (e) => {
+      // Escape inside the book reaches overlays listening on the host window.
+      if (e.key === 'Escape') window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      else void lookups.handleQuickAddKey(e);
+    },
     onPointer: {
       down: (e) => focus.pointerHandlersRef.current.down(e),
       move: (e) => focus.pointerHandlersRef.current.move(e),
@@ -203,7 +209,9 @@ export function Reader({
 
   // Quick-add from the host page (e.g. right after closing a popup).
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => handlersRef.current?.onKeyDown(e);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') handlersRef.current?.onKeyDown(e);
+    };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
@@ -307,7 +315,7 @@ export function Reader({
     if (!selection) return;
     const svc = serviceRef.current;
     const sectionHref = svc?.getCurrentSectionHref();
-    await annotationService.create({
+    const created = await annotationService.create({
       book,
       cfiRange: selection.cfiRange,
       text: selection.text,
@@ -315,6 +323,7 @@ export function Reader({
       chapterHref: sectionHref,
       chapterLabel: svc?.getChapterLabelFor(sectionHref),
     });
+    bookHighlights.added(created);
     svc?.renderHighlight(selection.cfiRange, color);
     svc?.clearSelection();
     setSelection(null);
@@ -323,6 +332,19 @@ export function Reader({
   function dismissSelection() {
     serviceRef.current?.clearSelection();
     setSelection(null);
+  }
+
+  async function recolorHighlight(highlight: Highlight, color: HighlightColor) {
+    if (highlight.color === color) return;
+    const updated = await annotationService.updateColor(highlight, color);
+    bookHighlights.replaced(updated);
+    serviceRef.current?.renderHighlight(updated.cfiRange, color);
+  }
+
+  async function removeHighlight(highlight: Highlight) {
+    await annotationService.remove(highlight.id);
+    bookHighlights.removed(highlight.id);
+    serviceRef.current?.removeHighlight(highlight.cfiRange);
   }
 
   const showEndIndicator = prefs.showPageBoundaries && (prefs.readingFlow === 'paginated' ? location.atPageEnd : atSectionScrollEnd);
@@ -372,12 +394,15 @@ export function Reader({
         {panel === 'bookmarks' && (
           <BookmarksPanel
             bookmarks={bookmarks}
+            highlights={bookHighlights.highlights}
             onAdd={handleAddBookmark}
-            onOpen={(bookmark) => {
-              serviceRef.current?.goTo(bookmark.cfi);
+            onOpen={({ cfi }) => {
+              serviceRef.current?.goTo(cfi);
               setPanel(null);
             }}
             onRemove={removeBookmark}
+            onRecolorHighlight={(highlight, color) => void recolorHighlight(highlight, color)}
+            onRemoveHighlight={(highlight) => void removeHighlight(highlight)}
             onClose={() => setPanel(null)}
           />
         )}
