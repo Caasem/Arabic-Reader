@@ -29,9 +29,12 @@ export class ShamelaBooksProvider {
         throw new ShamelaBrowseError('network', `HTTP ${response.status}`);
       }
 
-      const data = (await response.json()) as unknown;
+      const json = (await response.json()) as unknown;
+
+      // Response is wrapped in {results: {items: [...]}}
+      const data = extractSearchResults(json);
       if (!Array.isArray(data)) {
-        throw new ShamelaBrowseError('parse', 'Expected array response');
+        throw new ShamelaBrowseError('parse', 'Expected array of results');
       }
 
       return data
@@ -127,6 +130,19 @@ export class ShamelaBooksProvider {
     }
     this.lastRequestTime = Date.now();
   }
+}
+
+function extractSearchResults(json: unknown): unknown[] {
+  // Response format: {results: {items: [...]}} or just [...]
+  if (Array.isArray(json)) return json;
+  if (typeof json !== 'object' || json === null) return [];
+  const obj = json as Record<string, unknown>;
+  const results = obj.results;
+  if (typeof results === 'object' && results !== null) {
+    const items = (results as Record<string, unknown>).items;
+    if (Array.isArray(items)) return items;
+  }
+  return [];
 }
 
 function isValidCatalogBook(item: unknown): item is ShamelaCatalogBook {
