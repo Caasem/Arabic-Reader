@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { EpubService, type SearchResult, type RelocatedLocation } from '../../reader/epub/EpubService';
+import { searchBookFile } from '../../reader/epub/bookSearch';
 
 type SearchScope = 'page' | 'book' | 'library';
 type SearchMode = 'phrase' | 'word';
@@ -1312,32 +1313,21 @@ export function Reader({
     }
   }
 
-  /** "Entire library" scope: opens every other book in a hidden, detached
-   * container just long enough to search it, then tears it down --
-   * reuses the exact same EpubService.search() this reader already uses
-   * for its own book, just against a temporary instance per book, rather
-   * than a second search implementation. Sequential (not parallel) so a
-   * large library doesn't try to hold many books' DOM in memory at once. */
+  /** "Library" scope: searches every stored book file in turn without
+   * rendering any of them (see searchBookFile). Sequential so a large
+   * library never holds many parsed books in memory at once. */
   async function searchLibrary(query: string, mode: SearchMode): Promise<AnySearchResult[]> {
     const books = await libraryService.listBooks();
     const all: AnySearchResult[] = [];
     for (const b of books) {
       const file = await libraryService.getBookFile(b.id);
       if (!file) continue;
-      const container = document.createElement('div');
-      container.style.cssText = 'position:fixed;left:-99999px;top:0;width:400px;height:600px;visibility:hidden;';
-      document.body.appendChild(container);
-      const tempSvc = new EpubService();
       try {
-        await tempSvc.open(file, container, undefined, prefsRef.current);
-        const results = await tempSvc.search(query, { mode });
+        const results = await searchBookFile(file, query, { mode });
         all.push(...results.map((r) => ({ ...r, book: b })));
       } catch {
-        // A book that fails to parse/open just contributes no results,
-        // rather than aborting the whole library search over one bad file.
-      } finally {
-        tempSvc.destroy();
-        container.remove();
+        // A book that fails to parse contributes no results rather than
+        // aborting the whole library search.
       }
     }
     return all;

@@ -1,7 +1,10 @@
 import ePub, { type Book, type Rendition, type NavItem } from 'epubjs';
 import type { HighlightColor, PageDirection, ReaderPreferences, ReadingFlow, TocItem } from '../../types';
 import { resolveFootnote, type FootnoteContent } from '../footnotes/resolveFootnote';
-import { normalizeForSearch } from '../tokenizer/arabicTokenizer';
+import { searchBook, type SearchOptions, type SearchResult } from './bookSearch';
+import { sanitizeSectionDocument } from './sanitizeSection';
+
+export type { SearchMatchType, SearchOptions, SearchResult } from './bookSearch';
 
 /** epub.js's own flow keyword for our simpler paginated/scrolled toggle. */
 function epubFlow(flow: ReadingFlow): 'paginated' | 'scrolled-doc' {
@@ -51,40 +54,6 @@ export interface SelectionInfo {
   text: string;
   x: number;
   y: number;
-}
-
-/**
- * Match-quality tier, in the priority order results should be presented:
- * an unaccented literal match first, then one that only lines up once
- * diacritics/hamza-variants are normalized, then a looser word-mode match
- * (all query words present, not necessarily adjacent). No 'fuzzy' tier is
- * populated today (see SearchOptions.mode below) -- the type has room for
- * one so a future edit-distance or root/morphology-based tier could slot
- * in above the display layer's sort without changing its shape, but none
- * of the existing dictionary/search backend does that matching today, so
- * building it now would just be unimplemented surface area.
- */
-export type SearchMatchType = 'exact' | 'normalized' | 'partial';
-
-export interface SearchResult {
-  cfi: string;
-  excerpt: string;
-  href: string;
-  label?: string;
-  matchType: SearchMatchType;
-}
-
-export interface SearchOptions {
-  /** 'phrase' (default): the query must appear as one literal substring,
-   * in order -- what `normalizeForSearch`-based matching already did.
-   * 'word': every whitespace-separated word in the query must appear
-   * somewhere in the same text node, not necessarily adjacent or in
-   * order -- always tiered 'partial' (see SearchMatchType), since it's a
-   * deliberately looser match than a phrase. */
-  mode?: 'phrase' | 'word';
-  /** Restricts the search to one section (href) -- the "Current page"
-   * scope. Omit to search the whole book. */
-  sectionHref?: string;
 }
 
 const HIGHLIGHT_FILL: Record<HighlightColor, string> = {
@@ -141,6 +110,9 @@ export class EpubService {
     if (this.destroyed) return;
 
     const book = ePub(buf);
+    // Registered before anything loads so every section is sanitized before
+    // it's serialized into its iframe (see sanitizeSection.ts).
+    book.spine.hooks.content.register(sanitizeSectionDocument);
     await book.ready;
     if (this.destroyed) {
       book.destroy();
@@ -190,19 +162,14 @@ export class EpubService {
       // explicitly right below regardless of what this resolves to.
       defaultDirection: this.currentDirection,
       script: undefined,
-      // TEMPORARY DIAGNOSTIC -- without this, epub.js sandboxes every
-      // section's iframe as `sandbox="allow-same-origin"` with no
-      // `allow-scripts` (see node_modules/epubjs/src/managers/views/
-      // iframe.js), and WebKit/iOS appears to withhold dispatching touch/
-      // click events into that iframe's content entirely -- even to
-      // listeners the host page itself attached -- while Chromium doesn't
-      // enforce that the same way, which would explain why tapping a word
-      // does nothing on iPhone but works fine on Android/desktop. This
-      // flag is here ONLY to confirm that diagnosis; combined with the
-      // existing `allow-same-origin`, it also lets a malicious EPUB's own
-      // embedded <script> run with same-origin access to this app's
-      // IndexedDB (vocabulary, highlights, every saved book) -- NOT safe
-      // to ship as-is. Remove or replace with a narrower fix once confirmed.
+      // Without `allow-scripts` in the section iframe's sandbox, iOS WebKit
+      // withholds touch/click events from the frame's content entirely --
+      // even for listeners this app attaches from the host page -- so word
+      // taps never register on iPhone. Combined with `allow-same-origin`
+      // that would let a book's own script reach this app's IndexedDB, which
+      // is why every section is sanitized (scripts, handlers, script URLs
+      // stripped; restrictive CSP injected) before it renders -- see the
+      // content hook registered above.
       allowScriptedContent: true,
     });
     if (this.destroyed) {
@@ -604,117 +571,10 @@ export class EpubService {
     return href ? this.findTocLabel(href) : undefined;
   }
 
-  /** Text search, scoped to the whole book by default or to one section
-   * (SearchOptions.sectionHref -- the "Current page" scope). epub.js only
-   * keeps the *current* section's content parsed into a Document -- the
-   * rest of the book is just spine metadata until asked for -- so this
-   * loads each section in turn, walks its text nodes directly (rather than
-   * epub.js's own `Section.find()`, which does a plain case-insensitive
-   * substring match with no Arabic diacritic/hamza-variant awareness),
-   * then unloads it again before moving on, so a large book doesn't end up
-   * with every chapter's DOM held in memory at once just because the
-   * reader searched it once.
-   *
-   * Diacritic-insensitive and أ/إ/آ/ٱ-folding (see normalizeForSearch):
-   * both the query and each text node's content are normalized before
-   * matching, then a match position in the *normalized* string is mapped
-   * back to a real offset in the *original* text (diacritics are deletions,
-   * so those positions don't otherwise line up) to build a correct DOM
-   * Range/CFI and an excerpt that still shows the real, un-normalized text.
-   *
-   * Results come back sorted by match quality (see SearchMatchType) --
-   * exact literal matches first, then ones that only line up after
-   * normalization, then (mode: 'word' only) loose word-presence matches --
-   * rather than in whatever order sections happen to be walked in. */
+  /** Diacritic-insensitive text search over this book (see bookSearch.ts). */
   async search(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
-    const trimmed = query.trim();
-    if (!this.book || !trimmed) return [];
-    const mode = options.mode ?? 'phrase';
-    const { normalized: normalizedQuery } = normalizeForSearch(trimmed);
-    if (!normalizedQuery) return [];
-    const queryWords = normalizedQuery.split(/\s+/).filter(Boolean);
-    const EXCERPT_LIMIT = 150;
-    const results: SearchResult[] = [];
-    const excerptOf = (text: string, origStart: number, origEnd: number) =>
-      text.length <= EXCERPT_LIMIT
-        ? text
-        : '...' +
-          text.slice(Math.max(0, origStart - EXCERPT_LIMIT / 2), Math.min(text.length, origEnd + EXCERPT_LIMIT / 2)) +
-          '...';
-
-    // epub.js's own TS defs don't declare `spineItems` (only its runtime
-    // Spine class does) -- cast through `any` the same way this file
-    // already does for epub.js internals it doesn't have full types for.
-    const allSections = (this.book.spine as any).spineItems as any[];
-    const sections = options.sectionHref ? allSections.filter((s) => s.href === options.sectionHref) : allSections;
-
-    for (const section of sections) {
-      try {
-        await section.load(this.book.load.bind(this.book));
-        const doc: Document | undefined = section.document;
-        if (!doc) continue;
-        const walker = doc.createTreeWalker(doc, NodeFilter.SHOW_TEXT);
-        let node: Node | null;
-        while ((node = walker.nextNode())) {
-          const text = node.textContent ?? '';
-          if (!text.trim()) continue;
-          const { normalized, toOriginal } = normalizeForSearch(text);
-
-          if (mode === 'word') {
-            // Every query word must appear somewhere in this node -- not
-            // necessarily adjacent or in order, so this is always the
-            // loosest ('partial') tier. Anchored on the first word's first
-            // occurrence for the CFI/excerpt.
-            const firstIdx = normalized.indexOf(queryWords[0]);
-            if (firstIdx === -1) continue;
-            if (!queryWords.every((w) => normalized.includes(w))) continue;
-            const origStart = toOriginal[firstIdx];
-            const matchEndIdx = firstIdx + queryWords[0].length;
-            const origEnd = matchEndIdx < toOriginal.length ? toOriginal[matchEndIdx] : text.length;
-            const range = doc.createRange();
-            range.setStart(node, origStart);
-            range.setEnd(node, origEnd);
-            results.push({
-              cfi: section.cfiFromRange(range),
-              excerpt: excerptOf(text, origStart, origEnd),
-              href: section.href,
-              label: this.getChapterLabelFor(section.href),
-              matchType: 'partial',
-            });
-            continue;
-          }
-
-          let searchFrom = 0;
-          for (;;) {
-            const idx = normalized.indexOf(normalizedQuery, searchFrom);
-            if (idx === -1) break;
-            const origStart = toOriginal[idx];
-            const matchEndIdx = idx + normalizedQuery.length;
-            const origEnd = matchEndIdx < toOriginal.length ? toOriginal[matchEndIdx] : text.length;
-            searchFrom = matchEndIdx;
-
-            const range = doc.createRange();
-            range.setStart(node, origStart);
-            range.setEnd(node, origEnd);
-            const cfi = section.cfiFromRange(range);
-            const matchType: SearchMatchType = text.slice(origStart, origEnd) === trimmed ? 'exact' : 'normalized';
-            results.push({
-              cfi,
-              excerpt: excerptOf(text, origStart, origEnd),
-              href: section.href,
-              label: this.getChapterLabelFor(section.href),
-              matchType,
-            });
-          }
-        }
-      } finally {
-        section.unload();
-      }
-    }
-
-    const TIER_ORDER: Record<SearchMatchType, number> = { exact: 0, normalized: 1, partial: 2 };
-    results.sort((a, b) => TIER_ORDER[a.matchType] - TIER_ORDER[b.matchType]);
-    return results;
+    if (!this.book) return [];
+    return searchBook(this.book, query, options, (href) => this.getChapterLabelFor(href));
   }
 
   private findTocLabel(href: string): string | undefined {

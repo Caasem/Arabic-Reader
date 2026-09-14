@@ -40,5 +40,6 @@ describe('sanitizeFootnoteHtml', () => {
     expect(links[0].hasAttribute('href')).toBe(false);
     expect(links[1].getAttribute('href')).toBe('https://example.com');
     expect(links[1].getAttribute('target')).toBe('_blank');
+    expect(links[1].getAttribute('rel')).toBe('noopener noreferrer');
   });
 });

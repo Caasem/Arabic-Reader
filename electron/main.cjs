@@ -1,20 +1,18 @@
-// Electron main process. Deliberately plain CommonJS (`.cjs`) regardless of
-// the rest of the project being ESM (`"type": "module"` in package.json) —
-// Electron's main entry point is simplest kept as CJS so there's no
-// ESM/CJS interop friction with `electron`/`electron-builder` itself.
+// Electron main process (plain CommonJS -- simplest for Electron's entry
+// point regardless of the rest of the project being ESM).
 //
-// The app is served from a tiny local HTTP server rather than loaded via a
-// `file://` URL. The Vite build (shared with the web deploy) uses root-
-// relative asset paths ("/assets/…") and a PWA manifest with an absolute
-// `start_url` — both of those resolve correctly against `http://` but
-// would break against `file://`. Serving locally means the packaged app
-// runs byte-for-byte the same built output the web deploy uses, no special
-// Electron-only build config needed.
-const { app, BrowserWindow, shell } = require('electron');
-const http = require('node:http');
-const fs = require('node:fs');
+// The built app (dist/) is served from a privileged custom `app://bundle`
+// scheme. That gives the app one fixed origin for the life of the install,
+// which matters because IndexedDB/localStorage are scoped per origin: the
+// previous approach (a local HTTP server on a random port) produced a new
+// origin -- and therefore empty storage -- on every launch.
+const { app, BrowserWindow, protocol, session, shell } = require('electron');
+const fs = require('node:fs/promises');
 const path = require('node:path');
 
+const APP_SCHEME = 'app';
+const APP_HOST = 'bundle';
+const APP_ORIGIN = `${APP_SCHEME}://${APP_HOST}`;
 const DIST_DIR = path.join(__dirname, '..', 'dist');
 
 const MIME_TYPES = {
@@ -32,61 +30,83 @@ const MIME_TYPES = {
   '.woff': 'font/woff',
   '.woff2': 'font/woff2',
   '.ttf': 'font/ttf',
-  '.gzbin': 'application/octet-stream',
   '.epub': 'application/epub+zip',
+  '.txt': 'text/plain; charset=utf-8',
+  '.md': 'text/plain; charset=utf-8',
 };
 
-function startServer() {
-  return new Promise((resolve, reject) => {
-    const server = http.createServer((req, res) => {
-      let urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
-      if (urlPath === '/') urlPath = '/index.html';
+// Book sections render in srcdoc iframes, which inherit this policy -- so
+// book styles/images (epub.js serves them as blob: URLs) must stay allowed,
+// while any script not shipped with the app is blocked. AnkiConnect runs on
+// localhost:8765.
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "worker-src 'self' blob:",
+  "style-src 'self' 'unsafe-inline' blob:",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data: blob:",
+  "media-src 'self' data: blob:",
+  "connect-src 'self' blob: data: http://127.0.0.1:8765 http://localhost:8765",
+  "frame-src 'self' blob:",
+  "object-src 'none'",
+].join('; ');
 
-      // Prevent escaping DIST_DIR via "../" — this only ever serves the
-      // app's own bundled assets, but there's no reason to trust the path.
-      const resolved = path.normalize(path.join(DIST_DIR, urlPath));
-      if (!resolved.startsWith(DIST_DIR)) {
-        res.writeHead(403);
-        res.end('Forbidden');
-        return;
-      }
+// Must run before the app is ready.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: APP_SCHEME,
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      stream: true,
+      codeCache: true,
+      allowServiceWorkers: true,
+    },
+  },
+]);
 
-      fs.readFile(resolved, (err, data) => {
-        if (err) {
-          // SPA fallback: this app has no client-side routes today, but
-          // falling back to index.html for an unmatched path is the
-          // standard, harmless default for a single-page app server.
-          fs.readFile(path.join(DIST_DIR, 'index.html'), (fallbackErr, fallbackData) => {
-            if (fallbackErr) {
-              res.writeHead(404);
-              res.end('Not found');
-              return;
-            }
-            res.writeHead(200, { 'Content-Type': MIME_TYPES['.html'] });
-            res.end(fallbackData);
-          });
-          return;
-        }
-        const ext = path.extname(resolved);
-        res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
-        res.end(data);
-      });
-    });
+async function serveAppRequest(request) {
+  const url = new URL(request.url);
+  if (url.host !== APP_HOST) return new Response('Not found', { status: 404 });
 
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address();
-      resolve(typeof address === 'object' && address ? address.port : 0);
-    });
-    server.on('error', reject);
-  });
+  let relativePath = decodeURIComponent(url.pathname);
+  if (relativePath === '/' || relativePath === '') relativePath = '/index.html';
+  let filePath = path.normalize(path.join(DIST_DIR, relativePath));
+  if (filePath !== DIST_DIR && !filePath.startsWith(DIST_DIR + path.sep)) {
+    return new Response('Forbidden', { status: 403 });
+  }
+
+  let data;
+  try {
+    data = await fs.readFile(filePath);
+  } catch {
+    // Extensionless paths are app navigations -- fall back to the SPA shell.
+    // A missing asset is a genuine 404, not an HTML page.
+    if (path.extname(filePath)) return new Response('Not found', { status: 404 });
+    filePath = path.join(DIST_DIR, 'index.html');
+    data = await fs.readFile(filePath);
+  }
+
+  const contentType = MIME_TYPES[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
+  const headers = { 'Content-Type': contentType };
+  if (contentType.startsWith('text/html')) headers['Content-Security-Policy'] = CONTENT_SECURITY_POLICY;
+  return new Response(data, { headers });
 }
 
-let mainWindow = null;
+function isExternalWebUrl(url) {
+  try {
+    const { protocol: scheme } = new URL(url);
+    return scheme === 'https:' || scheme === 'http:';
+  } catch {
+    return false;
+  }
+}
 
-async function createWindow() {
-  const port = await startServer();
-
-  mainWindow = new BrowserWindow({
+function createWindow() {
+  const mainWindow = new BrowserWindow({
     width: 1320,
     height: 880,
     minWidth: 760,
@@ -100,20 +120,32 @@ async function createWindow() {
       sandbox: true,
     },
   });
-
-  mainWindow.loadURL(`http://127.0.0.1:${port}/`);
-
-  // Any link the app tries to open in a "new tab" (target="_blank" — e.g.
-  // the AnkiConnect add-on link, the CAMeL Lab citation link in Settings)
-  // should open in the user's real default browser, not a second Electron
-  // window with no navigation chrome.
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
-    return { action: 'deny' };
-  });
+  mainWindow.loadURL(`${APP_ORIGIN}/`);
 }
 
-app.whenReady().then(createWindow);
+// Applies to every WebContents the app ever creates, not just the first window.
+app.on('web-contents-created', (_event, contents) => {
+  // New-window requests (target="_blank" links) open in the real browser --
+  // but only for http(s): openExternal on arbitrary schemes can launch local
+  // programs.
+  contents.setWindowOpenHandler(({ url }) => {
+    if (isExternalWebUrl(url)) shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  contents.on('will-navigate', (event, url) => {
+    if (!url.startsWith(`${APP_ORIGIN}/`)) event.preventDefault();
+  });
+  contents.on('will-attach-webview', (event) => event.preventDefault());
+});
+
+app.whenReady().then(() => {
+  protocol.handle(APP_SCHEME, serveAppRequest);
+  // Only fullscreen (Speed Reader) is ever needed; deny everything else.
+  session.defaultSession.setPermissionRequestHandler((_contents, permission, callback) => {
+    callback(permission === 'fullscreen');
+  });
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

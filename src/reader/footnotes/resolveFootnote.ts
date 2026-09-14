@@ -149,8 +149,12 @@ export function sanitizeFootnoteHtml(html: string): string {
         }
         Array.from(el.attributes).forEach((attr) => {
           if (attr.name === 'href') {
-            if (!/^https?:\/\//i.test(attr.value)) el.removeAttribute('href');
-            else el.setAttribute('target', '_blank');
+            if (!/^https?:\/\//i.test(attr.value)) {
+              el.removeAttribute('href');
+            } else {
+              el.setAttribute('target', '_blank');
+              el.setAttribute('rel', 'noopener noreferrer');
+            }
           } else if (attr.name !== 'class') {
             el.removeAttribute(attr.name);
           }
