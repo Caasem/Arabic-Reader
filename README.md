@@ -2,7 +2,7 @@
 
 Arabic EPUBs, Automated Dictionary definitions and an SRS (Anki-ish) system,
 
-Reading itself can be tedious, reading in another language even more so, reading in another language whilst constantly having to refer to dictionary doubly, reading in another language whilst referring to a dictionary, and trying to keep a record of words to memorise later eveeen more so. 
+Reading can be tedious... reading in another language, even more so; reading in another language whilst constantly having to refer to a dictionary, doubly so; and reading in another language whilst referring to a dictionary and trying to keep a record of words to memorise later, eeeveeen more so.
 
 This project attempts to overcome that, making that ^ process efficient, with the costs of being efficient.
 
