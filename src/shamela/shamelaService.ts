@@ -38,7 +38,9 @@ export class ShamelaService {
       for await (const page of shamelaBooksProvider.fetchBookPages(book.id)) {
         pages.push(page);
         pageCount++;
-        const percent = Math.min((pageCount / 100) * 90, 90); // rough estimate, most books < 100 pages
+        // Page count isn't known upfront, so this eases toward (never hits) 90%
+        // rather than plateauing once a book passes 100 pages.
+        const percent = 90 * (1 - 100 / (100 + pageCount));
         onProgress?.(`Downloaded ${pageCount} pages...`, percent);
       }
 

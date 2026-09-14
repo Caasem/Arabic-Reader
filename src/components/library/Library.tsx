@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { libraryService, type BookReadingInfo } from '../../library/libraryService';
 import { invalidateBookVocabIndex } from '../../vocabRarity/bookVocabIndex';
 import { invalidateTokenStream } from '../../speedReader/tokenStream';
+import { useShamelaBrowse } from '../../shamela/useShamelaBrowse';
 import type { BookMeta } from '../../types';
 import { readString, STORAGE_KEYS, writeString } from '../../utils/storage';
 import { useEscapeKey } from '../shared/useEscapeKey';
 import { usePreferences } from '../../state/PreferencesContext';
-import { ShamelaBrowser } from './ShamelaBrowser';
+import { ShamelaResultCard } from './ShamelaResultCard';
 import './Library.css';
 
 type SortOrder = 'added' | 'lastRead' | 'title' | 'progress';
@@ -84,7 +85,7 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
     };
   }, []);
 
-  function handleShamelaBokAdded() {
+  function handleShamelaBookAdded() {
     reloadLibrary();
     setError(null);
   }
@@ -92,6 +93,8 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
   function handleShamelaBrowseError(err: Error) {
     setError(err.message);
   }
+
+  const shamela = useShamelaBrowse(query, prefs.shamelaEnabled, handleShamelaBookAdded, handleShamelaBrowseError);
 
   async function handleFiles(files: FileList | null) {
     if (!files || !files.length) return;
@@ -223,19 +226,12 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
 
       {error && <div className="library__error">{error}</div>}
 
-      {!loading && prefs.shamelaEnabled && (
-        <ShamelaBrowser
-          onBookAdded={handleShamelaBokAdded}
-          onError={handleShamelaBrowseError}
-        />
-      )}
-
-      {!loading && books.length > 0 && (
+      {!loading && (books.length > 0 || prefs.shamelaEnabled) && (
         <div className="library__toolbar">
           <input
             className="library__search"
             type="search"
-            placeholder="Search by title or author…"
+            placeholder={prefs.shamelaEnabled ? 'Search your library or Shamela…' : 'Search by title or author…'}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -260,18 +256,26 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
         </div>
       )}
 
+      {!loading && prefs.shamelaEnabled && (
+        <p className="library__shamela-note">
+          Also searching an unofficial Shamela mirror (not shamela.ws) — results not yet in your library show ⬇.
+        </p>
+      )}
+
       {loading ? (
         <div className="library__empty">Loading…</div>
-      ) : books.length === 0 ? (
-        <div className="library__empty">
-          <p>No books yet.</p>
-          <p className="library__empty-sub">Add an EPUB, or try the sample book to see the reader in action.</p>
-        </div>
-      ) : visibleBooks.length === 0 ? (
-        <div className="library__empty">
-          <p>No books match.</p>
-          <p className="library__empty-sub">Try a different search or filter.</p>
-        </div>
+      ) : visibleBooks.length === 0 && shamela.results.length === 0 && !shamela.searching ? (
+        books.length === 0 && !query.trim() ? (
+          <div className="library__empty">
+            <p>No books yet.</p>
+            <p className="library__empty-sub">Add an EPUB, or try the sample book to see the reader in action.</p>
+          </div>
+        ) : (
+          <div className="library__empty">
+            <p>No books match.</p>
+            <p className="library__empty-sub">Try a different search or filter.</p>
+          </div>
+        )
       ) : (
         <div className="library__grid">
           {visibleBooks.map((book) => (
@@ -305,6 +309,16 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
               </button>
             </div>
           ))}
+          {prefs.shamelaEnabled &&
+            shamela.results.map((book) => (
+              <ShamelaResultCard
+                key={`shamela-${book.id}`}
+                book={book}
+                downloading={shamela.downloadingId === book.id}
+                progress={shamela.downloadProgress}
+                onDownload={shamela.download}
+              />
+            ))}
         </div>
       )}
 
