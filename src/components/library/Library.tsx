@@ -31,6 +31,12 @@ interface ReadingInfo {
   lastReadAt?: number;
 }
 
+async function loadLibrary(): Promise<{ list: BookMeta[]; info: Record<string, ReadingInfo> }> {
+  const list = await libraryService.listBooks();
+  const entries = await Promise.all(list.map(async (b) => [b.id, await libraryService.readingInfoFor(b.id)] as const));
+  return { list, info: Object.fromEntries(entries) };
+}
+
 export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }) {
   const [books, setBooks] = useState<BookMeta[]>([]);
   const [readingInfo, setReadingInfo] = useState<Record<string, ReadingInfo>>({});
@@ -61,17 +67,17 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
     }
   }
 
-  async function refresh() {
-    setLoading(true);
-    const list = await libraryService.listBooks();
-    setBooks(list);
-    const entries = await Promise.all(list.map(async (b) => [b.id, await libraryService.readingInfoFor(b.id)] as const));
-    setReadingInfo(Object.fromEntries(entries));
-    setLoading(false);
-  }
-
   useEffect(() => {
-    refresh();
+    let cancelled = false;
+    loadLibrary().then(({ list, info }) => {
+      if (cancelled) return;
+      setBooks(list);
+      setReadingInfo(info);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function handleFiles(files: FileList | null) {

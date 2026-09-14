@@ -85,10 +85,8 @@ export function Review() {
     setEditingField(null);
   }
 
-  // Computed once per card (not per render) — previewGrades() runs the
-  // scheduler for all four grades, so it's worth memoizing on the card's
-  // own id rather than recomputing on every flip/re-render.
-  const previews = useMemo(() => (current ? vocabularyService.previewGrades(current) : null), [current?.id]);
+  // previewGrades() runs the scheduler for all four grades -- memoized per card.
+  const previews = useMemo(() => (current ? vocabularyService.previewGrades(current) : null), [current]);
 
   async function answer(grade: ReviewGrade) {
     if (!current) return;

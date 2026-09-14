@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { DictionaryLookupResult } from '../../types';
 import './DictionaryBubble.css';
 
@@ -50,7 +50,10 @@ export function DictionaryBubble({
   const condensed =
     gloss && gloss.length > BUBBLE_GLOSS_MAX_CHARS ? gloss.slice(0, BUBBLE_GLOSS_MAX_CHARS - 1) + '…' : gloss;
 
-  const mountedAtRef = useRef(Date.now());
+  const mountedAtRef = useRef(0);
+  useEffect(() => {
+    mountedAtRef.current = Date.now();
+  }, []);
   function handleBackdropClick() {
     if (Date.now() - mountedAtRef.current < IGNORE_DISMISS_MS) return;
     onDismiss();

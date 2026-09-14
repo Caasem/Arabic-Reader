@@ -8,17 +8,14 @@ import './CalendarSection.css';
 
 export function CalendarSection({ data }: { data: DayActivity[] | null }) {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [daySessions, setDaySessions] = useState<ReadingSession[] | null>(null);
+  const [dayData, setDayData] = useState<{ day: string; sessions: ReadingSession[] } | null>(null);
+  const daySessions = dayData && dayData.day === selectedDay ? dayData.sessions : null;
 
   useEffect(() => {
-    if (!selectedDay) {
-      setDaySessions(null);
-      return;
-    }
+    if (!selectedDay) return;
     let cancelled = false;
-    setDaySessions(null);
     getSessionsForDay(selectedDay).then((sessions) => {
-      if (!cancelled) setDaySessions(sessions);
+      if (!cancelled) setDayData({ day: selectedDay, sessions });
     });
     return () => {
       cancelled = true;

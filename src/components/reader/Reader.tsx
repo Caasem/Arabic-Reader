@@ -751,10 +751,21 @@ export function Reader({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [book.id, prefs.continuousScrollEnabled]);
 
-  // Reading controls (Settings panel) apply live, without reopening the book.
+  // Reading controls apply live, without reopening the book. Keyed on just
+  // the preferences epub.js cares about -- re-applying themes on unrelated
+  // preference changes would trigger needless re-layouts.
+  const readingPrefsKey = [
+    prefs.fontSizePct,
+    prefs.lineHeight,
+    prefs.fontFamily,
+    prefs.readingFlow,
+    prefs.pageDirection,
+    prefs.theme,
+    prefs.twoColumnEnabled,
+  ].join('|');
   useEffect(() => {
-    if (ready) serviceRef.current?.applyPreferences(prefs);
-  }, [ready, prefs.fontSizePct, prefs.lineHeight, prefs.fontFamily, prefs.readingFlow, prefs.pageDirection, prefs.theme, prefs.twoColumnEnabled]);
+    if (ready) serviceRef.current?.applyPreferences(prefsRef.current);
+  }, [ready, readingPrefsKey]);
 
   // EXPERIMENT (see the manual reading-width-slider branch): the general
   // ResizeObserver that used to catch *any* `.reader__epub` size change --

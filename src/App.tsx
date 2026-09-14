@@ -9,7 +9,7 @@ import { Dashboard } from './components/dashboard/Dashboard';
 import { SpeedReader } from './components/speedReader/SpeedReader';
 import { SettingsPanel } from './components/shared/SettingsPanel';
 import { BackupReminder } from './components/shared/BackupReminder';
-import { PreferencesProvider } from './state/PreferencesContext';
+import { PreferencesProvider } from './state/PreferencesProvider';
 import type { BookMeta } from './types';
 import './App.css';
 

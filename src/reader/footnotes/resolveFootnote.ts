@@ -129,7 +129,7 @@ const DROP_ENTIRELY_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBE
  * Strip everything except a small inline-formatting allowlist and drop any
  * non-http(s) link targets before it's ever handed to React.
  */
-function sanitizeFootnoteHtml(html: string): string {
+export function sanitizeFootnoteHtml(html: string): string {
   const parsed = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
   const root = parsed.body.firstElementChild;
   if (!root) return '';

@@ -4,6 +4,7 @@ import { getWordRarity, isRarityDataReady, TIER_LABELS } from '../../vocabRarity
 import { normalize } from '../../reader/tokenizer/arabicTokenizer';
 import { usePreferences } from '../../state/PreferencesContext';
 import { IconEdit, IconChevronLeft, IconChevronRight } from '../shared/icons';
+import { buildEntryTokenSenses, reconstructSelection, type DefinitionToken } from './definitionTokens';
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
@@ -23,64 +24,6 @@ const NARROW_BREAKPOINT_PX = 480;
 const IGNORE_DISMISS_MS = 400;
 
 type EntryGroup = { providerId: string; providerName: string; entries: { entry: DictionaryEntry; index: number }[] };
-
-/** One tokenized word or whitespace run inside an Al-Wasit entry's
- * definition -- `globalIdx` indexes into that entry's flat token stream
- * (spanning every sense, not just one), which is what the click/drag
- * selection below tracks and what reconstructSelection walks. Punctuation
- * stays attached to its word rather than becoming its own token, same as
- * VocabularyEditModal's context-sentence tokenizer. */
-interface DefinitionToken {
-  text: string;
-  isWord: boolean;
-  globalIdx: number;
-}
-
-/** Flattens every sense in an Al-Wasit entry into one token stream (senses
- * joined by a single space so a selection spanning two senses doesn't run
- * their text together), alongside the same tokens grouped back by sense
- * for rendering each sense on its own line -- `bySense[i]` holds the exact
- * same token objects as `flat`, just grouped, so a globalIdx assigned once
- * stays correct in both views. */
-function buildEntryTokenSenses(entry: DictionaryEntry): { flat: DefinitionToken[]; bySense: DefinitionToken[][] } {
-  const flat: DefinitionToken[] = [];
-  const bySense: DefinitionToken[][] = [];
-  entry.senses.forEach((s, si) => {
-    if (si > 0) flat.push({ text: ' ', isWord: false, globalIdx: flat.length });
-    const senseTokens: DefinitionToken[] = [];
-    for (const part of s.gloss.split(/(\s+)/).filter((t) => t.length > 0)) {
-      const token: DefinitionToken = { text: part, isWord: !!part.trim(), globalIdx: flat.length };
-      flat.push(token);
-      senseTokens.push(token);
-    }
-    bySense.push(senseTokens);
-  });
-  return { flat, bySense };
-}
-
-/** Rebuilds saveable text from a (possibly non-contiguous) set of selected
- * word-token indices. Two selected words that were already directly
- * adjacent in the original text keep their exact original spacing between
- * them; a gap that skipped over unselected words collapses to a single
- * normalizing space instead of running them together or keeping the
- * skipped text. */
-function reconstructSelection(tokens: DefinitionToken[], selected: Set<number>): string {
-  let out = '';
-  let lastIncluded = -2;
-  for (let idx = 0; idx < tokens.length; idx++) {
-    const t = tokens[idx];
-    if (t.isWord) {
-      if (!selected.has(idx)) continue;
-      if (out && lastIncluded !== idx - 1) out += ' ';
-      out += t.text;
-      lastIncluded = idx;
-    } else if (lastIncluded === idx - 1 && selected.has(idx + 1)) {
-      out += t.text;
-      lastIncluded = idx;
-    }
-  }
-  return out;
-}
 
 /** A root/lemma value that shows the Arabic text by default; tapping it
  * crossfades to the "root"/"form" label in the exact same spot, then fades
@@ -524,7 +467,10 @@ export function DictionaryPopup({
 
   const scale = sizePct / 100;
 
-  const mountedAtRef = useRef(Date.now());
+  const mountedAtRef = useRef(0);
+  useEffect(() => {
+    mountedAtRef.current = Date.now();
+  }, []);
   function handleBackdropClick() {
     if (Date.now() - mountedAtRef.current < IGNORE_DISMISS_MS) return;
     onClose();

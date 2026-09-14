@@ -29,7 +29,7 @@ const buck2uniPatterns = Object.entries(buck2uni).map(([key, value]) => ({
   value,
 }));
 
-function detransliterate(word: string): string {
+export function detransliterate(word: string): string {
   if (!word) return word;
   let result = word;
   for (const p of buck2uniPatterns) result = result.replace(p.pattern, p.value);
@@ -43,7 +43,7 @@ const uni2buckPatterns = Object.entries(buck2uni).map(([key, value]) => ({
   pattern: new RegExp(value.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'g'),
   value: key,
 }));
-function transliterate(word: string): string {
+export function transliterate(word: string): string {
   if (!word) return word;
   let result = word;
   for (const p of uni2buckPatterns) result = result.replace(p.pattern, p.value);
