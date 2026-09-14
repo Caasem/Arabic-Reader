@@ -1,7 +1,7 @@
 {
   "name": "arabic-reader-app",
   "private": true,
-  "version": "0.10.0",
+  "version": "0.10.1",
   "license": "GPL-2.0",
   "type": "module",
   "main": "electron/main.cjs",

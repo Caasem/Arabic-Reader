@@ -61,11 +61,11 @@ export function ShamelaBrowser({ onBookAdded, onError }: Props) {
     <div className="shamela-browser">
       <h2>Browse Shamela Library (Beta)</h2>
       <p className="shamela-note" style={{ fontSize: '0.9em', color: '#666', margin: '0 0 1rem 0' }}>
-        ⚠️ Search functionality is limited due to Shamela API restrictions. For best results, visit{' '}
+        Powered by an unofficial community mirror of al-Maktaba al-Shamela, not{' '}
         <a href="https://shamela.ws" target="_blank" rel="noopener noreferrer" style={{ color: '#2196f3' }}>
           shamela.ws
         </a>
-        {' '}directly to browse books.
+        {' '}itself — availability isn't guaranteed.
       </p>
 
       <form onSubmit={handleSearch} className="shamela-search-form">

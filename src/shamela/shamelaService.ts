@@ -29,20 +29,16 @@ export class ShamelaService {
     book: ShamelaCatalogBook,
     onProgress?: (status: string, percent: number) => void
   ): Promise<BookMeta> {
-    onProgress?.('Fetching first page...', 0);
+    onProgress?.('Downloading pages...', 0);
 
     try {
-      // Get the starting page
-      const firstPageId = await shamelaBooksProvider.getBookFirstPageId(book.id);
-      onProgress?.('Downloading pages...', 5);
-
       // Collect all pages
       const pages = [];
       let pageCount = 0;
-      for await (const page of shamelaBooksProvider.fetchBookPages(book.id, firstPageId)) {
+      for await (const page of shamelaBooksProvider.fetchBookPages(book.id)) {
         pages.push(page);
         pageCount++;
-        const percent = Math.min(5 + (pageCount / 100) * 90, 95); // 5-95%
+        const percent = Math.min((pageCount / 100) * 90, 90); // rough estimate, most books < 100 pages
         onProgress?.(`Downloaded ${pageCount} pages...`, percent);
       }
 
