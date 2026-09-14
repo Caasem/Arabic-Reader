@@ -2,7 +2,11 @@ name: Tests
 
 on:
   push:
-    branches: [main]
+    # TEMPORARY, this branch only: verifies the hardening-pass refactor on
+    # CI, not just locally. Revert before merging -- main should be the
+    # only branch this fires for on push otherwise (pull_request below
+    # already covers a PR from any branch).
+    branches: [main, refactor/hardening-pass]
   pull_request:
 
 jobs:
