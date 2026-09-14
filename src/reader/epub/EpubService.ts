@@ -5,6 +5,7 @@ import { HIGHLIGHT_FILL, PAGE_COLORS } from '../../theme/tokens';
 import { resolveFootnote, type FootnoteContent } from '../footnotes/resolveFootnote';
 import { anchorOf, toHostRect } from '../wordInteraction/rectInHost';
 import { searchBook, type SearchOptions, type SearchResult } from './bookSearch';
+import { spineIndexOfCfi } from './cfi';
 import { bookLocations, declaredDirection, enqueue, findTocLabel, mapNavItems, renderedContents } from './epubInternals';
 import { sanitizeSectionDocument } from './sanitizeSection';
 
@@ -58,7 +59,7 @@ export class EpubService {
   private container: HTMLElement | null = null;
   private toc: TocItem[] = [];
   private currentSectionHref?: string;
-  private readonly renderedAnnotationCfis = new Set<string>();
+  private readonly highlights = new Map<string, { color: HighlightColor; onClick?: (event: Event) => void }>();
   /** open() is a long async chain. If destroy() lands mid-way (React
    * StrictMode's double mount does exactly that in dev), the abandoned open
    * must not attach a second rendition to the same container. */
@@ -131,12 +132,14 @@ export class EpubService {
   }
 
   private listen(rendition: Rendition, options: OpenOptions): void {
-    rendition.on('rendered', (section: { href?: string } | undefined, view: { document?: Document; iframe?: HTMLIFrameElement }) => {
+    type RenderedSection = { href?: string; index?: number } | undefined;
+    rendition.on('rendered', (section: RenderedSection, view: { document?: Document; iframe?: HTMLIFrameElement }) => {
       const doc = view?.document ?? view?.iframe?.contentDocument;
       if (section?.href) this.currentSectionHref = section.href;
       if (!doc || !section?.href) return;
       this.injectFonts(doc);
       options.onRendered(doc, section.href);
+      if (typeof section.index === 'number') this.reattachHighlights(section.index);
     });
 
     rendition.on('relocated', (location: RelocatedEvent) => {
@@ -252,23 +255,42 @@ export class EpubService {
     doc.head.appendChild(style);
   }
 
-  /** Renders a highlight; safe before its section renders (epub.js applies
-   * registered annotations as sections come into view). */
+  /** Draws a highlight, now if its section is on screen and otherwise when
+   * that section renders. Calling it again replaces the highlight. */
   renderHighlight(cfiRange: string, color: HighlightColor, onClick?: (event: Event) => void): void {
-    if (this.renderedAnnotationCfis.has(cfiRange)) return;
-    this.renderedAnnotationCfis.add(cfiRange);
-    this.rendition?.annotations.highlight(
-      cfiRange,
-      {},
-      (event: Event) => onClick?.(event),
-      'ar-highlight',
-      { fill: HIGHLIGHT_FILL[color], 'fill-opacity': '0.4', 'mix-blend-mode': 'multiply' }
-    );
+    this.highlights.set(cfiRange, { color, onClick });
+    this.attachHighlight(cfiRange);
   }
 
   removeHighlight(cfiRange: string): void {
-    this.renderedAnnotationCfis.delete(cfiRange);
+    this.highlights.delete(cfiRange);
     this.rendition?.annotations.remove(cfiRange, 'highlight');
+  }
+
+  private attachHighlight(cfiRange: string): void {
+    const highlight = this.highlights.get(cfiRange);
+    const annotations = this.rendition?.annotations;
+    if (!highlight || !annotations) return;
+    annotations.remove(cfiRange, 'highlight');
+    try {
+      annotations.highlight(cfiRange, {}, (event: Event) => highlight.onClick?.(event), 'ar-highlight', {
+        fill: HIGHLIGHT_FILL[highlight.color],
+        'fill-opacity': '0.4',
+        'mix-blend-mode': 'multiply',
+      });
+    } catch {
+      // a range that no longer resolves in this section just isn't drawn
+    }
+  }
+
+  /** Highlight CFIs point inside the word spans added on 'rendered', but
+   * epub.js injects annotations before that event, when the spans don't
+   * exist yet. So each section's highlights are attached again once its
+   * words are wrapped. */
+  private reattachHighlights(sectionIndex: number): void {
+    for (const cfiRange of this.highlights.keys()) {
+      if (spineIndexOfCfi(cfiRange) === sectionIndex) this.attachHighlight(cfiRange);
+    }
   }
 
   clearSelection(): void {
