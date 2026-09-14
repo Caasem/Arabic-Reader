@@ -9,6 +9,7 @@ import { Dashboard } from './components/dashboard/Dashboard';
 import { SpeedReader } from './components/speedReader/SpeedReader';
 import { SettingsPanel } from './components/shared/SettingsPanel';
 import { BackupReminder } from './components/shared/BackupReminder';
+import { PomodoroNotifier } from './components/pomodoro/PomodoroNotifier';
 import { PreferencesProvider } from './state/PreferencesProvider';
 import type { BookMeta } from './types';
 import './App.css';
@@ -91,6 +92,7 @@ function App() {
           </main>
         </div>
         {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
+        <PomodoroNotifier />
       </div>
     </PreferencesProvider>
   );

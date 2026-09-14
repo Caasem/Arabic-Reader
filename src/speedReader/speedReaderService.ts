@@ -1,6 +1,7 @@
 import { persistenceService } from '../persistence/db';
 import type { BookMeta, RsvpToken, SpeedReaderPosition, SpeedReaderSession } from '../types';
 import { getTokenStream, type TokenStream } from './tokenStream';
+import { newId } from '../utils/id';
 
 export const WPM_PRESETS = [100, 150, 200, 250, 300, 400, 500, 600] as const;
 export const MIN_WPM = 60;
@@ -52,7 +53,7 @@ export async function recordSession(params: {
 }): Promise<SpeedReaderSession> {
   const averageWpm = params.durationMs > 0 ? Math.round((params.wordsRead / params.durationMs) * 60_000) : 0;
   const session: SpeedReaderSession = {
-    id: 'srsess_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+    id: newId('srsess'),
     bookId: params.book.id,
     bookTitle: params.book.title,
     wordsRead: params.wordsRead,

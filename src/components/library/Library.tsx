@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { libraryService } from '../../library/libraryService';
+import { libraryService, type BookReadingInfo } from '../../library/libraryService';
+import { invalidateBookVocabIndex } from '../../vocabRarity/bookVocabIndex';
+import { invalidateTokenStream } from '../../speedReader/tokenStream';
 import type { BookMeta } from '../../types';
 import './Library.css';
 
@@ -26,15 +28,11 @@ const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
 // land exactly on 1) -- close enough counts as finished for filtering.
 const FINISHED_AT = 0.97;
 
-interface ReadingInfo {
-  percent: number;
-  lastReadAt?: number;
-}
+type ReadingInfo = BookReadingInfo;
 
 async function loadLibrary(): Promise<{ list: BookMeta[]; info: Record<string, ReadingInfo> }> {
   const list = await libraryService.listBooks();
-  const entries = await Promise.all(list.map(async (b) => [b.id, await libraryService.readingInfoFor(b.id)] as const));
-  return { list, info: Object.fromEntries(entries) };
+  return { list, info: await libraryService.readingInfoForBooks(list.map((b) => b.id)) };
 }
 
 export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }) {
@@ -125,6 +123,8 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
   async function removeBook(id: string, e: React.MouseEvent) {
     e.stopPropagation();
     await libraryService.removeBook(id);
+    invalidateBookVocabIndex(id);
+    invalidateTokenStream(id);
     setBooks((prev) => prev.filter((b) => b.id !== id));
   }
 

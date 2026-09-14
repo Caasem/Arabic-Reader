@@ -1,5 +1,6 @@
 import { persistenceService } from '../../persistence/db';
 import type { BookMeta, Bookmark } from '../../types';
+import { newId } from '../../utils/id';
 
 /**
  * Bookmark CRUD -- deliberately separate from Highlight/AnnotationService
@@ -22,7 +23,7 @@ export class BookmarkService {
     chapterLabel?: string;
   }): Promise<Bookmark> {
     const bookmark: Bookmark = {
-      id: 'bm_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+      id: newId('bm'),
       bookId: params.book.id,
       bookTitle: params.book.title,
       cfi: params.cfi,

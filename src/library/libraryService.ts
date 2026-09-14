@@ -1,29 +1,39 @@
 import ePub from 'epubjs';
 import { persistenceService } from '../persistence/db';
 import type { BookMeta } from '../types';
+import { newId } from '../utils/id';
+
+export interface BookReadingInfo {
+  percent: number;
+  /** undefined for a book that has never been opened. */
+  lastReadAt?: number;
+}
 
 /**
- * Book-library operations: importing a file into persistent storage
- * (extracting title/author/cover along the way) and listing/removing books.
- * Keeps epub.js metadata-sniffing out of the UI layer.
+ * Library operations: importing a file (extracting title/author/cover),
+ * listing and removing books.
  */
 export class LibraryService {
   async importEpub(file: File): Promise<BookMeta> {
     const buf = await file.arrayBuffer();
-    const book = ePub(buf.slice(0)); // slice: epub.js may detach the buffer
-    await book.ready;
-    const metadata = await book.loaded.metadata;
+    const book = ePub(buf.slice(0)); // epub.js may detach the buffer
     let coverDataUrl: string | undefined;
+    let metadata: { title?: string; creator?: string; language?: string };
     try {
-      const coverUrl = await book.coverUrl();
-      if (coverUrl) coverDataUrl = await this.urlToDataUrl(coverUrl);
-    } catch {
-      // no cover — fine, library UI falls back to a generated placeholder
+      await book.ready;
+      metadata = await book.loaded.metadata;
+      try {
+        const coverUrl = await book.coverUrl();
+        if (coverUrl) coverDataUrl = await blobUrlToDataUrl(coverUrl);
+      } catch {
+        // no cover -- the library shows a generated placeholder
+      }
+    } finally {
+      book.destroy();
     }
-    book.destroy();
 
     const meta: BookMeta = {
-      id: 'book_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+      id: newId('book'),
       title: metadata.title || file.name.replace(/\.epub$/i, ''),
       author: metadata.creator || undefined,
       language: metadata.language || undefined,
@@ -34,17 +44,6 @@ export class LibraryService {
     };
     await persistenceService.saveBook(meta, file);
     return meta;
-  }
-
-  private async urlToDataUrl(url: string): Promise<string> {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
   }
 
   async listBooks(): Promise<BookMeta[]> {
@@ -59,14 +58,26 @@ export class LibraryService {
     await persistenceService.deleteBook(id);
   }
 
-  /** One round-trip for both the Library grid's progress bar and its
-   * "Recently read" sort -- `updatedAt` is undefined for a book that's
-   * never been opened (no ReadingPosition row yet), distinct from having
-   * been opened but not reported reading it (percent 0). */
-  async readingInfoFor(bookId: string): Promise<{ percent: number; lastReadAt?: number }> {
-    const pos = await persistenceService.getReadingPosition(bookId);
-    return { percent: pos?.percent ?? 0, lastReadAt: pos?.updatedAt };
+  /** Progress and last-read time for many books in one read. */
+  async readingInfoForBooks(bookIds: string[]): Promise<Record<string, BookReadingInfo>> {
+    const positions = await persistenceService.getReadingPositions(bookIds);
+    return Object.fromEntries(
+      bookIds.map((id) => {
+        const pos = positions.get(id);
+        return [id, { percent: pos?.percent ?? 0, lastReadAt: pos?.updatedAt }];
+      })
+    );
   }
+}
+
+async function blobUrlToDataUrl(url: string): Promise<string> {
+  const blob = await (await fetch(url)).blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 export const libraryService = new LibraryService();

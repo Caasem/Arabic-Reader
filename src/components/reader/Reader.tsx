@@ -40,6 +40,7 @@ import type { Book } from 'epubjs';
 import { usePreferences } from '../../state/PreferencesContext';
 import { isFootnoteLink } from '../../reader/footnotes/resolveFootnote';
 import { ReadingSessionTracker } from '../../reader/session/ReadingSessionTracker';
+import { observeWordsSeen } from '../../reader/session/observeWordsSeen';
 import { IconBack, IconContents, IconFocus, IconSearch, IconBookmark, IconBookmarkFilled, IconTrash, IconClose } from '../shared/icons';
 import './Reader.css';
 
@@ -367,11 +368,8 @@ export function Reader({
           style.textContent = wordStyle(document.documentElement.dataset.theme === 'dark');
           wrapArabicWords(doc);
 
-          // Dashboard word-count contribution for this section (see
-          // ReadingSessionTracker — each section only counts once per
-          // session, so scrolling back over it or a resize re-render
-          // doesn't inflate the total).
-          sessionTrackerRef.current?.recordSectionWords(sectionHref, doc.querySelectorAll('.ar-word').length);
+          // Dashboard "words read": only words that actually appear on screen.
+          observeWordsSeen(doc, sectionHref, (key) => sessionTrackerRef.current?.recordWordSeen(key));
 
           // Reading-activity signal for the idle cutoff (see
           // ReadingSessionTracker) — page turns and word taps already
@@ -418,17 +416,12 @@ export function Reader({
           doc.addEventListener('pointerup', () => edgePointerUpRef.current());
           doc.addEventListener('pointercancel', () => edgePointerUpRef.current());
 
-          // Both of these used to run once *per distinct word* in the
-          // section (recordEncounter: a get+put pair; the saved check: a
-          // whole-vocabulary-table scan plus its own querySelectorAll) —
-          // a section can easily have a few hundred distinct words, so
-          // that was hundreds of concurrent IndexedDB transactions and DOM
-          // queries firing on every single page turn or scroll, which is a
-          // real source of reading jank. Batched here into one write and
-          // one read, each covering the whole section at once, plus a
-          // single DOM pass instead of one query per saved word.
-          const words = distinctWordsIn(doc);
-          vocabularyService.recordEncounters(book.id, words, sectionHref);
+          // One bulk write per section. Counted once per section per session,
+          // so re-renders (resize, layout change, paging back) don't inflate
+          // encounter counts.
+          if (sessionTrackerRef.current?.isFirstVisit(sectionHref) ?? true) {
+            vocabularyService.recordEncounters(book.id, distinctWordsIn(doc), sectionHref);
+          }
           vocabularyService.listForBook(book.id).then((items) => {
             if (items.length === 0) return;
             const saved = new Set(items.map((i) => i.surfaceForm));

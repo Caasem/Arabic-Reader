@@ -3,7 +3,8 @@ import type { Book } from 'epubjs';
 import type { BookMeta, BookVocabWord, VocabTier } from '../../types';
 import { getBookVocabIndex } from '../../vocabRarity/bookVocabIndex';
 import { isRarityDataReady, enableRarityData } from '../../vocabRarity/rarity';
-import { formatVocabularyExport, downloadTextFile } from '../../vocabRarity/exportVocabulary';
+import { formatVocabularyExport } from '../../vocabRarity/exportVocabulary';
+import { saveFile } from '../../utils/saveFile';
 import { IconChevronLeft, IconChevronRight, IconClose } from '../shared/icons';
 import './VocabLevels.css';
 
@@ -80,7 +81,7 @@ export function VocabLevels({
   function handleExport() {
     const content = formatVocabularyExport(book.title, wordsForTier);
     const safeTitle = book.title.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60) || 'book';
-    downloadTextFile(`${safeTitle}-vocabulary-${activeTier}.txt`, content);
+    void saveFile(`${safeTitle}-vocabulary-${activeTier}.txt`, content, 'text/plain;charset=utf-8');
   }
 
   function toggleWord(w: BookVocabWord) {

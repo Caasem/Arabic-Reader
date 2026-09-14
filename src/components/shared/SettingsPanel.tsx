@@ -4,7 +4,8 @@ import { dictionaryManager } from '../../dictionary/DictionaryManager';
 import { aramorphProvider } from '../../dictionary/providers/aramorph/AramorphDictionaryProvider';
 import { DICT_FILE_NAMES, type DictFileName } from '../../dictionary/providers/aramorph/dictFileNames';
 import { isRarityDataReady, enableRarityData, disableRarityData } from '../../vocabRarity/rarity';
-import { pingAnki, getDeckNames, ensureDeck, addNote, AnkiConnectError } from '../../anki/ankiConnect';
+import { pingAnki, getDeckNames, ensureDeck, AnkiConnectError } from '../../anki/ankiConnect';
+import { syncToAnki } from '../../anki/ankiSync';
 import { vocabularyService } from '../../vocabulary/vocabularyService';
 import { BackupControls } from './BackupControls';
 import type {
@@ -186,17 +187,13 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         return;
       }
 
-      // Sequential rather than parallel — this only runs after a
-      // user-initiated sync (not a hot path), and AnkiConnect handles one
-      // request at a time anyway.
-      let synced = 0;
-      for (const item of unsynced) {
-        const back = [item.meaning, item.sentence ? `\n\n${item.sentence}` : ''].join('');
-        await addNote(deck, item.surfaceForm, back, ['arabic-reader']);
-        await vocabularyService.markSyncedToAnki(item);
-        synced++;
-      }
-      setAnkiStatus(`Synced ${synced} word${synced === 1 ? '' : 's'} to the "${deck}" deck in Anki.`);
+      const { added, alreadyInAnki, failed } = await syncToAnki(deck, unsynced, (item) =>
+        vocabularyService.markSyncedToAnki(item)
+      );
+      const parts = [`Synced ${added} word${added === 1 ? '' : 's'} to the "${deck}" deck in Anki.`];
+      if (alreadyInAnki) parts.push(`${alreadyInAnki} ${alreadyInAnki === 1 ? 'was' : 'were'} already there.`);
+      if (failed) parts.push(`${failed} couldn't be added — try syncing again.`);
+      setAnkiStatus(parts.join(' '));
     } catch (e) {
       setAnkiStatus(e instanceof AnkiConnectError ? e.message : e instanceof Error ? e.message : 'Sync failed.');
     } finally {
@@ -585,7 +582,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
                 </label>
                 {isAramorph && (
                   <span className={'settings-badge' + (aramorphReady ? ' settings-badge--ready' : '')}>
-                    {aramorphReady ? 'Data loaded' : 'No data loaded'}
+                    {aramorphReady ? 'Data loaded' : aramorphProvider.status === 'failed' ? 'Failed to load' : 'No data loaded'}
                   </span>
                 )}
               </div>

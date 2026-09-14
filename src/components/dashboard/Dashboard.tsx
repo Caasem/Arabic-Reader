@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { vocabularyService } from '../../vocabulary/vocabularyService';
 import { CollapsibleSection } from './CollapsibleSection';
 import { RangeFilter } from './RangeFilter';
 import { ArabicProfileSection } from './ArabicProfileSection';
@@ -48,26 +49,35 @@ export function Dashboard() {
   // Range-independent — an Arabic learner's cumulative profile, the weak-word
   // list, streaks, and the full activity log don't reset when the filter
   // changes, so these load once.
+  // Vocabulary feeds several sections; read it once per Dashboard visit.
+  const vocabularyRef = useRef<Promise<VocabularyItem[]> | null>(null);
+  const loadVocabulary = useCallback(() => (vocabularyRef.current ??= vocabularyService.list()), []);
+
   useEffect(() => {
-    getArabicProfile().then(setProfile);
-    getWeakVocabulary().then(setWeakVocab);
+    const vocabulary = loadVocabulary();
+    vocabulary.then((items) => getArabicProfile(items)).then(setProfile);
+    vocabulary.then((items) => getWeakVocabulary(8, items)).then(setWeakVocab);
     getStreak().then(setStreak);
     getDailyActivity().then(setDailyActivity);
-  }, []);
+  }, [loadVocabulary]);
 
   // Range-dependent — recomputed every time the Today/Week/Month/90d/All
   // filter changes.
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getReadingTotals(range), getVocabularySavedInRange(range), getTrend(range), getPomodoroTotals(range)]).then(
-      ([totals, vocabSaved, trend, pomodoroTotals]) => {
-        if (!cancelled) setRangeData({ range, totals, vocabSaved, trend, pomodoroTotals });
-      }
-    );
+    loadVocabulary().then(async (items) => {
+      const [totals, vocabSaved, trend, pomodoroTotals] = await Promise.all([
+        getReadingTotals(range),
+        getVocabularySavedInRange(range, items),
+        getTrend(range, items),
+        getPomodoroTotals(range),
+      ]);
+      if (!cancelled) setRangeData({ range, totals, vocabSaved, trend, pomodoroTotals });
+    });
     return () => {
       cancelled = true;
     };
-  }, [range]);
+  }, [range, loadVocabulary]);
 
   return (
     <div className="dashboard">

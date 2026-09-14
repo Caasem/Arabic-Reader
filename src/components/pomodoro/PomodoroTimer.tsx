@@ -4,31 +4,6 @@ import { usePreferences } from '../../state/PreferencesContext';
 import type { BookMeta } from '../../types';
 import './PomodoroTimer.css';
 
-/** A short, self-contained beep (Web Audio, no bundled asset) for
- * Settings → Pomodoro notification = "sound" -- two quick tones read as
- * "phase done" without needing an audio file shipped with the app. */
-function playBeep(): void {
-  try {
-    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new Ctx();
-    const now = ctx.currentTime;
-    [880, 1320].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.15, now + i * 0.18);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.18 + 0.15);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(now + i * 0.18);
-      osc.stop(now + i * 0.18 + 0.16);
-    });
-    window.setTimeout(() => ctx.close(), 500);
-  } catch {
-    // best-effort only -- autoplay restrictions or no Web Audio support
-    // just mean silence instead of a crash
-  }
-}
-
 function formatTime(ms: number): string {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
   const m = Math.floor(totalSeconds / 60);
@@ -36,35 +11,15 @@ function formatTime(ms: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+/** The timer popover -- a view onto pomodoroService, which keeps running
+ * (and announces phase ends via PomodoroNotifier) when this is closed. */
 export function PomodoroTimer({ book, onClose }: { book: BookMeta | null; onClose: () => void }) {
   const { prefs } = usePreferences();
+  // The service mutates its snapshot in place, so re-render on every change.
   const [, forceRender] = useState(0);
-  const [toast, setToast] = useState<string | null>(null);
   const snapshot = pomodoroService.getSnapshot();
 
-  useEffect(() => {
-    pomodoroService.setPrefs({
-      pomodoroWorkMinutes: prefs.pomodoroWorkMinutes,
-      pomodoroBreakMinutes: prefs.pomodoroBreakMinutes,
-      pomodoroAutoCycle: prefs.pomodoroAutoCycle,
-      pomodoroNotification: prefs.pomodoroNotification,
-    });
-  }, [prefs.pomodoroWorkMinutes, prefs.pomodoroBreakMinutes, prefs.pomodoroAutoCycle, prefs.pomodoroNotification]);
-
   useEffect(() => pomodoroService.subscribe(() => forceRender((n) => n + 1)), []);
-
-  useEffect(
-    () =>
-      pomodoroService.onNotify((phase, kind) => {
-        const label = phase === 'work' ? 'Work' : 'Break';
-        const message = kind === 'completed' ? `${label} session complete` : `${label} session ended`;
-        if (prefs.pomodoroNotification === 'silent') return;
-        if (prefs.pomodoroNotification === 'sound') playBeep();
-        setToast(message);
-        window.setTimeout(() => setToast(null), 3000);
-      }),
-    [prefs.pomodoroNotification]
-  );
 
   const remainingMs = snapshot ? snapshot.targetDurationMs - snapshot.activeDurationMs : 0;
 
@@ -77,8 +32,6 @@ export function PomodoroTimer({ book, onClose }: { book: BookMeta | null; onClos
             ×
           </button>
         </div>
-
-        {toast && <div className="pomodoro__toast">{toast}</div>}
 
         {!snapshot ? (
           <button

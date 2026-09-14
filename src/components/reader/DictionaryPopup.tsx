@@ -692,6 +692,12 @@ export function DictionaryPopup({
 
         {loading && <div className="dict-popup__loading">Looking up…</div>}
 
+        {!loading && result?.failedProviders?.length ? (
+          <div className="dict-popup__provider-error" role="status">
+            Couldn't load: {result.failedProviders.map((p) => p.name).join(', ')}
+          </div>
+        ) : null}
+
         {!loading && !result?.entries.length && <div className="dict-popup__empty">No entry found for this word yet.</div>}
 
         {!loading && result?.entries.length ? (

@@ -13,15 +13,12 @@ import type {
   ReadingSession,
   PomodoroSession,
 } from '../types';
+import { initialPreferences, withDefaults } from '../state/defaultPreferences';
 
 /**
- * Local persistence, backed by IndexedDB via Dexie.
- *
- * This is intentionally the *only* file in the app that knows it's running
- * in a browser with IndexedDB available. Everything else talks to the
- * PersistenceService interface below, so a React Native client can later
- * supply a SQLite- or MMKV-backed implementation of the same interface
- * without touching business logic.
+ * Local persistence, backed by IndexedDB via Dexie. The only module that
+ * knows storage is IndexedDB -- everything else depends on the
+ * PersistenceService interface below.
  */
 class ArabicReaderDB extends Dexie {
   books!: Table<BookMeta, string>;
@@ -44,16 +41,13 @@ class ArabicReaderDB extends Dexie {
       books: 'id, addedAt, title',
       bookFiles: 'bookId',
       positions: 'bookId',
-      // key = `${bookId}::${normalizedForm}` so lookups per book are O(1)
+      // key = `${bookId}::${normalizedForm}`
       wordInstances: 'key, bookId, normalizedForm, lemma',
       vocabulary: 'id, surfaceForm, lemma, mastery, bookId, addedAt',
       highlights: 'id, bookId, createdAt',
       preferences: 'id',
     });
-    // v2: adds an index on `srDueAt` so "what's due for review" is an
-    // indexed range query instead of a full-table scan — existing rows get
-    // srBox/srDueAt filled in by the upgrade so they're due immediately
-    // (rather than missing the field and never showing up in a review).
+    // v2: Leitner scheduling fields, indexed for "what's due" queries.
     this.version(2)
       .stores({
         vocabulary: 'id, surfaceForm, lemma, mastery, bookId, addedAt, srDueAt',
@@ -68,14 +62,8 @@ class ArabicReaderDB extends Dexie {
             if (item.srDueAt === undefined) item.srDueAt = now;
           });
       });
-    // v3: swaps the Leitner-box scheduler (srBox/srDueAt, v2) for FSRS —
-    // see vocabularyService.ts. There's no way to reconstruct real FSRS
-    // state (stability/difficulty) from Leitner history, so existing rows
-    // are simply re-seeded as fresh FSRS cards, preserving only their old
-    // due timestamp (srDueAt) so an item already due doesn't lose its
-    // place in the queue. The old srBox/srDueAt fields are left in place
-    // on existing rows (harmless, just unused) rather than stripped —
-    // Dexie's `modify` only adds fields here, it doesn't delete them.
+    // v3: Leitner -> FSRS. Existing cards are re-seeded as fresh FSRS cards,
+    // keeping their old due time so nothing loses its place in the queue.
     this.version(3)
       .stores({
         vocabulary: 'id, surfaceForm, lemma, mastery, bookId, addedAt, fsrsDue',
@@ -98,51 +86,41 @@ class ArabicReaderDB extends Dexie {
             }
           });
       });
-    // v4: adds the Speed Reader (RSVP) feature's own tables — a per-book
-    // resume position (word-index based, distinct from the normal Reader's
-    // CFI-based ReadingPosition) and a log of completed sessions (used for
-    // the "Session Complete" summary and lifetime average WPM). Purely
-    // additive — no migration needed for existing rows in other tables.
+    // v4: Speed Reader position + session log.
     this.version(4).stores({
       speedReaderPositions: 'bookId, updatedAt',
       speedReaderSessions: 'id, bookId, endedAt',
     });
-    // v5: the Reading Dashboard's data source — a log of normal-Reader
-    // sessions (see ReadingSession in types/index.ts). Indexed on
-    // `startedAt` since the Dashboard's every query — the heatmap, the
-    // trend charts, the Today/Week/Month/90d/All-time filter — is a range
-    // scan over this field. Purely additive.
+    // v5: Reading Dashboard session log (range-scanned on startedAt).
     this.version(5).stores({
       readingSessions: 'id, bookId, startedAt, endedAt',
     });
-    // v6: bookmarks -- explicit, reader-placed markers at a precise
-    // location, independent of both the automatic per-book ReadingPosition
-    // and of highlights. Purely additive.
+    // v6: bookmarks.
     this.version(6).stores({
       bookmarks: 'id, bookId, createdAt',
     });
-    // v7: cached epub.js `locations` index per book (see EpubService) --
-    // generating it walks the entire book's text, so it's worth persisting
-    // the result (epub.js's own serialized form, via `.save()`/`.load()`)
-    // rather than recomputing it every time the book is opened. Purely
-    // additive, and small relative to the book file itself (an array of
-    // CFIs, not the text).
+    // v7: cached epub.js locations index per book.
     this.version(7).stores({
       bookLocations: 'bookId',
     });
-    // v8: Pomodoro timer sessions (see PomodoroSession in types/index.ts) --
-    // one row per completed-or-abandoned work/break phase. Purely additive.
+    // v8: Pomodoro sessions.
     this.version(8).stores({
       pomodoroSessions: 'id, bookId, phase, status, startedAt',
+    });
+    // v9: compound index for "is this word saved in this book" lookups,
+    // which run on every word tap. Index-only change; no data migration.
+    this.version(9).stores({
+      vocabulary: 'id, surfaceForm, lemma, mastery, bookId, addedAt, fsrsDue, [bookId+surfaceForm]',
     });
   }
 }
 
 export const db = new ArabicReaderDB();
 
-// ---------------------------------------------------------------------------
-// PersistenceService — the abstraction the rest of the app depends on.
-// ---------------------------------------------------------------------------
+export interface TimeBounds {
+  since?: number;
+  until?: number;
+}
 
 export interface PersistenceService {
   // Books
@@ -156,30 +134,34 @@ export interface PersistenceService {
   // Reading position
   saveReadingPosition(pos: ReadingPosition): Promise<void>;
   getReadingPosition(bookId: string): Promise<ReadingPosition | undefined>;
+  /** One read for many books; books with no position are absent. */
+  getReadingPositions(bookIds: string[]): Promise<Map<string, ReadingPosition>>;
 
   // Word instances (encounter/lookup tracking)
   upsertWordInstance(instance: WordInstance): Promise<void>;
   getWordInstance(bookId: string, normalizedForm: string): Promise<WordInstance | undefined>;
-  getWordInstancesByLemma(lemma: string): Promise<WordInstance[]>;
+  /** Patches an existing instance; a no-op when there isn't one. */
+  updateWordInstance(bookId: string, normalizedForm: string, patch: Partial<WordInstance>): Promise<void>;
   getAllWordInstances(): Promise<WordInstance[]>;
-  /** Batch form of getWordInstance — one IndexedDB round-trip for many
-   * forms instead of one per form. Missing forms are simply absent from
-   * the returned map. */
+  countWordInstances(): Promise<number>;
+  countSavedWordInstances(): Promise<number>;
   getWordInstancesBulk(bookId: string, normalizedForms: string[]): Promise<Map<string, WordInstance>>;
-  /** Batch form of upsertWordInstance — writes all given instances in a
-   * single transaction instead of one transaction per instance. */
   upsertWordInstancesBulk(instances: WordInstance[]): Promise<void>;
 
   // Vocabulary
   saveVocabularyItem(item: VocabularyItem): Promise<void>;
+  getVocabularyItem(id: string): Promise<VocabularyItem | undefined>;
   getVocabulary(): Promise<VocabularyItem[]>;
   getVocabularyForBook(bookId: string): Promise<VocabularyItem[]>;
+  /** Every card for this exact surface form in this book. */
+  getVocabularyForWord(bookId: string, surfaceForm: string): Promise<VocabularyItem[]>;
   deleteVocabularyItem(id: string): Promise<void>;
   isSaved(surfaceForm: string, bookId: string): Promise<boolean>;
   getDueVocabulary(now: number): Promise<VocabularyItem[]>;
 
   // Highlights
   saveHighlight(h: Highlight): Promise<void>;
+  getHighlight(id: string): Promise<Highlight | undefined>;
   getHighlightsForBook(bookId: string): Promise<Highlight[]>;
   getAllHighlights(): Promise<Highlight[]>;
   deleteHighlight(id: string): Promise<void>;
@@ -189,7 +171,7 @@ export interface PersistenceService {
   getBookmarksForBook(bookId: string): Promise<Bookmark[]>;
   deleteBookmark(id: string): Promise<void>;
 
-  // Cached epub.js locations index (see EpubService) -- for real page numbers.
+  // Cached epub.js locations index (real page numbers)
   saveBookLocations(bookId: string, data: string, total: number): Promise<void>;
   getBookLocations(bookId: string): Promise<{ data: string; total: number } | undefined>;
 
@@ -197,11 +179,8 @@ export interface PersistenceService {
   getPreferences(): Promise<ReaderPreferences>;
   savePreferences(prefs: ReaderPreferences): Promise<void>;
 
-  // Backup / restore (see Settings → Backup)
+  // Backup / restore (put semantics: incoming rows overwrite same-id rows).
   exportBackup(): Promise<BackupData>;
-  /** Upserts every row in the backup (put semantics — an incoming row
-   * overwrites a local row with the same id/key). Returns how many of
-   * each kind were written. */
   importBackup(data: BackupData): Promise<{ vocabulary: number; wordInstances: number; highlights: number }>;
 
   // Speed Reader (RSVP)
@@ -210,72 +189,30 @@ export interface PersistenceService {
   saveSpeedReaderSession(session: SpeedReaderSession): Promise<void>;
   getSpeedReaderSessions(bookId?: string): Promise<SpeedReaderSession[]>;
 
-  // Reading sessions (normal Reader — Dashboard data source)
+  // Reading sessions (Dashboard data source), `startedAt` in [since, until)
   saveReadingSession(session: ReadingSession): Promise<void>;
-  /** All sessions with `startedAt` in [since, until) — the one query shape
-   * every Dashboard range filter and chart needs, so range filtering lives
-   * here rather than being re-implemented per caller. Omit `since`/`until`
-   * for the full unbounded history ("All time"). */
-  getReadingSessions(range?: { since?: number; until?: number }): Promise<ReadingSession[]>;
+  getReadingSessions(range?: TimeBounds): Promise<ReadingSession[]>;
 
-  // Pomodoro timer
+  // Pomodoro, `startedAt` in [since, until)
   savePomodoroSession(session: PomodoroSession): Promise<void>;
-  /** All sessions (both phases) with `startedAt` in [since, until) -- same
-   * shape as getReadingSessions above. Omit for full unbounded history. */
-  getPomodoroSessions(range?: { since?: number; until?: number }): Promise<PomodoroSession[]>;
+  getPomodoroSessions(range?: TimeBounds): Promise<PomodoroSession[]>;
 }
 
-const DEFAULT_PREFS: ReaderPreferences = {
-  theme: 'light',
-  fontSizePct: 100,
-  fontFamily: "'Noto Naskh Arabic', 'Amiri', 'Traditional Arabic', serif",
-  lineHeight: 2.1,
-  readingWidthPct: 100,
-  // AraMorph (the real, bundled dictionary) is the default; the mock demo
-  // dictionaries are still registered and can be re-enabled in Settings.
-  enabledProviderIds: ['aramorph'],
-  readingFlow: 'paginated',
-  continuousScrollEnabled: false,
-  showPageBoundaries: false,
-  hoverPreviewEnabled: false,
-  // On by default — a saved word without the sentence it came from is much
-  // less useful for review later; still toggleable in Settings for anyone
-  // who'd rather not capture surrounding text.
-  sentenceContextEnabled: true,
-  quickAddShortcutEnabled: false,
-  ankiDeckName: 'Arabic Vocabulary',
-  speedReaderWpm: 300,
-  speedReaderOrpEnabled: true,
-  speedReaderContextEnabled: false,
-  touchGestures: { singleTap: 'bubble', doubleTap: 'quickSave', hold: 'none' },
-  pageDirection: 'auto',
-  dictionaryPopupSizePct: 100,
-  liveSearchEnabled: true,
-  searchHistoryEnabled: true,
-  morphDisplayStyle: 'caption',
-  twoColumnEnabled: false,
-  dictionaryPanelLayout: 'merged',
-  dictionaryPanelSingleProviderId: null,
-  dictionaryPopupPinFooter: false,
-  pomodoroWorkMinutes: 25,
-  pomodoroBreakMinutes: 5,
-  pomodoroAutoCycle: true,
-  pomodoroNotification: 'toast',
-  pomodoroShowPhaseLabel: true,
-};
+function wordInstanceKey(bookId: string, normalizedForm: string): string {
+  return `${bookId}::${normalizedForm}`;
+}
 
-/** A comfortable line length varies a lot by device -- 100% (the flat
- * default above) is about right on a narrow phone screen, but the same
- * 100% on a tablet or a desktop window stretches lines to a width that's
- * noticeably harder to read. Only consulted the very first time a device
- * has no saved preferences at all (see getPreferences below); once saved,
- * the reader's own Settings choice always wins from then on, including a
- * deliberate 100% pick on a wide screen. */
-function defaultReadingWidthPctForDevice(): number {
-  const width = typeof window !== 'undefined' ? window.innerWidth : 0;
-  if (width >= 1100) return 65; // desktop -- unrestricted runs to distractingly long lines
-  if (width >= 700) return 80; // tablet
-  return 100; // phone -- already narrow enough that less would waste the screen
+function withoutKey({ key: _key, ...rest }: WordInstance & { key: string }): WordInstance {
+  return rest;
+}
+
+/** Rows with `startedAt` in [since, until), in startedAt order, via the index. */
+function startedAtRange<T>(table: Table<T, string>, range?: TimeBounds): Promise<T[]> {
+  if (range?.since === undefined && range?.until === undefined) return table.orderBy('startedAt').toArray();
+  return table
+    .where('startedAt')
+    .between(range.since ?? -Infinity, range.until ?? Infinity, true, false)
+    .toArray();
 }
 
 class DexiePersistenceService implements PersistenceService {
@@ -292,8 +229,7 @@ class DexiePersistenceService implements PersistenceService {
     return db.books.get(id);
   }
   async getBookFile(id: string): Promise<Blob | undefined> {
-    const row = await db.bookFiles.get(id);
-    return row?.data;
+    return (await db.bookFiles.get(id))?.data;
   }
   async deleteBook(id: string): Promise<void> {
     await db.transaction('rw', db.books, db.bookFiles, db.positions, async () => {
@@ -312,46 +248,49 @@ class DexiePersistenceService implements PersistenceService {
   async getReadingPosition(bookId: string): Promise<ReadingPosition | undefined> {
     return db.positions.get(bookId);
   }
+  async getReadingPositions(bookIds: string[]): Promise<Map<string, ReadingPosition>> {
+    const rows = await db.positions.bulkGet(bookIds);
+    const out = new Map<string, ReadingPosition>();
+    for (const row of rows) if (row) out.set(row.bookId, row);
+    return out;
+  }
 
   async upsertWordInstance(instance: WordInstance): Promise<void> {
-    const key = `${instance.bookId}::${instance.normalizedForm}`;
-    await db.wordInstances.put({ ...instance, key });
+    await db.wordInstances.put({ ...instance, key: wordInstanceKey(instance.bookId, instance.normalizedForm) });
   }
   async getWordInstance(bookId: string, normalizedForm: string): Promise<WordInstance | undefined> {
-    const key = `${bookId}::${normalizedForm}`;
-    const row = await db.wordInstances.get(key);
-    if (!row) return undefined;
-    const { key: _key, ...rest } = row;
-    return rest;
+    const row = await db.wordInstances.get(wordInstanceKey(bookId, normalizedForm));
+    return row ? withoutKey(row) : undefined;
   }
-  async getWordInstancesByLemma(lemma: string): Promise<WordInstance[]> {
-    const rows = await db.wordInstances.where('lemma').equals(lemma).toArray();
-    return rows.map(({ key: _key, ...rest }) => rest);
+  async updateWordInstance(bookId: string, normalizedForm: string, patch: Partial<WordInstance>): Promise<void> {
+    await db.wordInstances.update(wordInstanceKey(bookId, normalizedForm), patch);
   }
   async getAllWordInstances(): Promise<WordInstance[]> {
-    const rows = await db.wordInstances.toArray();
-    return rows.map(({ key: _key, ...rest }) => rest);
+    return (await db.wordInstances.toArray()).map(withoutKey);
+  }
+  async countWordInstances(): Promise<number> {
+    return db.wordInstances.count();
+  }
+  async countSavedWordInstances(): Promise<number> {
+    return db.wordInstances.filter((w) => w.saved).count();
   }
   async getWordInstancesBulk(bookId: string, normalizedForms: string[]): Promise<Map<string, WordInstance>> {
     if (normalizedForms.length === 0) return new Map();
-    const keys = normalizedForms.map((f) => `${bookId}::${f}`);
-    const rows = await db.wordInstances.bulkGet(keys);
+    const rows = await db.wordInstances.bulkGet(normalizedForms.map((f) => wordInstanceKey(bookId, f)));
     const out = new Map<string, WordInstance>();
-    rows.forEach((row) => {
-      if (!row) return;
-      const { key: _key, ...rest } = row;
-      out.set(rest.normalizedForm, rest);
-    });
+    for (const row of rows) if (row) out.set(row.normalizedForm, withoutKey(row));
     return out;
   }
   async upsertWordInstancesBulk(instances: WordInstance[]): Promise<void> {
     if (instances.length === 0) return;
-    const rows = instances.map((instance) => ({ ...instance, key: `${instance.bookId}::${instance.normalizedForm}` }));
-    await db.wordInstances.bulkPut(rows);
+    await db.wordInstances.bulkPut(instances.map((i) => ({ ...i, key: wordInstanceKey(i.bookId, i.normalizedForm) })));
   }
 
   async saveVocabularyItem(item: VocabularyItem): Promise<void> {
     await db.vocabulary.put(item);
+  }
+  async getVocabularyItem(id: string): Promise<VocabularyItem | undefined> {
+    return db.vocabulary.get(id);
   }
   async getVocabulary(): Promise<VocabularyItem[]> {
     return db.vocabulary.orderBy('addedAt').reverse().toArray();
@@ -359,16 +298,14 @@ class DexiePersistenceService implements PersistenceService {
   async getVocabularyForBook(bookId: string): Promise<VocabularyItem[]> {
     return db.vocabulary.where('bookId').equals(bookId).toArray();
   }
+  async getVocabularyForWord(bookId: string, surfaceForm: string): Promise<VocabularyItem[]> {
+    return db.vocabulary.where('[bookId+surfaceForm]').equals([bookId, surfaceForm]).toArray();
+  }
   async deleteVocabularyItem(id: string): Promise<void> {
     await db.vocabulary.delete(id);
   }
   async isSaved(surfaceForm: string, bookId: string): Promise<boolean> {
-    const count = await db.vocabulary
-      .where('bookId')
-      .equals(bookId)
-      .filter((v) => v.surfaceForm === surfaceForm)
-      .count();
-    return count > 0;
+    return (await db.vocabulary.where('[bookId+surfaceForm]').equals([bookId, surfaceForm]).count()) > 0;
   }
   async getDueVocabulary(now: number): Promise<VocabularyItem[]> {
     return db.vocabulary.where('fsrsDue').belowOrEqual(now).toArray();
@@ -376,6 +313,9 @@ class DexiePersistenceService implements PersistenceService {
 
   async saveHighlight(h: Highlight): Promise<void> {
     await db.highlights.put(h);
+  }
+  async getHighlight(id: string): Promise<Highlight | undefined> {
+    return db.highlights.get(id);
   }
   async getHighlightsForBook(bookId: string): Promise<Highlight[]> {
     return db.highlights.where('bookId').equals(bookId).toArray();
@@ -407,11 +347,9 @@ class DexiePersistenceService implements PersistenceService {
 
   async getPreferences(): Promise<ReaderPreferences> {
     const row = await db.preferences.get('default');
-    if (!row) return { ...DEFAULT_PREFS, readingWidthPct: defaultReadingWidthPctForDevice() };
-    const { id: _id, ...rest } = row;
-    // Merge over defaults so preferences saved before a new field existed
-    // (e.g. enabledProviderIds) don't come back missing it.
-    return { ...DEFAULT_PREFS, ...rest };
+    if (!row) return initialPreferences();
+    const { id: _id, ...stored } = row;
+    return withDefaults(stored);
   }
   async savePreferences(prefs: ReaderPreferences): Promise<void> {
     await db.preferences.put({ id: 'default', ...prefs });
@@ -428,18 +366,14 @@ class DexiePersistenceService implements PersistenceService {
 
   async importBackup(data: BackupData): Promise<{ vocabulary: number; wordInstances: number; highlights: number }> {
     await db.transaction('rw', db.vocabulary, db.wordInstances, db.highlights, async () => {
-      if (data.vocabulary?.length) await db.vocabulary.bulkPut(data.vocabulary);
-      if (data.wordInstances?.length) {
-        await db.wordInstances.bulkPut(
-          data.wordInstances.map((w) => ({ ...w, key: `${w.bookId}::${w.normalizedForm}` }))
-        );
-      }
-      if (data.highlights?.length) await db.highlights.bulkPut(data.highlights);
+      if (data.vocabulary.length) await db.vocabulary.bulkPut(data.vocabulary);
+      if (data.wordInstances.length) await this.upsertWordInstancesBulk(data.wordInstances);
+      if (data.highlights.length) await db.highlights.bulkPut(data.highlights);
     });
     return {
-      vocabulary: data.vocabulary?.length ?? 0,
-      wordInstances: data.wordInstances?.length ?? 0,
-      highlights: data.highlights?.length ?? 0,
+      vocabulary: data.vocabulary.length,
+      wordInstances: data.wordInstances.length,
+      highlights: data.highlights.length,
     };
   }
 
@@ -462,27 +396,15 @@ class DexiePersistenceService implements PersistenceService {
   async saveReadingSession(session: ReadingSession): Promise<void> {
     await db.readingSessions.put(session);
   }
-  async getReadingSessions(range?: { since?: number; until?: number }): Promise<ReadingSession[]> {
-    let collection = db.readingSessions.orderBy('startedAt');
-    if (range?.since !== undefined || range?.until !== undefined) {
-      const since = range?.since ?? -Infinity;
-      const until = range?.until ?? Infinity;
-      collection = collection.filter((s) => s.startedAt >= since && s.startedAt < until);
-    }
-    return collection.toArray();
+  async getReadingSessions(range?: TimeBounds): Promise<ReadingSession[]> {
+    return startedAtRange(db.readingSessions, range);
   }
 
   async savePomodoroSession(session: PomodoroSession): Promise<void> {
     await db.pomodoroSessions.put(session);
   }
-  async getPomodoroSessions(range?: { since?: number; until?: number }): Promise<PomodoroSession[]> {
-    let collection = db.pomodoroSessions.orderBy('startedAt');
-    if (range?.since !== undefined || range?.until !== undefined) {
-      const since = range?.since ?? -Infinity;
-      const until = range?.until ?? Infinity;
-      collection = collection.filter((s) => s.startedAt >= since && s.startedAt < until);
-    }
-    return collection.toArray();
+  async getPomodoroSessions(range?: TimeBounds): Promise<PomodoroSession[]> {
+    return startedAtRange(db.pomodoroSessions, range);
   }
 }
 

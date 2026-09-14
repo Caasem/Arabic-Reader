@@ -116,3 +116,19 @@
   color: var(--danger);
   border-color: var(--danger);
 }
+
+/* App-wide phase-end announcement (PomodoroNotifier). */
+.pomodoro-notifier {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 1000;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 13px;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}

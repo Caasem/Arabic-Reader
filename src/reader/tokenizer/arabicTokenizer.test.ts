@@ -17,6 +17,13 @@ describe('tokenize', () => {
     expect(tokens.find((t) => t.text === '؟')?.isArabic).toBe(false);
   });
 
+  it('treats Arabic-Indic digits as non-word text', () => {
+    const tokens = tokenize('صفحة ١٢٣ و۴۵');
+    expect(tokens.filter((t) => t.isArabic).map((t) => t.text)).toEqual(['صفحة', 'و']);
+    expect(tokens.find((t) => t.text === '١٢٣')?.isArabic).toBe(false);
+    expect(tokens.find((t) => t.text === '۴۵')?.isArabic).toBe(false);
+  });
+
   it('keeps diacritics attached to their word', () => {
     expect(tokenize('كِتَابٌ').map((t) => t.text)).toEqual(['كِتَابٌ']);
   });

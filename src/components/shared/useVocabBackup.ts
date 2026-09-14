@@ -1,15 +1,14 @@
 import { useRef, useState } from 'react';
 import { vocabularyService } from '../../vocabulary/vocabularyService';
 import { recordBackupExported } from '../../backupReminder';
-import type { BackupData } from '../../types';
+import { BackupFormatError, parseBackup } from '../../persistence/backup';
+import { saveFile } from '../../utils/saveFile';
+
+const plural = (n: number, noun: string) => `${n} ${noun}${n === 1 ? '' : 's'}`;
 
 /**
- * Export/import logic for the vocabulary + word-instance + highlight
- * backup (see Settings → Backup). Pulled out of SettingsPanel so the same
- * export/import buttons can appear in the Vocabulary and Review tabs too,
- * without three separate copies of this logic drifting apart over time —
- * all three call the exact same `vocabularyService.exportBackup()` /
- * `importBackup()` pair and produce byte-identical backup files.
+ * Export/import of the vocabulary + word-instance + highlight backup, shared
+ * by Settings, Vocabulary, and Review so all three produce identical files.
  */
 export function useVocabBackup() {
   const [status, setStatus] = useState<string | null>(null);
@@ -21,17 +20,13 @@ export function useVocabBackup() {
     setStatus(null);
     try {
       const data = await vocabularyService.exportBackup();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `arabic-reader-backup-${new Date(data.exportedAt).toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const filename = `arabic-reader-backup-${new Date(data.exportedAt).toISOString().slice(0, 10)}.json`;
+      const outcome = await saveFile(filename, JSON.stringify(data, null, 2), 'application/json');
+      if (outcome === 'cancelled') return;
       recordBackupExported();
-      setStatus(
-        `Exported ${data.vocabulary.length} vocabulary item${data.vocabulary.length === 1 ? '' : 's'}, ${data.highlights.length} highlight${data.highlights.length === 1 ? '' : 's'}.`
-      );
+      setStatus(`Exported ${plural(data.vocabulary.length, 'vocabulary item')}, ${plural(data.highlights.length, 'highlight')}.`);
+    } catch (e) {
+      setStatus(`Export failed: ${e instanceof Error ? e.message : 'unknown error'}`);
     } finally {
       setBusy(false);
     }
@@ -42,17 +37,16 @@ export function useVocabBackup() {
     setBusy(true);
     setStatus(null);
     try {
-      const text = await fileList[0].text();
-      const data = JSON.parse(text) as BackupData;
-      if (!data || typeof data !== 'object' || !Array.isArray(data.vocabulary)) {
-        throw new Error('Not a recognizable backup file.');
-      }
+      const { data, skipped } = parseBackup(JSON.parse(await fileList[0].text()));
       const result = await vocabularyService.importBackup(data);
       setStatus(
-        `Imported ${result.vocabulary} vocabulary item${result.vocabulary === 1 ? '' : 's'}, ${result.highlights} highlight${result.highlights === 1 ? '' : 's'}. A row with the same id as one you already had was overwritten by the imported version.`
+        `Imported ${plural(result.vocabulary, 'vocabulary item')}, ${plural(result.highlights, 'highlight')}.` +
+          (skipped ? ` Skipped ${plural(skipped, 'invalid row')}.` : '') +
+          ' Items with the same id as ones you already had were replaced.'
       );
     } catch (e) {
-      setStatus(e instanceof Error ? `Import failed: ${e.message}` : 'Import failed: not a valid backup file.');
+      const reason = e instanceof BackupFormatError ? e.message : 'not a valid backup file.';
+      setStatus(`Import failed: ${reason}`);
     } finally {
       setBusy(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

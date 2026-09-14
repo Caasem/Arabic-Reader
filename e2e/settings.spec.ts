@@ -9,36 +9,34 @@ test('theme, font size, and dictionary-provider toggles persist and actually fil
 
   // The 'dark' theme id is branded "Night" in the UI.
   await page.locator('.segmented__item', { hasText: 'Night' }).click();
-  await page.waitForTimeout(200);
-  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
 
   const fontSlider = page.locator('.settings-row', { hasText: 'Font size' }).locator('input[type=range]');
   await fontSlider.fill('140');
-  await page.waitForTimeout(200);
-  const fontLabel = await page.textContent('.settings-row:has-text("Font size") .settings-row__value');
-  expect(fontLabel?.trim()).toBe('140%');
+  await expect(page.locator('.settings-row:has-text("Font size") .settings-row__value')).toHaveText('140%');
 
-  // Enable both mock dictionaries, then disable just A, to exercise provider filtering end to end.
-  const providerRows = await page.locator('.settings-row--dict .settings-toggle__label').allTextContents();
-  expect(providerRows.some((p) => p.includes('Dictionary A'))).toBe(true);
-  expect(providerRows.some((p) => p.includes('AraMorph'))).toBe(true);
+  // Provider filtering: switch Al-Wasīṭ on and AraMorph off.
+  const aramorphToggle = page.locator('.settings-row--dict', { hasText: 'AraMorph' }).locator('input[type=checkbox]');
+  const alWasitToggle = page.locator('.settings-row--dict', { hasText: 'Wasīṭ' }).locator('input[type=checkbox]');
+  await expect(aramorphToggle).toBeChecked();
+  await expect(alWasitToggle).not.toBeChecked();
+  // The demo dictionaries only exist in development builds.
+  await expect(page.locator('.settings-row--dict', { hasText: 'Dictionary A' })).toHaveCount(0);
 
-  await page.locator('.settings-row--dict', { hasText: 'Dictionary A' }).locator('input[type=checkbox]').check();
-  await page.locator('.settings-row--dict', { hasText: 'Dictionary B' }).locator('input[type=checkbox]').check();
-  await page.locator('.settings-row--dict', { hasText: 'Dictionary A' }).locator('input[type=checkbox]').uncheck();
-  await page.waitForTimeout(300); // preference writes are fire-and-forget
+  await alWasitToggle.check();
+  await aramorphToggle.uncheck();
+  await page.waitForTimeout(300); // let the preference change land
 
   await page.reload({ waitUntil: 'networkidle' });
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
 
   await page.click('.navbar__settings');
   await page.waitForSelector('.settings-panel', { timeout: 5000 });
-  const fontLabelAfterReload = await page.textContent('.settings-row:has-text("Font size") .settings-row__value');
-  expect(fontLabelAfterReload?.trim()).toBe('140%');
-  await expect(page.locator('.settings-row--dict', { hasText: 'Dictionary A' }).locator('input[type=checkbox]')).not.toBeChecked();
+  await expect(page.locator('.settings-row:has-text("Font size") .settings-row__value')).toHaveText('140%');
+  await expect(aramorphToggle).not.toBeChecked();
+  await expect(alWasitToggle).toBeChecked();
 
-  // Confirm the disabled provider is actually excluded from lookups (A
-  // absent, B still present) rather than the toggle only being cosmetic.
+  // The disabled provider is actually excluded from lookups, not just hidden.
   await page.click('.settings-panel__close');
   await page.locator('.navbar__item', { hasText: 'Library' }).click();
   await page.waitForSelector('text=Try the sample book', { timeout: 10000 });
@@ -50,11 +48,13 @@ test('theme, font size, and dictionary-provider toggles persist and actually fil
 
   const frame = page.frames().find((f) => f !== page.mainFrame())!;
   await frame.evaluate(() => {
-    document.querySelector('p .ar-word')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    const span = document.createElement('span');
+    span.className = 'ar-word';
+    span.dataset.word = 'كتاب';
+    span.textContent = 'كتاب';
+    document.querySelector('p')!.appendChild(span);
+    span.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
   });
-  await page.waitForSelector('.dict-popup', { timeout: 8000 });
-  await page.waitForTimeout(600);
-  const popupText = (await page.textContent('.dict-popup'))!;
-  expect(popupText).not.toContain('Dictionary A');
-  expect(popupText).toContain('Dictionary B');
+  await expect(page.locator('.dict-popup__group-header', { hasText: 'Wasīṭ' })).toBeVisible({ timeout: 20000 });
+  await expect(page.locator('.dict-popup__group-header', { hasText: 'AraMorph' })).toHaveCount(0);
 });

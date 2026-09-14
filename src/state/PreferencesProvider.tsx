@@ -1,87 +1,127 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from 'react';
 import { persistenceService } from '../persistence/db';
 import { dictionaryManager } from '../dictionary/DictionaryManager';
+import { pomodoroService } from '../pomodoro/pomodoroService';
 import type { ReaderPreferences } from '../types';
-import { PreferencesContext } from './PreferencesContext';
+import { readJSON, STORAGE_KEYS, writeJSON } from '../utils/storage';
+import { withDefaults } from './defaultPreferences';
+import { PreferencesContext, type ResolvedTheme } from './PreferencesContext';
 
-const FALLBACK_PREFS: ReaderPreferences = {
-  theme: 'light',
-  fontSizePct: 100,
-  fontFamily: "'Noto Naskh Arabic', 'Amiri', 'Traditional Arabic', serif",
-  lineHeight: 2.1,
-  readingWidthPct: 100,
-  enabledProviderIds: ['aramorph'],
-  readingFlow: 'paginated',
-  continuousScrollEnabled: false,
-  showPageBoundaries: false,
-  hoverPreviewEnabled: false,
-  sentenceContextEnabled: true,
-  quickAddShortcutEnabled: false,
-  ankiDeckName: 'Arabic Vocabulary',
-  speedReaderWpm: 300,
-  speedReaderOrpEnabled: true,
-  speedReaderContextEnabled: false,
-  touchGestures: { singleTap: 'bubble', doubleTap: 'quickSave', hold: 'none' },
-  pageDirection: 'auto',
-  dictionaryPopupSizePct: 100,
-  liveSearchEnabled: true,
-  searchHistoryEnabled: true,
-  morphDisplayStyle: 'caption',
-  twoColumnEnabled: false,
-  dictionaryPanelLayout: 'merged',
-  dictionaryPanelSingleProviderId: null,
-  dictionaryPopupPinFooter: false,
-  pomodoroWorkMinutes: 25,
-  pomodoroBreakMinutes: 5,
-  pomodoroAutoCycle: true,
-  pomodoroNotification: 'toast',
-  pomodoroShowPhaseLabel: true,
-};
+/** IndexedDB writes are coalesced so dragging a slider doesn't write per tick. */
+const PERSIST_DELAY_MS = 250;
+
+const DARK_SCHEME_QUERY = '(prefers-color-scheme: dark)';
+
+function subscribeToSystemTheme(onChange: () => void): () => void {
+  const mql = window.matchMedia(DARK_SCHEME_QUERY);
+  mql.addEventListener('change', onChange);
+  return () => mql.removeEventListener('change', onChange);
+}
+
+const systemPrefersDark = () => window.matchMedia(DARK_SCHEME_QUERY).matches;
+
+function readMirror(): ReaderPreferences | null {
+  const stored = readJSON<Partial<ReaderPreferences>>(STORAGE_KEYS.preferencesMirror);
+  return stored && typeof stored === 'object' ? withDefaults(stored) : null;
+}
 
 /**
- * Single source of truth for reading preferences and which dictionary
- * providers are switched on. Loaded once at startup, persisted to
- * IndexedDB on every change, and pushed into the DictionaryManager
- * singleton so a provider toggle takes effect on the very next lookup.
+ * Single source of truth for reading preferences. Every change is mirrored to
+ * localStorage immediately (instant first paint on the next launch, and it
+ * survives a reload that lands before the debounced IndexedDB write);
+ * IndexedDB remains the durable copy used when the mirror is missing.
  */
 export function PreferencesProvider({ children }: { children: ReactNode }) {
-  const [prefs, setPrefs] = useState<ReaderPreferences>(FALLBACK_PREFS);
-  const [loaded, setLoaded] = useState(false);
+  const [initialMirror] = useState(readMirror);
+  const [prefs, setPrefs] = useState<ReaderPreferences | null>(initialMirror);
+  const pendingSaveRef = useRef<ReaderPreferences | null>(null);
+  const saveTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    persistenceService.getPreferences().then((p) => {
-      setPrefs(p);
-      setLoaded(true);
-      dictionaryManager.setEnabledProviders(p.enabledProviderIds);
+    if (initialMirror) return;
+    let cancelled = false;
+    persistenceService.getPreferences().then((stored) => {
+      if (!cancelled) setPrefs(stored);
     });
+    return () => {
+      cancelled = true;
+    };
+  }, [initialMirror]);
+
+  const flushSave = useCallback(() => {
+    if (saveTimerRef.current !== null) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    const pending = pendingSaveRef.current;
+    pendingSaveRef.current = null;
+    if (pending) void persistenceService.savePreferences(pending);
   }, []);
 
-  // 'system' resolves live to 'dark'/'light' via prefers-color-scheme,
-  // including an OS theme change made while the app is open.
   useEffect(() => {
-    if (prefs.theme !== 'system') {
-      document.documentElement.dataset.theme = prefs.theme;
-      return;
-    }
-    const mql = window.matchMedia('(prefers-color-scheme: dark)');
-    const apply = () => {
-      document.documentElement.dataset.theme = mql.matches ? 'dark' : 'light';
+    if (!prefs) return;
+    writeJSON(STORAGE_KEYS.preferencesMirror, prefs);
+    pendingSaveRef.current = prefs;
+    if (saveTimerRef.current !== null) window.clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = window.setTimeout(flushSave, PERSIST_DELAY_MS);
+  }, [prefs, flushSave]);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flushSave();
     };
-    apply();
-    mql.addEventListener('change', apply);
-    return () => mql.removeEventListener('change', apply);
-  }, [prefs.theme]);
+    window.addEventListener('pagehide', flushSave);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener('pagehide', flushSave);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      flushSave();
+    };
+  }, [flushSave]);
 
-  function updatePrefs(patch: Partial<ReaderPreferences>) {
-    setPrefs((prev) => {
-      const next = { ...prev, ...patch };
-      persistenceService.savePreferences(next);
-      if (patch.enabledProviderIds) dictionaryManager.setEnabledProviders(next.enabledProviderIds);
-      return next;
+  const enabledProviderIds = prefs?.enabledProviderIds;
+  useEffect(() => {
+    if (enabledProviderIds) dictionaryManager.setEnabledProviders(enabledProviderIds);
+  }, [enabledProviderIds]);
+
+  const workMinutes = prefs?.pomodoroWorkMinutes;
+  const breakMinutes = prefs?.pomodoroBreakMinutes;
+  const autoCycle = prefs?.pomodoroAutoCycle;
+  const notification = prefs?.pomodoroNotification;
+  useEffect(() => {
+    if (workMinutes === undefined || breakMinutes === undefined || autoCycle === undefined || notification === undefined) return;
+    pomodoroService.setPrefs({
+      pomodoroWorkMinutes: workMinutes,
+      pomodoroBreakMinutes: breakMinutes,
+      pomodoroAutoCycle: autoCycle,
+      pomodoroNotification: notification,
     });
-  }
+  }, [workMinutes, breakMinutes, autoCycle, notification]);
 
-  if (!loaded) return null;
+  const updatePrefs = useCallback((patch: Partial<ReaderPreferences>) => {
+    setPrefs((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
 
-  return <PreferencesContext.Provider value={{ prefs, updatePrefs }}>{children}</PreferencesContext.Provider>;
+  const systemDark = useSyncExternalStore(subscribeToSystemTheme, systemPrefersDark, () => false);
+  const theme = prefs?.theme ?? 'light';
+  const resolvedTheme: ResolvedTheme = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
+
+  // Layout effect: the palette is in place before any child's passive effect
+  // (e.g. the Reader theming its book iframe) runs.
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = resolvedTheme;
+  }, [resolvedTheme]);
+
+  const value = useMemo(() => (prefs ? { prefs, updatePrefs, resolvedTheme } : null), [prefs, updatePrefs, resolvedTheme]);
+  if (!value) return null;
+  return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
 }

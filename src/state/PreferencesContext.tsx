@@ -1,9 +1,13 @@
 import { createContext, useContext } from 'react';
 import type { ReaderPreferences } from '../types';
 
+/** A concrete palette: 'system' resolved against the OS setting. */
+export type ResolvedTheme = 'light' | 'dark' | 'sepia';
+
 export interface PreferencesContextValue {
   prefs: ReaderPreferences;
   updatePrefs: (patch: Partial<ReaderPreferences>) => void;
+  resolvedTheme: ResolvedTheme;
 }
 
 /** Provided by `PreferencesProvider` (kept in its own file so this module

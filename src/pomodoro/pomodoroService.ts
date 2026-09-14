@@ -1,60 +1,35 @@
 import { persistenceService } from '../persistence/db';
 import type { PomodoroPhase, PomodoroSession, PomodoroSnapshot, ReaderPreferences } from '../types';
+import { newId } from '../utils/id';
+import { readJSON, removeKey, STORAGE_KEYS, writeJSON } from '../utils/storage';
 
-const SNAPSHOT_KEY = 'arabic-reader:pomodoroSnapshot';
 const TICK_MS = 1000;
 
-/** Ends a resumed session that's been sitting paused since before the app
- * was last closed for longer than this -- resuming a break from three days
- * ago isn't useful, and would otherwise linger forever since nothing else
- * ever clears a paused snapshot on its own. */
-const STALE_PAUSED_MS = 6 * 60 * 60 * 1000; // 6 hours
+/** A paused phase left this long before the app reopens is ended, not resumed. */
+const STALE_PAUSED_MS = 6 * 60 * 60 * 1000;
 
-function readSnapshot(): PomodoroSnapshot | null {
-  try {
-    const raw = localStorage.getItem(SNAPSHOT_KEY);
-    return raw ? (JSON.parse(raw) as PomodoroSnapshot) : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeSnapshot(snapshot: PomodoroSnapshot | null): void {
-  try {
-    if (snapshot) localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshot));
-    else localStorage.removeItem(SNAPSHOT_KEY);
-  } catch {
-    // best-effort only -- a lost snapshot just means the in-flight phase
-    // can't be resumed after a reload, not a real data-loss risk
-  }
-}
-
-function makeId(): string {
-  return 'pmd_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-}
+export type PomodoroPrefs = Pick<
+  ReaderPreferences,
+  'pomodoroWorkMinutes' | 'pomodoroBreakMinutes' | 'pomodoroAutoCycle' | 'pomodoroNotification'
+>;
+export type PomodoroOutcome = 'completed' | 'abandoned';
 
 /**
- * Pomodoro timer state machine. A singleton (same pattern as
- * vocabularyService/bookmarkService) rather than React state, since the
- * timer needs to keep running (and its snapshot needs to keep persisting)
- * independent of whichever component happens to be mounted -- the reader
- * header button just opens a view onto whatever this is already doing.
+ * Pomodoro timer state machine. A singleton rather than React state because
+ * the timer keeps running regardless of which component is mounted; the
+ * current phase is snapshotted to localStorage so a reload resumes it.
  *
- * Simplifications versus the full feature spec, both called out again in
- * their own comments below: a session's `bookId` is fixed at whichever book
- * was open when the phase *started* (no proportional time-split tracking
- * across a mid-session book switch), and a paused snapshot found stale on
- * reload is simply discarded rather than surfaced as a "Resume?" prompt.
+ * Simplifications: a session's book is whichever was open when the phase
+ * started, and a stale paused snapshot is ended rather than offered for resume.
  */
-class PomodoroService {
+export class PomodoroService {
   private snapshot: PomodoroSnapshot | null = null;
-  private intervalId: number | null = null;
-  private listeners = new Set<() => void>();
-  private notifyListeners = new Set<(phase: PomodoroPhase, kind: 'completed' | 'abandoned') => void>();
-  private prefs: Pick<
-    ReaderPreferences,
-    'pomodoroWorkMinutes' | 'pomodoroBreakMinutes' | 'pomodoroAutoCycle' | 'pomodoroNotification'
-  > = {
+  private intervalId: ReturnType<typeof setInterval> | null = null;
+  private readonly listeners = new Set<() => void>();
+  private readonly notifyListeners = new Set<(phase: PomodoroPhase, outcome: PomodoroOutcome) => void>();
+  private pendingWrite: Promise<void> = Promise.resolve();
+  /** Kept in sync with the user's settings by PreferencesProvider. */
+  private prefs: PomodoroPrefs = {
     pomodoroWorkMinutes: 25,
     pomodoroBreakMinutes: 5,
     pomodoroAutoCycle: true,
@@ -62,32 +37,26 @@ class PomodoroService {
   };
 
   constructor() {
-    const restored = readSnapshot();
-    if (restored) {
-      // Account for time passed while the app was closed/backgrounded --
-      // there was no live interval ticking then, so the elapsed wall-clock
-      // time since the snapshot's own last tick has to be added in now,
-      // same as a running phase would have accrued it tick-by-tick.
-      if (restored.running) {
-        restored.activeDurationMs += Date.now() - restored.lastTickAt;
-        restored.lastTickAt = Date.now();
-      } else if (Date.now() - restored.lastTickAt > STALE_PAUSED_MS) {
-        this.finishSession(restored, 'abandoned');
-        return;
-      }
-      this.snapshot = restored;
-      if (this.snapshot.running) {
-        if (this.snapshot.activeDurationMs >= this.snapshot.targetDurationMs) this.completePhase();
-        else this.startInterval();
-      }
+    const restored = readJSON<PomodoroSnapshot>(STORAGE_KEYS.pomodoroSnapshot);
+    if (!restored) return;
+    const now = Date.now();
+    if (restored.running) {
+      // No interval ran while the app was closed; fold that time in now.
+      restored.activeDurationMs += now - restored.lastTickAt;
+      restored.lastTickAt = now;
+    } else if (now - restored.lastTickAt > STALE_PAUSED_MS) {
+      this.finishSession(restored, 'abandoned');
+      return;
+    }
+    this.snapshot = restored;
+    if (restored.running) {
+      if (restored.activeDurationMs >= restored.targetDurationMs) this.completePhase();
+      else this.startInterval();
     }
   }
 
-  /** Called once from PreferencesContext (or the timer UI) whenever
-   * durations/auto-cycle settings change, so a phase already running picks
-   * up a *new* target only the next time it's started -- an in-flight
-   * phase keeps the target it began with. */
-  setPrefs(prefs: PomodoroService['prefs']): void {
+  /** New durations apply from the next phase; an in-flight phase keeps its target. */
+  setPrefs(prefs: PomodoroPrefs): void {
     this.prefs = prefs;
   }
 
@@ -96,11 +65,8 @@ class PomodoroService {
     return () => this.listeners.delete(listener);
   }
 
-  /** Fires once per phase completion/abandonment, after the row is already
-   * persisted -- the timer UI uses this to show a toast/play a sound per
-   * `pomodoroNotification`, without this service needing to know anything
-   * about how notifications are actually presented. */
-  onNotify(listener: (phase: PomodoroPhase, kind: 'completed' | 'abandoned') => void): () => void {
+  /** Fires once per phase end, after its session row is queued for saving. */
+  onNotify(listener: (phase: PomodoroPhase, outcome: PomodoroOutcome) => void): () => void {
     this.notifyListeners.add(listener);
     return () => this.notifyListeners.delete(listener);
   }
@@ -109,9 +75,15 @@ class PomodoroService {
     return this.snapshot;
   }
 
+  /** Resolves once every queued session write has landed (used by tests). */
+  whenIdle(): Promise<void> {
+    return this.pendingWrite;
+  }
+
   start(book: { id: string; title: string } | null, phase: PomodoroPhase = 'work'): void {
     this.stopInterval();
     const minutes = phase === 'work' ? this.prefs.pomodoroWorkMinutes : this.prefs.pomodoroBreakMinutes;
+    const now = Date.now();
     this.snapshot = {
       phase,
       bookId: book?.id ?? null,
@@ -119,7 +91,8 @@ class PomodoroService {
       targetDurationMs: minutes * 60_000,
       activeDurationMs: 0,
       running: true,
-      lastTickAt: Date.now(),
+      startedAt: now,
+      lastTickAt: now,
     };
     this.persist();
     this.startInterval();
@@ -127,7 +100,8 @@ class PomodoroService {
 
   pause(): void {
     if (!this.snapshot?.running) return;
-    this.tick(); // fold in the time since the last tick before freezing
+    this.tick();
+    if (!this.snapshot?.running) return; // the tick may have completed the phase
     this.snapshot.running = false;
     this.stopInterval();
     this.persist();
@@ -141,23 +115,21 @@ class PomodoroService {
     this.startInterval();
   }
 
-  /** Ends the current phase early, marked abandoned regardless of how much
-   * time had already accrued -- an explicit Stop always means "this run
-   * doesn't count as completed," even at 24:59 of a 25:00 work phase. */
+  /** Ends the phase early; an explicit Stop never counts as completed. */
   stop(): void {
     if (!this.snapshot) return;
     if (this.snapshot.running) this.tick();
-    this.finishSession(this.snapshot, 'abandoned');
+    if (this.snapshot) this.finishSession(this.snapshot, 'abandoned');
   }
 
   private startInterval(): void {
     if (this.intervalId !== null) return;
-    this.intervalId = window.setInterval(() => this.tick(), TICK_MS);
+    this.intervalId = setInterval(() => this.tick(), TICK_MS);
   }
 
   private stopInterval(): void {
     if (this.intervalId === null) return;
-    window.clearInterval(this.intervalId);
+    clearInterval(this.intervalId);
     this.intervalId = null;
   }
 
@@ -179,35 +151,33 @@ class PomodoroService {
     this.stopInterval();
     this.finishSession(finished, 'completed');
     if (this.prefs.pomodoroAutoCycle) {
-      const nextPhase: PomodoroPhase = finished.phase === 'work' ? 'break' : 'work';
-      this.start(finished.bookId ? { id: finished.bookId, title: finished.bookTitle ?? '' } : null, nextPhase);
+      const book = finished.bookId ? { id: finished.bookId, title: finished.bookTitle ?? '' } : null;
+      this.start(book, finished.phase === 'work' ? 'break' : 'work');
     }
   }
 
-  /** Persists the finished phase as a row, notifies listeners, and clears
-   * the live snapshot (a following auto-cycle start immediately replaces
-   * it, if enabled). */
-  private finishSession(snapshot: PomodoroSnapshot, status: 'completed' | 'abandoned'): void {
+  private finishSession(snapshot: PomodoroSnapshot, status: PomodoroOutcome): void {
     const session: PomodoroSession = {
-      id: makeId(),
+      id: newId('pmd'),
       phase: snapshot.phase,
       bookId: snapshot.bookId,
       bookTitle: snapshot.bookTitle,
       targetDurationMs: snapshot.targetDurationMs,
-      activeDurationMs: snapshot.activeDurationMs,
+      activeDurationMs: Math.min(snapshot.activeDurationMs, status === 'completed' ? snapshot.targetDurationMs : Infinity),
       status,
-      startedAt: snapshot.lastTickAt - snapshot.activeDurationMs,
+      // Snapshots written before `startedAt` existed fall back to an estimate.
+      startedAt: snapshot.startedAt ?? snapshot.lastTickAt - snapshot.activeDurationMs,
       endedAt: Date.now(),
     };
-    persistenceService.savePomodoroSession(session);
+    this.pendingWrite = this.pendingWrite.then(() => persistenceService.savePomodoroSession(session)).catch(() => {});
     this.snapshot = null;
     this.persist();
     this.notifyListeners.forEach((l) => l(snapshot.phase, status));
-    this.listeners.forEach((l) => l());
   }
 
   private persist(): void {
-    writeSnapshot(this.snapshot);
+    if (this.snapshot) writeJSON(STORAGE_KEYS.pomodoroSnapshot, this.snapshot);
+    else removeKey(STORAGE_KEYS.pomodoroSnapshot);
     this.listeners.forEach((l) => l());
   }
 }

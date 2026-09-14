@@ -113,12 +113,17 @@ export interface DictionaryLookupResult {
   word: string;
   entries: DictionaryEntry[];
   morphology?: MorphologicalAnalysis[];
+  /** Enabled providers whose lookup failed (e.g. data unavailable offline). */
+  failedProviders?: { id: string; name: string }[];
 }
 
 export interface DictionaryProvider {
   id: string;
   name: string;
   lookup(word: string): Promise<DictionaryEntry[]>;
+  /** Notifies when the provider's underlying data changes (e.g. a custom
+   * dataset upload), so cached lookups can be discarded. */
+  onDataChanged?(listener: () => void): () => void;
 }
 
 export interface MorphologyProvider {
@@ -426,6 +431,8 @@ export interface PomodoroSnapshot {
   bookId: string | null;
   bookTitle: string | null;
   targetDurationMs: number;
+  /** When the phase started (absent in snapshots saved by older versions). */
+  startedAt?: number;
   /** Active (non-paused) time already elapsed as of `lastTickAt`. */
   activeDurationMs: number;
   /** True while running -- when false, `activeDurationMs` is exact as-is

@@ -3,6 +3,7 @@ import { ActivityCalendar } from './ActivityCalendar';
 import { getSessionsForDay, type DayActivity } from '../../stats/readingStatsService';
 import type { ReadingSession } from '../../types';
 import { formatHours, formatCount } from './format';
+import { parseDayKey } from '../../utils/date';
 import { IconClose } from '../shared/icons';
 import './CalendarSection.css';
 
@@ -36,7 +37,7 @@ export function CalendarSection({ data }: { data: DayActivity[] | null }) {
         <div className="day-detail">
           <div className="day-detail__header">
             <span className="day-detail__title">
-              {new Date(selectedDay).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+              {new Date(parseDayKey(selectedDay)).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
             </span>
             <button className="day-detail__close" onClick={() => setSelectedDay(null)} aria-label="Close">
               <IconClose size={13} />
