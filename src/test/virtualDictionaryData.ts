@@ -10,3 +10,4 @@ const data: Record<DictFileName, string> = {
   tablebc: '',
 };
 export default data;
+export const fingerprint = 'test';

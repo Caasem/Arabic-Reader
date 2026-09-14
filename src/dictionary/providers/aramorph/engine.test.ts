@@ -48,6 +48,26 @@ describe('Buckwalter transliteration', () => {
     expect(transliterate('كتب 12!')).toBe('ktb 12!');
     expect(detransliterate('')).toBe('');
   });
+
+  it('matches the original regex-per-letter implementation exactly', () => {
+    // The pre-optimization implementation, kept here as the reference.
+    const escape = (s: string) => s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+    const buckwalter = "'|>&<}AbptvjHxd*rzs$SDTZEg_fqklmnhwYyFNKaui~o`{";
+    const arabic = Array.from(buckwalter, (ch) => detransliterate(ch));
+    const referenceDetransliterate = (word: string) =>
+      Array.from(buckwalter).reduce((acc, ch, i) => acc.replace(new RegExp(escape(ch), 'g'), arabic[i]), word);
+    const referenceTransliterate = (word: string) =>
+      Array.from(buckwalter).reduce((acc, ch, i) => acc.replace(new RegExp(escape(arabic[i]), 'g'), ch), word);
+
+    const alphabet = buckwalter + arabic.join('') + 'xyz 01-.،';
+    let seed = 42;
+    const random = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+    for (let n = 0; n < 300; n++) {
+      const sample = Array.from({ length: 1 + Math.floor(random() * 12) }, () => alphabet[Math.floor(random() * alphabet.length)]).join('');
+      expect(detransliterate(sample)).toBe(referenceDetransliterate(sample));
+      expect(transliterate(sample)).toBe(referenceTransliterate(sample));
+    }
+  });
 });
 
 describe('createDictTable', () => {

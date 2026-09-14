@@ -37,3 +37,9 @@
     order: 1;
   }
 }
+
+.app__loading {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--ink-soft);
+}

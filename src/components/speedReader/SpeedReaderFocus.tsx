@@ -24,6 +24,8 @@ const WPM_STEP = 25;
 const CONTEXT_WINDOW = 9;
 /** How many words a "jump" button skips. */
 const JUMP_WORDS = 10;
+/** While playing, the resume position is saved at most this often (in words). */
+const POSITION_SAVE_EVERY = 20;
 
 interface PopupState {
   word: string;
@@ -109,14 +111,35 @@ export function SpeedReaderFocus({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, tokens.length]);
 
-  // Persist position as the reader advances (debounced by only writing on
-  // pause/exit/every 20 words would be nicer, but IndexedDB puts are cheap
-  // and this guarantees "close the app, come back" never loses more than
-  // the current word).
+  // The resume position is saved when paused, every POSITION_SAVE_EVERY words
+  // while playing, when the page is hidden, and on exit -- not on every word,
+  // which at reading speed meant several IndexedDB writes a second.
+  const lastSavedIndexRef = useRef<number | null>(null);
+  const saveCurrentPosition = useCallback(() => {
+    const i = Math.min(indexRef.current, tokens.length - 1);
+    const token = tokens[i];
+    if (!token || lastSavedIndexRef.current === i) return;
+    lastSavedIndexRef.current = i;
+    void savePosition(book.id, token.sectionHref, i);
+  }, [book.id, tokens]);
+
   useEffect(() => {
-    if (!currentToken) return;
-    savePosition(book.id, currentToken.sectionHref, index);
-  }, [book.id, currentToken, index]);
+    const last = lastSavedIndexRef.current;
+    if (!playing || last === null || Math.abs(index - last) >= POSITION_SAVE_EVERY) saveCurrentPosition();
+  }, [index, playing, saveCurrentPosition]);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') saveCurrentPosition();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pagehide', saveCurrentPosition);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pagehide', saveCurrentPosition);
+      saveCurrentPosition();
+    };
+  }, [saveCurrentPosition]);
 
   function finishSession() {
     if (endedRef.current) return;

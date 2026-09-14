@@ -1,6 +1,6 @@
 import type { VocabTier, WordRarity } from '../types';
 import { isEnabled, setEnabled, setDisabled } from './frequencyStore';
-import { getFrequencyIndex, type IngestProgress } from './frequencyIndex';
+import { getFrequencyIndex } from './frequencyIndex';
 import { normalize } from '../reader/tokenizer/arabicTokenizer';
 
 /**
@@ -131,11 +131,9 @@ export async function isRarityDataReady(): Promise<boolean> {
   return isEnabled();
 }
 
-/** Records the opt-in choice and builds the in-memory index for this
- * session (see frequencyIndex.ts — this is now cheap enough to not need
- * real progress reporting; `onProgress` fires once, immediately). */
-export async function enableRarityData(onProgress?: (p: IngestProgress) => void): Promise<void> {
-  await getFrequencyIndex(onProgress);
+/** Records the opt-in choice and builds the in-memory index for this session. */
+export async function enableRarityData(): Promise<void> {
+  await getFrequencyIndex();
   await setEnabled();
 }
 

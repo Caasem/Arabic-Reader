@@ -4,82 +4,13 @@ import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { DICT_FILE_ORDER, fingerprintDictTexts, type DictTexts } from './src/dictionary/providers/aramorph/fingerprint.ts'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// package.json's `version` field, read at build time rather than imported
-// as JSON directly into app code -- resolveJsonModule/rootDir would need
-// widening to reach a file outside src/ just for this one string. Exposed
-// to the app as the __APP_VERSION__ global (declared in
-// src/types/virtual-modules.d.ts) via the `define` below.
+// package.json's version, exposed to the app as __APP_VERSION__
+// (declared in src/types/virtual-modules.d.ts).
 const appVersion = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version as string
-
-// Precache scope decision (see claude/roadmap-next-features.md item 7): the
-// small AraMorph dictionary files (~3.8MB total) are worth guaranteeing
-// offline via the service-worker precache — that's the "dictionary
-// included" part of an offline install.
-const DICTIONARY_DATA_FILES = [
-  'dictprefixes',
-  'dictstems',
-  'dictsuffixes',
-  'tableab',
-  'tableac',
-  'tablebc',
-]
-
-// Embeds the six AraMorph data files directly into the JS bundle at build
-// time, as a virtual module, instead of the app having to `fetch()` them
-// from public/dictionary-data/ at runtime. That fetch turned out to be
-// unreliable on at least one real Android/Capacitor WebView -- it would
-// silently resolve with only a tiny fragment of each file's real content
-// (see the "no definition found on Android" investigation), while the
-// exact same files read via the browser's File API (Settings' manual
-// upload) always came through intact. Embedding sidesteps whatever
-// WebView/asset-serving quirk caused that, on every platform, by turning
-// the six fetches into plain synchronous string constants baked into the
-// bundle -- there's no network/asset layer left in the loop to get it
-// wrong. `public/dictionary-data/` remains the single source of truth
-// (this plugin just reads it at build time) and is also still served
-// as-is for the PWA's offline service-worker precache and as a
-// GPL-required plain-text copy of the data.
-function bundledDictDataPlugin(): Plugin {
-  return virtualTextFilePlugin('virtual:dictionary-data', (readText) => {
-    const entries = DICTIONARY_DATA_FILES.map((name) => {
-      const content = readText(path.join('public/dictionary-data', name))
-      return `${JSON.stringify(name)}: ${JSON.stringify(content)}`
-    })
-    return `export default {\n${entries.join(',\n')}\n};\n`
-  })
-}
-
-// Same embedding approach as the dictionary above, for the ~23,500-entry
-// KSUCCA-derived vocabulary-frequency list (see
-// public/vocab-list-data/SOURCE-README.md). At ~1.8MB this is loaded via a
-// dynamic import() in frequencyIndex.ts rather than a static one -- the
-// rarity feature is opt-in (see frequencyStore.ts), so this needs the same
-// code-splitting treatment as the AlWasit dictionary data below, not the
-// dictionary-data plugin's eager one.
-function bundledVocabListPlugin(): Plugin {
-  return virtualTextFilePlugin('virtual:vocab-list-data', (readText) => {
-    const content = readText('public/vocab-list-data/the-list.tsv')
-    return `export default ${JSON.stringify(content)};\n`
-  })
-}
-
-// Same embedding approach again, for the optional Al-Muʿjam al-Wasīṭ
-// dictionary (see public/alwasit-data/SOURCE-README.md for provenance and
-// licensing notes). At ~7.8MB this is by far the largest of the three
-// bundled datasets, and the feature defaults to off in Settings --
-// AlWasitDictionaryProvider imports this virtual module with a dynamic
-// `import()` on first lookup rather than a static top-level import, so
-// Rollup code-splits it into its own chunk that users who never enable the
-// feature never fetch.
-function bundledAlWasitDataPlugin(): Plugin {
-  return virtualTextFilePlugin('virtual:alwasit-data', (readText) => {
-    const content = readText('public/alwasit-data/alwasit.tsv')
-    return `export default ${JSON.stringify(content)};\n`
-  })
-}
 
 function virtualTextFilePlugin(virtualModuleId: string, build: (readText: (relPath: string) => string) => string): Plugin {
   const resolvedVirtualModuleId = '\0' + virtualModuleId
@@ -96,23 +27,50 @@ function virtualTextFilePlugin(virtualModuleId: string, build: (readText: (relPa
   }
 }
 
+/**
+ * The six AraMorph data files, embedded in the dictionary worker's bundle
+ * instead of fetched at runtime: on at least one Android WebView that fetch
+ * silently returned truncated files. public/dictionary-data/ remains the
+ * source of truth (and the GPL plain-text copy). The build-time fingerprint
+ * lets the worker reuse its cached parse without hashing ~4MB of text on
+ * every launch.
+ */
+function bundledDictDataPlugin(): Plugin {
+  return virtualTextFilePlugin('virtual:dictionary-data', (readText) => {
+    const texts = Object.fromEntries(
+      DICT_FILE_ORDER.map((name) => [name, readText(`public/dictionary-data/${name}`)])
+    ) as DictTexts
+    return `export default ${JSON.stringify(texts)};\nexport const fingerprint = ${JSON.stringify(fingerprintDictTexts(texts))};\n`
+  })
+}
+
+/** The KSUCCA-derived vocabulary frequency list (see
+ * public/vocab-list-data/SOURCE-README.md). Loaded with a dynamic import(),
+ * so it becomes its own chunk that only Vocabulary Levels users download. */
+function bundledVocabListPlugin(): Plugin {
+  return virtualTextFilePlugin('virtual:vocab-list-data', (readText) => {
+    return `export default ${JSON.stringify(readText('public/vocab-list-data/the-list.tsv'))};\n`
+  })
+}
+
+/** The optional Al-Muʿjam al-Wasīṭ dictionary (see
+ * public/alwasit-data/SOURCE-README.md), off by default and likewise split
+ * into its own chunk via dynamic import(). */
+function bundledAlWasitDataPlugin(): Plugin {
+  return virtualTextFilePlugin('virtual:alwasit-data', (readText) => {
+    return `export default ${JSON.stringify(readText('public/alwasit-data/alwasit.tsv'))};\n`
+  })
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  // Relative, not '/': this app is also deployed as a GitHub Pages project
-  // site (https://<user>.github.io/<repo>/), which serves from a subpath,
-  // not the domain root. An absolute '/' base would resolve every asset
-  // against the domain root instead and 404 there, while still happening
-  // to work in local dev (which *is* served from root) -- '.' avoids that
-  // trap by working the same way at any base path, including root.
+  // Relative: the app is also served from a GitHub Pages project subpath,
+  // where an absolute '/' base would 404 every asset.
   base: './',
   define: {
     __APP_VERSION__: JSON.stringify(appVersion),
   },
-  // Worker entries (aramorph.worker.ts, which imports the virtual module
-  // above) are bundled by Vite in a separate build pass that does not
-  // inherit the top-level `plugins` list -- it needs the virtual-module
-  // plugin registered here too, or resolving `virtual:dictionary-data` from
-  // inside the worker fails at build time.
+  // Worker bundles are built in a separate pass that doesn't inherit `plugins`.
   worker: {
     plugins: () => [bundledDictDataPlugin()],
   },
@@ -128,9 +86,7 @@ export default defineConfig({
         name: 'Arabic Reader',
         short_name: 'Arabic Reader',
         description: 'An Arabic-language ebook reader with built-in dictionary lookup and vocabulary tracking.',
-        // Relative ('.'), matching `base` above -- an absolute '/' here
-        // would point an installed GitHub Pages PWA at the domain root
-        // instead of /<repo>/, which isn't this app.
+        // Relative, like `base`, so an installed Pages PWA opens /<repo>/.
         start_url: '.',
         scope: '.',
         display: 'standalone',
@@ -143,28 +99,21 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Default globPatterns only match common web-asset extensions —
-        // the AraMorph data files have no extension at all, so they're
-        // listed explicitly here rather than relying on a glob to catch
-        // them (a silent scope miss on offline dictionary data would be a
-        // worse failure mode than being explicit).
+        // The app shell, all view chunks, and the dictionary worker (which
+        // carries the dictionary data) are precached for offline use.
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-        // The optional Al-Wasit dictionary chunk (~7.8MB) and the vocab
-        // frequency-list chunk (~1.8MB) are deliberately excluded from the
-        // precache list -- both default to off, and the whole point of
-        // loading either via dynamic import() is that a user who never
-        // enables the feature never downloads it. Precaching them on every
-        // install would silently defeat that.
+        // The optional datasets aren't precached -- most users never enable
+        // them -- but are cached on first use so an enabled feature keeps
+        // working offline.
         globIgnores: ['**/_virtual_alwasit-data-*.js', '**/_virtual_vocab-list-data-*.js'],
-        additionalManifestEntries: DICTIONARY_DATA_FILES.map((name) => ({
-          url: `dictionary-data/${name}`,
-          revision: null,
-        })),
-        // The bundled JS is already ~700KB; raise Workbox's default 2MB
-        // precache-file-size ceiling isn't needed here, but the combined
-        // precache list (app shell + dictionary data) is a bit larger
-        // than default apps, so this just documents that it's intentional
-        // rather than an oversight if the number looks big in devtools.
+        runtimeCaching: [
+          {
+            urlPattern: /\/assets\/_virtual_(?:alwasit|vocab-list)-data-[\w-]+\.js$/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'optional-datasets', expiration: { maxEntries: 4 } },
+          },
+        ],
+        // The dictionary worker chunk (~4MB with its data) exceeds Workbox's 2MB default.
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
     }),

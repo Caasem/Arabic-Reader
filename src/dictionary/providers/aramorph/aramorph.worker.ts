@@ -16,32 +16,18 @@ import {
   type SerializedAramorphTables,
 } from './engine';
 import { loadCachedDictFiles, saveDictFiles, clearDictFiles, loadCachedParsedTables, saveParsedTables } from './store';
-import { DICT_FILE_NAMES, type DictFileName } from './dictFileNames';
-import bundledDictData from 'virtual:dictionary-data';
+import type { DictFileName } from './dictFileNames';
+import { fingerprintDictTexts } from './fingerprint';
+import bundledDictData, { fingerprint as bundledFingerprint } from 'virtual:dictionary-data';
 
 let engine = new AramorphEngine();
 
 const errorMessage = (err: unknown) => (err instanceof Error ? err.message : String(err));
 
-/** FNV-1a hash plus lengths: identifies "this exact dataset" well enough to
- * reuse a cached parse. */
-function fingerprintTexts(texts: Record<DictFileName, string>): string {
-  return DICT_FILE_NAMES.map((name) => `${name}:${texts[name].length}:${hash(texts[name])}`).join('|');
-}
-function hash(s: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
-  return h >>> 0;
-}
-
 /** Installs tables for `texts`, reusing a cached parse when one matches. The
  * cache is only an optimization: failing to read or write it (quota, private
  * mode, a corrupt row) falls back to parsing and never fails the load. */
-async function buildTables(texts: Record<DictFileName, string>): Promise<void> {
-  const fingerprint = fingerprintTexts(texts);
+async function buildTables(texts: Record<DictFileName, string>, fingerprint = fingerprintDictTexts(texts)): Promise<void> {
   const cached = await loadCachedParsedTables(fingerprint).catch(() => null);
   if (cached) {
     try {
@@ -64,11 +50,13 @@ async function buildTables(texts: Record<DictFileName, string>): Promise<void> {
   await saveParsedTables(fingerprint, serializeTables(tables)).catch(() => {});
 }
 
+const loadBundled = () => buildTables(bundledDictData, bundledFingerprint);
+
 // A previously uploaded custom dataset wins; otherwise the bundled one,
 // embedded in this worker's chunk at build time.
 const ready = loadCachedDictFiles()
   .catch(() => null)
-  .then((cached) => buildTables(cached ?? bundledDictData));
+  .then((cached) => (cached ? buildTables(cached) : loadBundled()));
 
 ready.then(
   () => postMessage({ id: 0, type: 'ready', tableSizes: engine.tableSizes }),
@@ -108,7 +96,7 @@ self.onmessage = async (e: MessageEvent<Incoming>) => {
         await ready.catch(() => {});
         await clearDictFiles();
         engine = new AramorphEngine();
-        await buildTables(bundledDictData);
+        await loadBundled();
         postMessage({ id: msg.id, type: 'built', tableSizes: engine.tableSizes });
         break;
       }
