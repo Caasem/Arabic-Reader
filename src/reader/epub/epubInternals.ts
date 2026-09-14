@@ -1,4 +1,4 @@
-import type { Book, NavItem } from 'epubjs';
+import type { Book, NavItem, Rendition } from 'epubjs';
 import type { TocItem } from '../../types';
 
 /**
@@ -85,4 +85,39 @@ export function findTocLabel(toc: TocItem[], href: string): string | undefined {
     }
   }
   return undefined;
+}
+
+/** Runs `task` through `rendition.q`, the queue epub.js serializes page turns on. */
+export function enqueue(rendition: Rendition, task: () => void): void {
+  void (rendition as unknown as { q: { enqueue(task: () => void): Promise<unknown> } }).q.enqueue(task);
+}
+
+export interface RenderedContents {
+  document?: Document;
+  window?: Window;
+  cfiFromNode(node: Node): string;
+}
+
+/** Every rendered section's Contents (typed by epub.js as one, returned as an array). */
+export function renderedContents(rendition: Rendition): RenderedContents[] {
+  const contents = rendition.getContents() as unknown;
+  if (Array.isArray(contents)) return contents as RenderedContents[];
+  return contents ? [contents as RenderedContents] : [];
+}
+
+export interface BookLocations {
+  total: number;
+  generate(charsPerLocation: number): Promise<unknown>;
+  load(serialized: string): unknown;
+  save(): string;
+  locationFromCfi(cfi: string): number | null;
+}
+
+export function bookLocations(book: Book): BookLocations {
+  return (book as unknown as { locations: BookLocations }).locations;
+}
+
+/** The spine's declared page-progression-direction, if any. */
+export function declaredDirection(book: Book): string | undefined {
+  return (book as unknown as { packaging?: { metadata?: { direction?: string } } }).packaging?.metadata?.direction;
 }

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BookMeta, DictionaryLookupResult, ReaderPreferences, RsvpToken, WordInstance } from '../../types';
-import { dictionaryManager } from '../../dictionary/DictionaryManager';
-import { vocabularyService } from '../../vocabulary/vocabularyService';
+import { lookupWord, saveLookup } from '../../vocabulary/lookupWord';
 import { DictionaryPopup } from '../reader/DictionaryPopup';
 import { RsvpWord } from './RsvpWord';
 import {
@@ -283,33 +282,16 @@ export function SpeedReaderFocus({
     const word = currentToken.lookupWord;
     setPlaying(false);
     setPopup({ word, result: null, instance: null, saved: false, loading: true });
-    const [result, saved] = await Promise.all([
-      dictionaryManager.lookup(word),
-      vocabularyService.isSaved(book.id, word),
-    ]);
-    const morphology = result.morphology?.[0];
-    const sentence = contextWindowText(tokens, index, CONTEXT_WINDOW);
-    const instance = await vocabularyService.recordLookup(book.id, word, {
+    const lookup = await lookupWord(book.id, word, {
       chapterHref: currentToken.sectionHref,
-      sentence,
-      lemma: morphology?.lemma,
-      root: morphology?.root ?? result.entries[0]?.root,
+      sentence: contextWindowText(tokens, index, CONTEXT_WINDOW),
     });
-    setPopup({ word, result, instance, saved, loading: false });
+    setPopup({ word, result: lookup.result, instance: lookup.instance, saved: lookup.saved, loading: false });
   }
 
   async function handleSave() {
     if (!popup?.result || popup.saved) return;
-    await vocabularyService.saveToVocabulary({
-      surfaceForm: popup.word,
-      entries: popup.result.entries,
-      lemma: popup.result.morphology?.[0]?.lemma,
-      root: popup.result.morphology?.[0]?.root ?? popup.result.entries[0]?.root,
-      pos: popup.result.morphology?.[0]?.pos,
-      book,
-      chapterHref: currentToken?.sectionHref,
-      wordInstance: popup.instance ?? undefined,
-    });
+    await saveLookup(book, { word: popup.word, result: popup.result, instance: popup.instance }, { chapterHref: currentToken?.sectionHref });
     setPopup((p) => (p ? { ...p, saved: true } : p));
   }
 

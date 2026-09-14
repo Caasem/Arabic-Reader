@@ -1,11 +1,11 @@
-import { usePreferences } from '../../state/PreferencesContext';
-import type { ReaderTheme } from '../../types';
+import { usePreferences, type ResolvedTheme } from '../../state/PreferencesContext';
+import { PAGE_COLORS } from '../../theme/tokens';
 import './QuickSettingsPopover.css';
 
-const THEME_SWATCHES: { id: ReaderTheme; label: string; bg: string; fg: string }[] = [
-  { id: 'light', label: 'Light', bg: '#faf7f2', fg: '#1c1b19' },
-  { id: 'sepia', label: 'Sepia', bg: '#f1e6d0', fg: '#4a3a22' },
-  { id: 'dark', label: 'Night', bg: '#16151a', fg: '#efe9df' },
+const THEME_SWATCHES: { id: ResolvedTheme; label: string }[] = [
+  { id: 'light', label: 'Light' },
+  { id: 'sepia', label: 'Sepia' },
+  { id: 'dark', label: 'Night' },
 ];
 
 const FONT_SIZE_MIN = 80;
@@ -58,7 +58,8 @@ export function QuickSettingsPopover({ onClose }: { onClose: () => void }) {
             <button
               key={t.id}
               className={'quick-settings__swatch' + (prefs.theme === t.id ? ' quick-settings__swatch--active' : '')}
-              style={{ background: t.bg, color: t.fg }}
+              style={{ background: PAGE_COLORS[t.id].bg, color: PAGE_COLORS[t.id].ink }}
+              aria-pressed={prefs.theme === t.id}
               onClick={() => updatePrefs({ theme: t.id })}
               aria-label={t.label}
               title={t.label}
