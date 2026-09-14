@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
 import { IconClose } from '../shared/icons';
+import { useEscapeKey } from '../shared/useEscapeKey';
 import type { BookSearch, SearchMode, SearchScope } from './hooks/useBookSearch';
 
 const SCOPES: { id: SearchScope; label: string; placeholder: string }[] = [
@@ -22,13 +22,7 @@ interface Props {
 
 /** In-book and library search. Closing it never moves the reading position. */
 export function SearchOverlay({ search, liveSearchEnabled, historyEnabled, onClose }: Props) {
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onClose]);
+  useEscapeKey(onClose);
 
   const { results, searching, activeIndex } = search;
   const needsSubmit = !liveSearchEnabled || search.scope === 'library';

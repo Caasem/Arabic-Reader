@@ -3,9 +3,8 @@ import { libraryService, type BookReadingInfo } from '../../library/libraryServi
 import { invalidateBookVocabIndex } from '../../vocabRarity/bookVocabIndex';
 import { invalidateTokenStream } from '../../speedReader/tokenStream';
 import type { BookMeta } from '../../types';
+import { readString, STORAGE_KEYS, writeString } from '../../utils/storage';
 import './Library.css';
-
-const OFFLINE_NOTICE_DISMISSED_KEY = 'ar-reader-offline-notice-dismissed';
 
 type SortOrder = 'added' | 'lastRead' | 'title' | 'progress';
 type StatusFilter = 'all' | 'unread' | 'inProgress' | 'finished';
@@ -48,21 +47,13 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
   // First-run notice only -- this app's biggest differentiator (a real,
   // ~136k-entry Arabic dictionary built in, no account or internet needed)
   // was otherwise completely invisible until you happened to tap a word.
-  const [showOfflineNotice, setShowOfflineNotice] = useState(() => {
-    try {
-      return localStorage.getItem(OFFLINE_NOTICE_DISMISSED_KEY) !== '1';
-    } catch {
-      return true;
-    }
-  });
+  const [showOfflineNotice, setShowOfflineNotice] = useState(
+    () => readString(STORAGE_KEYS.offlineNoticeDismissed) !== '1'
+  );
 
   function dismissOfflineNotice() {
     setShowOfflineNotice(false);
-    try {
-      localStorage.setItem(OFFLINE_NOTICE_DISMISSED_KEY, '1');
-    } catch {
-      /* private-browsing or storage disabled -- the notice just reappears next time, harmless */
-    }
+    writeString(STORAGE_KEYS.offlineNoticeDismissed, '1');
   }
 
   useEffect(() => {

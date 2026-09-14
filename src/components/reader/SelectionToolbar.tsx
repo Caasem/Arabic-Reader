@@ -1,4 +1,5 @@
 import type { HighlightColor } from '../../types';
+import { anchoredPosition } from '../shared/anchoredPosition';
 import './SelectionToolbar.css';
 
 const COLORS: HighlightColor[] = ['yellow', 'green', 'blue', 'purple', 'red'];
@@ -14,15 +15,13 @@ export function SelectionToolbar({
   onPick: (color: HighlightColor) => void;
   onDismiss: () => void;
 }) {
-  const clampedX = Math.min(Math.max(x, 120), window.innerWidth - 120);
-  const showBelow = y < 90;
-  const clampedY = showBelow ? Math.min(y, window.innerHeight - 30) : Math.min(y, window.innerHeight - 20);
+  const { left, top, below } = anchoredPosition(x, y, { halfWidth: 120, flipBelowY: 90, bottomMarginBelow: 30 });
 
   return (
     <div className="selection-toolbar-backdrop" onClick={onDismiss}>
       <div
-        className={'selection-toolbar' + (showBelow ? ' selection-toolbar--below' : '')}
-        style={{ left: clampedX, top: clampedY }}
+        className={'selection-toolbar' + (below ? ' selection-toolbar--below' : '')}
+        style={{ left, top }}
         onClick={(e) => e.stopPropagation()}
       >
         {COLORS.map((c) => (
