@@ -1,15 +1,19 @@
 # Arabic Reader
 
-An EPUB reader built for reading classical and modern Arabic. Tap any word and get a real dictionary entry, not a
-guess. Everything runs on your device — nothing you read is ever sent anywhere.
+Arabic EPUBs, Automated Dictionary definitions and an SRS (Anki-ish) system,
+
+Reading itself can be tedious, reading in another language even more so, reading in another language whilst constantly having to refer to dictionary doubly, reading in another language whilst referring to a dictionary, and trying to keep a record of words to memorise later eveeen more so. 
+
+This project attempts to overcome that, making that ^ process efficient, with the costs of being efficient.
+
+Now you can tap any word and get a real dictionary entry, with a single touch save it to your vocab, and read, read read.
+
+Everything runs on your device — nothing you read is ever sent anywhere.
 
 **[Try it live](https://caasem.github.io/Arabic-Reader/)** — open it, tap the browser's install/"Add to Home Screen"
 option, and it's a real app on your phone or desktop from there. No app store, no account.
 
 It runs in the browser, installs as a PWA, or packages as a native Android, iOS, or desktop app.
-
-This started as a browser extension. It grew into a full reading app, and kept the dictionary and vocabulary
-pipeline that made the extension useful in the first place.
 
 ## What it does
 
