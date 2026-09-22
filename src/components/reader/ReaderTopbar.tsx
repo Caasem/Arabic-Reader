@@ -2,40 +2,33 @@ import { IconBack, IconBookmark, IconBookmarkFilled, IconContents, IconFocus, Ic
 
 interface Props {
   chapterLabel?: string;
-  focusMode: boolean;
-  idle: boolean;
   bookmarkCount: number;
-  onRevealChrome(): void;
   onBack(): void;
   onToggleQuickSettings(): void;
   onTogglePomodoro(): void;
-  onFocusModeChange(on: boolean): void;
   onToggleSearch(): void;
   onAddBookmark(): void;
   onToggleBookmarks(): void;
   onToggleToc(): void;
+  onSwitchToCleanReader(): void;
+  onEnterCleanFocus(): void;
 }
 
 export function ReaderTopbar({
   chapterLabel,
-  focusMode,
-  idle,
   bookmarkCount,
-  onRevealChrome,
   onBack,
   onToggleQuickSettings,
   onTogglePomodoro,
-  onFocusModeChange,
   onToggleSearch,
   onAddBookmark,
   onToggleBookmarks,
   onToggleToc,
+  onSwitchToCleanReader,
+  onEnterCleanFocus,
 }: Props) {
   return (
-    <header
-      className={'reader__topbar' + (focusMode ? ' reader__topbar--focus' : '') + (idle ? ' reader__topbar--idle' : '')}
-      onMouseEnter={onRevealChrome}
-    >
+    <header className="reader__topbar">
       <button className="reader__back" onClick={onBack}>
         <IconBack size={14} /> Library
       </button>
@@ -55,13 +48,16 @@ export function ReaderTopbar({
         <button className="reader__toc-toggle" onClick={onTogglePomodoro} aria-label="Start Pomodoro" title="Start Pomodoro">
           Pomodoro
         </button>
-        <label className={'reader__focus-toggle' + (focusMode ? ' reader__focus-toggle--on' : '')} title="Focus mode">
-          <input type="checkbox" checked={focusMode} onChange={(e) => onFocusModeChange(e.target.checked)} aria-label="Toggle focus mode" />
-          <IconFocus size={15} />
-          <span className="reader__focus-toggle-track">
-            <span className="reader__focus-toggle-knob" />
-          </span>
-        </label>
+        <button
+          className="reader__toc-toggle"
+          onClick={onSwitchToCleanReader}
+          title="Switch to the clean text reader (beta)"
+        >
+          Clean text
+        </button>
+        <button className="reader__toc-toggle" onClick={onEnterCleanFocus} title="Focus: clean text with nothing else on screen">
+          <IconFocus size={14} /> Focus
+        </button>
         <button className="reader__toc-toggle" onClick={onToggleSearch}>
           <IconSearch size={14} /> Search
         </button>

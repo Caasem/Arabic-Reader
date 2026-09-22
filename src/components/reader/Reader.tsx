@@ -18,7 +18,6 @@ import { useEpubReader } from './hooks/useEpubReader';
 import { useSavedWords } from './hooks/useSavedWords';
 import { useHoverPreview } from './hooks/useHoverPreview';
 import { useWordLookups } from './hooks/useWordLookups';
-import { useFocusMode } from './hooks/useFocusMode';
 import { useBookmarks } from './hooks/useBookmarks';
 import { useBookHighlights } from './hooks/useBookHighlights';
 import { useBookSearch, type SearchMode } from './hooks/useBookSearch';
@@ -36,6 +35,7 @@ import { SelectionToolbar } from './SelectionToolbar';
 import { QuickSettingsPopover } from './QuickSettingsPopover';
 import { VocabularyEditModal } from './VocabularyEditModal';
 import { PomodoroTimer } from '../pomodoro/PomodoroTimer';
+import { saveCleanFocus } from '../../cleanReader/cleanFocus';
 import './Reader.css';
 
 type Panel = 'toc' | 'bookmarks' | 'search' | null;
@@ -56,8 +56,6 @@ interface ReaderProps {
   /** The Vocabulary Levels panel, driven by the "Vocab Levels" nav tab. */
   vocabPanelOpen?: boolean;
   onVocabPanelOpenChange?: (open: boolean) => void;
-  /** Focus mode went idle: the app-level sidebar should hide too. */
-  onFocusChromeChange?: (hidden: boolean) => void;
   /** Opens at this CFI instead of the saved position (library search result). */
   initialCfiOverride?: string;
   /** Switches the open book -- for library search results in another book. */
@@ -76,11 +74,10 @@ export function Reader({
   onBack,
   vocabPanelOpen = false,
   onVocabPanelOpenChange,
-  onFocusChromeChange,
   initialCfiOverride,
   onOpenBookAt,
 }: ReaderProps) {
-  const { prefs, resolvedTheme } = usePreferences();
+  const { prefs, resolvedTheme, updatePrefs } = usePreferences();
   const prefsRef = useRef(prefs);
   const themeRef = useRef(resolvedTheme);
   useLayoutEffect(() => {
@@ -100,7 +97,6 @@ export function Reader({
   const [gestureState] = useState(createGestureState);
 
   const hover = useHoverPreview();
-  const focus = useFocusMode(onFocusChromeChange);
   const savedWords = useSavedWords(book.id, containerRef);
   const lookups = useWordLookups({ book, trackerRef, savedWords, prefsRef, onLookupStart: hover.dismiss });
   const { bookmarks, add: addBookmark, remove: removeBookmark } = useBookmarks(book);
@@ -197,11 +193,7 @@ export function Reader({
       if (e.key === 'Escape') window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
       else void lookups.handleQuickAddKey(e);
     },
-    onPointer: {
-      down: (e) => focus.pointerHandlersRef.current.down(e),
-      move: (e) => focus.pointerHandlersRef.current.move(e),
-      up: () => focus.pointerHandlersRef.current.up(),
-    },
+    onPointer: { down: () => {}, move: () => {}, up: () => {} },
   };
   useLayoutEffect(() => {
     handlersRef.current = latestHandlers;
@@ -354,14 +346,15 @@ export function Reader({
     <div className="reader">
       <ReaderTopbar
         chapterLabel={location.chapterLabel}
-        focusMode={focus.focusMode}
-        idle={focus.chromeIdle}
         bookmarkCount={bookmarks.length}
-        onRevealChrome={focus.revealChrome}
         onBack={onBack}
         onToggleQuickSettings={() => setQuickSettingsOpen((open) => !open)}
         onTogglePomodoro={() => setPomodoroOpen((open) => !open)}
-        onFocusModeChange={focus.setFocusMode}
+        onSwitchToCleanReader={() => updatePrefs({ cleanReaderEnabled: true })}
+        onEnterCleanFocus={() => {
+          saveCleanFocus(true);
+          updatePrefs({ cleanReaderEnabled: true });
+        }}
         onToggleSearch={() => togglePanel('search')}
         onAddBookmark={handleAddBookmark}
         onToggleBookmarks={() => togglePanel('bookmarks')}
@@ -436,11 +429,8 @@ export function Reader({
       </div>
 
       <ReaderFooter
-        focusMode={focus.focusMode}
-        idle={focus.chromeIdle}
         pageLabel={location.pageLabel}
         percent={location.percent}
-        onRevealChrome={focus.revealChrome}
         onNext={() => serviceRef.current?.next()}
         onPrev={() => serviceRef.current?.prev()}
       />

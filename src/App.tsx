@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { NavBar, type ViewName } from './components/shared/NavBar';
 import { Library } from './components/library/Library';
-import { Reader } from './components/reader/Reader';
+import { ReaderSwitch } from './cleanReader/ReaderSwitch';
 import { BackupReminder } from './components/shared/BackupReminder';
 import { PomodoroNotifier } from './components/pomodoro/PomodoroNotifier';
 import { PreferencesProvider } from './state/PreferencesProvider';
@@ -81,7 +81,7 @@ function App() {
             <Suspense fallback={<div className="app__loading" role="status">Loading…</div>}>
               {view === 'library' && <Library onOpenBook={openBook} />}
               {view === 'read' && activeBook && (
-                <Reader
+                <ReaderSwitch
                   book={activeBook}
                   onBack={backToLibrary}
                   vocabPanelOpen={vocabPanelOpen}

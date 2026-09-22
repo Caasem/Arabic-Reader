@@ -16,18 +16,6 @@
   transition: opacity 0.4s ease;
 }
 
-/* Focus mode: once idle, fade the whole topbar down to near-invisible
-   rather than removing it — a stray mouse move or a hover on the bar
-   itself (see the onMouseEnter handler in Reader.tsx) brings it right
-   back, so it's never actually unreachable. */
-.reader__topbar--focus.reader__topbar--idle {
-  opacity: 0.06;
-}
-
-.reader__topbar--focus.reader__topbar--idle:hover {
-  opacity: 1;
-}
-
 .reader__topbar-actions {
   display: flex;
   align-items: center;
@@ -52,59 +40,6 @@
 .reader__toc-toggle:hover {
   background: var(--accent-soft);
   color: var(--ink);
-}
-
-.reader__focus-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  color: var(--ink-faint);
-  font-size: 12px;
-  padding: 4px 8px 4px 4px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-}
-
-.reader__focus-toggle input {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.reader__focus-toggle--on {
-  color: var(--accent);
-}
-
-.reader__focus-toggle-track {
-  width: 28px;
-  height: 16px;
-  border-radius: 999px;
-  background: var(--border);
-  position: relative;
-  transition: background 0.15s ease;
-  flex-shrink: 0;
-}
-
-.reader__focus-toggle-knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-  transition: left 0.15s ease;
-}
-
-.reader__focus-toggle--on .reader__focus-toggle-track {
-  background: var(--accent);
-}
-
-.reader__focus-toggle--on .reader__focus-toggle-knob {
-  left: 14px;
 }
 
 .reader__chapter {
@@ -542,15 +477,6 @@
   padding: 10px 24px 18px;
   flex-shrink: 0;
   transition: opacity 0.4s ease;
-}
-
-/* Same fade-not-remove treatment as .reader__topbar--focus.reader__topbar--idle above. */
-.reader__footer--focus.reader__footer--idle {
-  opacity: 0.06;
-}
-
-.reader__footer--focus.reader__footer--idle:hover {
-  opacity: 1;
 }
 
 .reader__nav-btn {

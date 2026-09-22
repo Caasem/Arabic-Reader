@@ -33,6 +33,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   pomodoroNotification: 'toast',
   pomodoroShowPhaseLabel: true,
   shamelaEnabled: false,
+  cleanReaderEnabled: false,
 };
 
 /** A comfortable line length depends on screen width, so a device with no

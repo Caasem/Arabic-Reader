@@ -94,4 +94,6 @@ export interface ReaderPreferences {
   pomodoroShowPhaseLabel: boolean;
   /** Enable Shamela Library integration (beta). */
   shamelaEnabled: boolean;
+  /** Read books as plain text instead of in the epub reader (beta). */
+  cleanReaderEnabled: boolean;
 }

@@ -1,0 +1,92 @@
+/* Lotus is a licensed Linotype font, so it is never bundled with the app: this
+   only picks it up when it is installed on the device. */
+@font-face {
+  font-family: 'Lotus';
+  src: local('Lotus'), local('Lotus Linotype'), local('LotusLinotype'), local('Lotus Light');
+}
+
+.clean-reader__stage {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  outline: none;
+}
+
+.clean-reader__text {
+  margin: 0 auto;
+  padding: 32px 24px 96px;
+  color: var(--ink);
+  text-align: justify;
+}
+
+.clean-reader__text p {
+  margin: 0 0 0.9em;
+}
+
+.clean-reader__text h2,
+.clean-reader__text h3 {
+  margin: 1.4em 0 0.6em;
+  text-align: start;
+}
+
+.clean-reader__title {
+  margin: 0.6em 0 1.4em;
+  font-size: 1.5em;
+  font-weight: 600;
+  text-align: center;
+}
+
+.clean-reader__gap {
+  height: 1em;
+}
+
+.clean-reader__break {
+  margin: 1.2em 0;
+  text-align: center;
+  color: var(--ink-faint);
+  letter-spacing: 0.4em;
+}
+
+.clean-reader__text .ar-word {
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.1s ease;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+}
+
+.clean-reader__text .ar-word:hover {
+  background: var(--accent-soft);
+}
+
+.clean-reader__text .ar-word--saved {
+  color: var(--saved-word-color);
+}
+
+.clean-reader__text .ar-word--jump-flash {
+  background: rgba(230, 170, 60, 0.55);
+}
+
+.clean-reader__counter,
+.clean-reader__hint {
+  position: fixed;
+  bottom: 12px;
+  font-size: 12px;
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+
+.clean-reader__counter {
+  inset-inline-start: 16px;
+}
+
+.clean-reader__hint {
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
