@@ -24,30 +24,24 @@ const buck2uni: Record<string, string> = {
 };
 const harakaat = ['a', 'u', 'i', 'F', 'N', 'K', '~', 'o'];
 const diacriticsRegex = new RegExp(`[${harakaat.join('')}]`, 'g');
-const buck2uniPatterns = Object.entries(buck2uni).map(([key, value]) => ({
-  pattern: new RegExp(key.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'g'),
-  value,
-}));
 
-function detransliterate(word: string): string {
-  if (!word) return word;
-  let result = word;
-  for (const p of buck2uniPatterns) result = result.replace(p.pattern, p.value);
-  return result;
+// Every mapping is one character to one character, so a single pass over the
+// word is equivalent to (and much cheaper than) one global replace per letter.
+const BUCK_TO_UNI = new Map(Object.entries(buck2uni));
+const UNI_TO_BUCK = new Map(Object.entries(buck2uni).map(([buck, uni]) => [uni, buck]));
+
+function mapChars(word: string, table: Map<string, string>): string {
+  let out = '';
+  for (const ch of word) out += table.get(ch) ?? ch;
+  return out;
 }
-// Reverse of buck2uniPatterns -- built once at module load instead of a
-// fresh `new RegExp` per key on every single `transliterate()` call (this
-// runs on every `lookup()`, so it was recompiling ~40 regexes per word
-// looked up, including every word in a book-vocabulary batch).
-const uni2buckPatterns = Object.entries(buck2uni).map(([key, value]) => ({
-  pattern: new RegExp(value.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&'), 'g'),
-  value: key,
-}));
-function transliterate(word: string): string {
-  if (!word) return word;
-  let result = word;
-  for (const p of uni2buckPatterns) result = result.replace(p.pattern, p.value);
-  return result;
+
+export function detransliterate(word: string): string {
+  return word ? mapChars(word, BUCK_TO_UNI) : word;
+}
+
+export function transliterate(word: string): string {
+  return word ? mapChars(word, UNI_TO_BUCK) : word;
 }
 function removeDiacriticsBuckwalter(word: string): string {
   return word.replace(diacriticsRegex, '');
@@ -298,37 +292,33 @@ export class AramorphEngine {
     if (!this.tables) return [];
     const cached = this.lookupCache.get(word);
     if (cached) {
-      if (Date.now() - cached.timestamp < CACHE_EXPIRY) return cached.data;
       this.lookupCache.delete(word);
+      if (Date.now() - cached.timestamp < CACHE_EXPIRY) {
+        this.lookupCache.set(word, cached); // re-insert: Map order doubles as LRU order
+        return cached.data;
+      }
     }
 
+    // Every prefix/stem/suffix split of the (diacritic-free) word.
     const processedWord = removeDiacriticsBuckwalter(transliterate(word));
-    let data: AramorphResult[] = [];
+    const candidates: AramorphResult[] = [];
     for (let i = 0; i < processedWord.length; i++) {
       for (let j = i + 1; j <= processedWord.length; j++) {
-        data = data.concat(this.lookupPrefStemSuff(processedWord.slice(0, i), processedWord.slice(i, j), processedWord.slice(j)));
+        for (const r of this.lookupPrefStemSuff(processedWord.slice(0, i), processedWord.slice(i, j), processedWord.slice(j))) {
+          candidates.push(r);
+        }
       }
     }
 
     const seen = new Set<string>();
-    data = data.filter((d) => {
+    const data = candidates.filter((d) => {
       const k = d.word + '|' + d.def;
       if (seen.has(k)) return false;
       seen.add(k);
       return true;
     });
 
-    if (this.lookupCache.size >= CACHE_SIZE) {
-      let oldestKey: string | null = null;
-      let oldestTime = Infinity;
-      for (const [k, e] of this.lookupCache.entries()) {
-        if (e.timestamp < oldestTime) {
-          oldestTime = e.timestamp;
-          oldestKey = k;
-        }
-      }
-      if (oldestKey) this.lookupCache.delete(oldestKey);
-    }
+    if (this.lookupCache.size >= CACHE_SIZE) this.lookupCache.delete(this.lookupCache.keys().next().value!);
     this.lookupCache.set(word, { data, timestamp: Date.now() });
     return data;
   }

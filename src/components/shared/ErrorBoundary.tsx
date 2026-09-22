@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import './ErrorBoundary.css';
+import { logDiagnostic } from '../../diagnostics/diagnosticsLog';
 
 interface Props {
   children: ReactNode;
@@ -29,10 +30,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // No telemetry is wired up (this app doesn't send anything off-device
-    // by design) — logging to the console is the only trace a developer
-    // debugging via a shared screen recording or remote console has.
+    // Nothing leaves the device: the console and the local diagnostics log
+    // (Settings → Diagnostics) are the only traces.
     console.error('Unhandled error in the app UI:', error, info.componentStack);
+    logDiagnostic('error', 'ui', error.message, `${error.stack ?? ''}
+${info.componentStack ?? ''}`);
   }
 
   private reload = () => {

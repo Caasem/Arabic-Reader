@@ -561,3 +561,9 @@
   white-space: nowrap;
   cursor: pointer;
 }
+
+.dict-popup__provider-error {
+  margin: 6px 0;
+  font-size: 12px;
+  color: var(--danger);
+}

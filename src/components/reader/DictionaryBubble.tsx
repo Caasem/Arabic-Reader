@@ -1,5 +1,7 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { DictionaryLookupResult } from '../../types';
+import { anchoredPosition } from '../shared/anchoredPosition';
+import { useEscapeKey } from '../shared/useEscapeKey';
 import './DictionaryBubble.css';
 
 /** Condensed bubble shown for touch gestures bound to "Show definition
@@ -8,6 +10,8 @@ import './DictionaryBubble.css';
  * point is a glance-and-keep-reading answer, with a single "+" to save and
  * a tap-the-definition path to the full popup for anyone who wants more. */
 const BUBBLE_GLOSS_MAX_CHARS = 60;
+/** Enough to decide whether the bubble fits above the tapped word. */
+const BUBBLE_HEIGHT_ESTIMATE = 90;
 
 // iOS Safari fires a trailing synthetic 'click' as part of its touch-to-
 // mouse compatibility emulation for the same tap that opened this bubble --
@@ -50,29 +54,31 @@ export function DictionaryBubble({
   const condensed =
     gloss && gloss.length > BUBBLE_GLOSS_MAX_CHARS ? gloss.slice(0, BUBBLE_GLOSS_MAX_CHARS - 1) + '…' : gloss;
 
-  const mountedAtRef = useRef(Date.now());
+  useEscapeKey(onDismiss);
+  const mountedAtRef = useRef(0);
+  useEffect(() => {
+    mountedAtRef.current = Date.now();
+  }, []);
   function handleBackdropClick() {
     if (Date.now() - mountedAtRef.current < IGNORE_DISMISS_MS) return;
     onDismiss();
   }
 
-  // Small footprint compared to the full popup — a lower height estimate
-  // is enough to decide whether it fits above the tapped word, same
-  // above/below-flip and horizontal-clamp approach as DictionaryPopup.
-  const BUBBLE_HEIGHT_ESTIMATE = 90;
-  const clampedX = Math.min(Math.max(x, 120), window.innerWidth - 120);
-  const showBelow = y < BUBBLE_HEIGHT_ESTIMATE + 16;
-  const clampedY = showBelow ? Math.min(y, window.innerHeight - 40) : Math.min(y, window.innerHeight - 20);
+  const { left, top, below } = anchoredPosition(x, y, { halfWidth: 120, flipBelowY: BUBBLE_HEIGHT_ESTIMATE + 16 });
 
   return (
     <div className="dict-bubble-backdrop" onClick={handleBackdropClick}>
       <div
-        className={'dict-bubble' + (showBelow ? ' dict-bubble--below' : '')}
-        style={{ left: clampedX, top: clampedY }}
+        className={'dict-bubble' + (below ? ' dict-bubble--below' : '')}
+        role="dialog"
+        aria-label={`Definition of ${word}`}
+        style={{ left, top }}
         onClick={(e) => e.stopPropagation()}
       >
         <button className="dict-bubble__def" onClick={onOpenFull} disabled={loading} aria-label={`${word} — open full entry`}>
-          <span className="dict-bubble__word">{word}</span>
+          <span className="dict-bubble__word" lang="ar">
+            {word}
+          </span>
           <span className="dict-bubble__gloss">
             {loading ? 'Looking up…' : (condensed ?? 'No definition found — tap for more')}
           </span>

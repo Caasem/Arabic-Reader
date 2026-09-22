@@ -4,6 +4,7 @@ import { getWordRarity, isRarityDataReady, TIER_LABELS } from '../../vocabRarity
 import { normalize } from '../../reader/tokenizer/arabicTokenizer';
 import { usePreferences } from '../../state/PreferencesContext';
 import { IconEdit, IconChevronLeft, IconChevronRight } from '../shared/icons';
+import { buildEntryTokenSenses, reconstructSelection, type DefinitionToken } from './definitionTokens';
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
@@ -23,64 +24,6 @@ const NARROW_BREAKPOINT_PX = 480;
 const IGNORE_DISMISS_MS = 400;
 
 type EntryGroup = { providerId: string; providerName: string; entries: { entry: DictionaryEntry; index: number }[] };
-
-/** One tokenized word or whitespace run inside an Al-Wasit entry's
- * definition -- `globalIdx` indexes into that entry's flat token stream
- * (spanning every sense, not just one), which is what the click/drag
- * selection below tracks and what reconstructSelection walks. Punctuation
- * stays attached to its word rather than becoming its own token, same as
- * VocabularyEditModal's context-sentence tokenizer. */
-interface DefinitionToken {
-  text: string;
-  isWord: boolean;
-  globalIdx: number;
-}
-
-/** Flattens every sense in an Al-Wasit entry into one token stream (senses
- * joined by a single space so a selection spanning two senses doesn't run
- * their text together), alongside the same tokens grouped back by sense
- * for rendering each sense on its own line -- `bySense[i]` holds the exact
- * same token objects as `flat`, just grouped, so a globalIdx assigned once
- * stays correct in both views. */
-function buildEntryTokenSenses(entry: DictionaryEntry): { flat: DefinitionToken[]; bySense: DefinitionToken[][] } {
-  const flat: DefinitionToken[] = [];
-  const bySense: DefinitionToken[][] = [];
-  entry.senses.forEach((s, si) => {
-    if (si > 0) flat.push({ text: ' ', isWord: false, globalIdx: flat.length });
-    const senseTokens: DefinitionToken[] = [];
-    for (const part of s.gloss.split(/(\s+)/).filter((t) => t.length > 0)) {
-      const token: DefinitionToken = { text: part, isWord: !!part.trim(), globalIdx: flat.length };
-      flat.push(token);
-      senseTokens.push(token);
-    }
-    bySense.push(senseTokens);
-  });
-  return { flat, bySense };
-}
-
-/** Rebuilds saveable text from a (possibly non-contiguous) set of selected
- * word-token indices. Two selected words that were already directly
- * adjacent in the original text keep their exact original spacing between
- * them; a gap that skipped over unselected words collapses to a single
- * normalizing space instead of running them together or keeping the
- * skipped text. */
-function reconstructSelection(tokens: DefinitionToken[], selected: Set<number>): string {
-  let out = '';
-  let lastIncluded = -2;
-  for (let idx = 0; idx < tokens.length; idx++) {
-    const t = tokens[idx];
-    if (t.isWord) {
-      if (!selected.has(idx)) continue;
-      if (out && lastIncluded !== idx - 1) out += ' ';
-      out += t.text;
-      lastIncluded = idx;
-    } else if (lastIncluded === idx - 1 && selected.has(idx + 1)) {
-      out += t.text;
-      lastIncluded = idx;
-    }
-  }
-  return out;
-}
 
 /** A root/lemma value that shows the Arabic text by default; tapping it
  * crossfades to the "root"/"form" label in the exact same spot, then fades
@@ -149,6 +92,7 @@ export function DictionaryPopup({
   loading,
   x,
   y,
+  wordRect,
   sizePct = 100,
   onClose,
   onSave,
@@ -161,8 +105,16 @@ export function DictionaryPopup({
   instance: WordInstance | null;
   saved: boolean;
   loading: boolean;
+  /** Fallback anchor point (word's horizontal center, top edge) used only
+   * when `wordRect` isn't supplied -- kept so any caller that hasn't been
+   * updated to measure the word's full rect still gets *a* position. */
   x: number;
   y: number;
+  /** The tapped `.ar-word` element's own `getBoundingClientRect()` (already
+   * adjusted for the epub.js iframe's own offset, same as x/y above) --
+   * lets recalcPosition below place the popup above/below/beside the word
+   * without covering it, rather than just centering on a single point. */
+  wordRect?: { top: number; bottom: number; left: number; right: number };
   /** Settings → "Dictionary popup size" -- 100 = the popup's normal size. */
   sizePct?: number;
   onClose: () => void;
@@ -438,25 +390,69 @@ export function DictionaryPopup({
     const rect = el.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+    const clampLeft = (left: number) => Math.min(Math.max(left, VIEWPORT_MARGIN), Math.max(VIEWPORT_MARGIN, vw - rect.width - VIEWPORT_MARGIN));
+    const clampTop = (top: number) => Math.min(Math.max(top, VIEWPORT_MARGIN), Math.max(VIEWPORT_MARGIN, vh - rect.height - VIEWPORT_MARGIN));
 
-    let left = x - rect.width / 2;
-    left = Math.min(Math.max(left, VIEWPORT_MARGIN), vw - rect.width - VIEWPORT_MARGIN);
+    if (wordRect) {
+      // Word-aware placement: below the word, then above, then beside it,
+      // each tried only if the popup would land fully on-screen there --
+      // the last resort (clamp only) is the one place this can still cover
+      // the word, same graceful-degradation the feature accepts for small
+      // screens/Split layout's narrower columns rather than never showing
+      // a usable popup at all.
+      const centerLeft = clampLeft((wordRect.left + wordRect.right) / 2 - rect.width / 2);
 
+      const belowTop = wordRect.bottom + WORD_GAP;
+      if (belowTop + rect.height <= vh - VIEWPORT_MARGIN) {
+        setStyle({ left: centerLeft, top: belowTop, visibility: 'visible' });
+        return;
+      }
+
+      const aboveTop = wordRect.top - WORD_GAP - rect.height;
+      if (aboveTop >= VIEWPORT_MARGIN) {
+        setStyle({ left: centerLeft, top: aboveTop, visibility: 'visible' });
+        return;
+      }
+
+      // Neither direction has room (a short landscape viewport, typically)
+      // -- shift beside the word instead, vertically centered on it. This
+      // app's own chrome is RTL, so "forward" is the left side (matching
+      // e.g. the reader footer's Next button already being on the left) --
+      // tried first, then the right, whichever actually has room for the
+      // popup's width.
+      const sideTop = clampTop((wordRect.top + wordRect.bottom) / 2 - rect.height / 2);
+      const spaceLeft = wordRect.left - VIEWPORT_MARGIN;
+      const spaceRight = vw - VIEWPORT_MARGIN - wordRect.right;
+      if (spaceLeft >= rect.width + WORD_GAP) {
+        setStyle({ left: wordRect.left - WORD_GAP - rect.width, top: sideTop, visibility: 'visible' });
+        return;
+      }
+      if (spaceRight >= rect.width + WORD_GAP) {
+        setStyle({ left: wordRect.right + WORD_GAP, top: sideTop, visibility: 'visible' });
+        return;
+      }
+
+      // Popup doesn't fit anywhere without covering the word (a small
+      // screen, or a narrow Split-layout column) -- fall back to simply
+      // keeping it fully on-screen, word visibility no longer guaranteed.
+      setStyle({ left: centerLeft, top: clampTop(wordRect.top), visibility: 'visible' });
+      return;
+    }
+
+    // No measured word rect (a caller that only has a point, not the
+    // element itself) -- the old point-based heuristic: prefer above the
+    // point, then below, then vertically centered on it, always clamped.
+    const left = clampLeft(x - rect.width / 2);
     const fitsAbove = y - WORD_GAP - rect.height >= VIEWPORT_MARGIN;
     let top: number;
     if (fitsAbove) {
       top = y - WORD_GAP - rect.height;
     } else {
-      // Not enough room above -- try below, then fall back to whichever
-      // side has more room, clamped so the popup is always fully visible
-      // (never permanently clipped) even if that means covering the word.
       const fitsBelow = y + WORD_GAP + rect.height <= vh - VIEWPORT_MARGIN;
-      top = fitsBelow ? y + WORD_GAP : Math.min(Math.max(y - rect.height / 2, VIEWPORT_MARGIN), vh - rect.height - VIEWPORT_MARGIN);
+      top = fitsBelow ? y + WORD_GAP : clampTop(y - rect.height / 2);
     }
-    top = Math.min(Math.max(top, VIEWPORT_MARGIN), vh - rect.height - VIEWPORT_MARGIN);
-
-    setStyle({ left, top, visibility: 'visible' });
-  }, [x, y]);
+    setStyle({ left, top: clampTop(top), visibility: 'visible' });
+  }, [x, y, wordRect]);
 
   useLayoutEffect(() => {
     recalcPosition();
@@ -467,11 +463,14 @@ export function DictionaryPopup({
     // so this call catches the *start* of that resize -- the transitionend
     // handler on the popup element below catches the settled end of it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [word, loading, result, x, y, sizePct, effectiveLayout, isNarrow]);
+  }, [word, loading, result, x, y, wordRect, sizePct, effectiveLayout, isNarrow]);
 
   const scale = sizePct / 100;
 
-  const mountedAtRef = useRef(Date.now());
+  const mountedAtRef = useRef(0);
+  useEffect(() => {
+    mountedAtRef.current = Date.now();
+  }, []);
   function handleBackdropClick() {
     if (Date.now() - mountedAtRef.current < IGNORE_DISMISS_MS) return;
     onClose();
@@ -692,6 +691,12 @@ export function DictionaryPopup({
         </div>
 
         {loading && <div className="dict-popup__loading">Looking up…</div>}
+
+        {!loading && result?.failedProviders?.length ? (
+          <div className="dict-popup__provider-error" role="status">
+            Couldn't load: {result.failedProviders.map((p) => p.name).join(', ')}
+          </div>
+        ) : null}
 
         {!loading && !result?.entries.length && <div className="dict-popup__empty">No entry found for this word yet.</div>}
 

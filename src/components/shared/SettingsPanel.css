@@ -186,3 +186,68 @@
   color: var(--danger);
   font-size: 12px;
 }
+
+.settings-diagnostics__info {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 12px;
+  font-size: 12.5px;
+}
+
+.settings-diagnostics__info div {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-diagnostics__info dt {
+  color: var(--ink-faint);
+  min-width: 140px;
+}
+
+.settings-diagnostics__info dd {
+  margin: 0;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.settings-diagnostics__report {
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.settings-diagnostics__log {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.settings-diagnostics__entry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--bg);
+  border-inline-start: 3px solid var(--ink-faint);
+}
+
+.settings-diagnostics__entry--error {
+  border-inline-start-color: var(--danger);
+}
+
+.settings-diagnostics__time,
+.settings-diagnostics__source {
+  color: var(--ink-faint);
+}
+
+.settings-diagnostics__message {
+  flex-basis: 100%;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}

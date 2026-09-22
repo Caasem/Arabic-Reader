@@ -104,3 +104,112 @@
 .hl-card__remove:hover {
   color: var(--danger);
 }
+
+.hl-list__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: -16px 0 20px;
+}
+
+.hl-list__book-filter {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--ink);
+}
+
+.hl-list__color-filter,
+.hl-card__colors {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hl-list__color-all {
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.hl-list__color-all--active {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+button.hl-card__note {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: text;
+}
+
+.hl-card__note-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 8px;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  direction: ltr;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  resize: vertical;
+}
+
+.hl-card__warning {
+  font-family: var(--font-ui);
+  direction: ltr;
+  text-align: right;
+  font-size: 11.5px;
+  color: var(--danger);
+  margin-top: 8px;
+}
+
+.hl-card__actions {
+  direction: ltr;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.hl-card__buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.hl-card__action {
+  font-family: var(--font-ui);
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 11px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.hl-card__action:hover {
+  color: var(--ink);
+}
+
+.hl-card__buttons .hl-card__remove {
+  margin-top: 0;
+  float: none;
+}

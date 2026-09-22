@@ -1,9 +1,98 @@
 # Changelog
 
-We're not using git for this project yet, so versions are tracked here plus
-in the `VERSION` file, and each delivered zip is named with its version
-(`arabic-reader-app-v<version>.zip`, kept in `/root/work/releases/`). Bump
-`VERSION` and add an entry here whenever a delivered zip changes.
+Versions are tracked here plus in the `VERSION` file, kept in step with
+`package.json`. Bump `VERSION` and add an entry here for each user-visible
+release.
+
+## v0.10.0 — 2026-09-14
+
+A hardening pass over the whole app: security (EPUB content sanitized against
+script injection; Electron moved off `file://` to a custom `app://` protocol
+with a real CSP), decomposed the two largest files in the codebase, and added
+accessibility, highlight tools, review upgrades, and an on-device diagnostics
+log. No user-visible feature was removed; several longstanding bugs were
+fixed along the way.
+
+- **EPUB sections are sanitized before rendering.** Scripts, event-handler
+  attributes, `javascript:`/`data:text/html` URLs, and meta-refresh tags are
+  stripped from every spine section, and a restrictive CSP is injected into
+  each — closing off a book file as a code-execution vector. Kept alongside
+  `allowScriptedContent` (needed for iOS Safari to deliver taps into the
+  section iframe at all) rather than removed outright, since sanitizing the
+  content makes that permission safe rather than a live risk.
+- **Electron dropped `file://` for a real origin.** The desktop shell now
+  serves the built app from a privileged `app://bundle` custom protocol with
+  its own CSP, `window.open`/navigation locked to http(s) targets, and no
+  permission grants beyond fullscreen — `file://` gave every page an opaque,
+  unrestricted origin.
+- **Reader.tsx (1,860 lines) and SettingsPanel.tsx (835 lines) are now
+  compositions of small pieces.** The reader's book lifecycle, word lookups,
+  saved-word coloring, hover preview, focus mode, bookmarks/highlights, and
+  search are hooks (`components/reader/hooks/`); per-section DOM listeners
+  (taps, touch gestures, swipes, footnotes) live in one module
+  (`reader/wordInteraction/sectionInteractions.ts`); the topbar, footer, TOC,
+  bookmarks, and search overlay are their own components. Settings is one
+  component per section under `components/shared/settings/`, sharing a small
+  set of row controls. `types/index.ts` is split into book/dictionary/
+  vocabulary/preferences/sessions modules. Class names, behavior, and test
+  selectors are unchanged.
+- **Accessibility pass.** Every popover (Settings, dictionary popup/bubble,
+  vocabulary edit, Pomodoro, quick settings, footnote, selection toolbar,
+  search) is a proper `role="dialog"`/`"toolbar"` and closes on Escape —
+  including Escape pressed while focus is inside the book's own iframe,
+  which previously reached nothing outside it. Segmented controls and color
+  swatches report `aria-pressed`; the nav marks the active tab and labels
+  its collapsed icon-only buttons; Arabic text throughout gets
+  `lang="ar"`/`dir` so screen readers and bidi layout handle it correctly;
+  keyboard focus gets a visible ring (mouse clicks don't); a
+  `prefers-reduced-motion` override is honored.
+- **Highlight tools.** The reader's Bookmarks panel now also lists the open
+  book's highlights, with inline recolor and delete — `EpubService`'s
+  highlight rendering already supported this, there was just no UI for it
+  beyond creating one via text selection. The Highlights tab gained note
+  editing, color change, per-book/per-color filters, and "Open in book."
+  Fixed a real bug along the way: highlight CFIs point inside the word spans
+  the reader adds when a section renders, but epub.js attaches annotations
+  *before* that happens, so highlights could silently fail to appear on
+  reopen or on sections reached later by paging — each section's highlights
+  are now attached again once its words are wrapped.
+- **Review upgrades:** keyboard shortcuts (Space/Enter to reveal, 1–4 to
+  grade), a card that comes due again soon is requeued later in the same
+  session instead of only reappearing on the next visit, and optional Arabic
+  pronunciation via `speechSynthesis` when the device has an Arabic voice.
+- **A local diagnostics log** (Settings → Diagnostics): a capped ring buffer
+  in `localStorage`, fed by `window` error/`unhandledrejection` listeners,
+  the error boundary, and several catch blocks that used to log to the
+  console only. Shows recent entries, environment info (app version, storage
+  usage, AraMorph status), a dictionary lookup test, and a "copy report"
+  button. Nothing leaves the device.
+- **Removing a book now asks first.** The Library book-card's remove button
+  was a `<span>` nested inside the card's own `<button>` — never
+  keyboard-reachable — and deleted the book's file and reading position
+  immediately, no confirmation. It's now a sibling button, keyboard-reachable
+  and visible on focus, that asks before deleting (and says plainly that
+  saved vocabulary/highlights are kept).
+- **Reader bug fixes found during the decomposition:** the session tracker
+  now starts before the first section renders, so the opening section's
+  words/encounters are counted; the saved reading position no longer gets
+  overwritten by a stale value on the very first relocation after opening a
+  book; switching books from a library search result no longer resumes at
+  the *previous* book's location; saved-word coloring is read once per book
+  and kept in sync through quick-save/bubble-save/undo; the dictionary popup
+  keeps clear of the tapped word after its lookup resolves, not just before;
+  search drops results from a slower, superseded search and only enters
+  explicit searches into history; Vocab Levels jumps land on the right page
+  in paginated layout; book fonts load correctly under a subpath deploy
+  (GitHub Pages); the quick-settings sepia swatch matches the actual sepia
+  page background.
+- Test infrastructure: a real unit test suite (Vitest, 80 tests) alongside
+  the existing Playwright end-to-end suite; both run in CI on every push.
+  Dependencies updated within their existing version ranges.
+- **Known, deliberately deferred:** `epub.js`'s own `@xmldom/xmldom`
+  dependency carries several disclosed XML-parsing vulnerabilities (the
+  registry's fix requires an epub.js major-version upgrade); the iOS
+  `allowScriptedContent` tradeoff above needs on-device confirmation the
+  sanitization actually restores iPhone word-tap behavior.
 
 ## v0.9.0 — 2026-09-09
 

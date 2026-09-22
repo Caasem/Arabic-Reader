@@ -1,8 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { IconChevronLeft } from '../shared/icons';
+import { readString, STORAGE_KEYS, writeString } from '../../utils/storage';
 import './CollapsibleSection.css';
-
-const STORAGE_PREFIX = 'dashboard-section-collapsed:';
 
 /** One show/hide-able card in the Dashboard — every section (Arabic
  * Profile, Current Focus, Reading Statistics, Calendar, Trends) is one of
@@ -22,25 +21,16 @@ export function CollapsibleSection({
   defaultCollapsed?: boolean;
   children: ReactNode;
 }) {
+  const storageKey = STORAGE_KEYS.dashboardSectionCollapsedPrefix + id;
   const [collapsed, setCollapsed] = useState(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_PREFIX + id);
-      return raw === null ? defaultCollapsed : raw === '1';
-    } catch {
-      return defaultCollapsed;
-    }
+    const raw = readString(storageKey);
+    return raw === null ? defaultCollapsed : raw === '1';
   });
 
   function toggle() {
-    setCollapsed((v) => {
-      const next = !v;
-      try {
-        localStorage.setItem(STORAGE_PREFIX + id, next ? '1' : '0');
-      } catch {
-        // best-effort only
-      }
-      return next;
-    });
+    const next = !collapsed;
+    setCollapsed(next);
+    writeString(storageKey, next ? '1' : '0');
   }
 
   return (

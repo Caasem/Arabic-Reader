@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { vocabularyService, entryMeaning } from '../../vocabulary/vocabularyService';
+import { vocabularyService, entryMeaning } from '../../vocabulary';
 import { BackupControls } from '../shared/BackupControls';
 import { IconSearch, IconTrash, IconEdit, IconCheck, IconClose } from '../shared/icons';
 import type { VocabularyItem } from '../../types';
@@ -123,7 +123,9 @@ export function VocabularyList() {
             return (
               <div className="vocab-card" key={item.id}>
                 <div className="vocab-card__top">
-                  <div className="vocab-card__word">{item.surfaceForm}</div>
+                  <div className="vocab-card__word" lang="ar" dir="rtl">
+                    {item.surfaceForm}
+                  </div>
                   <div className="vocab-card__actions">
                     {!isEditing && (
                       <button className="vocab-card__icon-btn" onClick={() => startEdit(item)} aria-label="Edit" title="Edit">
@@ -170,7 +172,11 @@ export function VocabularyList() {
                 ) : (
                   <>
                     <div className="vocab-card__meaning">{item.meaning}</div>
-                    {item.sentence && <div className="vocab-card__sentence">“{item.sentence}”</div>}
+                    {item.sentence && (
+                      <div className="vocab-card__sentence" lang="ar">
+                        “{item.sentence}”
+                      </div>
+                    )}
                     {item.entries.length > 1 && (
                       <div className="vocab-card__definitions">
                         <select

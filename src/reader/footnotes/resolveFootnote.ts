@@ -129,7 +129,7 @@ const DROP_ENTIRELY_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBE
  * Strip everything except a small inline-formatting allowlist and drop any
  * non-http(s) link targets before it's ever handed to React.
  */
-function sanitizeFootnoteHtml(html: string): string {
+export function sanitizeFootnoteHtml(html: string): string {
   const parsed = new DOMParser().parseFromString(`<div>${html}</div>`, 'text/html');
   const root = parsed.body.firstElementChild;
   if (!root) return '';
@@ -149,8 +149,12 @@ function sanitizeFootnoteHtml(html: string): string {
         }
         Array.from(el.attributes).forEach((attr) => {
           if (attr.name === 'href') {
-            if (!/^https?:\/\//i.test(attr.value)) el.removeAttribute('href');
-            else el.setAttribute('target', '_blank');
+            if (!/^https?:\/\//i.test(attr.value)) {
+              el.removeAttribute('href');
+            } else {
+              el.setAttribute('target', '_blank');
+              el.setAttribute('rel', 'noopener noreferrer');
+            }
           } else if (attr.name !== 'class') {
             el.removeAttribute(attr.name);
           }

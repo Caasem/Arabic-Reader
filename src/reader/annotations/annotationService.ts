@@ -1,5 +1,6 @@
-import { persistenceService } from '../../persistence/db';
+import { persistenceService } from '../../persistence';
 import type { BookMeta, Highlight, HighlightColor } from '../../types';
+import { newId } from '../../utils/id';
 
 /**
  * Highlight/annotation CRUD, kept separate from EpubService (which only
@@ -19,7 +20,7 @@ export class AnnotationService {
   }): Promise<Highlight> {
     const now = Date.now();
     const highlight: Highlight = {
-      id: 'hl_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+      id: newId('hl'),
       bookId: params.book.id,
       bookTitle: params.book.title,
       cfiRange: params.cfiRange,

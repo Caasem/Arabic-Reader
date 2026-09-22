@@ -1,4 +1,8 @@
+import { anchoredPosition } from '../shared/anchoredPosition';
+import { useEscapeKey } from '../shared/useEscapeKey';
 import './FootnotePopup.css';
+
+const POPUP_HEIGHT_ESTIMATE = 200;
 
 export function FootnotePopup({
   loading,
@@ -19,16 +23,16 @@ export function FootnotePopup({
   /** Falls back to normal in-book navigation when we couldn't resolve the note inline. */
   onGoToNote: () => void;
 }) {
-  const clampedX = Math.min(Math.max(x, 160), window.innerWidth - 160);
-  const POPUP_HEIGHT_ESTIMATE = 200;
-  const showBelow = y < POPUP_HEIGHT_ESTIMATE + 24;
-  const clampedY = showBelow ? Math.min(y, window.innerHeight - 40) : Math.min(y, window.innerHeight - 20);
+  useEscapeKey(onClose);
+  const { left, top, below } = anchoredPosition(x, y, { halfWidth: 160, flipBelowY: POPUP_HEIGHT_ESTIMATE + 24 });
 
   return (
     <div className="footnote-popup-backdrop" onClick={onClose}>
       <div
-        className={'footnote-popup' + (showBelow ? ' footnote-popup--below' : '')}
-        style={{ left: clampedX, top: clampedY }}
+        className={'footnote-popup' + (below ? ' footnote-popup--below' : '')}
+        role="dialog"
+        aria-label="Note"
+        style={{ left, top }}
         onClick={(e) => e.stopPropagation()}
       >
         <button className="footnote-popup__close" onClick={onClose} aria-label="Close">
@@ -39,7 +43,7 @@ export function FootnotePopup({
         {loading && <div className="footnote-popup__loading">Loading note…</div>}
 
         {!loading && !failed && html && (
-          <div className="footnote-popup__body" dangerouslySetInnerHTML={{ __html: html }} />
+          <div className="footnote-popup__body" dir="auto" dangerouslySetInnerHTML={{ __html: html }} />
         )}
 
         {!loading && failed && (

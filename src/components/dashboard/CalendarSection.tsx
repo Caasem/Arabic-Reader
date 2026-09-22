@@ -1,24 +1,22 @@
 import { useEffect, useState } from 'react';
 import { ActivityCalendar } from './ActivityCalendar';
-import { getSessionsForDay, type DayActivity } from '../../stats/readingStatsService';
+import { getSessionsForDay, type DayActivity } from '../../stats';
 import type { ReadingSession } from '../../types';
 import { formatHours, formatCount } from './format';
+import { parseDayKey } from '../../utils/date';
 import { IconClose } from '../shared/icons';
 import './CalendarSection.css';
 
 export function CalendarSection({ data }: { data: DayActivity[] | null }) {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [daySessions, setDaySessions] = useState<ReadingSession[] | null>(null);
+  const [dayData, setDayData] = useState<{ day: string; sessions: ReadingSession[] } | null>(null);
+  const daySessions = dayData && dayData.day === selectedDay ? dayData.sessions : null;
 
   useEffect(() => {
-    if (!selectedDay) {
-      setDaySessions(null);
-      return;
-    }
+    if (!selectedDay) return;
     let cancelled = false;
-    setDaySessions(null);
     getSessionsForDay(selectedDay).then((sessions) => {
-      if (!cancelled) setDaySessions(sessions);
+      if (!cancelled) setDayData({ day: selectedDay, sessions });
     });
     return () => {
       cancelled = true;
@@ -39,7 +37,7 @@ export function CalendarSection({ data }: { data: DayActivity[] | null }) {
         <div className="day-detail">
           <div className="day-detail__header">
             <span className="day-detail__title">
-              {new Date(selectedDay).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+              {new Date(parseDayKey(selectedDay)).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
             </span>
             <button className="day-detail__close" onClick={() => setSelectedDay(null)} aria-label="Close">
               <IconClose size={13} />

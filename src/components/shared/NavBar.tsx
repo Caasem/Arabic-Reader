@@ -12,6 +12,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
 } from './icons';
+import { readString, STORAGE_KEYS, writeString } from '../../utils/storage';
 import './NavBar.css';
 
 export type ViewName =
@@ -23,8 +24,6 @@ export type ViewName =
   | 'review'
   | 'speedReader'
   | 'dashboard';
-
-const NAVBAR_COLLAPSED_KEY = 'navbar-collapsed';
 
 // 'vocabLevels' (per-book "Vocabulary Levels" — rarity-tiered word list with
 // jump-to-occurrence) is distinct from 'vocabulary' (the cross-book saved
@@ -70,25 +69,17 @@ export function NavBar({
 }) {
   // Collapsed = a 76px icon-only rail (mirrors the Smart Structure concept's
   // rail), persisted across sessions so the choice sticks.
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(NAVBAR_COLLAPSED_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
+  const [collapsed, setCollapsed] = useState(() => readString(STORAGE_KEYS.navbarCollapsed) === '1');
 
   useEffect(() => {
-    try {
-      localStorage.setItem(NAVBAR_COLLAPSED_KEY, collapsed ? '1' : '0');
-    } catch {
-      // localStorage unavailable (private mode, etc.) — collapse state just
-      // won't persist across reloads, which is fine.
-    }
+    writeString(STORAGE_KEYS.navbarCollapsed, collapsed ? '1' : '0');
   }, [collapsed]);
 
   return (
-    <nav className={'navbar' + (collapsed ? ' navbar--collapsed' : '') + (hidden ? ' navbar--hidden' : '')}>
+    <nav
+      className={'navbar' + (collapsed ? ' navbar--collapsed' : '') + (hidden ? ' navbar--hidden' : '')}
+      aria-label="Main"
+    >
       <div className="navbar__brand">
         <span className="navbar__mark">ق</span>
         {!collapsed && <span className="navbar__title">Reader</span>}
@@ -110,6 +101,8 @@ export function NavBar({
               disabled={REQUIRES_BOOK.includes(item.id) && readDisabled}
               onClick={() => onSelect(item.id)}
               title={collapsed ? item.label : undefined}
+              aria-label={collapsed ? item.label : undefined}
+              aria-current={active === item.id ? 'page' : undefined}
             >
               <span className="navbar__icon" aria-hidden="true">
                 <item.Icon size={18} />

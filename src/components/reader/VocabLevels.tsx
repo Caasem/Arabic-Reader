@@ -3,7 +3,8 @@ import type { Book } from 'epubjs';
 import type { BookMeta, BookVocabWord, VocabTier } from '../../types';
 import { getBookVocabIndex } from '../../vocabRarity/bookVocabIndex';
 import { isRarityDataReady, enableRarityData } from '../../vocabRarity/rarity';
-import { formatVocabularyExport, downloadTextFile } from '../../vocabRarity/exportVocabulary';
+import { formatVocabularyExport } from '../../vocabRarity/exportVocabulary';
+import { saveFile } from '../../utils/saveFile';
 import { IconChevronLeft, IconChevronRight, IconClose } from '../shared/icons';
 import './VocabLevels.css';
 
@@ -35,10 +36,11 @@ export function VocabLevels({
   const [rarityReady, setRarityReady] = useState<boolean | null>(null);
   const [enabling, setEnabling] = useState(false);
   const [enableError, setEnableError] = useState<string | null>(null);
-  const [index, setIndex] = useState<BookVocabWord[] | null>(null);
-  const [indexing, setIndexing] = useState(false);
+  const [indexState, setIndexState] = useState<{ bookId: string; words: BookVocabWord[] } | null>(null);
   const [activeTier, setActiveTier] = useState<VocabTier>('beginner');
   const [expanded, setExpanded] = useState<{ word: string; occurrenceIdx: number } | null>(null);
+  const index = indexState?.bookId === book.id ? indexState.words : null;
+  const indexing = !!rarityReady && !!bookHandle && index === null;
 
   useEffect(() => {
     isRarityDataReady().then(setRarityReady);
@@ -47,13 +49,11 @@ export function VocabLevels({
   useEffect(() => {
     if (!rarityReady || !bookHandle || collapsed) return;
     let cancelled = false;
-    setIndexing(true);
-    getBookVocabIndex(book.id, bookHandle)
-      .then((result) => {
-        if (!cancelled) setIndex(result);
-      })
-      .finally(() => {
-        if (!cancelled) setIndexing(false);
+    const bookId = book.id;
+    getBookVocabIndex(bookId, bookHandle)
+      .catch(() => [] as BookVocabWord[])
+      .then((words) => {
+        if (!cancelled) setIndexState({ bookId, words });
       });
     return () => {
       cancelled = true;
@@ -81,7 +81,7 @@ export function VocabLevels({
   function handleExport() {
     const content = formatVocabularyExport(book.title, wordsForTier);
     const safeTitle = book.title.replace(/[^\p{L}\p{N}]+/gu, '_').slice(0, 60) || 'book';
-    downloadTextFile(`${safeTitle}-vocabulary-${activeTier}.txt`, content);
+    void saveFile(`${safeTitle}-vocabulary-${activeTier}.txt`, content, 'text/plain;charset=utf-8');
   }
 
   function toggleWord(w: BookVocabWord) {

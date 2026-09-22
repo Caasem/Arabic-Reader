@@ -1,4 +1,4 @@
-import { computeOrpSplit } from '../../speedReader/orp';
+import { computeOrpSplit } from '../../speedReader';
 
 /** The single central word displayed during RSVP playback. With ORP on,
  * splits the word into three pieces so the pivot letter stays visually

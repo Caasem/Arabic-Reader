@@ -1,3 +1,4 @@
+import { clampX } from '../shared/anchoredPosition';
 import './HoverPreview.css';
 
 export function HoverPreview({
@@ -5,18 +6,17 @@ export function HoverPreview({
   x,
   y,
 }: {
-  /** Short, single-line gloss text. Null while still loading — nothing renders until it resolves. */
-  gloss: string | null;
+  /** Short, single-line gloss text. */
+  gloss: string;
   x: number;
   y: number;
 }) {
-  if (!gloss) return null;
-  const clampedX = Math.min(Math.max(x, 90), window.innerWidth - 90);
-
   return (
-    <div className="hover-preview" style={{ left: clampedX, top: y }}>
+    <div className="hover-preview" style={{ left: clampX(x, 90), top: y }} role="tooltip">
       <span className="hover-preview__text">{gloss}</span>
-      <span className="hover-preview__chevron">‹</span>
+      <span className="hover-preview__chevron" aria-hidden="true">
+        ‹
+      </span>
     </div>
   );
 }

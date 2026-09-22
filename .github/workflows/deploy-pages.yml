@@ -2,7 +2,11 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    # TEMPORARY, this branch only: lets a push here deploy to Pages for
+    # manual testing (see the hardening-pass refactor) without touching main
+    # or its own copy of this file. Revert before merging -- main should be
+    # the only branch this fires for otherwise.
+    branches: [main, refactor/hardening-pass]
   workflow_dispatch:
 
 permissions:
@@ -24,7 +28,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - run: npm ci

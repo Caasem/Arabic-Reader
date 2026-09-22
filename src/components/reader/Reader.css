@@ -16,18 +16,6 @@
   transition: opacity 0.4s ease;
 }
 
-/* Focus mode: once idle, fade the whole topbar down to near-invisible
-   rather than removing it — a stray mouse move or a hover on the bar
-   itself (see the onMouseEnter handler in Reader.tsx) brings it right
-   back, so it's never actually unreachable. */
-.reader__topbar--focus.reader__topbar--idle {
-  opacity: 0.06;
-}
-
-.reader__topbar--focus.reader__topbar--idle:hover {
-  opacity: 1;
-}
-
 .reader__topbar-actions {
   display: flex;
   align-items: center;
@@ -52,59 +40,6 @@
 .reader__toc-toggle:hover {
   background: var(--accent-soft);
   color: var(--ink);
-}
-
-.reader__focus-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  color: var(--ink-faint);
-  font-size: 12px;
-  padding: 4px 8px 4px 4px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-}
-
-.reader__focus-toggle input {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.reader__focus-toggle--on {
-  color: var(--accent);
-}
-
-.reader__focus-toggle-track {
-  width: 28px;
-  height: 16px;
-  border-radius: 999px;
-  background: var(--border);
-  position: relative;
-  transition: background 0.15s ease;
-  flex-shrink: 0;
-}
-
-.reader__focus-toggle-knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18);
-  transition: left 0.15s ease;
-}
-
-.reader__focus-toggle--on .reader__focus-toggle-track {
-  background: var(--accent);
-}
-
-.reader__focus-toggle--on .reader__focus-toggle-knob {
-  left: 14px;
 }
 
 .reader__chapter {
@@ -499,12 +434,23 @@
   height: 100%;
   max-width: 100%;
   transition: width 0.15s ease;
+  /* Page backdrop: subtle shadow creates depth */
+  box-shadow:
+    inset 0 0 30px rgba(0, 0, 0, 0.08),
+    0 20px 40px rgba(0, 0, 0, 0.1);
+  background: var(--bg);
 }
 
 .reader__epub {
   position: absolute;
   inset: 0;
   padding: 20px 6%;
+  /* Constrain text to readable page width (max ~800px) while maintaining
+     responsive behavior. On wider screens, centers the content with equal
+     margins; on narrower screens, uses full available width minus padding. */
+  max-width: 900px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
 
 .reader__loading,
@@ -531,15 +477,6 @@
   padding: 10px 24px 18px;
   flex-shrink: 0;
   transition: opacity 0.4s ease;
-}
-
-/* Same fade-not-remove treatment as .reader__topbar--focus.reader__topbar--idle above. */
-.reader__footer--focus.reader__footer--idle {
-  opacity: 0.06;
-}
-
-.reader__footer--focus.reader__footer--idle:hover {
-  opacity: 1;
 }
 
 .reader__nav-btn {
@@ -589,6 +526,24 @@
 
 .reader__progress {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+/* Subtle by design (see the feature's own "help tell if Next is broken"
+   rationale in Reader.tsx) -- small and low-contrast, a glance-target, not
+   something meant to compete with the nav buttons either side of it. */
+.reader__progress-label {
+  font-size: 10px;
+  color: var(--ink-faint);
+  direction: ltr;
+  line-height: 1;
+}
+
+.reader__progress-track {
+  width: 100%;
   height: 3px;
   background: var(--border);
   border-radius: 2px;
@@ -605,6 +560,27 @@
 .reader__progress-bar {
   height: 100%;
   background: var(--accent);
+}
+
+/* End-of-page/section boundary indicator (Settings → "End-of-page
+   indicator", off by default) -- a plain divider, deliberately no text (see
+   Reader.tsx's own comment on why). Always in the DOM, faded in/out via
+   opacity rather than conditionally rendered, so its appearance never
+   itself shifts the reading column's layout. */
+.reader__end-indicator {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 10px;
+  height: 1px;
+  background: var(--border);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.reader__end-indicator--visible {
+  opacity: 1;
 }
 
 @media (max-width: 860px) {
@@ -665,4 +641,39 @@
   cursor: pointer;
   padding: 0;
   text-decoration: underline;
+}
+
+.reader__bookmarks-section-title {
+  margin: 16px 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.reader__highlight-item {
+  flex-wrap: wrap;
+}
+
+.reader__highlight-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.reader__highlight-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-family: var(--font-arabic);
+}
+
+.reader__highlight-colors {
+  display: flex;
+  gap: 6px;
+  flex-basis: 100%;
+  padding: 2px 0 4px 24px;
 }

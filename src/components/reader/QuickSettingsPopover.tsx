@@ -1,11 +1,12 @@
-import { usePreferences } from '../../state/PreferencesContext';
-import type { ReaderTheme } from '../../types';
+import { usePreferences, type ResolvedTheme } from '../../state/PreferencesContext';
+import { PAGE_COLORS } from '../../theme/tokens';
+import { useEscapeKey } from '../shared/useEscapeKey';
 import './QuickSettingsPopover.css';
 
-const THEME_SWATCHES: { id: ReaderTheme; label: string; bg: string; fg: string }[] = [
-  { id: 'light', label: 'Light', bg: '#faf7f2', fg: '#1c1b19' },
-  { id: 'sepia', label: 'Sepia', bg: '#f1e6d0', fg: '#4a3a22' },
-  { id: 'dark', label: 'Night', bg: '#16151a', fg: '#efe9df' },
+const THEME_SWATCHES: { id: ResolvedTheme; label: string }[] = [
+  { id: 'light', label: 'Light' },
+  { id: 'sepia', label: 'Sepia' },
+  { id: 'dark', label: 'Night' },
 ];
 
 const FONT_SIZE_MIN = 80;
@@ -22,6 +23,7 @@ const FONT_SIZE_STEP = 10;
  */
 export function QuickSettingsPopover({ onClose }: { onClose: () => void }) {
   const { prefs, updatePrefs } = usePreferences();
+  useEscapeKey(onClose);
 
   function stepFontSize(delta: number) {
     const next = Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, prefs.fontSizePct + delta));
@@ -30,7 +32,12 @@ export function QuickSettingsPopover({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="quick-settings-backdrop" onClick={onClose}>
-      <div className="quick-settings" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="quick-settings"
+        role="dialog"
+        aria-label="Font and appearance"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="quick-settings__row">
           <button
             className="quick-settings__aa quick-settings__aa--small"
@@ -58,7 +65,8 @@ export function QuickSettingsPopover({ onClose }: { onClose: () => void }) {
             <button
               key={t.id}
               className={'quick-settings__swatch' + (prefs.theme === t.id ? ' quick-settings__swatch--active' : '')}
-              style={{ background: t.bg, color: t.fg }}
+              style={{ background: PAGE_COLORS[t.id].bg, color: PAGE_COLORS[t.id].ink }}
+              aria-pressed={prefs.theme === t.id}
               onClick={() => updatePrefs({ theme: t.id })}
               aria-label={t.label}
               title={t.label}
@@ -119,6 +127,28 @@ export function QuickSettingsPopover({ onClose }: { onClose: () => void }) {
           >
             2 columns
           </button>
+        </div>
+
+        <div className="quick-settings__divider" />
+
+        {/* Reading width -- deliberately no icon, label, or percentage (see
+            the feature's own design brief): an iOS Control Center-style
+            slider is meant to be read by feel/position, not by a number.
+            min/max match the Settings panel's own reading-width slider
+            (same underlying pref, readingWidthPct); step is finer here
+            (1 vs Settings' 5) since dragging is this control's whole
+            reason to exist. */}
+        <div className="quick-settings__row">
+          <input
+            type="range"
+            className="quick-settings__width-slider"
+            min={50}
+            max={100}
+            step={1}
+            value={prefs.readingWidthPct}
+            onChange={(e) => updatePrefs({ readingWidthPct: Number(e.target.value) })}
+            aria-label="Reading width"
+          />
         </div>
       </div>
     </div>

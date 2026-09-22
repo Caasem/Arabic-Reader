@@ -9,7 +9,7 @@ import {
   getSessions,
   loadStream,
   type SpeedReaderStream,
-} from '../../speedReader/speedReaderService';
+} from '../../speedReader';
 import type { SpeedReaderSession } from '../../types';
 import { SpeedReaderFocus } from './SpeedReaderFocus';
 import './SpeedReader.css';

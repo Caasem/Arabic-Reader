@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { libraryService } from '../../library/libraryService';
+import { libraryService, type BookReadingInfo } from '../../library/libraryService';
+import { invalidateBookVocabIndex } from '../../vocabRarity/bookVocabIndex';
+import { invalidateTokenStream } from '../../speedReader';
+import { useShamelaBrowse } from '../../shamela/useShamelaBrowse';
 import type { BookMeta } from '../../types';
+import { readString, STORAGE_KEYS, writeString } from '../../utils/storage';
+import { useEscapeKey } from '../shared/useEscapeKey';
+import { usePreferences } from '../../state/PreferencesContext';
+import { ShamelaResultCard } from './ShamelaResultCard';
 import './Library.css';
-
-const OFFLINE_NOTICE_DISMISSED_KEY = 'ar-reader-offline-notice-dismissed';
 
 type SortOrder = 'added' | 'lastRead' | 'title' | 'progress';
 type StatusFilter = 'all' | 'unread' | 'inProgress' | 'finished';
@@ -26,12 +31,15 @@ const STATUS_FILTERS: { id: StatusFilter; label: string }[] = [
 // land exactly on 1) -- close enough counts as finished for filtering.
 const FINISHED_AT = 0.97;
 
-interface ReadingInfo {
-  percent: number;
-  lastReadAt?: number;
+type ReadingInfo = BookReadingInfo;
+
+async function loadLibrary(): Promise<{ list: BookMeta[]; info: Record<string, ReadingInfo> }> {
+  const list = await libraryService.listBooks();
+  return { list, info: await libraryService.readingInfoForBooks(list.map((b) => b.id)) };
 }
 
 export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }) {
+  const { prefs } = usePreferences();
   const [books, setBooks] = useState<BookMeta[]>([]);
   const [readingInfo, setReadingInfo] = useState<Record<string, ReadingInfo>>({});
   const [loading, setLoading] = useState(true);
@@ -41,38 +49,52 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
   const [sortBy, setSortBy] = useState<SortOrder>('added');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Removing a book deletes its file and reading position outright (see
+  // libraryService.removeBook) -- confirmed first since that's irreversible.
+  const [confirmRemoveBook, setConfirmRemoveBook] = useState<BookMeta | null>(null);
+  useEscapeKey(() => setConfirmRemoveBook(null), !!confirmRemoveBook);
   // First-run notice only -- this app's biggest differentiator (a real,
   // ~136k-entry Arabic dictionary built in, no account or internet needed)
   // was otherwise completely invisible until you happened to tap a word.
-  const [showOfflineNotice, setShowOfflineNotice] = useState(() => {
-    try {
-      return localStorage.getItem(OFFLINE_NOTICE_DISMISSED_KEY) !== '1';
-    } catch {
-      return true;
-    }
-  });
+  const [showOfflineNotice, setShowOfflineNotice] = useState(
+    () => readString(STORAGE_KEYS.offlineNoticeDismissed) !== '1'
+  );
 
   function dismissOfflineNotice() {
     setShowOfflineNotice(false);
-    try {
-      localStorage.setItem(OFFLINE_NOTICE_DISMISSED_KEY, '1');
-    } catch {
-      /* private-browsing or storage disabled -- the notice just reappears next time, harmless */
-    }
+    writeString(STORAGE_KEYS.offlineNoticeDismissed, '1');
   }
 
-  async function refresh() {
-    setLoading(true);
-    const list = await libraryService.listBooks();
-    setBooks(list);
-    const entries = await Promise.all(list.map(async (b) => [b.id, await libraryService.readingInfoFor(b.id)] as const));
-    setReadingInfo(Object.fromEntries(entries));
-    setLoading(false);
+  function reloadLibrary() {
+    loadLibrary().then(({ list, info }) => {
+      setBooks(list);
+      setReadingInfo(info);
+    });
   }
 
   useEffect(() => {
-    refresh();
+    let cancelled = false;
+    loadLibrary().then(({ list, info }) => {
+      if (cancelled) return;
+      setBooks(list);
+      setReadingInfo(info);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  function handleShamelaBookAdded() {
+    reloadLibrary();
+    setError(null);
+  }
+
+  function handleShamelaBrowseError(err: Error) {
+    setError(err.message);
+  }
+
+  const shamela = useShamelaBrowse(query, prefs.shamelaEnabled, handleShamelaBookAdded, handleShamelaBrowseError);
 
   async function handleFiles(files: FileList | null) {
     if (!files || !files.length) return;
@@ -116,10 +138,19 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
     }
   }
 
-  async function removeBook(id: string, e: React.MouseEvent) {
+  function requestRemoveBook(book: BookMeta, e: React.MouseEvent) {
     e.stopPropagation();
-    await libraryService.removeBook(id);
-    setBooks((prev) => prev.filter((b) => b.id !== id));
+    setConfirmRemoveBook(book);
+  }
+
+  async function confirmRemoveBookNow() {
+    const book = confirmRemoveBook;
+    if (!book) return;
+    setConfirmRemoveBook(null);
+    await libraryService.removeBook(book.id);
+    invalidateBookVocabIndex(book.id);
+    invalidateTokenStream(book.id);
+    setBooks((prev) => prev.filter((b) => b.id !== book.id));
   }
 
   // Search/filter/sort all run client-side over the already-loaded list --
@@ -195,12 +226,12 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
 
       {error && <div className="library__error">{error}</div>}
 
-      {!loading && books.length > 0 && (
+      {!loading && (books.length > 0 || prefs.shamelaEnabled) && (
         <div className="library__toolbar">
           <input
             className="library__search"
             type="search"
-            placeholder="Search by title or author…"
+            placeholder={prefs.shamelaEnabled ? 'Search your library or Shamela…' : 'Search by title or author…'}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -225,41 +256,95 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
         </div>
       )}
 
+      {!loading && prefs.shamelaEnabled && (
+        <p className="library__shamela-note">
+          Also searching an unofficial Shamela mirror (not shamela.ws) — results not yet in your library show ⬇.
+        </p>
+      )}
+
       {loading ? (
         <div className="library__empty">Loading…</div>
-      ) : books.length === 0 ? (
-        <div className="library__empty">
-          <p>No books yet.</p>
-          <p className="library__empty-sub">Add an EPUB, or try the sample book to see the reader in action.</p>
-        </div>
-      ) : visibleBooks.length === 0 ? (
-        <div className="library__empty">
-          <p>No books match.</p>
-          <p className="library__empty-sub">Try a different search or filter.</p>
-        </div>
+      ) : visibleBooks.length === 0 && shamela.results.length === 0 && !shamela.searching ? (
+        books.length === 0 && !query.trim() ? (
+          <div className="library__empty">
+            <p>No books yet.</p>
+            <p className="library__empty-sub">Add an EPUB, or try the sample book to see the reader in action.</p>
+          </div>
+        ) : (
+          <div className="library__empty">
+            <p>No books match.</p>
+            <p className="library__empty-sub">Try a different search or filter.</p>
+          </div>
+        )
       ) : (
         <div className="library__grid">
           {visibleBooks.map((book) => (
-            <button key={book.id} className="book-card" onClick={() => onOpenBook(book)}>
-              <div className="book-card__cover">
-                {book.coverDataUrl ? (
-                  <img src={book.coverDataUrl} alt="" />
-                ) : (
-                  <span className="book-card__cover-fallback">{book.title.slice(0, 1)}</span>
-                )}
-                <span className="book-card__remove" onClick={(e) => removeBook(book.id, e)} title="Remove">
-                  ×
-                </span>
-              </div>
-              <div className="book-card__title">{book.title}</div>
-              {book.author && <div className="book-card__author">{book.author}</div>}
-              {(readingInfo[book.id]?.percent ?? 0) > 0 && (
-                <div className="book-card__progress">
-                  <div className="book-card__progress-bar" style={{ width: `${Math.round((readingInfo[book.id]?.percent ?? 0) * 100)}%` }} />
+            <div key={book.id} className="book-card">
+              <button className="book-card__open" onClick={() => onOpenBook(book)}>
+                <div className="book-card__cover">
+                  {book.coverDataUrl ? (
+                    <img src={book.coverDataUrl} alt="" />
+                  ) : (
+                    <span className="book-card__cover-fallback">{book.title.slice(0, 1)}</span>
+                  )}
                 </div>
-              )}
-            </button>
+                <div className="book-card__title">{book.title}</div>
+                {book.author && <div className="book-card__author">{book.author}</div>}
+                {(readingInfo[book.id]?.percent ?? 0) > 0 && (
+                  <div className="book-card__progress">
+                    <div
+                      className="book-card__progress-bar"
+                      style={{ width: `${Math.round((readingInfo[book.id]?.percent ?? 0) * 100)}%` }}
+                    />
+                  </div>
+                )}
+              </button>
+              <button
+                className="book-card__remove"
+                onClick={(e) => requestRemoveBook(book, e)}
+                aria-label={`Remove ${book.title}`}
+                title="Remove"
+              >
+                ×
+              </button>
+            </div>
           ))}
+          {prefs.shamelaEnabled &&
+            shamela.results.map((book) => (
+              <ShamelaResultCard
+                key={`shamela-${book.id}`}
+                book={book}
+                downloading={shamela.downloadingId === book.id}
+                progress={shamela.downloadProgress}
+                onDownload={shamela.download}
+              />
+            ))}
+        </div>
+      )}
+
+      {confirmRemoveBook && (
+        <div className="library__confirm-backdrop" onClick={() => setConfirmRemoveBook(null)}>
+          <div
+            className="library__confirm"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="library-confirm-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="library-confirm-title">Remove this book?</h2>
+            <p dir="auto">
+              “{confirmRemoveBook.title}” and its reading position will be removed from this device. Any saved
+              vocabulary and highlights from it are kept.
+            </p>
+            <div className="library__confirm-actions">
+              <button className="btn btn--ghost" onClick={() => setConfirmRemoveBook(null)}>
+                Cancel
+              </button>
+              <button className="btn btn--danger" onClick={() => void confirmRemoveBookNow()} autoFocus>
+                Remove
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

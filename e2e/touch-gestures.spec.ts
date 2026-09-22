@@ -88,7 +88,7 @@ test('default touch-gesture bindings, single/double-tap/hold behavior, and the n
   await page.waitForSelector('.reader__touch-toast', { timeout: 8000 });
   const toastText = await page.locator('.reader__touch-toast span').first().textContent();
   expect(toastText).toContain('Saved');
-  await page.waitForTimeout(3200); // let the toast auto-dismiss
+  await expect(page.locator('.reader__touch-toast')).toHaveCount(0); // waits out its own auto-dismiss timer
 
   // --- Hold -> quickSave ---
   await page.click('.navbar__settings');
@@ -102,7 +102,7 @@ test('default touch-gesture bindings, single/double-tap/hold behavior, and the n
   const holdToastText = await page.locator('.reader__touch-toast span').first().textContent();
   expect(holdToastText?.includes('Saved') || holdToastText?.includes('already')).toBe(true);
   await expect(page.locator('.dict-bubble')).toHaveCount(0);
-  await page.waitForTimeout(3200);
+  await expect(page.locator('.reader__touch-toast')).toHaveCount(0); // waits out its own auto-dismiss timer
 
   // --- Gestures off -> falls back to the native click -> full popup ---
   await page.click('.navbar__settings');

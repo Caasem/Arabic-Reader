@@ -6,3 +6,8 @@ release-electron/
 test-results/
 playwright-report/
 blob-report/
+
+# Local IDE / tooling state
+.idea/
+android/.idea/
+.codegraph/

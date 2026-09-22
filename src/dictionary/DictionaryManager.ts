@@ -1,22 +1,25 @@
 import type { DictionaryLookupResult, DictionaryProvider, MorphologyProvider } from '../types';
+import { aramorphProvider } from './providers/aramorph/AramorphDictionaryProvider';
+import { alWasitProvider } from './providers/alwasit/AlWasitDictionaryProvider';
+
+const CACHE_LIMIT = 300;
 
 /**
- * Central point of contact for word lookups. The reader/UI only ever calls
- * `dictionaryManager.lookup(word)` — it has no idea how many providers
- * exist, where their data comes from, or which ones are currently switched
- * on. Adding a new dictionary, or swapping the mock morphology provider for
- * a real analyzer, means registering it here; nothing else in the app
- * changes.
+ * The single entry point for word lookups. Callers never know how many
+ * providers exist or which are enabled; adding a dictionary means registering
+ * it here.
  */
 export class DictionaryManager {
   private providers: DictionaryProvider[] = [];
   private morphologyProvider: MorphologyProvider | null = null;
+  /** Insertion-ordered, so the oldest entry is evicted first (LRU). */
   private cache = new Map<string, DictionaryLookupResult>();
-  /** undefined = every registered provider is queried (pre-Settings-UI default). */
+  /** undefined = every registered provider is queried. */
   private enabledProviderIds: Set<string> | undefined;
 
   registerProvider(provider: DictionaryProvider): void {
     this.providers.push(provider);
+    provider.onDataChanged?.(() => this.clearCache());
   }
 
   setMorphologyProvider(provider: MorphologyProvider): void {
@@ -27,7 +30,6 @@ export class DictionaryManager {
     return this.providers;
   }
 
-  /** Restricts lookups to this set of provider ids — backs the Dictionary switching UI. */
   setEnabledProviders(ids: string[]): void {
     this.enabledProviderIds = new Set(ids);
     this.clearCache();
@@ -37,23 +39,41 @@ export class DictionaryManager {
     return !this.enabledProviderIds || this.enabledProviderIds.has(providerId);
   }
 
+  /**
+   * Queries every enabled provider in parallel. One provider failing (e.g. an
+   * optional dataset that can't load offline) never hides the others'
+   * entries: it's listed in `failedProviders`, and the result isn't cached so
+   * a later lookup can retry.
+   */
   async lookup(word: string): Promise<DictionaryLookupResult> {
-    const cacheKey = this.cacheKey(word);
-    const cached = this.cache.get(cacheKey);
-    if (cached) return cached;
+    const key = this.cacheKey(word);
+    const cached = this.cache.get(key);
+    if (cached) {
+      this.cache.delete(key);
+      this.cache.set(key, cached);
+      return cached;
+    }
 
-    const activeProviders = this.providers.filter((p) => this.isEnabled(p.id));
-    const [entriesPerProvider, morphology] = await Promise.all([
-      Promise.all(activeProviders.map((p) => p.lookup(word))),
-      this.morphologyProvider ? this.morphologyProvider.analyze(word) : Promise.resolve(undefined),
+    const active = this.providers.filter((p) => this.isEnabled(p.id));
+    const [outcomes, morphology] = await Promise.all([
+      Promise.allSettled(active.map((p) => p.lookup(word))),
+      this.morphologyProvider ? this.morphologyProvider.analyze(word).catch(() => undefined) : Promise.resolve(undefined),
     ]);
 
-    const result: DictionaryLookupResult = {
-      word,
-      entries: entriesPerProvider.flat(),
-      morphology,
-    };
-    this.cache.set(cacheKey, result);
+    const entries: DictionaryLookupResult['entries'] = [];
+    const failedProviders: { id: string; name: string }[] = [];
+    outcomes.forEach((outcome, i) => {
+      if (outcome.status === 'fulfilled') entries.push(...outcome.value);
+      else failedProviders.push({ id: active[i].id, name: active[i].name });
+    });
+
+    const result: DictionaryLookupResult = { word, entries, morphology };
+    if (failedProviders.length) {
+      result.failedProviders = failedProviders;
+    } else {
+      this.cache.set(key, result);
+      if (this.cache.size > CACHE_LIMIT) this.cache.delete(this.cache.keys().next().value!);
+    }
     return result;
   }
 
@@ -67,29 +87,18 @@ export class DictionaryManager {
   }
 }
 
-// Wire up the default providers: two small mock dictionaries (always
-// available, for demoing without any setup) plus the project's real
-// AraMorph/Buckwalter engine (ships with a bundled default dataset — see
-// AramorphDictionaryProvider — or a user-uploaded one via Settings).
-import { MockDictionaryA } from './providers/mockDictionaryA';
-import { MockDictionaryB } from './providers/mockDictionaryB';
-import { aramorphProvider } from './providers/aramorph/AramorphDictionaryProvider';
-import { alWasitProvider } from './providers/alwasit/AlWasitDictionaryProvider';
-
 export const dictionaryManager = new DictionaryManager();
-dictionaryManager.registerProvider(new MockDictionaryA());
-dictionaryManager.registerProvider(new MockDictionaryB());
 dictionaryManager.registerProvider(aramorphProvider);
-// Off by default (see AlWasitDictionaryProvider's docstring for why) --
-// registering it here is enough for it to show up as a toggle in Settings'
-// dictionary list; DEFAULT_PREFS.enabledProviderIds simply doesn't include
-// its id, same mechanism that already backs every other provider toggle.
+// Off by default (not in DEFAULT_PREFS.enabledProviderIds); registering it is
+// what makes it appear as a toggle in Settings.
 dictionaryManager.registerProvider(alWasitProvider);
-// AraMorph already does real prefix/stem/suffix morphological analysis
-// (root, lemma, POS) against its full dictionary -- previously the app used
-// a separate MockMorphologyProvider here instead, which only matched
-// against the tiny demo lexicon the two mock dictionaries share. Since
-// AraMorph is enabled and loaded by default, using it for morphology too
-// means "Root"/lemma information now works for essentially any real word,
-// not just a handful of demo ones.
+// AraMorph's prefix/stem/suffix analysis also supplies root, lemma and POS.
 dictionaryManager.setMorphologyProvider(aramorphProvider);
+
+// Two tiny demo dictionaries, for development only.
+if (import.meta.env.DEV && import.meta.env.MODE !== 'test') {
+  void Promise.all([import('./providers/mockDictionaryA'), import('./providers/mockDictionaryB')]).then(([a, b]) => {
+    dictionaryManager.registerProvider(new a.MockDictionaryA());
+    dictionaryManager.registerProvider(new b.MockDictionaryB());
+  });
+}
