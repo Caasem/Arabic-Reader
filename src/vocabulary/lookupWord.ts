@@ -1,4 +1,4 @@
-import { dictionaryManager } from '../dictionary/DictionaryManager';
+import { dictionaryManager } from '../dictionary';
 import type { BookMeta, DictionaryEntry, DictionaryLookupResult, VocabularyItem, WordInstance } from '../types';
 import { vocabularyService } from './vocabularyService';
 

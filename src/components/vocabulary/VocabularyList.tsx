@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { vocabularyService, entryMeaning } from '../../vocabulary/vocabularyService';
+import { vocabularyService, entryMeaning } from '../../vocabulary';
 import { BackupControls } from '../shared/BackupControls';
 import { IconSearch, IconTrash, IconEdit, IconCheck, IconClose } from '../shared/icons';
 import type { VocabularyItem } from '../../types';

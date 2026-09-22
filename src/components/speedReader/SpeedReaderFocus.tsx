@@ -12,7 +12,7 @@ import {
   recordSession,
   savePosition,
   type SpeedReaderStream,
-} from '../../speedReader/speedReaderService';
+} from '../../speedReader';
 import './SpeedReaderFocus.css';
 
 /** Controls fade out after this long with no interaction while playing. */

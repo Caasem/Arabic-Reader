@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { BookMeta, Highlight, HighlightColor } from '../../types';
 import { usePreferences } from '../../state/PreferencesContext';
-import { annotationService } from '../../reader/annotations/annotationService';
-import { vocabularyService } from '../../vocabulary/vocabularyService';
+import { annotationService } from '../../reader/annotations';
+import { vocabularyService } from '../../vocabulary';
 import type { SelectionInfo } from '../../reader/epub/EpubService';
-import type { ReadingSessionTracker } from '../../reader/session/ReadingSessionTracker';
-import { observeWordsSeen } from '../../reader/session/observeWordsSeen';
+import type { ReadingSessionTracker } from '../../reader/session';
+import { observeWordsSeen } from '../../reader/session';
 import { distinctWordsIn, wrapArabicWords } from '../../reader/wordInteraction/wrapWords';
 import { applyWordStyle, refreshWordStyles } from '../../reader/wordInteraction/wordStyle';
 import { anchorOf, type HostRect } from '../../reader/wordInteraction/rectInHost';

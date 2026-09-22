@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { dictionaryManager } from '../../../dictionary/DictionaryManager';
+import { dictionaryManager } from '../../../dictionary';
 import { anchorOf, rectInHost } from '../../../reader/wordInteraction/rectInHost';
 
 /** Long enough that a pointer passing over text doesn't flash a preview per word. */

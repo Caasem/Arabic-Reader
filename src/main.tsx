@@ -12,7 +12,7 @@ installGlobalErrorLogging()
 // builds must not hand page scripts a direct line to app services.
 if (import.meta.env.DEV) {
   Promise.all([
-    import('./dictionary/DictionaryManager'),
+    import('./dictionary'),
     import('./dictionary/providers/aramorph/AramorphDictionaryProvider'),
   ]).then(([{ dictionaryManager }, { aramorphProvider }]) => {
     ;(window as unknown as { __dbg: unknown }).__dbg = { dictionaryManager, aramorphProvider }

@@ -3,8 +3,8 @@
  * (`readingSessions`, `vocabulary`, `wordInstances`) so there's one
  * definition of "reading time" or "known word".
  */
-import { persistenceService } from '../persistence/db';
-import { vocabularyService } from '../vocabulary/vocabularyService';
+import { persistenceService } from '../persistence';
+import { vocabularyService } from '../vocabulary';
 import type { ReadingSession, VocabularyItem } from '../types';
 import { addDays, dayKey, daysBetween, parseDayKey, startOfDay } from '../utils/date';
 

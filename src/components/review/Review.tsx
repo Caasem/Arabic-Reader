@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { vocabularyService, formatDueIn, type ReviewGrade } from '../../vocabulary/vocabularyService';
+import { vocabularyService, formatDueIn, type ReviewGrade } from '../../vocabulary';
 import { useArabicSpeech } from '../../utils/speech';
 import { BackupControls } from '../shared/BackupControls';
 import { IconEdit } from '../shared/icons';

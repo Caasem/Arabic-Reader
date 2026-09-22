@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { libraryService, type BookReadingInfo } from '../../library/libraryService';
 import { invalidateBookVocabIndex } from '../../vocabRarity/bookVocabIndex';
-import { invalidateTokenStream } from '../../speedReader/tokenStream';
+import { invalidateTokenStream } from '../../speedReader';
 import { useShamelaBrowse } from '../../shamela/useShamelaBrowse';
 import type { BookMeta } from '../../types';
 import { readString, STORAGE_KEYS, writeString } from '../../utils/storage';

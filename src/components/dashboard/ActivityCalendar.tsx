@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { DayActivity } from '../../stats/readingStatsService';
+import type { DayActivity } from '../../stats';
 import { addDays, dayKey, startOfDay } from '../../utils/date';
 import './ActivityCalendar.css';
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { usePreferences } from '../../../state/PreferencesContext';
-import { dictionaryManager } from '../../../dictionary/DictionaryManager';
+import { dictionaryManager } from '../../../dictionary';
 import { aramorphProvider } from '../../../dictionary/providers/aramorph/AramorphDictionaryProvider';
 import type { DictionaryPanelLayout, MorphDisplayStyle } from '../../../types';
 import { AramorphDataSettings } from './AramorphDataSettings';

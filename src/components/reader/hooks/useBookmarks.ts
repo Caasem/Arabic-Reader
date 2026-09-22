@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { bookmarkService } from '../../../reader/bookmarks/bookmarkService';
+import { bookmarkService } from '../../../reader/bookmarks';
 import type { BookMeta, Bookmark } from '../../../types';
 
 export function useBookmarks(book: BookMeta) {

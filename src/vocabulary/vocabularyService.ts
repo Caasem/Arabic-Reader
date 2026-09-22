@@ -1,6 +1,6 @@
 import { Rating } from 'ts-fsrs';
 import type { BackupData, BookMeta, DictionaryEntry, VocabularyItem, WordInstance } from '../types';
-import { persistenceService } from '../persistence/db';
+import { persistenceService } from '../persistence';
 import { normalize } from '../reader/tokenizer/arabicTokenizer';
 import { newId } from '../utils/id';
 import { applyReview, freshFsrsFields, GRADE_TO_RATING, scheduler, toFsrsCard, type ReviewGrade } from './fsrs';

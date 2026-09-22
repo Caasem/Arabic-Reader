@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, type RefObject } from 'react';
-import { vocabularyService } from '../vocabulary/vocabularyService';
+import { vocabularyService } from '../vocabulary';
 import type { SavedWords } from '../components/reader/hooks/useSavedWords';
 
 const SAVED_CLASS = 'ar-word--saved';

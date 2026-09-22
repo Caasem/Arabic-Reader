@@ -1,5 +1,5 @@
-import { persistenceService } from '../../persistence/db';
-import { invalidateStatsCache } from '../../stats/readingStatsService';
+import { persistenceService } from '../../persistence';
+import { invalidateStatsCache } from '../../stats';
 import { newId } from '../../utils/id';
 
 /** No recorded activity for this long stops time counting as "active reading". */

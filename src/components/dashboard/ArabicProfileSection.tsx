@@ -1,4 +1,4 @@
-import type { ArabicProfile } from '../../stats/readingStatsService';
+import type { ArabicProfile } from '../../stats';
 import { formatCount } from './format';
 import './StatGrid.css';
 

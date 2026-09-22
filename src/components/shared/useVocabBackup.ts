@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { vocabularyService } from '../../vocabulary/vocabularyService';
+import { vocabularyService } from '../../vocabulary';
 import { recordBackupExported } from '../../backupReminder';
 import { BackupFormatError, parseBackup } from '../../persistence/backup';
 import { saveFile } from '../../utils/saveFile';

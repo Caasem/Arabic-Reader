@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { annotationService } from '../../../reader/annotations/annotationService';
+import { annotationService } from '../../../reader/annotations';
 import { spineIndexOfCfi } from '../../../reader/epub/cfi';
 import type { Highlight } from '../../../types';
 

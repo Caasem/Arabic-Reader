@@ -1,5 +1,5 @@
 import ePub from 'epubjs';
-import { persistenceService } from '../persistence/db';
+import { persistenceService } from '../persistence';
 import { tokenize } from '../reader/tokenizer/arabicTokenizer';
 import { findTocLabel, forEachSpineSection, mapNavItems, sectionBody } from '../reader/epub/epubInternals';
 import type { RsvpChapter, RsvpToken } from '../types';

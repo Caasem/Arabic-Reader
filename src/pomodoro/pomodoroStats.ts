@@ -1,5 +1,5 @@
-import { persistenceService } from '../persistence/db';
-import { rangeToBounds, type TimeRange } from '../stats/readingStatsService';
+import { persistenceService } from '../persistence';
+import { rangeToBounds, type TimeRange } from '../stats';
 
 export interface PomodoroTotals {
   completed: number;

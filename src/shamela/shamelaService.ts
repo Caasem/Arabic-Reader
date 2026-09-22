@@ -1,5 +1,5 @@
 import type { BookMeta } from '../types';
-import { persistenceService } from '../persistence/db';
+import { persistenceService } from '../persistence';
 import { newId } from '../utils/id';
 import { EpubBuilder } from './epubBuilder';
 import { shamelaBooksProvider } from './shamelaBooksProvider';

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { vocabularyService } from '../../vocabulary/vocabularyService';
+import { vocabularyService } from '../../vocabulary';
 import './VocabularyEditModal.css';
 
 /**

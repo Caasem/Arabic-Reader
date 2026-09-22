@@ -1,4 +1,4 @@
-import { persistenceService } from '../persistence/db';
+import { persistenceService } from '../persistence';
 import type { PomodoroPhase, PomodoroSession, PomodoroSnapshot, ReaderPreferences } from '../types';
 import { newId } from '../utils/id';
 import { readJSON, removeKey, STORAGE_KEYS, writeJSON } from '../utils/storage';

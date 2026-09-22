@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { annotationService } from '../../reader/annotations/annotationService';
+import { annotationService } from '../../reader/annotations';
 import { HIGHLIGHT_FILL } from '../../theme/tokens';
 import type { Highlight, HighlightColor } from '../../types';
 import './HighlightsList.css';

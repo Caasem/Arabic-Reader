@@ -1,5 +1,5 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { dictionaryManager } from '../../../dictionary/DictionaryManager';
+import { dictionaryManager } from '../../../dictionary';
 import { aramorphProvider } from '../../../dictionary/providers/aramorph/AramorphDictionaryProvider';
 import {
   clearDiagnostics,

@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ReadingSessionTracker } from './ReadingSessionTracker';
-import { persistenceService } from '../../persistence/db';
+import { persistenceService } from '../../persistence';
 
 const T0 = 1_000_000_000;
 const rowsFor = async (bookId: string) => (await persistenceService.getReadingSessions()).filter((s) => s.bookId === bookId);

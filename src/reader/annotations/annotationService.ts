@@ -1,4 +1,4 @@
-import { persistenceService } from '../../persistence/db';
+import { persistenceService } from '../../persistence';
 import type { BookMeta, Highlight, HighlightColor } from '../../types';
 import { newId } from '../../utils/id';
 

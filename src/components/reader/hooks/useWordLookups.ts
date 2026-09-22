@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState, type RefObject } from 'react';
 import type { BookMeta, DictionaryEntry, DictionaryLookupResult, ReaderPreferences, VocabularyItem, WordInstance } from '../../../types';
 import { lookupWord, saveLookup } from '../../../vocabulary/lookupWord';
-import { vocabularyService } from '../../../vocabulary/vocabularyService';
-import type { ReadingSessionTracker } from '../../../reader/session/ReadingSessionTracker';
+import { vocabularyService } from '../../../vocabulary';
+import type { ReadingSessionTracker } from '../../../reader/session';
 import type { TouchWordAction, WordTarget } from '../../../reader/wordInteraction/sectionInteractions';
 import type { HostRect } from '../../../reader/wordInteraction/rectInHost';
 import type { SavedWords } from './useSavedWords';

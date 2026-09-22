@@ -1,4 +1,4 @@
-import type { PomodoroTotals } from '../../pomodoro/pomodoroStats';
+import type { PomodoroTotals } from '../../pomodoro';
 import { formatCount, formatHours } from './format';
 import './StatGrid.css';
 

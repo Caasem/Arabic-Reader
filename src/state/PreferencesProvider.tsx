@@ -8,9 +8,9 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from 'react';
-import { persistenceService } from '../persistence/db';
-import { dictionaryManager } from '../dictionary/DictionaryManager';
-import { pomodoroService } from '../pomodoro/pomodoroService';
+import { persistenceService } from '../persistence';
+import { dictionaryManager } from '../dictionary';
+import { pomodoroService } from '../pomodoro';
 import type { ReaderPreferences } from '../types';
 import { readJSON, STORAGE_KEYS, writeJSON } from '../utils/storage';
 import { withDefaults } from './defaultPreferences';

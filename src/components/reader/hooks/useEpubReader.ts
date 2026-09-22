@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import type { Book } from 'epubjs';
 import { EpubService, type RelocatedLocation, type SelectionInfo } from '../../../reader/epub/EpubService';
-import { ReadingSessionTracker } from '../../../reader/session/ReadingSessionTracker';
-import { annotationService } from '../../../reader/annotations/annotationService';
+import { ReadingSessionTracker } from '../../../reader/session';
+import { annotationService } from '../../../reader/annotations';
 import { libraryService } from '../../../library/libraryService';
-import { persistenceService } from '../../../persistence/db';
+import { persistenceService } from '../../../persistence';
 import type { BookMeta, ReaderPreferences, TocItem } from '../../../types';
 import { logDiagnostic } from '../../../diagnostics/diagnosticsLog';
 import type { ResolvedTheme } from '../../../state/PreferencesContext';

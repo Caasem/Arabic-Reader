@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { TrendPoint } from '../../stats/readingStatsService';
+import type { TrendPoint } from '../../stats';
 import './TrendCharts.css';
 
 type MetricKey = 'wordsRead' | 'readingTime' | 'wpm' | 'lookupDensity' | 'vocabGrowth';

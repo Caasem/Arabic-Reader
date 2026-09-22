@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ActivityCalendar } from './ActivityCalendar';
-import { getSessionsForDay, type DayActivity } from '../../stats/readingStatsService';
+import { getSessionsForDay, type DayActivity } from '../../stats';
 import type { ReadingSession } from '../../types';
 import { formatHours, formatCount } from './format';
 import { parseDayKey } from '../../utils/date';

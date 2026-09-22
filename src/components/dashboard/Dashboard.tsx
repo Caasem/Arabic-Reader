@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { vocabularyService } from '../../vocabulary/vocabularyService';
+import { vocabularyService } from '../../vocabulary';
 import { CollapsibleSection } from './CollapsibleSection';
 import { RangeFilter } from './RangeFilter';
 import { ArabicProfileSection } from './ArabicProfileSection';
@@ -8,7 +8,7 @@ import { ReadingStatsSection } from './ReadingStatsSection';
 import { CalendarSection } from './CalendarSection';
 import { TrendCharts } from './TrendCharts';
 import { PomodoroStatsSection } from './PomodoroStatsSection';
-import { getPomodoroTotals, type PomodoroTotals } from '../../pomodoro/pomodoroStats';
+import { getPomodoroTotals, type PomodoroTotals } from '../../pomodoro';
 import {
   getArabicProfile,
   getReadingTotals,
@@ -23,7 +23,7 @@ import {
   type DayActivity,
   type TrendPoint,
   type TimeRange,
-} from '../../stats/readingStatsService';
+} from '../../stats';
 import type { VocabularyItem } from '../../types';
 import './Dashboard.css';
 

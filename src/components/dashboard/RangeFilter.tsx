@@ -1,4 +1,4 @@
-import { TIME_RANGE_LABELS, type TimeRange } from '../../stats/readingStatsService';
+import { TIME_RANGE_LABELS, type TimeRange } from '../../stats';
 import './RangeFilter.css';
 
 const RANGES: TimeRange[] = ['today', 'week', 'month', '90d', 'all'];

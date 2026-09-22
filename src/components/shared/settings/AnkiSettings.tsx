@@ -3,7 +3,7 @@ import { usePreferences } from '../../../state/PreferencesContext';
 import { AnkiConnectError, ensureDeck, getDeckNames, pingAnki } from '../../../anki/ankiConnect';
 import { syncToAnki } from '../../../anki/ankiSync';
 import { logDiagnostic } from '../../../diagnostics/diagnosticsLog';
-import { vocabularyService } from '../../../vocabulary/vocabularyService';
+import { vocabularyService } from '../../../vocabulary';
 import { Note, SettingsSection } from './controls';
 
 const DEFAULT_DECK = 'Arabic Vocabulary';

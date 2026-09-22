@@ -1,4 +1,4 @@
-import { persistenceService } from '../persistence/db';
+import { persistenceService } from '../persistence';
 import type { BookMeta, RsvpToken, SpeedReaderPosition, SpeedReaderSession } from '../types';
 import { getTokenStream, type TokenStream } from './tokenStream';
 import { newId } from '../utils/id';

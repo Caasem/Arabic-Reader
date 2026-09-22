@@ -1,5 +1,5 @@
 import ePub from 'epubjs';
-import { persistenceService } from '../persistence/db';
+import { persistenceService } from '../persistence';
 import type { BookMeta } from '../types';
 import { newId } from '../utils/id';
 

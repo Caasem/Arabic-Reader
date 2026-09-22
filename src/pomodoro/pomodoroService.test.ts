@@ -2,7 +2,7 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PomodoroService, type PomodoroOutcome } from './pomodoroService';
-import { persistenceService } from '../persistence/db';
+import { persistenceService } from '../persistence';
 
 const T0 = 2_000_000_000;
 

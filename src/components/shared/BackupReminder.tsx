@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { vocabularyService } from '../../vocabulary/vocabularyService';
+import { vocabularyService } from '../../vocabulary';
 import { getLastBackupAt, getReminderDismissedAt, dismissBackupReminder } from '../../backupReminder';
 import './BackupReminder.css';
 

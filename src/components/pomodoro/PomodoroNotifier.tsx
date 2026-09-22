@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { pomodoroService } from '../../pomodoro/pomodoroService';
+import { pomodoroService } from '../../pomodoro';
 import { usePreferences } from '../../state/PreferencesContext';
 import './PomodoroTimer.css';
 

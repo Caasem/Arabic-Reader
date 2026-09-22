@@ -1,4 +1,4 @@
-import type { ReadingTotals, StreakInfo } from '../../stats/readingStatsService';
+import type { ReadingTotals, StreakInfo } from '../../stats';
 import { formatCount, formatHours } from './format';
 import { IconFlame } from '../shared/icons';
 import './StatGrid.css';

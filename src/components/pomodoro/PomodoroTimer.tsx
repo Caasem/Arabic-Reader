@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { pomodoroService } from '../../pomodoro/pomodoroService';
+import { pomodoroService } from '../../pomodoro';
 import { usePreferences } from '../../state/PreferencesContext';
 import type { BookMeta } from '../../types';
 import { useEscapeKey } from '../shared/useEscapeKey';
