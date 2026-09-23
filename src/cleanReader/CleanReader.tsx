@@ -165,7 +165,12 @@ export function CleanReader({
       pageDirection: () => 'rtl',
       onWordClick: (target) => void lookups.openPopup(withChapter(target)),
       onTouchAction: (action, target) => lookups.runTouchAction(action, withChapter(target)),
-      onBackgroundClick: () => lookups.closeBubble(),
+      // Tapping empty space is also how a touch device without an Escape key
+      // brings the exit button back once it's faded.
+      onBackgroundClick: () => {
+        lookups.closeBubble();
+        if (focusRef.current) setShowExitHint(true);
+      },
       onDoubleTap: () => lookups.closeBubble(),
       onHoverStart: hover.schedule,
       onHoverEnd: hover.dismiss,
@@ -326,7 +331,18 @@ export function CleanReader({
       <div className="reader__body">
         {!focus && tocOpen && <TocPanel items={tocItems} onSelect={(href) => goToChapter(Number(href))} />}
 
-        <div className="clean-reader__stage" ref={stageRef} tabIndex={-1} onScroll={handleScroll}>
+        <div
+          className="clean-reader__stage"
+          ref={stageRef}
+          tabIndex={-1}
+          onScroll={handleScroll}
+          onClick={(e) => {
+            // Word taps are handled inside the article itself; this only
+            // catches the margin/empty space around it, which the article's
+            // own background-click handling can't reach in a short chapter.
+            if (focus && e.target === e.currentTarget) setShowExitHint(true);
+          }}
+        >
           {error && <div className="reader__error">{error}</div>}
           {!clean && !error && <div className="reader__loading">Opening book…</div>}
           <article
@@ -352,7 +368,11 @@ export function CleanReader({
       {focus ? (
         <>
           {total > 0 && <div className="clean-reader__counter">{chapter + 1} / {total}</div>}
-          {showExitHint && <div className="clean-reader__hint">← → to turn chapters · Esc to exit</div>}
+          {showExitHint && (
+            <button className="clean-reader__hint" onClick={() => setFocus(false)}>
+              ← → to turn chapters · Tap here or press Esc to exit
+            </button>
+          )}
         </>
       ) : (
       <ReaderFooter
