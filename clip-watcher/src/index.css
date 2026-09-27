@@ -1,0 +1,242 @@
+:root {
+  --bg: #faf6ef;
+  --ink: #2a241c;
+  --ink-soft: #5a5348;
+  --ink-faint: #948c7d;
+  --accent: #a5772f;
+  --accent-tint: #f1e4cc;
+  --danger: #b8492f;
+  --hit: #4a8f5c;
+  --font-arabic: 'Segoe UI', Tahoma, sans-serif;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1812;
+    --ink: #f0e9db;
+    --ink-soft: #c8bda8;
+    --ink-faint: #8a8070;
+    --accent: #d4a44f;
+    --accent-tint: #322a1c;
+    --danger: #e07a5f;
+    --hit: #6fbf7f;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+}
+
+.page__header h1 {
+  margin: 0 0 2px;
+  font-size: 24px;
+}
+
+.page__source {
+  margin: 0 0 20px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.section {
+  margin-bottom: 26px;
+}
+
+.section__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section h2 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-faint);
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.section__hint {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 0 0 8px;
+}
+
+/* Plain text, no card chrome -- a grid of word/gloss pairs, sized to
+   content rather than padded boxes. */
+.vocab-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 4px 16px;
+}
+
+.vocab-grid__item {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+  line-height: 1.3;
+}
+
+.vocab-grid__word {
+  font-family: var(--font-arabic);
+  font-size: 17px;
+}
+
+.vocab-grid__meaning {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.vocab-grid__status {
+  font-size: 11px;
+  color: var(--accent);
+  margin-top: 1px;
+}
+
+.video {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+}
+
+.video iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.transcript {
+  font-family: var(--font-arabic);
+  font-size: 16px;
+  line-height: 2;
+  direction: rtl;
+  text-align: right;
+}
+
+.transcript__line {
+  margin: 0 0 4px;
+}
+
+.transcript__time {
+  direction: ltr;
+  display: inline-block;
+  font-family: system-ui, sans-serif;
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-inline-end: 8px;
+}
+
+.transcript__word {
+  font: inherit;
+  color: var(--ink);
+  background: none;
+  border: none;
+  border-bottom: 1px dotted var(--accent);
+  padding: 0;
+  cursor: pointer;
+}
+
+.transcript__word--open {
+  color: var(--accent);
+}
+
+.transcript__meaning {
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--ink-faint);
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Text-only actions -- no button chrome, matches the "just normal text"
+   direction; the accent color plus underline is enough affordance. */
+.link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.link--hit {
+  color: var(--hit);
+}
+
+.link--miss {
+  color: var(--danger);
+}
+
+/* Inline flashcard practice -- part of the page's flow, sized to its
+   content, not an overlay. */
+.panel {
+  margin-top: 10px;
+  padding: 14px 0 0;
+  border-top: 1px solid var(--accent-tint);
+}
+
+.panel__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-bottom: 6px;
+}
+
+.panel__close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.panel__card {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 10px 0;
+  cursor: pointer;
+}
+
+.panel__word {
+  font-family: var(--font-arabic);
+  font-size: 24px;
+}
+
+.panel__meaning {
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.panel__actions {
+  display: flex;
+  gap: 16px;
+}

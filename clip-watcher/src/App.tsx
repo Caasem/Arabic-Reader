@@ -1,0 +1,139 @@
+import { useState } from 'react';
+import { SAMPLE_CLIPS } from './clips';
+import { FlashcardPanel } from './FlashcardPanel';
+import { Transcript } from './Transcript';
+
+type PanelMode = 'preteach' | 'recap' | null;
+
+export function App() {
+  const [clip] = useState(SAMPLE_CLIPS[0]);
+  const [panelMode, setPanelMode] = useState<PanelMode>(null);
+  const [preteachKnown, setPreteachKnown] = useState<Set<string> | null>(null);
+  const [recapKnown, setRecapKnown] = useState<Set<string> | null>(null);
+
+  const embedSrc = `https://www.youtube.com/embed/${clip.videoId}?start=${clip.startSec}&end=${clip.endSec}&rel=0`;
+
+  return (
+    <div className="page">
+      <header className="page__header">
+        <h1 lang="ar" dir="rtl">
+          {clip.title}
+        </h1>
+        {clip.source && <p className="page__source">{clip.source}</p>}
+      </header>
+
+      <section className="section">
+        <div className="section__top">
+          <h2>Vocabulary</h2>
+          <button className="link" onClick={() => setPanelMode(panelMode === 'preteach' ? null : 'preteach')}>
+            {panelMode === 'preteach' ? 'Close' : 'Revise words'}
+          </button>
+        </div>
+        <div className="vocab-grid">
+          {clip.vocab.map((w) => (
+            <div key={w.surfaceForm} className="vocab-grid__item">
+              <span className="vocab-grid__word" lang="ar" dir="rtl">
+                {w.surfaceForm}
+              </span>
+              <span className="vocab-grid__meaning">{w.meaning}</span>
+            </div>
+          ))}
+        </div>
+        {panelMode === 'preteach' && (
+          <FlashcardPanel
+            words={clip.vocab}
+            onClose={() => setPanelMode(null)}
+            onComplete={(known) => {
+              setPreteachKnown(known);
+              setPanelMode(null);
+            }}
+          />
+        )}
+      </section>
+
+      <section className="section">
+        <h2>Video</h2>
+        <div className="video">
+          <iframe src={embedSrc} title={clip.title} allow="autoplay; encrypted-media" allowFullScreen frameBorder={0} />
+        </div>
+      </section>
+
+      <section className="section">
+        <h2>Transcript</h2>
+        <Transcript clip={clip} />
+      </section>
+
+      <section className="section">
+        <div className="section__top">
+          <h2>Recap</h2>
+          {!recapKnown && (
+            <button className="link" onClick={() => setPanelMode(panelMode === 'recap' ? null : 'recap')}>
+              {panelMode === 'recap' ? 'Close' : 'Test myself'}
+            </button>
+          )}
+        </div>
+        {panelMode === 'recap' && (
+          <FlashcardPanel
+            words={clip.vocab}
+            onClose={() => setPanelMode(null)}
+            onComplete={(known) => {
+              setRecapKnown(known);
+              setPanelMode(null);
+            }}
+          />
+        )}
+        {recapKnown && (
+          <RecapSummary
+            vocab={clip.vocab}
+            preteachKnown={preteachKnown}
+            recapKnown={recapKnown}
+            onRetest={() => {
+              setRecapKnown(null);
+              setPanelMode('recap');
+            }}
+          />
+        )}
+      </section>
+    </div>
+  );
+}
+
+function RecapSummary({
+  vocab,
+  preteachKnown,
+  recapKnown,
+  onRetest,
+}: {
+  vocab: { surfaceForm: string; meaning: string }[];
+  preteachKnown: Set<string> | null;
+  recapKnown: Set<string>;
+  onRetest: () => void;
+}) {
+  return (
+    <>
+      <p className="section__hint">
+        {recapKnown.size} of {vocab.length} known now
+        {preteachKnown ? ` (${preteachKnown.size} of ${vocab.length} before watching)` : ''}.
+      </p>
+      <div className="vocab-grid">
+        {vocab.map((w) => {
+          const after = recapKnown.has(w.surfaceForm);
+          const before = preteachKnown?.has(w.surfaceForm) ?? false;
+          const status = !preteachKnown ? (after ? 'knew it' : 'still shaky') : before && after ? 'already knew' : !before && after ? 'learned it' : after ? 'knew it' : 'still shaky';
+          return (
+            <div key={w.surfaceForm} className="vocab-grid__item">
+              <span className="vocab-grid__word" lang="ar" dir="rtl">
+                {w.surfaceForm}
+              </span>
+              <span className="vocab-grid__meaning">{w.meaning}</span>
+              <span className="vocab-grid__status">{status}</span>
+            </div>
+          );
+        })}
+      </div>
+      <button className="link" onClick={onRetest}>
+        Test again
+      </button>
+    </>
+  );
+}
