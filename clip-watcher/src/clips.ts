@@ -11,6 +11,12 @@ import type { Clip } from './types';
  * Vocab meanings are hand-entered -- standing in for the lookup this module
  * would eventually call over an API/props once integrated, rather than
  * depending on Arabic Reader's dictionary engine here.
+ *
+ * Clip 3 is from قطوف العصيمي (@Qutofosaimi's Shorts) -- unlike @elkamali's
+ * Shorts (checked, no caption track and no burned-in subtitles on 5 clips
+ * tried), this channel's own uploads do have Arabic ASR captions. Its
+ * transcript also has ASR quirks left uncorrected, e.g. "فيه ان" for what
+ * was almost certainly "فإن", and "لالا" for "لئلا".
  */
 export const SAMPLE_CLIPS: Clip[] = [
   {
@@ -61,6 +67,29 @@ export const SAMPLE_CLIPS: Clip[] = [
       { startSec: 15, text: 'بالطاعات وينقص بالمعاصي يحاول ان يكثر من فعل الخير' },
       { startSec: 33, text: 'كانوا في هذه العباده شيء عجيبه لماذا ما كان يصنعه عجائزنا الاميون' },
       { startSec: 44, text: 'شبابنا العالمون امور القلب' },
+    ],
+  },
+  {
+    id: 'strong-wind',
+    title: 'ماذا تفعل عند هبوب الريح؟',
+    videoId: '-7kPHesbdl4',
+    startSec: 0,
+    endSec: 22,
+    source: 'قطوف العصيمي — الشيخ صالح العصيمي',
+    vocab: [
+      { surfaceForm: 'قوله', meaning: 'his saying, his statement' },
+      { surfaceForm: 'الحديث', meaning: '[the] hadith' },
+      { surfaceForm: 'ريح', meaning: 'wind' },
+      { surfaceForm: 'بعير', meaning: 'camel' },
+      { surfaceForm: 'فليعقله', meaning: 'let him hobble/tie it up <verb>' },
+      { surfaceForm: 'السنه', meaning: '[the] Sunnah, [the] prophetic practice' },
+      { surfaceForm: 'الرياح', meaning: '[the] winds (plural of ريح)' },
+      { surfaceForm: 'موضعه', meaning: 'his place, his spot' },
+    ],
+    transcript: [
+      { startSec: 0, text: 'قوله في الحديث اما انها سته الليله ريح شديده فلا يقومن' },
+      { startSec: 7, text: 'احد ومن كان معه بعير فليعقله فيه ان السنه عند هبوب الرياح لزوم كل احد موضعه' },
+      { startSec: 17, text: 'وان يعقل ماله لالا يضيع' },
     ],
   },
 ];
