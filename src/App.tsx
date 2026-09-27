@@ -16,6 +16,7 @@ const Review = lazy(() => import('./components/review/Review').then((m) => ({ de
 const Dashboard = lazy(() => import('./components/dashboard/Dashboard').then((m) => ({ default: m.Dashboard })));
 const SpeedReader = lazy(() => import('./components/speedReader/SpeedReader').then((m) => ({ default: m.SpeedReader })));
 const SettingsPanel = lazy(() => import('./components/shared/SettingsPanel').then((m) => ({ default: m.SettingsPanel })));
+const ClipLessonView = lazy(() => import('./components/watcher/ClipLessonView').then((m) => ({ default: m.ClipLessonView })));
 
 function App() {
   const [view, setView] = useState<ViewName>('library');
@@ -94,6 +95,7 @@ function App() {
               {view === 'vocabulary' && <VocabularyList />}
               {view === 'highlights' && <HighlightsList onOpenInBook={openHighlight} />}
               {view === 'review' && <Review />}
+              {view === 'watcher' && <ClipLessonView />}
               {view === 'speedReader' && <SpeedReader />}
               {view === 'dashboard' && <Dashboard />}
             </Suspense>

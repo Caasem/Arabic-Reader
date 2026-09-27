@@ -85,6 +85,15 @@ export function IconReview({ size = 18, ...rest }: IconProps) {
   );
 }
 
+export function IconWatch({ size = 18, ...rest }: IconProps) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <rect x="3" y="5" width="18" height="14" rx="2.5" />
+      <path d="M10.5 9.5v5l4.3-2.5-4.3-2.5Z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function IconSettings({ size = 18, ...rest }: IconProps) {
   return (
     <svg {...base(size)} {...rest}>

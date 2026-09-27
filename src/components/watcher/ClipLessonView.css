@@ -1,0 +1,201 @@
+.clip-lesson {
+  padding: 40px 48px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.clip-lesson__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.clip-lesson__header h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+  font-family: var(--font-arabic);
+}
+
+.clip-lesson__phase-label {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.clip-lesson__empty {
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.clip-lesson__empty-sub {
+  color: var(--ink-faint);
+  font-size: 13px;
+}
+
+.clip-lesson__progress {
+  font-size: 13px;
+  color: var(--ink-faint);
+  margin: 0 0 10px;
+}
+
+.clip-lesson__card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 48px 32px;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  cursor: pointer;
+  gap: 12px;
+}
+
+.clip-lesson__card-word {
+  font-family: var(--font-arabic);
+  font-size: 40px;
+  color: var(--ink);
+}
+
+.clip-lesson__card-hint {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.clip-lesson__card-back {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.clip-lesson__card-meaning {
+  font-size: 17px;
+  color: var(--ink);
+}
+
+.clip-lesson__card-root {
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.clip-lesson__actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.clip-lesson__btn {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.clip-lesson__btn--reveal,
+.clip-lesson__btn--hit {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.clip-lesson__btn--miss {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.clip-lesson__video {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #000;
+}
+
+.clip-lesson__video iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.clip-lesson__vocab-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.clip-lesson__chip {
+  font-family: var(--font-arabic);
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-radius: 20px;
+  padding: 4px 12px;
+}
+
+.clip-lesson__source {
+  font-size: 12px;
+  color: var(--ink-faint);
+  margin-top: 10px;
+}
+
+.clip-lesson__summary {
+  font-size: 14px;
+  color: var(--ink-soft);
+  margin-bottom: 16px;
+}
+
+.clip-lesson__breakdown {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.clip-lesson__breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.clip-lesson__breakdown-row--hit {
+  border-color: var(--accent);
+}
+
+.clip-lesson__breakdown-row span:first-child {
+  font-family: var(--font-arabic);
+  font-size: 17px;
+  min-width: 70px;
+}
+
+.clip-lesson__breakdown-meaning {
+  color: var(--ink-soft);
+  flex: 1;
+}
+
+.clip-lesson__breakdown-status {
+  font-size: 12px;
+  color: var(--ink-faint);
+}

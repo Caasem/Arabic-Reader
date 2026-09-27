@@ -7,6 +7,7 @@ import {
   IconVocabulary,
   IconHighlights,
   IconReview,
+  IconWatch,
   IconDashboard,
   IconSettings,
   IconChevronLeft,
@@ -23,7 +24,8 @@ export type ViewName =
   | 'highlights'
   | 'review'
   | 'speedReader'
-  | 'dashboard';
+  | 'dashboard'
+  | 'watcher';
 
 // 'vocabLevels' (per-book "Vocabulary Levels" — rarity-tiered word list with
 // jump-to-occurrence) is distinct from 'vocabulary' (the cross-book saved
@@ -42,6 +44,7 @@ const ALL_ITEMS: { id: ViewName; label: string; Icon: (props: { size?: number })
   { id: 'vocabulary', label: 'Vocabulary', Icon: IconVocabulary },
   { id: 'highlights', label: 'Highlights', Icon: IconHighlights },
   { id: 'review', label: 'Review', Icon: IconReview },
+  { id: 'watcher', label: 'Watch', Icon: IconWatch },
   { id: 'dashboard', label: 'Dashboard', Icon: IconDashboard },
 ];
 const ITEMS = SPEED_READER_ENABLED ? ALL_ITEMS : ALL_ITEMS.filter((i) => i.id !== 'speedReader');
