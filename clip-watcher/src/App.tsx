@@ -2,11 +2,36 @@ import { useState } from 'react';
 import { SAMPLE_CLIPS } from './clips';
 import { FlashcardPanel } from './FlashcardPanel';
 import { Transcript } from './Transcript';
+import type { Clip } from './types';
 
 type PanelMode = 'preteach' | 'recap' | null;
 
 export function App() {
-  const [clip] = useState(SAMPLE_CLIPS[0]);
+  const [clipId, setClipId] = useState(SAMPLE_CLIPS[0].id);
+  const clip = SAMPLE_CLIPS.find((c) => c.id === clipId)!;
+
+  return (
+    <div className="page">
+      {SAMPLE_CLIPS.length > 1 && (
+        <nav className="clip-picker">
+          {SAMPLE_CLIPS.map((c) => (
+            <button
+              key={c.id}
+              className={'link' + (c.id === clipId ? ' clip-picker__active' : '')}
+              onClick={() => setClipId(c.id)}
+            >
+              {c.title}
+            </button>
+          ))}
+        </nav>
+      )}
+      {/* key resets the lesson's local state (panel/known-words) when the clip changes */}
+      <Lesson key={clip.id} clip={clip} />
+    </div>
+  );
+}
+
+function Lesson({ clip }: { clip: Clip }) {
   const [panelMode, setPanelMode] = useState<PanelMode>(null);
   const [preteachKnown, setPreteachKnown] = useState<Set<string> | null>(null);
   const [recapKnown, setRecapKnown] = useState<Set<string> | null>(null);
@@ -14,7 +39,7 @@ export function App() {
   const embedSrc = `https://www.youtube.com/embed/${clip.videoId}?start=${clip.startSec}&end=${clip.endSec}&rel=0`;
 
   return (
-    <div className="page">
+    <>
       <header className="page__header">
         <h1 lang="ar" dir="rtl">
           {clip.title}
@@ -94,7 +119,7 @@ export function App() {
           />
         )}
       </section>
-    </div>
+    </>
   );
 }
 
