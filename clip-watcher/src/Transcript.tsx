@@ -10,13 +10,34 @@ function formatTime(sec: number): string {
 }
 
 /**
- * The clip's transcript, line by line, with taught vocabulary words
- * highlighted and tappable -- tap one to reveal its meaning inline, no
- * separate popover positioning to get right.
+ * The clip's transcript, line by line. Every word the lesson has a meaning
+ * for -- curated vocab or the rest of the glossary -- is hoverable (and
+ * tappable, for touch) to show its meaning, with an "Add" action for
+ * words not already in the vocab list.
+ *
+ * Two-state model on purpose: `pinned` (set by click, persists) and
+ * `hovered` (set by mouse enter/leave, transient, only shown when nothing
+ * is pinned). A single toggle-on-click driven by hover state doesn't work
+ * here -- hovering a word would open it, then the click that follows
+ * immediately toggles it closed again, and moving the mouse from the word
+ * to its "+ Add" button (a sibling, not a child) would close the popover
+ * via mouseleave before the click on Add ever lands.
  */
-export function Transcript({ clip }: { clip: Clip }) {
-  const vocabByForm = new Map<string, ClipVocabWord>(clip.vocab.map((w) => [w.surfaceForm, w]));
-  const [openWord, setOpenWord] = useState<string | null>(null);
+export function Transcript({
+  clip,
+  vocabForms,
+  onAddWord,
+}: {
+  clip: Clip;
+  /** Surface forms already in the lesson's vocab list (curated + added),
+   * so already-added words don't offer "Add" again. */
+  vocabForms: Set<string>;
+  onAddWord: (word: ClipVocabWord) => void;
+}) {
+  const wordByForm = new Map<string, ClipVocabWord>([...clip.vocab, ...clip.glossary].map((w) => [w.surfaceForm, w]));
+  const [pinned, setPinned] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<string | null>(null);
+  const openWord = pinned ?? hovered;
 
   return (
     <div className="transcript">
@@ -25,19 +46,39 @@ export function Transcript({ clip }: { clip: Clip }) {
           <span className="transcript__time">{formatTime(segment.startSec)}</span>
           {segment.text.split(/\s+/).map((word, i) => {
             const bare = word.replace(TRAILING_PUNCT_RE, '');
-            const vocabWord = vocabByForm.get(bare);
-            if (!vocabWord) return <span key={i}> {word}</span>;
+            const entry = wordByForm.get(bare);
+            if (!entry) return <span key={i}> {word}</span>;
             const isOpen = openWord === bare;
+            const inVocab = vocabForms.has(bare);
             return (
-              <span key={i}>
+              <span
+                key={i}
+                onMouseEnter={() => setHovered(bare)}
+                onMouseLeave={() => setHovered((cur) => (cur === bare ? null : cur))}
+              >
                 {' '}
                 <button
-                  className={'transcript__word' + (isOpen ? ' transcript__word--open' : '')}
-                  onClick={() => setOpenWord(isOpen ? null : bare)}
+                  className={'transcript__word' + (inVocab ? ' transcript__word--taught' : '')}
+                  onClick={() => setPinned(pinned === bare ? null : bare)}
                 >
                   {word}
                 </button>
-                {isOpen && <span className="transcript__meaning">({vocabWord.meaning})</span>}
+                {isOpen && (
+                  <span className="transcript__meaning">
+                    ({entry.meaning})
+                    {!inVocab && (
+                      <button
+                        className="link transcript__add"
+                        onClick={() => {
+                          onAddWord(entry);
+                          setPinned(bare);
+                        }}
+                      >
+                        + Add
+                      </button>
+                    )}
+                  </span>
+                )}
               </span>
             );
           })}

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { SAMPLE_CLIPS } from './clips';
 import { FlashcardPanel } from './FlashcardPanel';
 import { Transcript } from './Transcript';
-import type { Clip } from './types';
+import type { Clip, ClipVocabWord } from './types';
 
 type PanelMode = 'preteach' | 'recap' | null;
 
@@ -35,6 +35,16 @@ function Lesson({ clip }: { clip: Clip }) {
   const [panelMode, setPanelMode] = useState<PanelMode>(null);
   const [preteachKnown, setPreteachKnown] = useState<Set<string> | null>(null);
   const [recapKnown, setRecapKnown] = useState<Set<string> | null>(null);
+  // Words added from the transcript, on top of the curated set -- kept
+  // separate so RecapSummary can still tell "curated" from "added" if
+  // that distinction turns out to matter later.
+  const [addedWords, setAddedWords] = useState<ClipVocabWord[]>([]);
+  const vocab = [...clip.vocab, ...addedWords];
+  const vocabForms = new Set(vocab.map((w) => w.surfaceForm));
+
+  function addWord(word: ClipVocabWord) {
+    setAddedWords((prev) => (prev.some((w) => w.surfaceForm === word.surfaceForm) ? prev : [...prev, word]));
+  }
 
   const embedSrc = `https://www.youtube.com/embed/${clip.videoId}?start=${clip.startSec}&end=${clip.endSec}&rel=0`;
 
@@ -55,7 +65,7 @@ function Lesson({ clip }: { clip: Clip }) {
           </button>
         </div>
         <div className="vocab-grid">
-          {clip.vocab.map((w) => (
+          {vocab.map((w) => (
             <div key={w.surfaceForm} className="vocab-grid__item">
               <span className="vocab-grid__word" lang="ar" dir="rtl">
                 {w.surfaceForm}
@@ -66,7 +76,7 @@ function Lesson({ clip }: { clip: Clip }) {
         </div>
         {panelMode === 'preteach' && (
           <FlashcardPanel
-            words={clip.vocab}
+            words={vocab}
             onClose={() => setPanelMode(null)}
             onComplete={(known) => {
               setPreteachKnown(known);
@@ -85,7 +95,7 @@ function Lesson({ clip }: { clip: Clip }) {
 
       <section className="section">
         <h2>Transcript</h2>
-        <Transcript clip={clip} />
+        <Transcript clip={clip} vocabForms={vocabForms} onAddWord={addWord} />
       </section>
 
       <section className="section">
@@ -99,7 +109,7 @@ function Lesson({ clip }: { clip: Clip }) {
         </div>
         {panelMode === 'recap' && (
           <FlashcardPanel
-            words={clip.vocab}
+            words={vocab}
             onClose={() => setPanelMode(null)}
             onComplete={(known) => {
               setRecapKnown(known);
@@ -109,7 +119,7 @@ function Lesson({ clip }: { clip: Clip }) {
         )}
         {recapKnown && (
           <RecapSummary
-            vocab={clip.vocab}
+            vocab={vocab}
             preteachKnown={preteachKnown}
             recapKnown={recapKnown}
             onRetest={() => {

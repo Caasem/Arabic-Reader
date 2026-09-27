@@ -19,6 +19,10 @@ export interface Clip {
   startSec: number;
   endSec: number;
   source?: string;
+  /** The curated pre-teach/recap set. */
   vocab: ClipVocabWord[];
+  /** Every other word in the transcript worth defining on hover/tap --
+   * lets the transcript act as a lookup surface beyond the curated set. */
+  glossary: ClipVocabWord[];
   transcript: ClipTranscriptSegment[];
 }

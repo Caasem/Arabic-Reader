@@ -159,18 +159,22 @@ body {
   margin-inline-end: 8px;
 }
 
+/* Any word with a meaning is a plain-text hover target -- dotted underline
+   only, no button chrome. Curated/added vocab words get the accent color
+   so they read as "already in your list" at a glance. */
 .transcript__word {
   font: inherit;
-  color: var(--ink);
+  color: var(--ink-soft);
   background: none;
   border: none;
-  border-bottom: 1px dotted var(--accent);
+  border-bottom: 1px dotted var(--ink-faint);
   padding: 0;
   cursor: pointer;
 }
 
-.transcript__word--open {
-  color: var(--accent);
+.transcript__word--taught {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
 }
 
 .transcript__meaning {
@@ -179,6 +183,11 @@ body {
   color: var(--ink-faint);
   direction: ltr;
   unicode-bidi: isolate;
+}
+
+.transcript__add {
+  margin-inline-start: 6px;
+  font-size: 12px;
 }
 
 /* Text-only actions -- no button chrome, matches the "just normal text"
