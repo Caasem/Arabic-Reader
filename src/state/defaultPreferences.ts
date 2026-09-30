@@ -37,6 +37,8 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   dictionarySearchEnabled: true,
   dictionarySearchStyle: 'floating',
   wasitMatchHighlight: true,
+  wasitStructureEnabled: true,
+  wasitStructureExamples: 'dim',
 };
 
 /** A comfortable line length depends on screen width, so a device with no

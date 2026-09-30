@@ -102,4 +102,7 @@ export interface ReaderPreferences {
   dictionarySearchStyle: 'floating' | 'palette' | 'drawer' | 'sheet';
   /** Prototype: colour the Al-Wasit sense matching the looked-up word. */
   wasitMatchHighlight: boolean;
+  /** Prototype: draw Al-Wasit's internal structure in the popup. */
+  wasitStructureEnabled: boolean;
+  wasitStructureExamples: 'dim' | 'normal';
 }

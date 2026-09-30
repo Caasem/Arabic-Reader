@@ -6,6 +6,7 @@ import { usePreferences } from '../../state/PreferencesContext';
 import { IconEdit, IconChevronLeft, IconChevronRight } from '../shared/icons';
 import { buildEntryTokenSenses, reconstructSelection, type DefinitionToken } from './definitionTokens';
 import { findMatchedSenses, WASIT_MATCH_CLASS } from '../../wasitMatch';
+import { annotateEntry } from '../../wasitStructure';
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
@@ -278,6 +279,16 @@ export function DictionaryPopup({
     });
     return map;
   }, [result, word, prefs.wasitMatchHighlight]);
+
+  // Al-Wasit's internal structure (see wasitStructure); null = render plain.
+  const wasitStructure = useMemo(() => {
+    const map = new Map<number, ReturnType<typeof annotateEntry>>();
+    if (!prefs.wasitStructureEnabled) return map;
+    result?.entries.forEach((e, i) => {
+      if (e.providerId === 'alwasit') map.set(i, annotateEntry(e));
+    });
+    return map;
+  }, [result, prefs.wasitStructureEnabled]);
 
   function toggleToken(entryIdx: number, idx: number) {
     setTokenSelections((prev) => {
@@ -557,19 +568,35 @@ export function DictionaryPopup({
                 )}
               </div>
               {tokenData ? (
-                <div className="dict-popup__tokens" dir="rtl" onPointerMove={handleTokensPointerMove}>
-                  {entry.senses.map((s, si) => (
-                    <div className="dict-popup__token-sense" key={si}>
-                      {tokenData.bySense[si].map((t) =>
-                        !t.isWord ? (
-                          <span key={t.globalIdx}>{t.text}</span>
-                        ) : (
+                <div
+                  className={'dict-popup__tokens' + (wasitStructure.get(i) && prefs.wasitStructureExamples === 'dim' ? ' wasit-examples--dim' : '')}
+                  dir="rtl"
+                  onPointerMove={handleTokensPointerMove}
+                >
+                  {entry.senses.map((s, si) => {
+                    const structure = wasitStructure.get(i)?.[si];
+                    let wordNo = 0;
+                    return (
+                    <div
+                      className={
+                        'dict-popup__token-sense' +
+                        (structure?.isLead ? ' wasit-sense--lead' : '') +
+                        (structure?.isContinuation ? ' wasit-sense--cont' : '')
+                      }
+                      key={si}
+                    >
+                      {tokenData.bySense[si].map((t) => {
+                        if (!t.isWord) return <span key={t.globalIdx}>{t.text}</span>;
+                        const word = structure?.words[wordNo++];
+                        return (
                           <span
                             key={t.globalIdx}
                             data-entry={i}
                             data-idx={t.globalIdx}
+                            title={word?.title}
                             className={
                               'dict-popup__token' +
+                              (word ? ' wasit-role--' + word.role : '') +
                               (sel?.has(t.globalIdx) ? ' dict-popup__token--selected' : '') +
                               (wasitMatches.get(i)?.has(si) && t === tokenData.bySense[si].find((x) => x.isWord) ? ' ' + WASIT_MATCH_CLASS : '')
                             }
@@ -577,11 +604,12 @@ export function DictionaryPopup({
                           >
                             {t.text}
                           </span>
-                        )
-                      )}
+                        );
+                      })}
                       {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <ul className="dict-popup__senses">
