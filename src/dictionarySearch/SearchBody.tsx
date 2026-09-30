@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { vocabularyService } from '../vocabulary';
 import type { BookMeta, DictionaryEntry } from '../types';
-import { SEARCH_INPUT_ATTR } from './useSearchHotkey';
 import { useDictionarySearch } from './useDictionarySearch';
 
 interface Props {
@@ -82,7 +81,6 @@ export function SearchBody({ book, initialQuery, onClose }: Props) {
         </svg>
         <input
           ref={inputRef}
-          {...{ [SEARCH_INPUT_ATTR]: '' }}
           className="dsearch__input"
           dir="rtl"
           lang="ar"

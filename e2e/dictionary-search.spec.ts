@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Press D in the reader (the key can come from inside the book's iframe or
- * the host page) to open the dictionary search; D again closes it.
+ * Press Alt+D in the reader (the key can come from inside the book's iframe or
+ * the host page) to open the dictionary search; Alt+D again closes it.
  */
-test('D opens and closes the dictionary search, in every style', async ({ page }) => {
+test('Alt+D opens and closes the dictionary search, in every style', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
   await page.waitForSelector('text=Try the sample book', { timeout: 10000 });
   await page.click('text=Try the sample book');
@@ -16,16 +16,16 @@ test('D opens and closes the dictionary search, in every style', async ({ page }
   const frame = page.frames().find((f) => f !== page.mainFrame())!;
   const word = await frame.evaluate(() => (document.querySelector('p .ar-word') as HTMLElement).dataset.word!);
   const pressDInBook = () =>
-    frame.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', bubbles: true })));
+    frame.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', code: 'KeyD', altKey: true, bubbles: true })));
 
-  // Floating is the default; D from inside the book opens it.
+  // Floating is the default; Alt+D from inside the book opens it.
   await pressDInBook();
   await expect(page.locator('.dsearch--floating')).toBeVisible();
   await page.keyboard.type(word);
   await expect(page.locator('.dsearch__entry').first()).toBeVisible({ timeout: 8000 });
 
-  // A plain Latin "d" typed in the box closes it rather than being typed.
-  await page.keyboard.press('d');
+  // Alt+D also closes it while typing in the box, and a plain "d" is not a shortcut.
+  await page.keyboard.press('Alt+d');
   await expect(page.locator('.dsearch')).toHaveCount(0);
 
   // Escape closes it too.
@@ -43,16 +43,16 @@ test('D opens and closes the dictionary search, in every style', async ({ page }
     await page.click('.navbar__settings');
     await page.locator('.settings-row', { hasText: 'Search style' }).locator('select').selectOption({ label });
     await page.click('.settings-panel__close');
-    await page.keyboard.press('d');
+    await page.keyboard.press('Alt+d');
     await expect(page.locator(cls)).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.locator('.dsearch')).toHaveCount(0);
   }
 
-  // Switched off, D does nothing.
+  // Switched off, Alt+D does nothing.
   await page.click('.navbar__settings');
-  await page.locator('label', { hasText: 'Enable the D shortcut' }).locator('input').uncheck();
+  await page.locator('label', { hasText: 'Enable the Alt+D shortcut' }).locator('input').uncheck();
   await page.click('.settings-panel__close');
-  await page.keyboard.press('d');
+  await page.keyboard.press('Alt+d');
   await expect(page.locator('.dsearch')).toHaveCount(0);
 });

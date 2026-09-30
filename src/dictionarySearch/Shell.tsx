@@ -36,7 +36,7 @@ export function Shell({ style, onClose, children }: { style: Style; onClose(): v
       <aside className="dsearch dsearch--drawer" aria-label="Dictionary search">
         <div className="dsearch__header">
           <span className="dsearch__title">Dictionary</span>
-          <kbd className="dsearch__key">D</kbd>
+          <kbd className="dsearch__key">Alt D</kbd>
           <CloseButton onClose={onClose} />
         </div>
         {children}
@@ -116,7 +116,7 @@ function Floating({ onClose, children }: { onClose(): void; children: ReactNode 
           <circle cx="16" cy="17" r="1.6" />
         </svg>
         <span className="dsearch__title">Drag to move</span>
-        <kbd className="dsearch__key">D</kbd>
+        <kbd className="dsearch__key">Alt D</kbd>
         <CloseButton onClose={onClose} />
       </div>
       {children}

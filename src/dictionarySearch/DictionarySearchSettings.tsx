@@ -13,10 +13,10 @@ export function DictionarySearchSettings() {
   const { prefs, updatePrefs } = usePreferences();
 
   return (
-    <SettingsSection title="Dictionary search (D key)">
-      <Note>Press D while reading to open a dictionary search; press D again (or Esc) to close it.</Note>
+    <SettingsSection title="Dictionary search (Alt+D)">
+      <Note>Press Alt+D while reading to open a dictionary search; press Alt+D again (or Esc) to close it.</Note>
       <ToggleRow
-        label="Enable the D shortcut"
+        label="Enable the Alt+D shortcut"
         checked={prefs.dictionarySearchEnabled}
         onChange={(value) => updatePrefs({ dictionarySearchEnabled: value })}
       />

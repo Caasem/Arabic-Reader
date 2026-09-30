@@ -1,19 +1,13 @@
 import { useEffect, useRef } from 'react';
 
-/** Marks the search box so a plain Latin "d" typed inside it closes the panel
- * (Arabic-only search never needs one) instead of being typed. */
-export const SEARCH_INPUT_ATTR = 'data-dict-search-input';
-
-const TYPING = 'input, textarea, select, [contenteditable="true"]';
-
 function selectedText(target: EventTarget | null): string {
   const doc = (target as Node | null)?.ownerDocument ?? document;
   return doc.defaultView?.getSelection()?.toString().trim() ?? '';
 }
 
 /**
- * Calls `onToggle` when D is pressed (no modifiers, not while typing in a
- * field). The epub reader renders each section in its own iframe, whose
+ * Calls `onToggle` on Alt+D (works while typing too: the chord never types
+ * a character). The epub reader renders each section in its own iframe, whose
  * keystrokes never reach the host window, so this also watches the page for
  * iframes and listens inside each one.
  */
@@ -27,13 +21,10 @@ export function useSearchHotkey(enabled: boolean, onToggle: (selection: string) 
     if (!enabled) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'd' && e.key !== 'D') return;
-      if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing || e.repeat) return;
-      const target = e.target as HTMLElement | null;
-      const inSearchBox = target?.hasAttribute?.(SEARCH_INPUT_ATTR);
-      if (!inSearchBox && target?.closest?.(TYPING)) return;
+      // e.code, not e.key: with Alt held, Mac layouts report a different character.
+      if (e.code !== 'KeyD' || !e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.isComposing || e.repeat) return;
       e.preventDefault();
-      toggleRef.current(inSearchBox ? '' : selectedText(target));
+      toggleRef.current(selectedText(e.target));
     };
 
     const attached = new WeakSet<Document>();
