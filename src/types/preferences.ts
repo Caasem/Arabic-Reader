@@ -100,6 +100,12 @@ export interface ReaderPreferences {
   dictionarySearchEnabled: boolean;
   /** How the D-key search is laid out; touch screens always get the sheet. */
   dictionarySearchStyle: 'floating' | 'palette' | 'drawer' | 'sheet';
+  /** The redesign (src/look): softer cards, serif headings, fuller colour scheme. */
+  lookEnabled: boolean;
+  /** Which preset palette the look starts from. */
+  lookPalette: string;
+  /** Colours the person picked over the preset, by role (hex). */
+  lookCustom: Partial<Record<'bg' | 'surface' | 'ink' | 'accent' | 'secondary' | 'highlight' | 'warning', string>>;
   /** Prototype: colour the Al-Wasit sense matching the looked-up word. */
   wasitMatchHighlight: boolean;
   /** Prototype: draw Al-Wasit's internal structure in the popup. */

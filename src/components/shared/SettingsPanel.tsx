@@ -12,6 +12,7 @@ import { AnkiSettings } from './settings/AnkiSettings';
 import { DiagnosticsSettings } from './settings/DiagnosticsSettings';
 import { CleanReaderSettings } from './settings/CleanReaderSettings';
 import { DictionarySearchSettings } from '../../dictionarySearch';
+import { LookSettings } from '../../look';
 import { WasitMatchSettings } from '../../wasitMatch';
 import { WasitStructureSettings } from '../../wasitStructure';
 import { ShamelaBetaSettings } from './settings/ShamelaBetaSettings';
@@ -33,6 +34,12 @@ function BackupSettings() {
 
 /** Settings grouped by what they're for; the sidebar jumps between groups. */
 const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] }[] = [
+  {
+    id: 'appearance',
+    label: 'Appearance',
+    blurb: 'Colours and the overall look of the app.',
+    sections: [<LookSettings key="look" />],
+  },
   {
     id: 'reading',
     label: 'Reading',

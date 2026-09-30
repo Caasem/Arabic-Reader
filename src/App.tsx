@@ -5,6 +5,7 @@ import { ReaderSwitch } from './cleanReader/ReaderSwitch';
 import { BackupReminder } from './components/shared/BackupReminder';
 import { PomodoroNotifier } from './components/pomodoro/PomodoroNotifier';
 import { PreferencesProvider } from './state/PreferencesProvider';
+import { LookSkin } from './look';
 import { libraryService } from './library/libraryService';
 import type { BookMeta, Highlight } from './types';
 import './App.css';
@@ -67,6 +68,7 @@ function App() {
 
   return (
     <PreferencesProvider>
+      <LookSkin />
       <div className="app">
         <BackupReminder onOpenSettings={() => setSettingsOpen(true)} />
         <div className="app__body">
