@@ -200,7 +200,15 @@ html[data-look] .vocab-card__mastery[data-mastery='mastered'] {
     box-shadow: none;
   }
 
+  html[data-look] .navbar__list {
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
   html[data-look] .navbar__item {
+    flex-shrink: 0;
+    min-width: 64px;
     min-height: 48px;
     border-radius: 24px;
     padding: 6px 10px;
