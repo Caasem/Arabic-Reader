@@ -203,7 +203,9 @@ export function VocabularyList() {
                 <div className="vocab-card__meta">
                   <span>{item.bookTitle}</span>
                   <span className="vocab-card__dot">·</span>
-                  <span className="vocab-card__mastery">{item.mastery}</span>
+                  <span className="vocab-card__mastery" data-mastery={item.mastery}>
+                    {item.mastery}
+                  </span>
                 </div>
                 <div className="vocab-card__stats">
                   {item.encounterCount} encounter{item.encounterCount === 1 ? '' : 's'} · {item.lookupCount} lookup

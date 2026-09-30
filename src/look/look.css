@@ -145,3 +145,64 @@ html[data-look] .settings-group__title {
   font-family: var(--look-display);
   letter-spacing: -0.02em;
 }
+
+/* Word status as pills: new / learning / known / mastered */
+html[data-look] .vocab-card__mastery {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: var(--border);
+  color: var(--ink-soft);
+}
+
+html[data-look] .vocab-card__mastery[data-mastery='new'] {
+  background: var(--look-highlight-soft);
+  color: var(--look-highlight-ink);
+}
+
+html[data-look] .vocab-card__mastery[data-mastery='learning'] {
+  background: var(--accent-soft);
+  color: var(--look-accent-ink);
+}
+
+html[data-look] .vocab-card__mastery[data-mastery='known'] {
+  background: var(--look-secondary-soft);
+  color: var(--look-secondary-ink);
+}
+
+html[data-look] .vocab-card__mastery[data-mastery='mastered'] {
+  background: var(--look-secondary);
+  color: #ffffff;
+}
+
+/* Narrow screens: the bottom tab bar becomes a floating pill */
+@media (max-width: 860px) {
+  html[data-look] .navbar,
+  html[data-look] .navbar--collapsed {
+    width: auto;
+    margin: 0 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    background: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
+    backdrop-filter: blur(18px) saturate(1.5);
+    box-shadow: 0 10px 30px rgba(28, 27, 25, 0.14);
+  }
+
+  html[data-look] .navbar--hidden {
+    width: auto;
+    margin: 0;
+    padding: 0;
+    border-width: 0;
+    box-shadow: none;
+  }
+
+  html[data-look] .navbar__item {
+    min-height: 48px;
+    border-radius: 24px;
+    padding: 6px 10px;
+  }
+}

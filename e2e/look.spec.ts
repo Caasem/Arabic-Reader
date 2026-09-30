@@ -39,3 +39,17 @@ test('look is on by default, takes a picked accent, and switches off cleanly', a
   await page.reload({ waitUntil: 'networkidle' });
   await expect.poll(dataLook).toBe(null);
 });
+
+test('narrow screens get a floating tab bar, and the original bar returns when the look is off', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.waitForSelector('.navbar', { timeout: 10000 });
+  const radius = () => page.$eval('.navbar', (el) => getComputedStyle(el).borderTopLeftRadius);
+
+  await expect.poll(radius).toBe('30px');
+
+  await page.click('.navbar__settings');
+  await page.locator('label', { hasText: 'New look' }).locator('input').uncheck();
+  await page.click('.settings-panel__close');
+  await expect.poll(radius).toBe('0px');
+});

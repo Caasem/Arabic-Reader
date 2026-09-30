@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { contrastRatio, hexToRgb, isHexColor, mix, readableOn, rgbToHex } from './color';
 import { buildLookCss } from './buildLookCss';
 import { LOOK_PALETTES, resolveLookColors } from './palettes';
+import { pickContinueBook } from './continueBook';
+import type { BookMeta } from '../types';
 
 describe('color helpers', () => {
   it('round-trips hex through rgb', () => {
@@ -58,5 +60,25 @@ describe('buildLookCss', () => {
     const light = buildLookCss(LOOK_PALETTES[0].colors).split('\n')[0];
     expect(light).toContain('--accent:#9c7a4f');
     expect(light).toContain('--bg:#faf7f2');
+  });
+});
+
+describe('pickContinueBook', () => {
+  const book = (id: string) => ({ id, title: id }) as BookMeta;
+  const books = [book('a'), book('b'), book('c'), book('d')];
+
+  it('picks the most recently read unfinished book', () => {
+    const info = {
+      a: { percent: 0.4, lastReadAt: 10 },
+      b: { percent: 0.2, lastReadAt: 30 },
+      c: { percent: 0.99, lastReadAt: 50 },
+      d: { percent: 0 },
+    };
+    expect(pickContinueBook(books, info)?.id).toBe('b');
+  });
+
+  it('returns nothing when no book is in progress', () => {
+    expect(pickContinueBook(books, { c: { percent: 1, lastReadAt: 5 }, d: { percent: 0 } })).toBeUndefined();
+    expect(pickContinueBook([], {})).toBeUndefined();
   });
 });
