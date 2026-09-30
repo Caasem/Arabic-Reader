@@ -1,0 +1,6 @@
+/* Text colour only -- no weight, background or underline. Uses the theme's
+   accent so it holds up in every reader theme. */
+.dict-popup__token.wasit-match,
+.wasit-match {
+  color: var(--accent);
+}

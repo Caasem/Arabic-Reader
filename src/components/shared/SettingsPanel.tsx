@@ -12,6 +12,7 @@ import { AnkiSettings } from './settings/AnkiSettings';
 import { DiagnosticsSettings } from './settings/DiagnosticsSettings';
 import { CleanReaderSettings } from './settings/CleanReaderSettings';
 import { DictionarySearchSettings } from '../../dictionarySearch';
+import { WasitMatchSettings } from '../../wasitMatch';
 import { ShamelaBetaSettings } from './settings/ShamelaBetaSettings';
 import './SettingsPanel.css';
 
@@ -47,7 +48,7 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
     id: 'dictionary',
     label: 'Dictionary',
     blurb: 'Which dictionaries answer, and how lookups appear.',
-    sections: [<DictionarySettings key="dictionaries" />, <DictionarySearchSettings key="dsearch" />],
+    sections: [<DictionarySettings key="dictionaries" />, <DictionarySearchSettings key="dsearch" />, <WasitMatchSettings key="wasitmatch" />],
   },
   {
     id: 'vocabulary',

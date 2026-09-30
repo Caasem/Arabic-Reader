@@ -36,6 +36,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   cleanReaderEnabled: false,
   dictionarySearchEnabled: true,
   dictionarySearchStyle: 'floating',
+  wasitMatchHighlight: true,
 };
 
 /** A comfortable line length depends on screen width, so a device with no

@@ -5,6 +5,7 @@ import { normalize } from '../../reader/tokenizer/arabicTokenizer';
 import { usePreferences } from '../../state/PreferencesContext';
 import { IconEdit, IconChevronLeft, IconChevronRight } from '../shared/icons';
 import { buildEntryTokenSenses, reconstructSelection, type DefinitionToken } from './definitionTokens';
+import { findMatchedSenses, WASIT_MATCH_CLASS } from '../../wasitMatch';
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
@@ -267,6 +268,16 @@ export function DictionaryPopup({
     });
     return map;
   }, [result]);
+
+  // Which Al-Wasit senses are the form that was looked up (see wasitMatch).
+  const wasitMatches = useMemo(() => {
+    const map = new Map<number, Set<number>>();
+    if (!prefs.wasitMatchHighlight) return map;
+    result?.entries.forEach((e, i) => {
+      if (e.providerId === 'alwasit') map.set(i, findMatchedSenses(e, word, result.morphology));
+    });
+    return map;
+  }, [result, word, prefs.wasitMatchHighlight]);
 
   function toggleToken(entryIdx: number, idx: number) {
     setTokenSelections((prev) => {
@@ -557,7 +568,11 @@ export function DictionaryPopup({
                             key={t.globalIdx}
                             data-entry={i}
                             data-idx={t.globalIdx}
-                            className={'dict-popup__token' + (sel?.has(t.globalIdx) ? ' dict-popup__token--selected' : '')}
+                            className={
+                              'dict-popup__token' +
+                              (sel?.has(t.globalIdx) ? ' dict-popup__token--selected' : '') +
+                              (wasitMatches.get(i)?.has(si) && t === tokenData.bySense[si].find((x) => x.isWord) ? ' ' + WASIT_MATCH_CLASS : '')
+                            }
                             onPointerDown={(e) => handleTokenPointerDown(i, t.globalIdx, e)}
                           >
                             {t.text}

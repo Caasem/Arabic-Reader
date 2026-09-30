@@ -100,4 +100,6 @@ export interface ReaderPreferences {
   dictionarySearchEnabled: boolean;
   /** How the D-key search is laid out; touch screens always get the sheet. */
   dictionarySearchStyle: 'floating' | 'palette' | 'drawer' | 'sheet';
+  /** Prototype: colour the Al-Wasit sense matching the looked-up word. */
+  wasitMatchHighlight: boolean;
 }
