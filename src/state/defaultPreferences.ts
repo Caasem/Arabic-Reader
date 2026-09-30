@@ -34,6 +34,8 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   pomodoroShowPhaseLabel: true,
   shamelaEnabled: false,
   cleanReaderEnabled: false,
+  dictionarySearchEnabled: true,
+  dictionarySearchStyle: 'floating',
 };
 
 /** A comfortable line length depends on screen width, so a device with no

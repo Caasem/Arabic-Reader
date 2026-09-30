@@ -1,6 +1,7 @@
 import { lazy, type ComponentProps } from 'react';
 import { Reader } from '../components/reader/Reader';
 import { usePreferences } from '../state/PreferencesContext';
+import { DictionarySearchHost } from '../dictionarySearch';
 
 const CleanReader = lazy(() => import('./CleanReader').then((m) => ({ default: m.CleanReader })));
 
@@ -17,9 +18,14 @@ type ReaderSwitchProps = ComponentProps<typeof Reader> & {
  */
 export function ReaderSwitch({ onFocusChromeChange, ...props }: ReaderSwitchProps) {
   const { prefs } = usePreferences();
-  return prefs.cleanReaderEnabled ? (
-    <CleanReader book={props.book} onBack={props.onBack} onFocusChromeChange={onFocusChromeChange} />
-  ) : (
-    <Reader {...props} />
+  return (
+    <>
+      {prefs.cleanReaderEnabled ? (
+        <CleanReader book={props.book} onBack={props.onBack} onFocusChromeChange={onFocusChromeChange} />
+      ) : (
+        <Reader {...props} />
+      )}
+      <DictionarySearchHost book={props.book} />
+    </>
   );
 }

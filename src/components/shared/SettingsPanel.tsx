@@ -10,6 +10,7 @@ import { TouchGestureSettings } from './settings/TouchGestureSettings';
 import { AnkiSettings } from './settings/AnkiSettings';
 import { DiagnosticsSettings } from './settings/DiagnosticsSettings';
 import { CleanReaderSettings } from './settings/CleanReaderSettings';
+import { DictionarySearchSettings } from '../../dictionarySearch';
 import { ShamelaBetaSettings } from './settings/ShamelaBetaSettings';
 import './SettingsPanel.css';
 
@@ -48,6 +49,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         <SearchSettings />
         <TouchGestureSettings />
         <AnkiSettings />
+        <DictionarySearchSettings />
         <CleanReaderSettings />
         <ShamelaBetaSettings />
         <DiagnosticsSettings />

@@ -96,4 +96,8 @@ export interface ReaderPreferences {
   shamelaEnabled: boolean;
   /** Read books as plain text instead of in the epub reader (beta). */
   cleanReaderEnabled: boolean;
+  /** Press D in either reader to search the dictionary. */
+  dictionarySearchEnabled: boolean;
+  /** How the D-key search is laid out; touch screens always get the sheet. */
+  dictionarySearchStyle: 'floating' | 'palette' | 'drawer' | 'sheet';
 }
