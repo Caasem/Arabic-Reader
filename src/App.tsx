@@ -23,6 +23,8 @@ function App() {
   const [view, setView] = useState<ViewName>('library');
   const [activeBook, setActiveBook] = useState<BookMeta | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Which settings group to show first (the reader's own settings links).
+  const [settingsGroup, setSettingsGroup] = useState<string | undefined>(undefined);
   // 'vocabLevels' is the Reader with its Vocabulary Levels panel open (so
   // switching doesn't remount epub.js), shown as its own nav tab.
   const [vocabPanelOpen, setVocabPanelOpen] = useState(false);
@@ -93,6 +95,10 @@ function App() {
                   onFocusChromeChange={setChromeHidden}
                   initialCfiOverride={pendingCfi}
                   onOpenBookAt={openBook}
+                  onOpenSettings={(group) => {
+                    setSettingsGroup(group);
+                    setSettingsOpen(true);
+                  }}
                 />
               )}
               {view === 'vocabulary' && <VocabularyList />}
@@ -105,7 +111,13 @@ function App() {
         </div>
         {settingsOpen && (
           <Suspense fallback={null}>
-            <SettingsPanel onClose={() => setSettingsOpen(false)} />
+            <SettingsPanel
+              initialGroup={settingsGroup}
+              onClose={() => {
+                setSettingsOpen(false);
+                setSettingsGroup(undefined);
+              }}
+            />
           </Suspense>
         )}
         <PomodoroNotifier />

@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { useOriginalReader } from './originalReader';
+
+test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 test('hover-preview toggle: off by default, shows a condensed pill when enabled, persists across reload', async ({ page }) => {
   await page.goto('/');

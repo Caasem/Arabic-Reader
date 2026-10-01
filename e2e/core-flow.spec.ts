@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { useOriginalReader } from './originalReader';
+
+test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 /**
  * The main reading path: open the sample book, tap a word, save it, confirm

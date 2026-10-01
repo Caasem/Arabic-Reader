@@ -8,6 +8,7 @@ import { persistenceService } from '../../../persistence';
 import type { BookMeta, ReaderPreferences, TocItem } from '../../../types';
 import { logDiagnostic } from '../../../diagnostics/diagnosticsLog';
 import type { ResolvedTheme } from '../../../state/PreferencesContext';
+import { isCleanLocation } from '../../../quietReader/location';
 
 export interface ReaderLocation {
   chapterLabel?: string;
@@ -73,7 +74,9 @@ export function useEpubReader(options: Options) {
         openedBookIdRef.current = book.id;
         const resumeCfi = sameBook ? currentLocationRef.current?.cfi : undefined;
         if (!sameBook) currentLocationRef.current = null;
-        const startCfi = resumeCfi ?? eventsRef.current.initialCfiOverride ?? savedPos?.cfi;
+        // A clean-text place (from the new reader) means nothing to epub.js.
+        const override = eventsRef.current.initialCfiOverride;
+        const startCfi = resumeCfi ?? (isCleanLocation(override) ? undefined : override) ?? savedPos?.cfi;
 
         // Started before the first render, so the first section counts too.
         const tracker = new ReadingSessionTracker(book.id, book.title, savedPos?.percent ?? 0);
@@ -112,7 +115,7 @@ export function useEpubReader(options: Options) {
           .listForBook(book.id)
           .then((highlights) => {
             if (cancelled) return;
-            for (const h of highlights) svc.renderHighlight(h.cfiRange, h.color);
+            for (const h of highlights) if (!isCleanLocation(h.cfiRange)) svc.renderHighlight(h.cfiRange, h.color);
           })
           .catch((e) => logDiagnostic('warn', 'reader', 'Could not load saved book data', e));
 

@@ -1,6 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { useOriginalReader } from './originalReader';
+
+test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 const fontsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', 'fonts');
 // The bundled (OFL) Latin subset stands in for a font someone uploads. WOFF2

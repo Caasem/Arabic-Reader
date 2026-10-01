@@ -21,6 +21,7 @@ import { FontSettings } from '../../readerFont';
 import { WasitMatchSettings } from '../../wasitMatch';
 import { WasitStructureSettings } from '../../wasitStructure';
 import { ShamelaBetaSettings } from './settings/ShamelaBetaSettings';
+import { QuietReaderSettings } from '../../quietReader/QuietReaderSettings';
 import './SettingsPanel.css';
 
 function BackupSettings() {
@@ -50,6 +51,7 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
     label: 'Reading',
     blurb: 'How books look, turn and respond to touch.',
     sections: [
+      <QuietReaderSettings key="quiet" />,
       <ReadingSettings key="reading" />,
       <FontSettings key="font" />,
       <CleanReaderSettings key="clean" />,
@@ -84,10 +86,19 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
   },
 ];
 
-export function SettingsPanel({ onClose }: { onClose: () => void }) {
+export function SettingsPanel({ onClose, initialGroup }: { onClose: () => void; initialGroup?: string }) {
   useEscapeKey(onClose);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(GROUPS[0].id);
+
+  // Opened from a link that names a group (e.g. the reader's "All reading settings").
+  useEffect(() => {
+    const el = scrollRef.current;
+    const target = initialGroup && el?.querySelector<HTMLElement>(`#settings-group-${initialGroup}`);
+    if (!el || !target) return;
+    el.scrollTop = target.offsetTop - el.offsetTop - 8;
+    setActive(initialGroup);
+  }, [initialGroup]);
 
   useEffect(() => {
     const el = scrollRef.current;

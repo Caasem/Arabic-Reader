@@ -190,6 +190,17 @@ export function useWordLookups({ book, trackerRef, savedWords, prefsRef, onLooku
       markSaved(popup.word, true);
     },
 
+    /** Saves several entries (e.g. one dictionary's whole section) as one card. */
+    async savePopupEntries(entries: DictionaryEntry[]) {
+      if (!popup?.result || !entries.length) return;
+      await saveLookup(
+        book,
+        { word: popup.word, result: popup.result, instance: popup.instance },
+        { entries, describedBy: entries[0], chapterHref: popup.sectionHref }
+      );
+      markSaved(popup.word, true);
+    },
+
     /** Saves only the selected part of a long entry as the card's definition. */
     async savePopupSelection(entry: DictionaryEntry, selectedText: string) {
       if (!popup) return;

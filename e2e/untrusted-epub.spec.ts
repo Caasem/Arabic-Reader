@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
 import JSZip from 'jszip';
+import { useOriginalReader } from './originalReader';
+
+test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 /**
  * A hostile EPUB must render as inert content: section iframes are

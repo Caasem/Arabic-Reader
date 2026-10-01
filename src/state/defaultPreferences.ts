@@ -36,6 +36,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   pomodoroShowPhaseLabel: true,
   shamelaEnabled: false,
   cleanReaderEnabled: false,
+  quietReaderEnabled: true,
   dictionarySearchEnabled: true,
   dictionarySearchStyle: 'floating',
   bookSearchEnabled: true,

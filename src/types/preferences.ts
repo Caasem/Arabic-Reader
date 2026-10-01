@@ -101,6 +101,8 @@ export interface ReaderPreferences {
   shamelaEnabled: boolean;
   /** Read books as plain text instead of in the epub reader (beta). */
   cleanReaderEnabled: boolean;
+  /** The redesigned reader (src/quietReader): clean text, one dock, the dictionary in the margin. Off: the readers above. */
+  quietReaderEnabled: boolean;
   /** Press D in either reader to search the dictionary. */
   dictionarySearchEnabled: boolean;
   /** How the D-key search is laid out; touch screens always get the sheet. */
