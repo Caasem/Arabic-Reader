@@ -37,6 +37,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   dictionarySearchEnabled: true,
   dictionarySearchStyle: 'floating',
   bookSearchEnabled: true,
+  bookVocabEnabled: true,
   lookEnabled: true,
   lookPalette: 'tan',
   lookCustom: {},

@@ -102,6 +102,8 @@ export interface ReaderPreferences {
   dictionarySearchStyle: 'floating' | 'palette' | 'drawer' | 'sheet';
   /** Press Alt+S in the epub reader to search the whole book (src/bookSearch). */
   bookSearchEnabled: boolean;
+  /** Press Alt+V to list the words saved from the open book (src/bookVocab). */
+  bookVocabEnabled: boolean;
   /** The redesign (src/look): softer cards, serif headings, fuller colour scheme. */
   lookEnabled: boolean;
   /** Which preset palette the look starts from. */
