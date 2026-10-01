@@ -349,3 +349,82 @@
 .dict-popup--clean .dict-popup__headword--toggle:hover {
   background: var(--accent-soft);
 }
+
+/* Dock of Al-Wasit entries: labelled tabs on the popup's edge, shown once the Al-Wasit entries are in view. */
+.dict-popup__dock {
+  position: absolute;
+  top: calc(104px * var(--k, 0.6667));
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: calc(5px * var(--k, 0.6667));
+  direction: ltr;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.dict-popup__dock--on {
+  opacity: 1;
+  pointer-events: auto;
+}
+.dict-popup__dock[data-side='left'] {
+  left: 0;
+  align-items: flex-end;
+  transform: translateX(calc(-100% + 10px * var(--k, 0.6667)));
+}
+.dict-popup__dock[data-side='right'] {
+  right: 0;
+  align-items: flex-start;
+  transform: translateX(calc(100% - 10px * var(--k, 0.6667)));
+}
+.dict-popup__dock-tab {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: calc(8px * var(--k, 0.6667));
+  width: calc(148px * var(--k, 0.6667));
+  height: calc(40px * var(--k, 0.6667));
+  padding: 0 calc(12px * var(--k, 0.6667));
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-family: var(--ui, var(--font-ui));
+  line-height: calc(38px * var(--k, 0.6667));
+  white-space: nowrap;
+  overflow: hidden;
+}
+.dict-popup__dock[data-side='left'] .dict-popup__dock-tab {
+  border-radius: calc(12px * var(--k, 0.6667)) 0 0 calc(12px * var(--k, 0.6667));
+  border-right: 0;
+}
+.dict-popup__dock[data-side='right'] .dict-popup__dock-tab {
+  border-radius: 0 calc(12px * var(--k, 0.6667)) calc(12px * var(--k, 0.6667)) 0;
+  border-left: 0;
+}
+.dict-popup__dock-tab[aria-current='true'] {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.dict-popup__dock-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.dict-popup__dock-head {
+  font-family: var(--ar, var(--font-arabic));
+  font-size: calc(19px * var(--k, 0.6667));
+  color: var(--accent);
+}
+.dict-popup__dock-gist {
+  font-family: var(--ar, var(--font-arabic));
+  font-size: calc(14px * var(--k, 0.6667));
+  color: var(--ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dict-popup--clean .dict-popup__entry--flash {
+  background: var(--accent-soft);
+  border-radius: calc(12px * var(--k));
+  transition: background 0.4s ease;
+}
