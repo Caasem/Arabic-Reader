@@ -1,6 +1,8 @@
 import type { DictionaryLookupResult, DictionaryProvider, MorphologyProvider } from '../types';
 import { aramorphProvider } from './providers/aramorph/AramorphDictionaryProvider';
 import { alWasitProvider } from './providers/alwasit/AlWasitDictionaryProvider';
+import { alSihahProvider } from './providers/alsihah/AlSihahDictionaryProvider';
+import { alMaqayisProvider } from './providers/almaqayis/AlMaqayisDictionaryProvider';
 import { orderProviders } from './providerOrder';
 
 const CACHE_LIMIT = 300;
@@ -100,6 +102,8 @@ dictionaryManager.registerProvider(aramorphProvider);
 // Off by default (not in DEFAULT_PREFS.enabledProviderIds); registering it is
 // what makes it appear as a toggle in Settings.
 dictionaryManager.registerProvider(alWasitProvider);
+dictionaryManager.registerProvider(alSihahProvider);
+dictionaryManager.registerProvider(alMaqayisProvider);
 // AraMorph's prefix/stem/suffix analysis also supplies root, lemma and POS.
 dictionaryManager.setMorphologyProvider(aramorphProvider);
 

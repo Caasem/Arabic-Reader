@@ -17,5 +17,7 @@ export { PopupCleanSettings } from './PopupCleanSettings';
 export function groupLabel(group: { providerId: string; providerName: string }): string {
   if (group.providerId === 'aramorph') return 'English';
   if (group.providerId === 'alwasit') return 'Al-Mu‘jam al-Wasīṭ · Arabic';
+  if (group.providerId === 'alsihah') return 'Al-Ṣiḥāḥ · Arabic';
+  if (group.providerId === 'almaqayis') return 'Maqāyīs al-Lugha · Arabic';
   return group.providerName;
 }
