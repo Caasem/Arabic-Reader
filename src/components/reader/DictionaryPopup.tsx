@@ -151,6 +151,8 @@ export function DictionaryPopup({
   const [openForms, setOpenForms] = useState<Set<number>>(new Set());
   // Clean layout: Al-Wasit sub-entries (a lead sense and its continuations) saved on their own, keyed "entry:group".
   const [savedSubKeys, setSavedSubKeys] = useState<Set<string>>(new Set());
+  // Clean layout: Al-Wasit entries folded to their headword row (pressing the headword toggles it).
+  const [foldedEntries, setFoldedEntries] = useState<Set<number>>(new Set());
   useEffect(() => {
     setSavedEntryKeys(new Set());
   }, [word]);
@@ -557,6 +559,16 @@ export function DictionaryPopup({
           const tokenData = entry.providerId === 'alwasit' ? entryTokenData.get(i) : undefined;
           const sel = tokenData ? tokenSelections.get(i) : undefined;
           const hasSelection = !!sel && sel.size > 0;
+          const folded = clean && !!tokenData && foldedEntries.has(i);
+
+          function toggleFold() {
+            clearEntrySelection(i);
+            setFoldedEntries((prev) => {
+              const next = new Set(prev);
+              if (!next.delete(i)) next.add(i);
+              return next;
+            });
+          }
 
           function saveThisSelection() {
             if (!tokenData || !sel || !onSaveSelection) return;
@@ -609,7 +621,26 @@ export function DictionaryPopup({
             >
               {clean && saveButton}
               <div className="dict-popup__entry-head">
-                <span className="dict-popup__headword">{entry.headword}</span>
+                {clean && tokenData ? (
+                  <span
+                    className="dict-popup__headword dict-popup__headword--toggle"
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={!folded}
+                    title={folded ? 'Show the definition' : 'Hide the definition'}
+                    onClick={toggleFold}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleFold();
+                      }
+                    }}
+                  >
+                    {entry.headword}
+                  </span>
+                ) : (
+                  <span className="dict-popup__headword">{entry.headword}</span>
+                )}
                 {/* Sits between the headword and the per-entry save
                     button -- root before form (read first, right next to
                     the headword it belongs to), both smaller than the
@@ -645,7 +676,7 @@ export function DictionaryPopup({
                 {!clean && saveButton}
               </div>
               {!clean && <VerbFormInfo entry={entry} />}
-              {tokenData ? (
+              {tokenData ? folded ? null : (
                 <div
                   className={'dict-popup__tokens' + (wasitStructure.get(i) && prefs.wasitStructureExamples === 'dim' ? ' wasit-examples--dim' : '')}
                   dir="rtl"
