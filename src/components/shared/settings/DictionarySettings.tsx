@@ -162,6 +162,12 @@ export function DictionarySettings() {
         this app's other sources — see <code>alwasit-data/SOURCE-README.md</code> for details before enabling it if you
         plan to redistribute this app.
       </Note>
+      <Note>
+        Al-Ṣiḥāḥ (al-Jawharī) and Maqāyīs al-Lugha (Ibn Fāris) are classical works in the public domain and are also off
+        by default. Both are filed by root, so a lookup resolves the tapped word to its root through AraMorph and shows that
+        root's article — about 5,650 roots in Al-Ṣiḥāḥ, 5,270 in Maqāyīs. Their data downloads the first time you switch
+        each one on; see <code>alsihah-data/SOURCE-README.md</code> and <code>almaqayis-data/SOURCE-README.md</code>.
+      </Note>
 
       <AramorphDataSettings
         ready={aramorphReady}

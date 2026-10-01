@@ -16,6 +16,8 @@ export default defineConfig({
       'virtual:dictionary-data': path.join(root, 'src/test/virtualDictionaryData.ts'),
       'virtual:vocab-list-data': path.join(root, 'src/test/virtualText.ts'),
       'virtual:alwasit-data': path.join(root, 'src/test/virtualText.ts'),
+      'virtual:alsihah-data': path.join(root, 'src/test/virtualText.ts'),
+      'virtual:almaqayis-data': path.join(root, 'src/test/virtualText.ts'),
     },
   },
   define: {

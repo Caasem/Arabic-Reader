@@ -16,8 +16,24 @@ export function leadForm(gloss: string): string | null {
 }
 
 /**
+ * Al-Sihah has no parentheses: each line opens with its headword, usually
+ * after a conjunction -- "واسْتَوْفى حقّه وتَوَفَّاهُ بمعنًى", "والوَفاةُ: الموتُ".
+ * The spellings that first word can stand for: as written, without the leading
+ * "و", and without the article "ال" (after the "و" too).
+ */
+export function openingKeys(gloss: string): string[] {
+  const first = key(gloss.trim().split(/\s+/)[0]?.replace(/[:،,.؛]+$/, '') ?? '');
+  if (!first) return [];
+  const withoutWaw = first.length > 2 && first.startsWith('و') ? first.slice(1) : first;
+  const keys = new Set([first, withoutWaw]);
+  for (const k of [first, withoutWaw]) if (k.length > 3 && k.startsWith('ال')) keys.add(k.slice(2));
+  return [...keys];
+}
+
+/**
  * Indexes of the entry's senses whose citation form is what the reader
- * looked up: the tapped surface form itself, or a lemma AraMorph resolved it
+ * looked up (Al-Wasit's "(form)" leads, Maqayis's opening "(root)", Al-Sihah's
+ * opening word): the tapped surface form itself, or a lemma AraMorph resolved it
  * to (tapping كَاتَبْتُهُ marks the "(كَاتَبَ)" sense). Diacritics and alef/hamza
  * variants are ignored, same as the dictionary's own matching.
  */
@@ -28,6 +44,10 @@ export function findMatchedSenses(entry: DictionaryEntry, word: string, morpholo
 
   const matched = new Set<number>();
   entry.senses.forEach((sense, i) => {
+    if (entry.providerId === 'alsihah') {
+      if (openingKeys(sense.gloss).some((k) => wanted.has(k))) matched.add(i);
+      return;
+    }
     const lead = leadForm(sense.gloss);
     if (lead && wanted.has(key(lead))) matched.add(i);
   });

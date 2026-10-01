@@ -8,6 +8,7 @@ import { usePreferences } from '../state/PreferencesContext';
 import { vocabularyService } from '../vocabulary';
 import { getWordRarity, isRarityDataReady, TIER_LABELS } from '../vocabRarity/rarity';
 import { findMatchedSenses, WASIT_MATCH_CLASS } from '../wasitMatch';
+import { isTokenizedProvider } from '../dictionary/tokenizedProviders';
 import { annotateEntry } from '../wasitStructure';
 import { IconCheck, IconChevronDown, IconClose, IconCompare, IconPencil, IconPlus } from './icons';
 import { statusOf, statusText } from './vocabStatus';
@@ -28,6 +29,8 @@ function groupByProvider(entries: DictionaryEntry[]): Group[] {
 function groupTitle(group: Group): string {
   if (group.providerId === 'aramorph') return 'English · AraMorph';
   if (group.providerId === 'alwasit') return 'Al-Mu‘jam al-Wasīṭ · Arabic';
+  if (group.providerId === 'alsihah') return 'Al-Ṣiḥāḥ · Arabic';
+  if (group.providerId === 'almaqayis') return 'Maqāyīs al-Lugha · Arabic';
   return group.providerName;
 }
 
@@ -150,7 +153,7 @@ export function MarginDictionary({ lookup, bookId, savedVersion, onClose, onTogg
 
   const tokenData = useMemo(() => {
     const map = new Map<number, { flat: DefinitionToken[]; bySense: DefinitionToken[][] }>();
-    entries.forEach((e, i) => e.providerId === 'alwasit' && map.set(i, buildEntryTokenSenses(e)));
+    entries.forEach((e, i) => isTokenizedProvider(e.providerId) && map.set(i, buildEntryTokenSenses(e)));
     return map;
   }, [entries]);
   const structure = useMemo(() => {
@@ -160,7 +163,7 @@ export function MarginDictionary({ lookup, bookId, savedVersion, onClose, onTogg
   }, [entries, prefs.wasitStructureEnabled]);
   const matches = useMemo(() => {
     const map = new Map<number, Set<number>>();
-    if (prefs.wasitMatchHighlight) entries.forEach((e, i) => e.providerId === 'alwasit' && map.set(i, findMatchedSenses(e, word, result?.morphology)));
+    if (prefs.wasitMatchHighlight) entries.forEach((e, i) => isTokenizedProvider(e.providerId) && map.set(i, findMatchedSenses(e, word, result?.morphology)));
     return map;
   }, [entries, word, result?.morphology, prefs.wasitMatchHighlight]);
 
@@ -248,13 +251,13 @@ export function MarginDictionary({ lookup, bookId, savedVersion, onClose, onTogg
   const lookups = instance?.lookupCount ?? 1;
 
   function renderGroup(group: Group) {
-    const isWasit = group.providerId === 'alwasit';
+    const isTokenized = isTokenizedProvider(group.providerId);
     const groupKey = `g:${group.providerId}`;
     return (
       <section key={group.providerId} className="qr-dict__section">
         <div className="qr-dict__section-head">
           <h4 className="qr-dict__section-title">{groupTitle(group)}</h4>
-          {isWasit && (
+          {isTokenized && (
             <button
               type="button"
               className="qr-add-sm"
@@ -269,7 +272,7 @@ export function MarginDictionary({ lookup, bookId, savedVersion, onClose, onTogg
         </div>
         {group.entries.map(({ entry, index }) => {
           const tokens = tokenData.get(index);
-          if (!isWasit || !tokens) {
+          if (!isTokenized || !tokens) {
             const key = `e:${index}`;
             return (
               <div key={index} className="qr-dict__entry">
@@ -297,12 +300,15 @@ export function MarginDictionary({ lookup, bookId, savedVersion, onClose, onTogg
           const isFolded = folded.has(index);
           const sel = selections.get(index);
           // Al-Wasit's lead senses with their continuations, each with its own add when there are several.
+          // The other root-keyed dictionaries have no such structure: one group, so no per-line add.
           const subGroups: number[][] = [];
-          entry.senses.forEach((_, si) => {
-            const s = structure.get(index)?.[si];
-            if (!subGroups.length || s?.isLead || !s?.isContinuation) subGroups.push([si]);
-            else subGroups[subGroups.length - 1].push(si);
-          });
+          if (entry.providerId !== 'alwasit') subGroups.push(entry.senses.map((_, si) => si));
+          else
+            entry.senses.forEach((_, si) => {
+              const s = structure.get(index)?.[si];
+              if (!subGroups.length || s?.isLead || !s?.isContinuation) subGroups.push([si]);
+              else subGroups[subGroups.length - 1].push(si);
+            });
           return (
             <div key={index} className="qr-dict__wasit" dir="rtl" lang="ar">
               <button
