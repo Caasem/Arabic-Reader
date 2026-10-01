@@ -104,6 +104,8 @@ export interface ReaderPreferences {
   bookSearchEnabled: boolean;
   /** Press Alt+V to list the words saved from the open book (src/bookVocab). */
   bookVocabEnabled: boolean;
+  /** Show a verb's form (I-X) and its root's other verbs in the dictionary popup (src/verbForms). */
+  verbFormsEnabled: boolean;
   /** The redesign (src/look): softer cards, serif headings, fuller colour scheme. */
   lookEnabled: boolean;
   /** Which preset palette the look starts from. */

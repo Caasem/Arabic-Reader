@@ -9,6 +9,9 @@
  * anything; see `store.ts` for how those get uploaded and cached.
  */
 
+import { classifyVerbForm } from '../../../verbForms/classifyForm';
+import type { VerbFamilyMember } from '../../../types';
+
 // ---------- Buckwalter transliteration ----------
 const buck2uni: Record<string, string> = {
   "'": 'ء', '|': 'آ', '>': 'أ', '&': 'ؤ', '<': 'إ',
@@ -60,6 +63,9 @@ export class OptimizedDictArray<T> {
   get size(): number {
     return this.map.size;
   }
+  values(): IterableIterator<T[]> {
+    return this.map.values();
+  }
   /** Plain array-of-tuples, not the Map itself or a plain object keyed by
    * dictionary entries -- IndexedDB's structured clone can store a Map
    * directly, but relying on that across every WebView this app targets
@@ -82,6 +88,8 @@ export class OptimizedDictArray<T> {
 interface MorphEntry {
   root: string;
   lemma: string;
+  /** Imperfect vowel(s) from the lemma marker (`-u` in `katab-u_1`, `-ui`: either); Form I only. */
+  lemmaVowel?: string;
   word: string;
   morph: string;
   def: string;
@@ -120,13 +128,14 @@ const POS_TAG = /<pos>([\s\S]*?)<\/pos>/;
 // index (dropped); a trailing `-u`/`-a`/`-i` (Form I only, its imperfect
 // vowel isn't predictable from the pattern the way it is for Forms II-X) is
 // dropped too, leaving the bare citation-form stem.
-const LEMMA_MARKER_RE = /^;;\s*(\S+?)(?:-[uai])?_\d+\s*$/;
+const LEMMA_MARKER_RE = /^;;\s*(\S+?)(?:-([uai]{1,2}))?_\d+\s*$/;
 
 export function createDictTable(text: string): OptimizedDictArray<MorphEntry> {
   const lines = text.split('\n');
   const table = new OptimizedDictArray<MorphEntry>();
   let root = '---';
   let lemma = '---';
+  let lemmaVowel: string | undefined;
   for (const line of lines) {
     if (line !== '' && line[0] !== ';') {
       const elems = line.split(/\s/);
@@ -137,6 +146,7 @@ export function createDictTable(text: string): OptimizedDictArray<MorphEntry> {
       const def: MorphEntry = {
         root,
         lemma,
+        lemmaVowel,
         word: elems[1].trim(),
         morph: (elems[2] || '').trim(),
         def: gloss.split(/;/).join(', '),
@@ -146,12 +156,17 @@ export function createDictTable(text: string): OptimizedDictArray<MorphEntry> {
     } else if (line !== '' && line.trim() === ';') {
       root = '---';
       lemma = '---';
+      lemmaVowel = undefined;
     } else if (line !== '' && line.slice(0, 5) === ';--- ') {
       root = line.split(/\s/)[1];
       lemma = '---';
+      lemmaVowel = undefined;
     } else {
       const lemmaMatch = line.match(LEMMA_MARKER_RE);
-      if (lemmaMatch) lemma = lemmaMatch[1];
+      if (lemmaMatch) {
+        lemma = lemmaMatch[1];
+        lemmaVowel = lemmaMatch[2];
+      }
     }
   }
   return table;
@@ -201,6 +216,13 @@ export function deserializeTables(data: SerializedAramorphTables): AramorphTable
   };
 }
 
+function verbFormOf(stem: { lemma: string; lemmaVowel?: string; morph: string }): { verbForm?: string; imperfectVowel?: string } {
+  if (stem.lemma === '---' || !VERB_STEM_RE.test(stem.morph)) return {};
+  const verbForm = classifyVerbForm(stem.lemma);
+  if (!verbForm) return {};
+  return { verbForm, imperfectVowel: verbForm === 'I' ? stem.lemmaVowel : undefined };
+}
+
 export interface AramorphResult {
   root: string;
   /** The stem's own citation/dictionary form (e.g. كاتَبَ for a matched
@@ -212,7 +234,13 @@ export interface AramorphResult {
   def: string;
   pos: string;
   morph: string;
+  /** Verb form I-X of the matched stem's lexeme (see src/verbForms); verbs only. */
+  verbForm?: string;
+  /** Form I only: the imperfect vowel(s) the dictionary marks (`u`, `a`, `i`). */
+  imperfectVowel?: string;
 }
+
+const VERB_STEM_RE = /^(PV|IV|CV)/;
 
 const CACHE_SIZE = 500;
 const CACHE_EXPIRY = 3600000;
@@ -224,6 +252,42 @@ export class AramorphEngine {
   setTables(tables: AramorphTables): void {
     this.tables = tables;
     this.lookupCache.clear();
+    this.familyIndex = null;
+  }
+
+  /** Root (Buckwalter) -> the dictionary's verbs for it, built on first use. */
+  private familyIndex: Map<string, VerbFamilyMember[]> | null = null;
+
+  /**
+   * Every verb the dictionary lists for a root, in dictionary order, one per
+   * lexeme and sense (the first perfect stem of each `;; lemma` group).
+   */
+  verbFamily(root: string): VerbFamilyMember[] {
+    if (!this.tables) return [];
+    if (!this.familyIndex) {
+      const index = new Map<string, VerbFamilyMember[]>();
+      const seen = new Set<string>();
+      for (const group of this.tables.dictstems.values()) {
+        for (const e of group) {
+          if (e.morph !== 'PV' || e.root === '---' || e.lemma === '---') continue;
+          const key = e.root + '|' + e.lemma + '|' + e.def;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const form = classifyVerbForm(e.lemma);
+          const member: VerbFamilyMember = {
+            lemma: detransliterate(e.lemma),
+            form,
+            imperfectVowel: form === 'I' ? e.lemmaVowel : undefined,
+            gloss: e.def,
+          };
+          const list = index.get(e.root);
+          if (list) list.push(member);
+          else index.set(e.root, [member]);
+        }
+      }
+      this.familyIndex = index;
+    }
+    return this.familyIndex.get(root) ?? [];
   }
 
   get isReady(): boolean {
@@ -280,6 +344,7 @@ export class AramorphEngine {
               def: [bracketify(p.def, 2), s.def, bracketify(su.def, 1)].join(''),
               pos: [p.pos, s.pos, su.pos].filter(Boolean).join(', '),
               morph: [p.morph, s.morph, su.morph].join(', '),
+              ...verbFormOf(s),
             });
           }
         }

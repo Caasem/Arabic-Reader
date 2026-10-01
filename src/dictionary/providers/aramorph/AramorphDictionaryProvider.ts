@@ -1,4 +1,4 @@
-import type { DictionaryEntry, DictionaryProvider, MorphologicalAnalysis, MorphologyProvider } from '../../../types';
+import type { DictionaryEntry, DictionaryProvider, MorphologicalAnalysis, MorphologyProvider, VerbFamilyMember } from '../../../types';
 import type { AramorphResult, AramorphTables } from './engine';
 import { DICT_FILE_NAMES, readDictFileList, type DictFileName } from './dictFileNames';
 
@@ -8,6 +8,7 @@ type WorkerResponse =
   | { id: number; type: 'ready' | 'built'; tableSizes: TableSizes | null }
   | { id: number; type: 'lookupResult'; results: AramorphResult[] }
   | { id: number; type: 'manyResults'; resultsByWord: Record<string, AramorphResult[]> }
+  | { id: number; type: 'verbFamily'; members: VerbFamilyMember[] }
   | { id: number; type: 'error'; message: string };
 
 export type AramorphStatus = 'loading' | 'ready' | 'failed';
@@ -179,6 +180,13 @@ export class AramorphDictionaryProvider implements DictionaryProvider, Morpholog
     return out;
   }
 
+  /** Every verb the dictionary lists for a root (Arabic letters, e.g. كتب). */
+  async verbFamily(root: string): Promise<VerbFamilyMember[]> {
+    await this.readyPromise;
+    const msg = await this.call('verbFamily', { root });
+    return msg.type === 'verbFamily' ? msg.members : [];
+  }
+
   private groupByWord(results: AramorphResult[]): DictionaryEntry[] {
     const byWord = new Map<string, AramorphResult[]>();
     for (const r of results) {
@@ -192,6 +200,8 @@ export class AramorphDictionaryProvider implements DictionaryProvider, Morpholog
       headword: word,
       root: entries.find((e) => e.root && e.root !== '---')?.root,
       lemma: entries.find((e) => e.lemma && e.lemma !== '---' && e.lemma !== word)?.lemma,
+      verbForm: entries.find((e) => e.verbForm)?.verbForm,
+      imperfectVowel: entries.find((e) => e.verbForm === 'I' && e.imperfectVowel)?.imperfectVowel,
       // `pos` here is AraMorph's raw affix analysis ("+at/PVSUFF_SUBJ:3FS"),
       // not a readable part of speech, so it's not shown; the gloss already
       // spells out the grammatical role in English.

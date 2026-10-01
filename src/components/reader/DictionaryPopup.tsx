@@ -7,6 +7,7 @@ import { IconEdit, IconChevronLeft, IconChevronRight } from '../shared/icons';
 import { buildEntryTokenSenses, reconstructSelection, type DefinitionToken } from './definitionTokens';
 import { findMatchedSenses, WASIT_MATCH_CLASS } from '../../wasitMatch';
 import { annotateEntry } from '../../wasitStructure';
+import { VerbFormInfo } from '../../verbForms';
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
@@ -567,6 +568,7 @@ export function DictionaryPopup({
                   </button>
                 )}
               </div>
+              <VerbFormInfo entry={entry} />
               {tokenData ? (
                 <div
                   className={'dict-popup__tokens' + (wasitStructure.get(i) && prefs.wasitStructureExamples === 'dim' ? ' wasit-examples--dim' : '')}

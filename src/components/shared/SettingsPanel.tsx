@@ -14,6 +14,7 @@ import { CleanReaderSettings } from './settings/CleanReaderSettings';
 import { DictionarySearchSettings } from '../../dictionarySearch';
 import { BookSearchSettings } from '../../bookSearch';
 import { BookVocabSettings } from '../../bookVocab';
+import { VerbFormsSettings } from '../../verbForms';
 import { LookSettings } from '../../look';
 import { WasitMatchSettings } from '../../wasitMatch';
 import { WasitStructureSettings } from '../../wasitStructure';
@@ -58,7 +59,7 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
     id: 'dictionary',
     label: 'Dictionary',
     blurb: 'Which dictionaries answer, and how lookups appear.',
-    sections: [<DictionarySettings key="dictionaries" />, <DictionarySearchSettings key="dsearch" />, <BookSearchSettings key="bsearch" />, <BookVocabSettings key="bvocab" />, <WasitMatchSettings key="wasitmatch" />, <WasitStructureSettings key="wasitstructure" />],
+    sections: [<DictionarySettings key="dictionaries" />, <DictionarySearchSettings key="dsearch" />, <BookSearchSettings key="bsearch" />, <BookVocabSettings key="bvocab" />, <VerbFormsSettings key="verbforms" />, <WasitMatchSettings key="wasitmatch" />, <WasitStructureSettings key="wasitstructure" />],
   },
   {
     id: 'vocabulary',
