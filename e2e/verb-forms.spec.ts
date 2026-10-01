@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Tapping a verb shows its form (I-X) under the headword, and "Other forms of
- * <root>" lists the dictionary's other verbs for that root. The sample book is
- * searched word by word until a verb comes up.
+ * Clean popup layout: pressing a verb's root shows its form (I-X) in the same
+ * spot; tapping the verb lists the dictionary's other verbs for that root. The
+ * sample book is searched word by word until a verb comes up. With the clean
+ * layout off, the classic popup returns.
  */
 test('the dictionary popup shows a verb form and the root family', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
@@ -23,20 +24,32 @@ test('the dictionary popup shows a verb form and the root family', async ({ page
     }, i);
     await page.waitForSelector('.dict-popup', { timeout: 8000 });
     await page.waitForTimeout(700);
-    found = (await page.locator('.verb-forms').count()) > 0;
+    found = (await page.locator('.dict-popup--clean .dict-popup__entry--tappable').count()) > 0;
     if (!found) await page.click('.dict-popup__close');
   }
   expect(found, 'a verb with a known form turns up in the sample book').toBe(true);
 
-  await expect(page.locator('.verb-forms__mark').first()).toHaveText(/^(I|II|III|IV|V|VI|VII|VIII|IX|X)$/);
-  await page.locator('.verb-forms__toggle').first().click();
+  // Pressing the root swaps it for the form, in the same spot.
+  const verbEntry = page.locator('.dict-popup__entry--tappable').first();
+  await verbEntry.locator('.dict-popup__morph-item[data-kind="root"]').click();
+  await expect(verbEntry.locator('[data-kind="root"] .dict-popup__morph-face--label')).toHaveText(/^Form (I|II|III|IV|V|VI|VII|VIII|IX|X)$/);
+
+  // Tapping the verb opens the root's other verbs; tapping again closes them.
+  await verbEntry.locator('.dict-popup__headword').click();
   await expect(page.locator('.verb-forms__item').first()).toBeVisible({ timeout: 8000 });
   await expect(page.locator('.verb-forms__item--current')).not.toHaveCount(0);
+  await page.locator('.dict-popup').screenshot({ path: 'test-results/clean-popup.png' });
+  await verbEntry.locator('.dict-popup__headword').click();
+  await expect(page.locator('.verb-forms__item')).toHaveCount(0);
 
-  // Switched off in Settings, the form disappears.
+  // Clean layout off: the classic popup returns.
   await page.click('.dict-popup__close');
   await page.click('.navbar__settings');
-  await page.locator('label', { hasText: 'Show the verb form (I-X) in the dictionary' }).locator('input').uncheck();
+  await page.locator('label', { hasText: 'Clean popup layout' }).locator('input').uncheck();
   await page.click('.settings-panel__close');
-  await expect(page.locator('.verb-forms')).toHaveCount(0);
+  await frame.evaluate(() => {
+    document.querySelectorAll('p .ar-word')[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  });
+  await page.waitForSelector('.dict-popup', { timeout: 8000 });
+  await expect(page.locator('.dict-popup--clean')).toHaveCount(0);
 });

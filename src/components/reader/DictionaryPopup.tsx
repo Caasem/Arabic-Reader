@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { DictionaryEntry, DictionaryLookupResult, WordInstance, WordRarity } from '../../types';
 import { getWordRarity, isRarityDataReady, TIER_LABELS } from '../../vocabRarity/rarity';
 import { normalize } from '../../reader/tokenizer/arabicTokenizer';
@@ -8,6 +8,7 @@ import { buildEntryTokenSenses, reconstructSelection, type DefinitionToken } fro
 import { findMatchedSenses, WASIT_MATCH_CLASS } from '../../wasitMatch';
 import { annotateEntry } from '../../wasitStructure';
 import { VerbFormInfo, VerbFormMark } from '../../verbForms';
+import { groupLabel } from '../../popupClean';
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
@@ -32,7 +33,7 @@ type EntryGroup = { providerId: string; providerName: string; entries: { entry: 
  * crossfades to the "root"/"form" label in the exact same spot, then fades
  * back to the value after a moment. Replaces a static always-visible label
  * — the label only appears when asked for, right where the value was. */
-function MorphValue({ kind, value }: { kind: 'form' | 'root'; value: string }) {
+function MorphValue({ kind, value, label }: { kind: 'form' | 'root'; value: string; label?: string }) {
   const [revealed, setRevealed] = useState(false);
   const timeoutRef = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(timeoutRef.current), []);
@@ -46,6 +47,7 @@ function MorphValue({ kind, value }: { kind: 'form' | 'root'; value: string }) {
   return (
     <span
       className="dict-popup__morph-item"
+      data-kind={kind}
       onClick={handleTap}
       role="button"
       tabIndex={0}
@@ -62,7 +64,7 @@ function MorphValue({ kind, value }: { kind: 'form' | 'root'; value: string }) {
           {value}
         </bdi>
         <span className="dict-popup__morph-face dict-popup__morph-face--label" aria-hidden={!revealed}>
-          {kind}
+          {label ?? kind}
         </span>
       </span>
     </span>
@@ -144,6 +146,11 @@ export function DictionaryPopup({
   // from vocabularyService for the word as a whole), just enough feedback
   // that tapping a per-entry "+" visibly did something.
   const [savedEntryKeys, setSavedEntryKeys] = useState<Set<number>>(new Set());
+  // Clean layout (src/popupClean): which verb entries have their other forms open.
+  const clean = prefs.dictionaryPopupCleanLayout;
+  const [openForms, setOpenForms] = useState<Set<number>>(new Set());
+  // Clean layout: Al-Wasit sub-entries (a lead sense and its continuations) saved on their own, keyed "entry:group".
+  const [savedSubKeys, setSavedSubKeys] = useState<Set<string>>(new Set());
   useEffect(() => {
     setSavedEntryKeys(new Set());
   }, [word]);
@@ -503,10 +510,45 @@ export function DictionaryPopup({
     updatePrefs({ dictionaryPanelLayout: prefs.dictionaryPanelLayout === 'split' ? 'merged' : 'split' });
   }
 
+  /** Al-Wasit's senses. Clean layout groups each lead sense with its continuations into a
+   * sub-entry with its own round "+", which saves just that section. */
+  function renderSubEntries(entry: DictionaryEntry, entryIndex: number, renderSense: (s: DictionaryEntry['senses'][number], si: number) => ReactNode) {
+    if (!clean) return entry.senses.map(renderSense);
+    const groups: number[][] = [];
+    entry.senses.forEach((_, si) => {
+      const structure = wasitStructure.get(entryIndex)?.[si];
+      if (!groups.length || structure?.isLead || !structure?.isContinuation) groups.push([si]);
+      else groups[groups.length - 1].push(si);
+    });
+    return groups.map((group, gi) => {
+      const key = `${entryIndex}:${gi}`;
+      const done = savedSubKeys.has(key);
+      return (
+        <div className="dict-popup__subentry" key={gi}>
+          {onSaveEntry && groups.length > 1 && (
+            <button
+              className="dict-popup__sense-add"
+              disabled={done}
+              onClick={() => {
+                onSaveEntry({ ...entry, senses: group.map((si) => entry.senses[si]) });
+                setSavedSubKeys((prev) => new Set(prev).add(key));
+              }}
+              aria-label="Add just this section to vocabulary"
+              title={done ? 'Added' : 'Add just this section'}
+            >
+              {done ? '✓' : '+'}
+            </button>
+          )}
+          <div className="dict-popup__sense-body">{group.map((si) => renderSense(entry.senses[si], si))}</div>
+        </div>
+      );
+    });
+  }
+
   function renderGroupList(groups: EntryGroup[]) {
     return groups.map((group) => (
       <div className="dict-popup__group" key={group.providerId}>
-        <div className="dict-popup__group-header">{group.providerName}</div>
+        <div className="dict-popup__group-header">{clean ? groupLabel(group) : group.providerName}</div>
         {group.entries.map(({ entry, index: i }) => {
           // Non-contiguous word selection (click to toggle, drag to add a
           // range) -- Al-Wasit only, and only while a save-selection
@@ -522,8 +564,50 @@ export function DictionaryPopup({
             clearEntrySelection(i);
           }
 
+          const saveButton =
+            onSaveEntry && result!.entries.length > 1 ? (
+              <button
+                className={'dict-popup__entry-save' + (hasSelection ? ' dict-popup__entry-save--selection' : '')}
+                onClick={() => {
+                  if (hasSelection) {
+                    saveThisSelection();
+                    return;
+                  }
+                  onSaveEntry(entry);
+                  setSavedEntryKeys((prev) => new Set(prev).add(i));
+                }}
+                disabled={!hasSelection && savedEntryKeys.has(i)}
+                aria-label={hasSelection ? `Save just the ${sel!.size} selected words for "${entry.headword}"` : `Add just "${entry.headword}" to vocabulary`}
+                title={hasSelection ? 'Will save only the selected words, not the full definition' : 'Add just this definition'}
+              >
+                {hasSelection ? '✓ sel' : savedEntryKeys.has(i) ? '✓' : '+'}
+              </button>
+            ) : null;
+
           return (
-            <div className="dict-popup__entry" data-entry-index={i} key={entry.providerId + i}>
+            <div
+              className={
+                'dict-popup__entry' +
+                (clean && entry.verbForm ? ' dict-popup__entry--tappable' : '') +
+                (clean && tokenData ? ' dict-popup__entry--subs' : '')
+              }
+              data-entry-index={i}
+              key={entry.providerId + i}
+              onClick={
+                clean && entry.verbForm
+                  ? (e) => {
+                      // Tapping the verb (not its root/form chips or buttons) opens its other forms.
+                      if ((e.target as HTMLElement).closest('.dict-popup__morph-item, button')) return;
+                      setOpenForms((prev) => {
+                        const next = new Set(prev);
+                        if (!next.delete(i)) next.add(i);
+                        return next;
+                      });
+                    }
+                  : undefined
+              }
+            >
+              {clean && saveButton}
               <div className="dict-popup__entry-head">
                 <span className="dict-popup__headword">{entry.headword}</span>
                 {/* Sits between the headword and the per-entry save
@@ -545,38 +629,29 @@ export function DictionaryPopup({
                       'dict-popup__entry-morph' + (prefs.morphDisplayStyle === 'badges' ? ' dict-popup__entry-morph--badges' : '')
                     }
                   >
-                    {entry.root && entry.root !== entry.headword && <MorphValue kind="root" value={entry.root} />}
-                    {entry.lemma && entry.lemma !== entry.headword && <MorphValue kind="form" value={entry.lemma} />}
+                    {/* Clean layout: dictionary form first, then the root; pressing a verb's root shows its form. */}
+                    {clean && entry.lemma && entry.lemma !== entry.headword && <MorphValue kind="form" value={entry.lemma} />}
+                    {entry.root && entry.root !== entry.headword && (
+                      <MorphValue
+                        kind="root"
+                        value={entry.root}
+                        label={clean && prefs.verbFormsEnabled && entry.verbForm ? `Form ${entry.verbForm}` : undefined}
+                      />
+                    )}
+                    {!clean && entry.lemma && entry.lemma !== entry.headword && <MorphValue kind="form" value={entry.lemma} />}
                   </span>
                 )}
-                <VerbFormMark entry={entry} />
-                {onSaveEntry && result!.entries.length > 1 && (
-                  <button
-                    className={'dict-popup__entry-save' + (hasSelection ? ' dict-popup__entry-save--selection' : '')}
-                    onClick={() => {
-                      if (hasSelection) {
-                        saveThisSelection();
-                        return;
-                      }
-                      onSaveEntry(entry);
-                      setSavedEntryKeys((prev) => new Set(prev).add(i));
-                    }}
-                    disabled={!hasSelection && savedEntryKeys.has(i)}
-                    aria-label={hasSelection ? `Save just the ${sel!.size} selected words for "${entry.headword}"` : `Add just "${entry.headword}" to vocabulary`}
-                    title={hasSelection ? 'Will save only the selected words, not the full definition' : 'Add just this definition'}
-                  >
-                    {hasSelection ? '✓ sel' : savedEntryKeys.has(i) ? '✓' : '+'}
-                  </button>
-                )}
+                {!clean && <VerbFormMark entry={entry} />}
+                {!clean && saveButton}
               </div>
-              <VerbFormInfo entry={entry} />
+              {!clean && <VerbFormInfo entry={entry} />}
               {tokenData ? (
                 <div
                   className={'dict-popup__tokens' + (wasitStructure.get(i) && prefs.wasitStructureExamples === 'dim' ? ' wasit-examples--dim' : '')}
                   dir="rtl"
                   onPointerMove={handleTokensPointerMove}
                 >
-                  {entry.senses.map((s, si) => {
+                  {renderSubEntries(entry, i, (s, si) => {
                     const structure = wasitStructure.get(i)?.[si];
                     let wordNo = 0;
                     return (
@@ -624,6 +699,7 @@ export function DictionaryPopup({
                   ))}
                 </ul>
               )}
+              {clean && <VerbFormInfo entry={entry} clean open={openForms.has(i)} />}
               {hasSelection && (
                 <button className="dict-popup__save-selection" onClick={saveThisSelection}>
                   + Save selection ({sel!.size})
@@ -681,6 +757,7 @@ export function DictionaryPopup({
         ref={popupRef}
         className={
           'dict-popup' +
+          (clean ? ' dict-popup--clean' : '') +
           (effectiveLayout === 'split' && !isNarrow ? ' dict-popup--split' : '') +
           (prefs.dictionaryPopupPinFooter ? ' dict-popup--pinned-footer' : '')
         }
@@ -757,7 +834,7 @@ export function DictionaryPopup({
                       className={'dict-popup__tab' + (g.providerId === activeTabId ? ' dict-popup__tab--active' : '')}
                       onClick={() => setActiveTab(g.providerId)}
                     >
-                      {g.providerName}
+                      {clean ? groupLabel(g) : g.providerName}
                     </button>
                   ))}
                 </div>

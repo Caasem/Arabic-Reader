@@ -46,6 +46,8 @@ export interface ReaderPreferences {
   readingWidthPct: number; // 100 = default column width
   /** Dictionary provider ids currently switched on. */
   enabledProviderIds: string[];
+  /** Dictionary ids in the order their entries appear in the popup (Settings -> Dictionaries). Empty = registration order. */
+  dictionaryProviderOrder: string[];
   readingFlow: ReadingFlow;
   /** Scrolling layout only. Off: scrolling stops at each chapter's end. On:
    * chapters flow into one continuous feed. Changing it reopens the book,
@@ -106,6 +108,8 @@ export interface ReaderPreferences {
   bookVocabEnabled: boolean;
   /** Show a verb's form (I-X) and its root's other verbs in the dictionary popup (src/verbForms). */
   verbFormsEnabled: boolean;
+  /** The aligned, roomier dictionary popup layout (src/popupClean). Off restores the classic popup. */
+  dictionaryPopupCleanLayout: boolean;
   /** The redesign (src/look): softer cards, serif headings, fuller colour scheme. */
   lookEnabled: boolean;
   /** Which preset palette the look starts from. */

@@ -93,6 +93,11 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     if (enabledProviderIds) dictionaryManager.setEnabledProviders(enabledProviderIds);
   }, [enabledProviderIds]);
 
+  const providerOrder = prefs?.dictionaryProviderOrder;
+  useEffect(() => {
+    if (providerOrder) dictionaryManager.setProviderOrder(providerOrder);
+  }, [providerOrder]);
+
   const workMinutes = prefs?.pomodoroWorkMinutes;
   const breakMinutes = prefs?.pomodoroBreakMinutes;
   const autoCycle = prefs?.pomodoroAutoCycle;

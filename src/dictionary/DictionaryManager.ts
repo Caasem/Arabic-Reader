@@ -1,6 +1,7 @@
 import type { DictionaryLookupResult, DictionaryProvider, MorphologyProvider } from '../types';
 import { aramorphProvider } from './providers/aramorph/AramorphDictionaryProvider';
 import { alWasitProvider } from './providers/alwasit/AlWasitDictionaryProvider';
+import { orderProviders } from './providerOrder';
 
 const CACHE_LIMIT = 300;
 
@@ -16,6 +17,8 @@ export class DictionaryManager {
   private cache = new Map<string, DictionaryLookupResult>();
   /** undefined = every registered provider is queried. */
   private enabledProviderIds: Set<string> | undefined;
+  /** The user's chosen order of dictionaries; empty = registration order. */
+  private providerOrder: string[] = [];
 
   registerProvider(provider: DictionaryProvider): void {
     this.providers.push(provider);
@@ -32,6 +35,11 @@ export class DictionaryManager {
 
   setEnabledProviders(ids: string[]): void {
     this.enabledProviderIds = new Set(ids);
+    this.clearCache();
+  }
+
+  setProviderOrder(ids: string[]): void {
+    this.providerOrder = [...ids];
     this.clearCache();
   }
 
@@ -54,7 +62,7 @@ export class DictionaryManager {
       return cached;
     }
 
-    const active = this.providers.filter((p) => this.isEnabled(p.id));
+    const active = orderProviders(this.providers, this.providerOrder).filter((p) => this.isEnabled(p.id));
     const [outcomes, morphology] = await Promise.all([
       Promise.allSettled(active.map((p) => p.lookup(word))),
       this.morphologyProvider ? this.morphologyProvider.analyze(word).catch(() => undefined) : Promise.resolve(undefined),
@@ -79,7 +87,7 @@ export class DictionaryManager {
 
   private cacheKey(word: string): string {
     const ids = this.enabledProviderIds ? Array.from(this.enabledProviderIds).sort().join(',') : 'all';
-    return `${ids}::${word}`;
+    return `${ids}@${this.providerOrder.join(',')}::${word}`;
   }
 
   clearCache(): void {

@@ -430,3 +430,24 @@
     padding: 18px 16px 28px;
   }
 }
+
+/* Settings -> Dictionaries: the order arrows (used with the ordering of dictionaries in the popup). */
+.settings-order {
+  display: inline-flex;
+  gap: 4px;
+  margin-inline-start: auto;
+}
+.settings-order__btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--ink);
+  cursor: pointer;
+  line-height: 1;
+}
+.settings-order__btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
