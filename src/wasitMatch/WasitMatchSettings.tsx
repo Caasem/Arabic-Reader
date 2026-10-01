@@ -11,7 +11,10 @@ export function WasitMatchSettings() {
         checked={prefs.wasitMatchHighlight}
         onChange={(value) => updatePrefs({ wasitMatchHighlight: value })}
       />
-      <Note>Al-Wasīṭ groups every form of a root together; this colours the form you tapped (or its base form) so it's easy to find.</Note>
+      <Note>
+        Al-Wasīṭ groups every form of a root together; this colours the form you tapped (or its base form) so it's easy to find. In
+        Al-Ṣiḥāḥ it colours the opening word of the line that begins with that form.
+      </Note>
     </SettingsSection>
   );
 }

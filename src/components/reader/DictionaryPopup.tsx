@@ -5,6 +5,7 @@ import { normalize } from '../../reader/tokenizer/arabicTokenizer';
 import { usePreferences } from '../../state/PreferencesContext';
 import { IconEdit, IconChevronLeft, IconChevronRight } from '../shared/icons';
 import { buildEntryTokenSenses, reconstructSelection, type DefinitionToken } from './definitionTokens';
+import { isTokenizedProvider } from '../../dictionary/tokenizedProviders';
 import { findMatchedSenses, WASIT_MATCH_CLASS } from '../../wasitMatch';
 import { annotateEntry } from '../../wasitStructure';
 import { VerbFormInfo, VerbFormMark } from '../../verbForms';
@@ -275,7 +276,7 @@ export function DictionaryPopup({
   const entryTokenData = useMemo(() => {
     const map = new Map<number, { flat: DefinitionToken[]; bySense: DefinitionToken[][] }>();
     result?.entries.forEach((e, i) => {
-      if (e.providerId === 'alwasit') map.set(i, buildEntryTokenSenses(e));
+      if (isTokenizedProvider(e.providerId)) map.set(i, buildEntryTokenSenses(e));
     });
     return map;
   }, [result]);
@@ -285,7 +286,7 @@ export function DictionaryPopup({
     const map = new Map<number, Set<number>>();
     if (!prefs.wasitMatchHighlight) return map;
     result?.entries.forEach((e, i) => {
-      if (e.providerId === 'alwasit') map.set(i, findMatchedSenses(e, word, result.morphology));
+      if (isTokenizedProvider(e.providerId)) map.set(i, findMatchedSenses(e, word, result.morphology));
     });
     return map;
   }, [result, word, prefs.wasitMatchHighlight]);
@@ -515,7 +516,9 @@ export function DictionaryPopup({
   /** Al-Wasit's senses. Clean layout groups each lead sense with its continuations into a
    * sub-entry with its own round "+", which saves just that section. */
   function renderSubEntries(entry: DictionaryEntry, entryIndex: number, renderSense: (s: DictionaryEntry['senses'][number], si: number) => ReactNode) {
-    if (!clean) return entry.senses.map(renderSense);
+    // Only Al-Wasit has lead/continuation structure to group by; the other
+    // root-keyed dictionaries' lines would each get their own "+".
+    if (!clean || entry.providerId !== 'alwasit') return entry.senses.map(renderSense);
     const groups: number[][] = [];
     entry.senses.forEach((_, si) => {
       const structure = wasitStructure.get(entryIndex)?.[si];
@@ -553,10 +556,11 @@ export function DictionaryPopup({
         <div className="dict-popup__group-header">{clean ? groupLabel(group) : group.providerName}</div>
         {group.entries.map(({ entry, index: i }) => {
           // Non-contiguous word selection (click to toggle, drag to add a
-          // range) -- Al-Wasit only, and only while a save-selection
-          // callback actually exists to hand it to. Every other provider's
-          // entries keep the plain, non-interactive sense list below.
-          const tokenData = entry.providerId === 'alwasit' ? entryTokenData.get(i) : undefined;
+          // range) -- the root-keyed Arabic-Arabic dictionaries only (see
+          // isTokenizedProvider), and only while a save-selection callback
+          // actually exists to hand it to. Every other provider's entries
+          // keep the plain, non-interactive sense list below.
+          const tokenData = isTokenizedProvider(entry.providerId) ? entryTokenData.get(i) : undefined;
           const sel = tokenData ? tokenSelections.get(i) : undefined;
           const hasSelection = !!sel && sel.size > 0;
           const folded = clean && !!tokenData && foldedEntries.has(i);
