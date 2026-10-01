@@ -4,7 +4,7 @@
  * lists for the same root. The form is read off the AraMorph lemma's spelling
  * (classifyForm.ts); nothing is invented.
  *
- * The app touches this folder in these places: <VerbFormInfo> in
+ * The app touches this folder in these places: <VerbFormMark> and <VerbFormInfo> in
  * DictionaryPopup, <VerbFormsSettings> in SettingsPanel, the
  * `verbFormsEnabled` preference, and a data path that carries the form out of
  * the Arabic Dictionary engine (engine.ts verbFormOf/verbFamily, the worker's
@@ -12,7 +12,7 @@
  * `verbForm`/`imperfectVowel` fields in types/dictionary.ts). To remove the
  * feature, `git revert` the commit that added it.
  */
-export { VerbFormInfo } from './VerbFormInfo';
+export { VerbFormInfo, VerbFormMark } from './VerbFormInfo';
 export { VerbFormsSettings } from './VerbFormsSettings';
 export { classifyVerbForm, type VerbForm } from './classifyForm';
 import './verbForms.css';

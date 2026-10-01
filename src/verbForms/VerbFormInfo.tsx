@@ -9,6 +9,20 @@ function vowelLabel(vowel: string): string {
 }
 
 /**
+ * The verb form as plain text (a Roman numeral) on the headword's row, just
+ * after its dictionary form. Renders nothing for non-verbs or when switched off.
+ */
+export function VerbFormMark({ entry }: { entry: DictionaryEntry }) {
+  const { prefs } = usePreferences();
+  if (!prefs.verbFormsEnabled || !entry.verbForm) return null;
+  return (
+    <span className="verb-forms__mark" dir="ltr" title={`Verb form ${entry.verbForm}`} aria-label={`Verb form ${entry.verbForm}`}>
+      {entry.verbForm}
+    </span>
+  );
+}
+
+/**
  * Under a verb's headword in the dictionary popup: which form (I-X) it is,
  * and, on request, the other verbs the dictionary lists for the same root.
  * Renders nothing for non-verbs or when switched off in Settings.
@@ -36,9 +50,6 @@ export function VerbFormInfo({ entry }: { entry: DictionaryEntry }) {
   return (
     <div className="verb-forms">
       <div className="verb-forms__row">
-        <span className="verb-forms__pill" title="Verb form">
-          Form {entry.verbForm}
-        </span>
         {entry.imperfectVowel && <span className="verb-forms__vowel">imperfect with {vowelLabel(entry.imperfectVowel)}</span>}
         {root && (
           <button type="button" className="verb-forms__toggle" aria-expanded={open} onClick={toggle}>
@@ -57,7 +68,7 @@ export function VerbFormInfo({ entry }: { entry: DictionaryEntry }) {
           {family && family.length === 0 && <li className="verb-forms__note">The dictionary lists no other verbs for this root.</li>}
           {family?.map((m, i) => (
             <li key={m.lemma + i} className={'verb-forms__item' + (m.lemma === entry.lemma ? ' verb-forms__item--current' : '')}>
-              <span className="verb-forms__pill verb-forms__pill--small">{m.form ?? '·'}</span>
+              <span className="verb-forms__numeral">{m.form ?? '·'}</span>
               <bdi className="verb-forms__lemma" lang="ar" dir="rtl">
                 {m.lemma}
               </bdi>

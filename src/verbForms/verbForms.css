@@ -11,18 +11,16 @@
   align-items: center;
   gap: 8px;
 }
-.verb-forms__pill {
-  border-radius: 999px;
-  padding: 1px 9px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 11px;
+.verb-forms__mark {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--ink-soft);
 }
-.verb-forms__pill--small {
-  min-width: 28px;
-  text-align: center;
-  padding: 1px 6px;
+.verb-forms__numeral {
+  min-width: 34px;
+  font-weight: 600;
+  color: var(--ink-soft);
 }
 .verb-forms__vowel {
   color: var(--ink-faint);

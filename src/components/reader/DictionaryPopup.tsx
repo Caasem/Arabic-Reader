@@ -7,7 +7,7 @@ import { IconEdit, IconChevronLeft, IconChevronRight } from '../shared/icons';
 import { buildEntryTokenSenses, reconstructSelection, type DefinitionToken } from './definitionTokens';
 import { findMatchedSenses, WASIT_MATCH_CLASS } from '../../wasitMatch';
 import { annotateEntry } from '../../wasitStructure';
-import { VerbFormInfo } from '../../verbForms';
+import { VerbFormInfo, VerbFormMark } from '../../verbForms';
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
@@ -549,6 +549,7 @@ export function DictionaryPopup({
                     {entry.lemma && entry.lemma !== entry.headword && <MorphValue kind="form" value={entry.lemma} />}
                   </span>
                 )}
+                <VerbFormMark entry={entry} />
                 {onSaveEntry && result!.entries.length > 1 && (
                   <button
                     className={'dict-popup__entry-save' + (hasSelection ? ' dict-popup__entry-save--selection' : '')}

@@ -28,7 +28,7 @@ test('the dictionary popup shows a verb form and the root family', async ({ page
   }
   expect(found, 'a verb with a known form turns up in the sample book').toBe(true);
 
-  await expect(page.locator('.verb-forms__pill').first()).toContainText(/^Form (I|II|III|IV|V|VI|VII|VIII|IX|X)$/);
+  await expect(page.locator('.verb-forms__mark').first()).toHaveText(/^(I|II|III|IV|V|VI|VII|VIII|IX|X)$/);
   await page.locator('.verb-forms__toggle').first().click();
   await expect(page.locator('.verb-forms__item').first()).toBeVisible({ timeout: 8000 });
   await expect(page.locator('.verb-forms__item--current')).not.toHaveCount(0);
