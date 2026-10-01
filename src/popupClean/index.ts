@@ -12,6 +12,8 @@
 import './popupClean.css';
 
 export { PopupCleanSettings } from './PopupCleanSettings';
+export { EntryDock, type DockItem } from './EntryDock';
+export { entryGist } from './entryGist';
 
 /** The group heading: AraMorph reads just "English"; every other dictionary keeps its own name. */
 export function groupLabel(group: { providerId: string; providerName: string }): string {
