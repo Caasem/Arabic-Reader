@@ -12,6 +12,7 @@ import { AnkiSettings } from './settings/AnkiSettings';
 import { DiagnosticsSettings } from './settings/DiagnosticsSettings';
 import { CleanReaderSettings } from './settings/CleanReaderSettings';
 import { DictionarySearchSettings } from '../../dictionarySearch';
+import { BookSearchSettings } from '../../bookSearch';
 import { LookSettings } from '../../look';
 import { WasitMatchSettings } from '../../wasitMatch';
 import { WasitStructureSettings } from '../../wasitStructure';
@@ -56,7 +57,7 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
     id: 'dictionary',
     label: 'Dictionary',
     blurb: 'Which dictionaries answer, and how lookups appear.',
-    sections: [<DictionarySettings key="dictionaries" />, <DictionarySearchSettings key="dsearch" />, <WasitMatchSettings key="wasitmatch" />, <WasitStructureSettings key="wasitstructure" />],
+    sections: [<DictionarySettings key="dictionaries" />, <DictionarySearchSettings key="dsearch" />, <BookSearchSettings key="bsearch" />, <WasitMatchSettings key="wasitmatch" />, <WasitStructureSettings key="wasitstructure" />],
   },
   {
     id: 'vocabulary',

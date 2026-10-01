@@ -36,6 +36,7 @@ import { QuickSettingsPopover } from './QuickSettingsPopover';
 import { VocabularyEditModal } from './VocabularyEditModal';
 import { PomodoroTimer } from '../pomodoro/PomodoroTimer';
 import { saveCleanFocus } from '../../cleanReader/cleanFocus';
+import { registerBookNavigator } from '../../readerChords';
 import './Reader.css';
 
 type Panel = 'toc' | 'bookmarks' | 'search' | null;
@@ -155,6 +156,9 @@ export function Reader({
       setSelection(info);
     },
   });
+
+  // Lets the Alt+S / Alt+V palettes (src/bookSearch, src/bookVocab) jump somewhere in this book.
+  useEffect(() => registerBookNavigator((cfi) => serviceRef.current?.goTo(cfi)), [serviceRef]);
 
   async function openFootnote(anchor: HTMLAnchorElement, doc: Document, sectionHref: string, rect: HostRect) {
     hover.dismiss();

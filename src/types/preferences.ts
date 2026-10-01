@@ -100,6 +100,8 @@ export interface ReaderPreferences {
   dictionarySearchEnabled: boolean;
   /** How the D-key search is laid out; touch screens always get the sheet. */
   dictionarySearchStyle: 'floating' | 'palette' | 'drawer' | 'sheet';
+  /** Press Alt+S in the epub reader to search the whole book (src/bookSearch). */
+  bookSearchEnabled: boolean;
   /** The redesign (src/look): softer cards, serif headings, fuller colour scheme. */
   lookEnabled: boolean;
   /** Which preset palette the look starts from. */
