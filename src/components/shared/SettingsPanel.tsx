@@ -17,6 +17,7 @@ import { BookVocabSettings } from '../../bookVocab';
 import { VerbFormsSettings } from '../../verbForms';
 import { PopupCleanSettings } from '../../popupClean';
 import { LookSettings } from '../../look';
+import { FontSettings } from '../../readerFont';
 import { WasitMatchSettings } from '../../wasitMatch';
 import { WasitStructureSettings } from '../../wasitStructure';
 import { ShamelaBetaSettings } from './settings/ShamelaBetaSettings';
@@ -50,6 +51,7 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
     blurb: 'How books look, turn and respond to touch.',
     sections: [
       <ReadingSettings key="reading" />,
+      <FontSettings key="font" />,
       <CleanReaderSettings key="clean" />,
       <TouchGestureSettings key="touch" />,
       <SearchSettings key="search" />,

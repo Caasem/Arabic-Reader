@@ -4,6 +4,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   theme: 'light',
   fontSizePct: 100,
   fontFamily: "'Noto Naskh Arabic', 'Amiri', 'Traditional Arabic', serif",
+  readingFontAppWide: true,
   lineHeight: 2.1,
   readingWidthPct: 100,
   enabledProviderIds: ['aramorph'],

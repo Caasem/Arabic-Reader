@@ -15,6 +15,7 @@ import { ReadingSessionTracker } from '../reader/session';
 import { createGestureState, attachSectionInteractions, type SectionInteractionHandlers, type WordTarget } from '../reader/wordInteraction/sectionInteractions';
 import { distinctWordsIn, wrapArabicWords } from '../reader/wordInteraction/wrapWords';
 import { usePreferences } from '../state/PreferencesContext';
+import { DEFAULT_PREFS } from '../state/defaultPreferences';
 import { SAVED_WORD_COLOR } from '../theme/tokens';
 import type { BookMeta, TocItem } from '../types';
 import { vocabularyService } from '../vocabulary';
@@ -354,7 +355,8 @@ export function CleanReader({
               {
                 width: `${prefs.readingWidthPct}%`,
                 maxWidth: MAX_TEXT_WIDTH_PX,
-                fontFamily: `'Lotus', ${prefs.fontFamily}`,
+                // Lotus when installed, unless a font was picked in Settings.
+                fontFamily: prefs.fontFamily === DEFAULT_PREFS.fontFamily ? `'Lotus', ${prefs.fontFamily}` : prefs.fontFamily,
                 fontSize: `${(BASE_FONT_PX * prefs.fontSizePct) / 100}px`,
                 lineHeight: prefs.lineHeight,
                 '--saved-word-color': savedColor,

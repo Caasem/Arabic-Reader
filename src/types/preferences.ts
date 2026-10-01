@@ -41,7 +41,10 @@ export interface TouchGestureBindings {
 export interface ReaderPreferences {
   theme: ReaderTheme;
   fontSizePct: number; // 100 = default
+  /** CSS font stack for book text, picked in Settings -> Font (src/readerFont). */
   fontFamily: string;
+  /** Also use `fontFamily` for Arabic text outside the book (dictionary, vocabulary, review). */
+  readingFontAppWide: boolean;
   lineHeight: number;
   readingWidthPct: number; // 100 = default column width
   /** Dictionary provider ids currently switched on. */
