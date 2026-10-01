@@ -8,8 +8,8 @@ import './bookSearch.css';
 /** Mounted once beside the epub reader; renders nothing when switched off. */
 export function BookSearchHost({ book }: { book: BookMeta }) {
   const { prefs } = usePreferences();
-  // Jumping to a match is epub-position based, which the Clean Reader has none of.
-  return prefs.bookSearchEnabled && !prefs.cleanReaderEnabled ? <Active book={book} /> : null;
+  // Jumping to a match needs a reader that can go there: the epub reader or the new reader, not the old Clean Reader.
+  return prefs.bookSearchEnabled && (prefs.quietReaderEnabled || !prefs.cleanReaderEnabled) ? <Active book={book} /> : null;
 }
 
 function Active({ book }: { book: BookMeta }) {

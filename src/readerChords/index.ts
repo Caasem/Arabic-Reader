@@ -5,4 +5,4 @@
  * Used only by src/bookSearch and src/bookVocab; delete with them.
  */
 export { useChordHotkey } from './useChordHotkey';
-export { goToBookLocation, registerBookNavigator } from './navigation';
+export { goToBookLocation, registerBookNavigator, type LocationHint } from './navigation';

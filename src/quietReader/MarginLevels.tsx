@@ -159,8 +159,8 @@ export function MarginLevels({
             ))}
           </div>
           <div className="qr-margin__scroll qr-levels__list">
-            {!index && <p className="qr-dict__empty">Reading the book…</p>}
-            {index && words.length === 0 && <p className="qr-dict__empty">No {tier} words in this book.</p>}
+            {!index && <p className="qr-empty">Reading the book…</p>}
+            {index && words.length === 0 && <p className="qr-empty">No {tier} words in this book.</p>}
             {visible.map((w) => {
               const kind = statusByWord.get(normalize(w.word)) ?? 'none';
               const n = step?.word === w.word ? step.at + 1 : 0;

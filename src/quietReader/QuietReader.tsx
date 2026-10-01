@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { DictionaryBubble } from '../components/reader/DictionaryBubble';
+import { DictionaryPopup } from '../components/reader/DictionaryPopup';
 import { HoverPreview } from '../components/reader/HoverPreview';
 import { VocabularyEditModal } from '../components/reader/VocabularyEditModal';
 import { useHoverPreview } from '../components/reader/hooks/useHoverPreview';
@@ -13,7 +14,7 @@ import { useCleanSavedWords } from '../cleanReader/useCleanSavedWords';
 import '../cleanReader/cleanReader.css';
 import { logDiagnostic } from '../diagnostics/diagnosticsLog';
 import { libraryService } from '../library/libraryService';
-import { useChordHotkey } from '../readerChords';
+import { registerBookNavigator, type LocationHint } from '../readerChords';
 import { ReadingSessionTracker } from '../reader/session';
 import { normalize } from '../reader/tokenizer/arabicTokenizer';
 import { attachSectionInteractions, createGestureState, type SectionInteractionHandlers, type WordTarget } from '../reader/wordInteraction/sectionInteractions';
@@ -27,9 +28,9 @@ import { BookDrawer, type BookmarkRow, type ChapterRow, type DrawerTab, type Hig
 import { buildBookModel, type BookModel } from './bookModel';
 import { Dock, FocusPill, Header, ProgressRail, TurnButtons, type DockAction } from './Chrome';
 import { searchForms, searchTexts } from './cleanSearch';
+import { normalizeForSearch } from '../reader/tokenizer/arabicTokenizer';
 import { DisplaySheet } from './DisplaySheet';
 import { chapterForEpubPosition, formatCleanLocation, parseCleanLocation } from './location';
-import { MarginDictionary } from './MarginDictionary';
 import { MarginLevels } from './MarginLevels';
 import { NotePopover, SelectionBar, type ViewportRect } from './Overlays';
 import { clearPaint, flash, paintHighlights, paintSearchMatch } from './paint';
@@ -46,8 +47,7 @@ import './quietReader.css';
 const BASE_FONT_PX = 22;
 /** Between columns, and between one page and the next in Paged layout. */
 const GAP = 64;
-const CARD_WIDTH = 372;
-const CARD_WIDTH_COMPARE = 640;
+const LEVELS_WIDTH = 372;
 const DRAWER_WIDTH = 404;
 const NARROW_PX = 760;
 const SAVE_DEBOUNCE_MS = 300;
@@ -94,8 +94,8 @@ const sectionOf = (node: Node | null) => (node instanceof Element ? node : node?
 
 /**
  * The redesigned reader: the book as clean text on a quiet page, one dock at
- * the bottom, the dictionary and vocab levels beside the text, and a drawer
- * for contents, search, marks and saved words.
+ * the bottom, vocab levels beside the text, the usual dictionary popup, and a
+ * drawer for contents, search, marks and saved words.
  */
 export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation, onOpenBookAt, levelsOpen, onLevelsOpenChange, onOpenSettings, onShowOriginal }: Props) {
   const { prefs, resolvedTheme } = usePreferences();
@@ -197,6 +197,8 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   const [savedItems, setSavedItems] = useState<VocabularyItem[] | null>(null);
   const [savedVersion, setSavedVersion] = useState(0);
   const chrome = !focus;
+  /** Something was saved or removed: lists of saved words reload. */
+  const bumpSaved = useCallback(() => setSavedVersion((v) => v + 1), []);
 
   // --- Word lookups -----------------------------------------------------------------------------------
   const hover = useHoverPreview();
@@ -222,10 +224,7 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   // --- Layout -----------------------------------------------------------------------------------------
   const narrow = size.w < NARROW_PX;
   const popup = lookups.popup;
-  const providerCount = new Set(popup?.result?.entries.map((e) => e.providerId) ?? []).size;
-  const cardWidth = prefs.dictionaryPanelLayout === 'split' && providerCount > 1 ? CARD_WIDTH_COMPARE : CARD_WIDTH;
-  const left: 'word' | 'levels' | null = popup ? 'word' : levels ? 'levels' : null;
-  const padL = !narrow && chrome && left ? (left === 'word' ? cardWidth : CARD_WIDTH) * (prefs.dictionaryPopupSizePct / 100) + 48 : 0;
+  const padL = !narrow && chrome && levels ? LEVELS_WIDTH + 48 : 0;
   const padR = !narrow && chrome && drawer ? DRAWER_WIDTH : 0;
   const region = size.w - padL - padR;
   const twoColumns = mode === 'paged' && prefs.twoColumnEnabled;
@@ -355,10 +354,10 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   }, [sectionEl, prepare, pageOfOffset, setPageIdx]);
 
   /** The text the reader can see right now, from the page's reading-start corner to its end corner. */
-  const measureVisible = useCallback(() => {
+  const measureVisible = useCallback((): Located | null => {
     const stage = stageRef.current;
     const article = articleRef.current;
-    if (!stage || !article || !model) return;
+    if (!stage || !article || !model) return null;
     const s = stage.getBoundingClientRect();
     const a = article.getBoundingClientRect();
     const right = Math.min(s.right, mode === 'paged' ? a.right - pageRef.current * step : a.right) - 6;
@@ -370,11 +369,10 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
     };
     const start = at(right, s.top + 10) ?? { chapter: chapterRef.current, offset: 0 };
     const end = at(leftX, s.bottom - 10);
-    setVisible({
-      chapter: start.chapter,
-      start: start.offset,
-      end: end && end.chapter === start.chapter ? end.offset : (model.chars[start.chapter] ?? 0),
-    });
+    const endOffset = end && end.chapter === start.chapter ? end.offset : (model.chars[start.chapter] ?? 0);
+    const range = { chapter: start.chapter, start: start.offset, end: Math.max(start.offset, endOffset) };
+    setVisible(range);
+    return range;
   }, [model, mode, step, colW]);
 
   /** Progress, saved position and what's visible, after any move. */
@@ -576,6 +574,40 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
 
   const jumpTo = useCallback((loc: Located) => goTo({ chapter: loc.chapter, offset: loc.start, end: loc.end }), [goTo]);
 
+  // Alt+S and Alt+V jump through readerChords, with an epub CFI or a clean place.
+  useEffect(
+    () =>
+      registerBookNavigator((target: string, hint?: LocationHint) => {
+        if (!model) return false;
+        const loc = parseCleanLocation(target);
+        if (loc) {
+          if (loc.end > loc.start) jumpTo(loc);
+          else {
+            const found = hint?.text ? locateWord({ chapterHref: target, sentence: hint.sentence, surfaceForm: hint.text } as VocabularyItem) : null;
+            if (found) jumpTo(found);
+            else goTo({ chapter: loc.chapter, fraction: 0 });
+          }
+          return true;
+        }
+        const ch = chapterForEpubPosition(model.book.chapters, target, hint?.href);
+        if (ch === null) return false;
+        if (hint?.sentence && hint.text) {
+          const found = locateWord({ chapterHref: hint.href, location: target, sentence: hint.sentence, surfaceForm: hint.text } as VocabularyItem);
+          if (found) return void jumpTo(found);
+        }
+        if (hint?.text) {
+          // Of several matches in the chapter, the one with the same text before it.
+          const hits = searchTexts(model.texts, hint.text, 'phrase', { chapters: [ch] });
+          const tail = normalizeForSearch((hint.before ?? '').replace(/^…/, '').slice(-24)).normalized.trim();
+          const best =
+            hits.find((h) => tail && normalizeForSearch(model.texts[ch].slice(Math.max(0, h.start - 80), h.start)).normalized.trim().endsWith(tail)) ?? hits[0];
+          if (best) return void jumpTo(best);
+        }
+        goTo({ chapter: ch, fraction: 0 });
+      }),
+    [model, goTo, jumpTo, locateWord]
+  );
+
   // --- Word taps --------------------------------------------------------------------------------------
   const withLocation = useCallback((target: WordTarget): WordTarget => {
     const section = sectionOf(target.element);
@@ -646,17 +678,22 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
     if (article) attachSectionInteractions(elementAsDocument(article), 'clean', sectionHandlers, gestureState);
   }, [sectionHandlers, gestureState]);
 
+  /** Looks up a word that isn't on the page (a dictionary search result): the popup opens mid-page. */
   const lookUpWord = useCallback(
     (word: string) => {
       const article = articleRef.current;
-      if (!article) return;
+      const stage = stageRef.current;
+      if (!article || !stage) return;
+      const s = stage.getBoundingClientRect();
+      const x = s.left + s.width / 2;
+      const y = s.top + s.height / 3;
       void lookupsRef.current.openPopup({
         word,
         sectionHref: `clean:${chapterRef.current}`,
         element: article,
-        rect: { top: 0, bottom: 0, left: 0, right: 0 },
-        x: 0,
-        y: 0,
+        rect: { top: y, bottom: y, left: x, right: x },
+        x,
+        y,
       });
     },
     []
@@ -735,14 +772,14 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   const escapeRef = useRef<() => void>(() => {});
   escapeRef.current = () => {
     const l = lookupsRef.current;
-    if (l.editing) return;
+    // As in the other readers, the dictionary popup closes with its × or a click outside it.
+    if (l.editing || l.popup) return;
     if (selection) {
       window.getSelection()?.removeAllRanges();
       setSelection(null);
     } else if (note) setNote(null);
     else if (sheet) setSheet(null);
     else if (l.bubble) l.closeBubble();
-    else if (l.popup) l.closePopup();
     else if (drawer) setDrawer(null);
     else if (levels) setLevels(false);
     else if (focus) setFocus(false);
@@ -757,6 +794,8 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       trackerRef.current?.recordActivity();
+      // An Alt+S / Alt+D / Alt+V palette handles its own keys.
+      if (e.defaultPrevented || (e.target as HTMLElement | null)?.closest?.('.bsearch, .bvocab, .dsearch')) return;
       if (e.key === 'Escape') {
         escapeRef.current();
         return;
@@ -787,15 +826,6 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
     };
   }, []);
 
-  useChordHotkey('KeyS', prefs.bookSearchEnabled, (selected) => {
-    setDrawer('search');
-    search.apply({ query: selected || undefined, scope: 'book', match: 'root', nonce: Date.now() });
-  });
-  useChordHotkey('KeyD', prefs.dictionarySearchEnabled, (selected) => {
-    setDrawer('search');
-    search.apply({ query: selected || undefined, scope: 'dict', nonce: Date.now() });
-  });
-  useChordHotkey('KeyV', prefs.bookVocabEnabled, () => setDrawer((d) => (d === 'words' ? null : 'words')));
 
   // --- Focus ------------------------------------------------------------------------------------------
   useEffect(() => {
@@ -815,12 +845,8 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   function onDock(action: DockAction) {
     if (action === 'contents' || action === 'search' || action === 'marks' || action === 'words') setDrawer((d) => (d === action ? null : action));
     else if (action === 'display' || action === 'timer') setSheet((s) => (s === action ? null : action));
-    else if (action === 'levels') {
-      if (popup) {
-        lookups.closePopup();
-        setLevels(true);
-      } else setLevels(!levels);
-    } else enterFocus();
+    else if (action === 'levels') setLevels(!levels);
+    else enterFocus();
   }
 
   // --- Derived for display ----------------------------------------------------------------------------
@@ -851,7 +877,8 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
       for (const { bookmark } of pageBookmarks) await marks.removeBookmark(bookmark.id);
       return;
     }
-    const at = visible ?? { chapter, start: 0, end: 0 };
+    // Measured now, not from the last settle, so the new bookmark always counts as on this page.
+    const at = measureVisible() ?? visible ?? { chapter, start: 0, end: 0 };
     await marks.addBookmark({
       location: formatCleanLocation({ chapter: at.chapter, start: at.start, end: at.start }),
       percent,
@@ -932,7 +959,7 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   const dockActive = new Set<DockAction>();
   if (drawer) dockActive.add(drawer);
   if (sheet) dockActive.add(sheet);
-  if (left === 'levels') dockActive.add('levels');
+  if (levels) dockActive.add('levels');
 
   const articleStyle = {
     width: colW,
@@ -1036,21 +1063,26 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
       )}
       {chrome && sheet === 'timer' && <TimerPopover book={book} center={dockCenter + (labels ? 220 : 90)} onClose={() => setSheet(null)} />}
 
-      {chrome && popup && (
-        <MarginDictionary
-          lookup={popup}
-          bookId={book.id}
-          savedVersion={savedVersion}
+      {popup && (
+        <DictionaryPopup
+          word={popup.word}
+          result={popup.result}
+          instance={popup.instance}
+          saved={popup.saved}
+          loading={popup.loading}
+          x={popup.x}
+          y={popup.y}
+          wordRect={popup.wordRect}
+          sizePct={prefs.dictionaryPopupSizePct}
           onClose={lookups.closePopup}
-          onToggleSave={() => void lookups.togglePopupSave().then(() => setSavedVersion((v) => v + 1))}
-          onSaveEntry={(entry) => void lookups.savePopupEntry(entry).then(() => setSavedVersion((v) => v + 1))}
-          onSaveEntries={(entries) => void lookups.savePopupEntries(entries).then(() => setSavedVersion((v) => v + 1))}
-          onSaveSelection={(entry, text) => void lookups.savePopupSelection(entry, text).then(() => setSavedVersion((v) => v + 1))}
+          onSave={() => void lookups.togglePopupSave().then(bumpSaved)}
+          onSaveEntry={(entry) => void lookups.savePopupEntry(entry).then(bumpSaved)}
+          onSaveSelection={(entry, text) => void lookups.savePopupSelection(entry, text).then(bumpSaved)}
+          onSaveEntries={(entries) => void lookups.savePopupEntries(entries).then(bumpSaved)}
           onEdit={lookups.startEditing}
-          onLookUp={lookUpWord}
         />
       )}
-      {chrome && !popup && levels && model && (
+      {chrome && levels && model && (
         <MarginLevels book={book} model={model} savedItems={savedItems ?? []} onJump={(_, occ) => jumpTo(occ)} onClose={() => setLevels(false)} />
       )}
 
@@ -1083,8 +1115,8 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
         />
       )}
 
-      {chrome && selection && <SelectionBar anchor={selection.rect} onPick={(c) => void highlightSelection(c)} onNote={() => void highlightSelection('yellow', true)} />}
-      {chrome && note && noteData && (
+      {selection && <SelectionBar anchor={selection.rect} onPick={(c) => void highlightSelection(c)} onNote={() => void highlightSelection('yellow', true)} />}
+      {note && noteData && (
         <NotePopover
           anchor={note.rect}
           number={noteData.label}
@@ -1109,7 +1141,7 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
           fallbackMeaning={lookups.editing.result?.entries[0]?.senses[0]?.gloss ?? ''}
           fallbackSentence={lookups.editing.instance?.sentence}
           onCancel={lookups.cancelEditing}
-          onSave={(patch) => lookups.saveEdit(patch).then(() => setSavedVersion((v) => v + 1))}
+          onSave={(patch) => lookups.saveEdit(patch).then(bumpSaved)}
         />
       )}
 

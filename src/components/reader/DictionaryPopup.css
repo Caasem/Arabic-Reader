@@ -567,3 +567,36 @@
   font-size: 12px;
   color: var(--danger);
 }
+
+/* "In this book": the sentence the word was met in, with the word in bold. */
+.dict-popup__context {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+}
+
+.dict-popup__context .dict-popup__sentence {
+  padding-top: 0;
+  border-top: none;
+  margin-top: 0;
+}
+
+.dict-popup__sentence strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* Clean layout: the "+" that saves a whole Al-Wasit section sits at the end of its heading. */
+.dict-popup__group-header:has(.dict-popup__group-add) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dict-popup__shortcut {
+  align-self: center;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
