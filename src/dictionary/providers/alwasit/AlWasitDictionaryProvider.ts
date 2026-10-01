@@ -1,6 +1,7 @@
 import type { DictionaryEntry, DictionaryProvider } from '../../../types';
 import { foldAlefHamza, normalize } from '../../../reader/tokenizer/arabicTokenizer';
 import { aramorphProvider } from '../aramorph/AramorphDictionaryProvider';
+import { buildLookupKeys } from './lookupKeys';
 
 interface AlWasitRow {
   id: number;
@@ -56,16 +57,15 @@ export class AlWasitDictionaryProvider implements DictionaryProvider {
   async lookup(word: string): Promise<DictionaryEntry[]> {
     const { byKey, byFoldedKey } = await this.getData();
 
-    const keys = new Set<string>([normalize(word)]);
+    // The word, AraMorph's roots and dictionary forms for it, and the weak-letter
+    // spellings of those roots (see lookupKeys.ts): AraMorph's قري is Al-Wasit's "قرا|قرو".
+    let analyses: Awaited<ReturnType<typeof aramorphProvider.analyze>> = [];
     try {
-      const analyses = await aramorphProvider.analyze(word);
-      for (const a of analyses) {
-        if (a.root) keys.add(normalize(a.root));
-        if (a.lemma) keys.add(normalize(a.lemma));
-      }
+      analyses = await aramorphProvider.analyze(word);
     } catch {
       // AraMorph unavailable -- fall back to matching the raw surface form only.
     }
+    const keys = buildLookupKeys(word, analyses);
 
     const matched = new Map<number, AlWasitRow>();
     for (const key of keys) {
