@@ -1,6 +1,12 @@
 /** The bundled font: also what every other choice falls back to for letters it lacks. */
 export const BUILT_IN_FAMILY = 'Noto Naskh Arabic';
 
+/** "And the best companion in time is a book" (al-Mutanabbi), shown in each font. */
+export const FONT_SAMPLE = 'وَخَيْرُ جَلِيسٍ فِي الزَّمَانِ كِتَابُ';
+
+/** What the font upload input offers. */
+export const FONT_FILE_ACCEPT = '.ttf,.otf,.woff,.woff2,.ttc,font/*';
+
 const FALLBACK = `'${BUILT_IN_FAMILY}', serif`;
 
 /** The `fontFamily` preference for a chosen font. */

@@ -4,11 +4,14 @@
  *
  * Touch points: <FontSettings> in SettingsPanel, <ReadingFontSync /> mounted
  * once in App, EpubService.injectFonts (uploaded fonts into each book
- * section), CleanReader honouring a picked font over Lotus, and the
- * `fontFamily` / `readingFontAppWide` preferences. Picking the built-in font
- * restores the original look; `git revert` the commit that added it to remove it.
+ * section), CleanReader honouring a picked font over Lotus, the new reader's
+ * Display sheet (useFontChoices), and the `fontFamily` / `readingFontAppWide`
+ * preferences. Picking the built-in font restores the original look; `git
+ * revert` the commit that added it to remove it.
  */
 import './readerFont.css';
 
 export { FontSettings } from './FontSettings';
 export { ReadingFontSync } from './ReadingFontSync';
+export { useFontChoices, type FontChoice } from './useFontChoices';
+export { FONT_FILE_ACCEPT, FONT_SAMPLE } from './fontStack';

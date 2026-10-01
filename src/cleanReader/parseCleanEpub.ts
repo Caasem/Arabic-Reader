@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import { isFootnoteLink } from '../reader/footnotes/resolveFootnote';
 
 export type CleanBlock =
   | { t: 'p'; s: string }
@@ -6,10 +7,29 @@ export type CleanBlock =
   | { t: 'brk' }
   | { t: 'gap' };
 
+/** A footnote referenced from the text. Its marker sits in a block's text as
+ * NOTE_OPEN + index + NOTE_CLOSE (see chapterHtml). */
+export interface CleanNote {
+  /** What the book shows as the marker, e.g. "1" or "[٣]". */
+  label: string;
+  /** The note's text; empty when it could not be found. */
+  text: string;
+}
+
 export interface CleanChapter {
   title: string;
   blocks: CleanBlock[];
+  /** The spine file this chapter came from, relative to the package (OPF) directory. */
+  href?: string;
+  /** Its position in the spine, counting sections without text too (what an epub CFI's step points at). */
+  spineIndex?: number;
+  notes?: CleanNote[];
 }
+
+export const NOTE_OPEN = '\uE000';
+export const NOTE_CLOSE = '\uE001';
+/** Matches one footnote marker; group 1 is the note index. */
+export const NOTE_MARKER = /\uE000(\d+)\uE001/g;
 
 export interface CleanBook {
   title: string;
@@ -32,8 +52,25 @@ const clean = (s: string) =>
 /** Reduces one XHTML section to plain text blocks: paragraphs, headings and
  * spacing only. Styles, images, links and footnote markers are dropped. */
 export function extractBlocks(html: string): CleanBlock[] {
+  return extractChapter(html, false).blocks;
+}
+
+/** A footnote link found in a section, before its note text is known. */
+interface PendingNote {
+  label: string;
+  href: string;
+  text: string;
+}
+
+/**
+ * Like extractBlocks, but with `keepNotes` each footnote reference stays in the
+ * text as a marker and its note is collected: same-file notes are read here,
+ * notes in other files are left for parseCleanEpub to fill in.
+ */
+export function extractChapter(html: string, keepNotes = true): { blocks: CleanBlock[]; notes: PendingNote[] } {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const blocks: CleanBlock[] = [];
+  const notes: PendingNote[] = [];
   let buf = '';
 
   const flush = (headLevel?: number) => {
@@ -64,7 +101,14 @@ export function extractBlocks(html: string): CleanBlock[] {
       blocks.push({ t: 'brk' });
       return;
     }
-    if (tag === 'a' && /noteref/.test(el.getAttribute('epub:type') ?? '')) return;
+    if (tag === 'a' && isFootnoteLink(el as HTMLAnchorElement)) {
+      if (!keepNotes) return;
+      const href = el.getAttribute('href') ?? '';
+      const label = clean(el.textContent ?? '').replace(/\s+/g, '') || String(notes.length + 1);
+      notes.push({ label, href, text: href.startsWith('#') ? noteText(doc, href.slice(1)) : '' });
+      buf += NOTE_OPEN + (notes.length - 1) + NOTE_CLOSE;
+      return;
+    }
     if (HEADING.test(tag)) {
       if (buf.trim()) flush();
       el.childNodes.forEach(walk);
@@ -102,7 +146,21 @@ export function extractBlocks(html: string): CleanBlock[] {
     result.push(b);
   }
   while (result.length && result[result.length - 1].t === 'gap') result.pop();
-  return result;
+  return { blocks: result, notes };
+}
+
+/** A note's text by its id. A bare back-link anchor (`<a id="fn1">1</a>`)
+ * stands for the paragraph around it. */
+function noteText(doc: Document, id: string): string {
+  let target: Element | null = null;
+  try {
+    target = doc.getElementById(id) ?? doc.querySelector(`a[name="${CSS.escape(id)}"]`);
+  } catch {
+    target = doc.getElementById(id);
+  }
+  if (!target) return '';
+  if (clean(target.textContent ?? '').length < 6) target = target.closest('p, li, aside, div, section') ?? target;
+  return clean(target.textContent ?? '').replace(/\n/g, ' ');
 }
 
 const decoder = new TextDecoder('utf-8');
@@ -130,9 +188,22 @@ function normalizePath(p: string): string {
   return out.join('/');
 }
 
+const safeDecode = (s: string) => {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+};
+
+/** Block text without footnote markers. */
+export function stripNoteMarkers(text: string): string {
+  return text.replace(NOTE_MARKER, '');
+}
+
 export function chapterTitle(blocks: CleanBlock[], index: number): string {
   const heading = blocks.find((b): b is Extract<CleanBlock, { t: 'h' }> => b.t === 'h');
-  return heading ? heading.s : `الفصل ${index + 1}`;
+  return heading ? stripNoteMarkers(heading.s) : `الفصل ${index + 1}`;
 }
 
 /** Reads an EPUB's spine into plain-text chapters. Throws on a file that isn't a valid EPUB. */
@@ -155,8 +226,18 @@ export async function parseCleanEpub(file: Blob): Promise<CleanBook> {
   });
 
   const chapters: CleanChapter[] = [];
-  for (const ref of Array.from(opf.querySelectorAll('spine > itemref'))) {
-    const href = manifest.get(ref.getAttribute('idref') ?? '');
+  const otherFiles = new Map<string, Promise<Document | null>>();
+  const loadDoc = (path: string) => {
+    let doc = otherFiles.get(path);
+    if (!doc) {
+      doc = readText(zip, path).then((html) => (html ? new DOMParser().parseFromString(html, 'text/html') : null));
+      otherFiles.set(path, doc);
+    }
+    return doc;
+  };
+  const spineRefs = Array.from(opf.querySelectorAll('spine > itemref'));
+  for (let spineIndex = 0; spineIndex < spineRefs.length; spineIndex++) {
+    const href = manifest.get(spineRefs[spineIndex].getAttribute('idref') ?? '');
     if (!href || !/\.(x?html?)$/i.test(href.split('#')[0])) continue;
     let path = href.split('#')[0];
     try {
@@ -166,10 +247,22 @@ export async function parseCleanEpub(file: Blob): Promise<CleanBook> {
     }
     const html = await readText(zip, normalizePath(base + path));
     if (!html) continue;
-    const blocks = extractBlocks(html);
-    if (blocks.some((b) => b.t === 'p' || b.t === 'h')) {
-      chapters.push({ title: chapterTitle(blocks, chapters.length), blocks });
+    const { blocks, notes } = extractChapter(html);
+    if (!blocks.some((b) => b.t === 'p' || b.t === 'h')) continue;
+    // Notes kept in another file (a shared endnotes section, typically).
+    for (const note of notes) {
+      if (note.text || note.href.startsWith('#')) continue;
+      const [file, id] = note.href.split('#');
+      const doc = await loadDoc(normalizePath(base + dirOf(path) + safeDecode(file)));
+      if (doc) note.text = id ? noteText(doc, id) : clean(doc.body?.textContent ?? '');
     }
+    chapters.push({
+      title: chapterTitle(blocks, chapters.length),
+      blocks,
+      href: path,
+      spineIndex,
+      notes: notes.map(({ label, text }) => ({ label, text })),
+    });
   }
   if (!chapters.length) throw new Error('No readable text was found in this book.');
 
