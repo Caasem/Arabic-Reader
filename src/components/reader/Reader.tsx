@@ -164,7 +164,15 @@ export function Reader({
   });
 
   // Lets the Alt+S / Alt+V palettes (src/bookSearch, src/bookVocab) jump somewhere in this book.
-  useEffect(() => registerBookNavigator((cfi) => serviceRef.current?.goTo(cfi)), [serviceRef]);
+  useEffect(
+    () =>
+      registerBookNavigator((cfi) => {
+        // A clean-text place (from the new reader) means nothing to epub.js.
+        if (isCleanLocation(cfi)) return false;
+        serviceRef.current?.goTo(cfi);
+      }),
+    [serviceRef]
+  );
 
   async function openFootnote(anchor: HTMLAnchorElement, doc: Document, sectionHref: string, rect: HostRect) {
     hover.dismiss();

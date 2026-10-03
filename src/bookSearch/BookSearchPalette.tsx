@@ -38,7 +38,7 @@ export function BookSearchPalette({ book, initialQuery, onClose }: Props) {
   function jump(index: number) {
     const hit = hits?.[index];
     if (!hit) return;
-    if (goToBookLocation(hit.cfi)) onClose();
+    if (goToBookLocation(hit.cfi, { href: hit.href, text: hit.match, before: hit.before })) onClose();
     else setNotice('Jumping to a match needs the EPUB reader (Clean Reader is off-limits for now).');
   }
 

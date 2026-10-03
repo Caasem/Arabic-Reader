@@ -72,9 +72,9 @@ export type DockAction = 'contents' | 'search' | 'marks' | 'words' | 'display' |
 
 const ITEMS: { id: DockAction; label: string; title: string; icon: ReactNode }[] = [
   { id: 'contents', label: 'Contents', title: 'Contents', icon: <IconList /> },
-  { id: 'search', label: 'Search', title: 'Search · Alt+S book, Alt+D dictionary', icon: <IconSearch /> },
+  { id: 'search', label: 'Search', title: 'Search this book, your library or the dictionary', icon: <IconSearch /> },
   { id: 'marks', label: 'Marks', title: 'Bookmarks and highlights', icon: <IconBookmark /> },
-  { id: 'words', label: 'Words', title: 'Words saved from this book (Alt+V)', icon: <IconWords /> },
+  { id: 'words', label: 'Words', title: 'Words saved from this book', icon: <IconWords /> },
   {
     id: 'display',
     label: 'Display',

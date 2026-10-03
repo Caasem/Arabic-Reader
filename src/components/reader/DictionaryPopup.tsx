@@ -72,6 +72,29 @@ function MorphValue({ kind, value, label }: { kind: 'form' | 'root'; value: stri
   );
 }
 
+/** Where the word was met: the sentence, with the word itself in bold. */
+function SentenceInBook({ sentence, word }: { sentence: string; word: string }) {
+  const at = sentence.indexOf(word);
+  return (
+    <div className="dict-popup__context">
+      <div className="dict-popup__group-header">In this book</div>
+      <div className="dict-popup__sentence">
+        “
+        {at === -1 ? (
+          sentence
+        ) : (
+          <>
+            {sentence.slice(0, at)}
+            <strong>{word}</strong>
+            {sentence.slice(at + word.length)}
+          </>
+        )}
+        ”
+      </div>
+    </div>
+  );
+}
+
 /** Folds consecutive same-provider entries into one group so the popup can
  * show the provider name once per group instead of once per entry. Keeps
  * each entry's original index (needed for the per-entry save-state Set,
@@ -105,6 +128,7 @@ export function DictionaryPopup({
   onSaveEntry,
   onSaveSelection,
   onEdit,
+  onSaveEntries,
 }: {
   word: string;
   result: DictionaryLookupResult | null;
@@ -139,6 +163,8 @@ export function DictionaryPopup({
   /** Opens the compact edit modal for this word's saved (or not-yet-saved)
    * card. */
   onEdit?: () => void;
+  /** Clean layout: a "+" on the Al-Wasit heading that saves all of its entries as one card. */
+  onSaveEntries?: (entries: DictionaryEntry[]) => void;
 }) {
   const { prefs, updatePrefs } = usePreferences();
 
@@ -154,8 +180,11 @@ export function DictionaryPopup({
   const [savedSubKeys, setSavedSubKeys] = useState<Set<string>>(new Set());
   // Clean layout: Al-Wasit entries folded to their headword row (pressing the headword toggles it).
   const [foldedEntries, setFoldedEntries] = useState<Set<number>>(new Set());
+  // Clean layout: dictionaries whose whole section was saved from its heading.
+  const [savedGroups, setSavedGroups] = useState<Set<string>>(new Set());
   useEffect(() => {
     setSavedEntryKeys(new Set());
+    setSavedGroups(new Set());
   }, [word]);
   const morphology = result?.morphology?.[0];
 
@@ -553,7 +582,23 @@ export function DictionaryPopup({
   function renderGroupList(groups: EntryGroup[]) {
     return groups.map((group) => (
       <div className="dict-popup__group" key={group.providerId}>
-        <div className="dict-popup__group-header">{clean ? groupLabel(group) : group.providerName}</div>
+        <div className="dict-popup__group-header">
+          {clean ? groupLabel(group) : group.providerName}
+          {clean && onSaveEntries && isTokenizedProvider(group.providerId) && group.entries.length > 1 && (
+            <button
+              className="dict-popup__sense-add dict-popup__group-add"
+              disabled={savedGroups.has(group.providerId)}
+              onClick={() => {
+                onSaveEntries(group.entries.map((e) => e.entry));
+                setSavedGroups((prev) => new Set(prev).add(group.providerId));
+              }}
+              aria-label="Add this whole section to vocabulary"
+              title={savedGroups.has(group.providerId) ? 'Added' : 'Add this whole section'}
+            >
+              {savedGroups.has(group.providerId) ? '✓' : '+'}
+            </button>
+          )}
+        </div>
         {group.entries.map(({ entry, index: i }) => {
           // Non-contiguous word selection (click to toggle, drag to add a
           // range) -- the root-keyed Arabic-Arabic dictionaries only (see
@@ -782,6 +827,7 @@ export function DictionaryPopup({
             Edit
           </button>
         )}
+        {prefs.quickAddShortcutEnabled && <span className="dict-popup__shortcut">Ctrl Shift A</span>}
       </div>
     </>
   );
@@ -892,7 +938,7 @@ export function DictionaryPopup({
           )
         ) : null}
 
-        {instance?.sentence && <div className="dict-popup__sentence">“{instance.sentence}”</div>}
+        {instance?.sentence && <SentenceInBook sentence={instance.sentence} word={word} />}
 
         {/* Settings → "Pin Save/Edit buttons": unpinned (default), this
             stays right here and scrolls away with a long entry list, same

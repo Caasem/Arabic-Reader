@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { vocabularyService } from '../vocabulary';
 import type { BookMeta, VocabularyItem } from '../types';
 import { goToBookLocation } from '../readerChords';
+import { isCleanLocation } from '../quietReader/location';
 
 type Filter = 'all' | 'new' | 'learning' | 'known' | 'due';
 type Sort = 'saved' | 'due';
@@ -57,7 +58,10 @@ export function BookVocabDrawer({ book, onClose }: Props) {
   }, [items, filter, sort, now]);
 
   function jump(item: VocabularyItem) {
-    if (item.location && goToBookLocation(item.location)) onClose();
+    // Words saved in the new reader keep their exact place in their chapter reference instead.
+    const place = item.location ?? (isCleanLocation(item.chapterHref) ? item.chapterHref : undefined);
+    const hint = { href: item.chapterHref, text: item.surfaceForm, sentence: item.sentence };
+    if (place && goToBookLocation(place, hint)) onClose();
     else setNotice('This word has no saved place in the book to jump to.');
   }
 

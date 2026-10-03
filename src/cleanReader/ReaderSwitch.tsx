@@ -29,19 +29,31 @@ export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: 
   const { prefs } = usePreferences();
   const [view, setView] = useReaderView(props.book.id);
 
+  // Alt+D, Alt+S and Alt+V open their palettes over whichever reader is showing.
+  const hosts = (
+    <>
+      <DictionarySearchHost book={props.book} />
+      <BookSearchHost book={props.book} />
+      <BookVocabHost book={props.book} />
+    </>
+  );
+
   if (prefs.quietReaderEnabled && view === 'clean') {
     return (
-      <QuietReader
-        book={props.book}
-        onBack={props.onBack}
-        onFocusChromeChange={onFocusChromeChange}
-        initialLocation={props.initialCfiOverride}
-        onOpenBookAt={props.onOpenBookAt}
-        levelsOpen={props.vocabPanelOpen}
-        onLevelsOpenChange={props.onVocabPanelOpenChange}
-        onOpenSettings={onOpenSettings}
-        onShowOriginal={() => setView('original')}
-      />
+      <>
+        <QuietReader
+          book={props.book}
+          onBack={props.onBack}
+          onFocusChromeChange={onFocusChromeChange}
+          initialLocation={props.initialCfiOverride}
+          onOpenBookAt={props.onOpenBookAt}
+          levelsOpen={props.vocabPanelOpen}
+          onLevelsOpenChange={props.onVocabPanelOpenChange}
+          onOpenSettings={onOpenSettings}
+          onShowOriginal={() => setView('original')}
+        />
+        {hosts}
+      </>
     );
   }
 
@@ -62,9 +74,7 @@ export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: 
       ) : (
         <Reader {...props} {...backToClean} />
       )}
-      <DictionarySearchHost book={props.book} />
-      <BookSearchHost book={props.book} />
-      <BookVocabHost book={props.book} />
+      {hosts}
     </>
   );
 }
