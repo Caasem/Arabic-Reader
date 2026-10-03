@@ -20,13 +20,12 @@ function scrollParent(el: HTMLElement): HTMLElement | null {
 /**
  * A dock of labelled tabs on the popup's edge, one per Al-Wasit entry (so one per
  * root the word led to). Pressing a tab scrolls that entry into view; the tab for
- * the entry being read stays lit. It fades in once the Al-Wasit entries reach the
- * upper part of the popup, and sits on whichever side of the popup has room.
+ * the entry being read stays lit. It is there from the moment the popup opens, and
+ * sits on whichever side of the popup has room.
  */
 export function EntryDock({ items, popupRef, scale }: { items: DockItem[]; popupRef: RefObject<HTMLDivElement | null>; scale: number }) {
   const [side, setSide] = useState<Side>('left');
   const [active, setActive] = useState(items[0]?.index ?? 0);
-  const [visible, setVisible] = useState(false);
   const key = items.map((i) => i.index).join(',');
 
   const entryEl = useCallback(
@@ -42,18 +41,14 @@ export function EntryDock({ items, popupRef, scale }: { items: DockItem[]; popup
     setSide(rect.left >= need ? 'left' : window.innerWidth - rect.right >= need ? 'right' : null);
 
     let current = items[0].index;
-    let show = false;
     items.forEach((item, n) => {
       const el = entryEl(item.index);
       const box = el && scrollParent(el);
       if (!el || !box) return;
-      const boxRect = box.getBoundingClientRect();
-      const top = el.getBoundingClientRect().top - boxRect.top;
-      if (n === 0 && (top < box.clientHeight * 0.6 || box.classList.contains('dict-popup__split-col'))) show = true;
+      const top = el.getBoundingClientRect().top - box.getBoundingClientRect().top;
       if (top <= box.clientHeight * 0.3) current = item.index;
       if (n === items.length - 1 && box.scrollTop + box.clientHeight >= box.scrollHeight - 4) current = item.index;
     });
-    setVisible(show);
     setActive(current);
   }, [items, popupRef, scale, entryEl]);
 
@@ -81,7 +76,7 @@ export function EntryDock({ items, popupRef, scale }: { items: DockItem[]; popup
 
   if (!side || items.length < 2) return null;
   return (
-    <nav className={'dict-popup__dock' + (visible ? ' dict-popup__dock--on' : '')} data-side={side} aria-label="Jump to an Al-Wasīṭ entry">
+    <nav className="dict-popup__dock dict-popup__dock--on" data-side={side} aria-label="Jump to an Al-Wasīṭ entry">
       {items.map((item) => (
         <button
           key={item.index}
@@ -90,7 +85,6 @@ export function EntryDock({ items, popupRef, scale }: { items: DockItem[]; popup
           aria-current={item.index === active}
           aria-label={`Go to the Al-Wasīṭ entry ${item.headword}: ${item.gist}`}
           title={`${item.headword} · ${item.gist}`}
-          tabIndex={visible ? 0 : -1}
           onClick={() => go(item.index)}
         >
           <span className="dict-popup__dock-head" lang="ar">

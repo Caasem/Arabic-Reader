@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => useOriginalReader(page));
 /**
  * Clean popup layout: when Al-Wasit returns more than one entry (a word with several
  * roots), a dock of labelled tabs, one per Al-Wasit entry, jumps between them and
- * lights the one being read. (It fades in only once the Al-Wasit entries are in view.)
+ * lights the one being read. It is visible as soon as the popup opens.
  */
 test('the Al-Wasit dock jumps between entries', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
@@ -35,8 +35,7 @@ test('the Al-Wasit dock jumps between entries', async ({ page }) => {
   }
   expect(found, 'a word with two or more Al-Wasit entries turns up in the sample book').toBe(true);
 
-  // The dock appears once the Al-Wasit entries are in view.
-  await page.locator('.dict-popup__scroll').evaluate((el) => (el.scrollTop = el.scrollHeight));
+  // The dock is there from the start, before any scrolling.
   await expect(page.locator('.dict-popup__dock--on')).toBeVisible();
   const tabs = page.locator('.dict-popup__dock-tab');
   await expect(tabs.first()).toContainText(/\S/);
