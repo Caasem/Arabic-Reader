@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { useOriginalReader } from './originalReader';
+
+test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 /**
  * Clean popup layout: when Al-Wasit returns more than one entry (a word with several
