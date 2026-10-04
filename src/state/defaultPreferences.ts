@@ -43,6 +43,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   bookVocabEnabled: true,
   verbFormsEnabled: true,
   dictionaryPopupCleanLayout: true,
+  collapseManyArabicEntries: true,
   lookEnabled: true,
   lookPalette: 'tan',
   lookCustom: {},

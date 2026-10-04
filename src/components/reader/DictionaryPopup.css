@@ -2,9 +2,21 @@
   position: fixed;
   inset: 0;
   z-index: 40;
+  /* Inert for the first moments, so the second click of a double-click reaches
+     the word underneath (it saves the word) instead of closing the popup the
+     first click opened. */
+  pointer-events: none;
+  animation: dict-backdrop-arm 1ms linear 0.4s forwards;
+}
+
+@keyframes dict-backdrop-arm {
+  to {
+    pointer-events: auto;
+  }
 }
 
 .dict-popup {
+  pointer-events: auto;
   position: absolute;
   /* left/top are set inline in JS, in viewport pixel coordinates, after
      measuring the popup's actual rendered size -- see DictionaryPopup.tsx.

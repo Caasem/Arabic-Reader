@@ -45,10 +45,11 @@ describe('profilePreferences', () => {
     expect(profilePreferences('desktop').touchGestures).toBeUndefined();
   });
 
-  it('uses paginated single-column Amiri everywhere', () => {
+  it('scrolls all, single-column, in Amiri everywhere', () => {
     for (const p of ['phone', 'tablet', 'desktop'] as const) {
       const prefs = profilePreferences(p);
-      expect(prefs.readingFlow).toBe('paginated');
+      expect(prefs.readingFlow).toBe('scrolled');
+      expect(prefs.continuousScrollEnabled).toBe(true);
       expect(prefs.twoColumnEnabled).toBe(false);
       expect(prefs.fontFamily).toMatch(/^'Amiri'/);
     }

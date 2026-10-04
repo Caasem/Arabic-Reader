@@ -1,5 +1,7 @@
 .hover-preview {
-  position: absolute;
+  /* Fixed: the anchor is in viewport coordinates, and the reader can sit beside
+     the sidebar, so an absolute offset parent would shift the bubble sideways. */
+  position: fixed;
   transform: translate(-50%, calc(-100% - 10px));
   z-index: 35; /* below DictionaryPopup/FootnotePopup (40), above reader content */
   display: flex;

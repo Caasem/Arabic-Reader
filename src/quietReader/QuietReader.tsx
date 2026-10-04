@@ -47,6 +47,8 @@ import './quietReader.css';
 const BASE_FONT_PX = 22;
 /** Between columns, and between one page and the next in Paged layout. */
 const GAP = 64;
+/** Side padding of `.qr-text` (quietReader.css). The CSS columns lie inside it, so it's part of the page step. */
+const TEXT_PAD = 4;
 const LEVELS_WIDTH = 372;
 const DRAWER_WIDTH = 404;
 const NARROW_PX = 760;
@@ -230,7 +232,9 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   const twoColumns = mode === 'paged' && prefs.twoColumnEnabled;
   const baseWidth = 380 + 3.8 * prefs.readingWidthPct;
   const colW = Math.round(Math.max(260, Math.min(twoColumns ? baseWidth * 1.75 : baseWidth, region - (narrow ? 32 : 150))));
-  const step = colW + GAP;
+  // The distance between two pages: one column's inner width plus the gap. Using the outer width
+  // here drifts the text out of its frame by the padding on every page turn.
+  const step = colW - TEXT_PAD * 2 + GAP;
   const dockCenter = padL + region / 2;
   const labels = region >= 860;
   const stageTop = focus ? 84 : narrow ? 68 : 92;

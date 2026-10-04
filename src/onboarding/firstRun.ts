@@ -2,7 +2,12 @@ import { libraryService } from '../library/libraryService';
 import { readString, STORAGE_KEYS, writeString } from '../utils/storage';
 import { sidebarStartsCollapsed, type DeviceProfile } from './deviceProfile';
 
-const STARTER_BOOK_FILE = 'narada-kamel-kilani.epub';
+/** Books every install gets once. `flag` remembers it was added, so removing
+ * a book never brings it back; the first keeps its original key. */
+const STARTER_BOOKS = [
+  { file: 'narada-kamel-kilani.epub', flag: STORAGE_KEYS.starterBookAdded },
+  { file: 'qisas-al-nabiyyin.epub', flag: `${STORAGE_KEYS.starterBookAdded}:qisas-al-nabiyyin` },
+];
 
 /**
  * Onboarding runs once, on a device that has never opened the app: no
@@ -22,21 +27,34 @@ export function applySidebarStart(profile: DeviceProfile): void {
   writeString(STORAGE_KEYS.navbarCollapsed, sidebarStartsCollapsed(profile) ? '1' : '0');
 }
 
+let preloading: Promise<void> | null = null;
+
 /**
- * Puts the starter book on the shelf, once. A failure (offline on the very
- * first launch) is silent and retried on the next first run; it never blocks
- * the library.
+ * Puts the starter books on the shelf, once each per install: on a first run
+ * and on any launch that has not added one yet (an install from before it
+ * existed). Removing a book does not bring it back. A failure (offline) is
+ * silent and retried next launch; it never blocks the library.
  */
-export async function preloadStarterBook(): Promise<void> {
-  if (readString(STORAGE_KEYS.starterBookAdded) === '1') return;
-  try {
-    // BASE_URL, not '/': see the note in Library.loadSample.
-    const res = await fetch(`${import.meta.env.BASE_URL}${STARTER_BOOK_FILE}`);
-    if (!res.ok) return;
-    const blob = await res.blob();
-    await libraryService.importEpub(new File([blob], STARTER_BOOK_FILE, { type: 'application/epub+zip' }));
-    writeString(STORAGE_KEYS.starterBookAdded, '1');
-  } catch {
-    // best-effort only
+export function preloadStarterBooks(): Promise<void> {
+  if (STARTER_BOOKS.every((b) => readString(b.flag) === '1')) return Promise.resolve();
+  preloading ??= addStarterBooks().finally(() => {
+    preloading = null;
+  });
+  return preloading;
+}
+
+async function addStarterBooks(): Promise<void> {
+  for (const book of STARTER_BOOKS) {
+    if (readString(book.flag) === '1') continue;
+    try {
+      // BASE_URL, not '/': see the note in Library.loadSample.
+      const res = await fetch(`${import.meta.env.BASE_URL}${book.file}`);
+      if (!res.ok) continue;
+      const blob = await res.blob();
+      await libraryService.importEpub(new File([blob], book.file, { type: 'application/epub+zip' }));
+      writeString(book.flag, '1');
+    } catch {
+      // best-effort only
+    }
   }
 }

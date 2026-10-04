@@ -51,10 +51,12 @@ export function detectDeviceProfile(): DeviceProfile {
   });
 }
 
-/** Preferences a profile starts from. Paginated, single-column Amiri on all three. */
+/** Preferences a profile starts from. Scroll all (one continuous scroll through
+ * the book), single-column Amiri on all three. */
 export function profilePreferences(profile: DeviceProfile): Partial<ReaderPreferences> {
   const shared: Partial<ReaderPreferences> = {
-    readingFlow: 'paginated',
+    readingFlow: 'scrolled',
+    continuousScrollEnabled: true,
     twoColumnEnabled: false,
     fontFamily: stackFor('Amiri'),
   };
