@@ -1,0 +1,210 @@
+/*
+ * First-run welcome. Colours come from the app's own variables, so the
+ * themes (light, sepia, night) and the look's palettes apply unchanged; the
+ * type and radii match the redesigned reader (src/quietReader).
+ */
+.ob {
+  --ob-ui: 'DM Sans', var(--font-ui);
+  --ob-display: 'Newsreader', var(--look-display, 'Iowan Old Style', 'Palatino Linotype', Georgia, serif);
+  --ob-accent: var(--look-accent-ink, #7a5a32);
+  --ob-on-accent: var(--bg);
+  --ob-teal-soft: var(--look-secondary-soft, #dcece9);
+  --ob-teal-ink: var(--look-secondary-ink, #245f58);
+  --ob-teal: var(--look-secondary, #2e7d74);
+  --ob-gold-soft: var(--look-highlight-soft, #f6ead0);
+  --ob-gold-ink: var(--look-highlight-ink, #7d5a14);
+
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  overflow-y: auto;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--ob-ui);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 32px 16px;
+}
+:root[data-theme='dark'] .ob {
+  --ob-accent: var(--look-accent-ink, #d0ab74);
+  --ob-teal-soft: var(--look-secondary-soft, #1f3431);
+  --ob-teal-ink: var(--look-secondary-ink, #8fd0c6);
+  --ob-gold-soft: var(--look-highlight-soft, #3b3220);
+  --ob-gold-ink: var(--look-highlight-ink, #e6c47c);
+}
+
+.ob *, .ob *::before, .ob *::after { box-sizing: border-box; }
+.ob button { font: inherit; cursor: pointer; }
+.ob :focus-visible { outline: 2px solid var(--ob-accent); outline-offset: 3px; }
+.ob [hidden] { display: none !important; }
+
+.ob-panel {
+  width: 100%;
+  max-width: 720px;
+  margin-block: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: var(--shadow);
+}
+
+.ob-h1, .ob-q {
+  font-family: var(--ob-display);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  margin: 0 0 8px;
+  outline: none;
+}
+.ob-h1 { font-size: clamp(1.7rem, 4.5vw, 2.25rem); }
+.ob-q { font-size: clamp(1.6rem, 4.2vw, 2.1rem); margin-bottom: 28px; }
+.ob-kicker { margin: 0 0 6px; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: var(--ob-accent); }
+.ob-lede { margin: 0; color: var(--ink-soft); max-width: 52ch; }
+.ob-lede b { color: var(--ink); font-weight: 600; }
+
+.ob-btn { min-height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--ink); font-weight: 600; }
+.ob-btn:hover:not(:disabled) { border-color: var(--ink-faint); }
+.ob-btn:disabled { opacity: 0.6; cursor: default; }
+.ob-btn--primary { background: var(--ob-accent); border-color: var(--ob-accent); color: var(--ob-on-accent); }
+.ob-btn--primary:hover:not(:disabled) { filter: brightness(1.08); border-color: var(--ob-accent); }
+.ob-btn--quiet { border: 0; color: var(--ink-soft); padding-inline: 8px; text-decoration: underline; text-underline-offset: 4px; }
+.ob-btn--quiet:hover:not(:disabled) { color: var(--ink); }
+.ob-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 24px; }
+.ob-sp { flex: 1; }
+.ob-alt { display: flex; justify-content: center; gap: 22px; margin-top: 12px; flex-wrap: wrap; }
+.ob-alt .ob-btn { min-height: 36px; font-weight: 500; font-size: 0.9rem; }
+
+/* Showcase */
+.ob-slide { display: grid; gap: 20px; }
+.ob-slide > * { animation: ob-rise 0.45s ease both; }
+.ob-slide > .ob-txt { animation-delay: 0.06s; }
+.ob-art { position: relative; height: 250px; border-radius: var(--radius); background: var(--bg); border: 1px solid var(--border); display: grid; place-items: center; overflow: hidden; }
+.ob-demo { width: min(100% - 40px, 440px); display: grid; gap: 12px; }
+.ob-demo--center { justify-items: center; }
+.ob-read { font-family: var(--font-arabic); font-size: 1.9rem; line-height: 1.9; text-align: right; color: var(--ink); }
+.ob-read--dim { opacity: 0.5; }
+
+.ob-hero { text-align: center; }
+.ob-hero__mark { font-family: var(--font-arabic); font-weight: 700; font-size: 6.5rem; line-height: 1; color: var(--ob-accent); animation: ob-bigin 0.9s 0.1s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.ob-hero__name { font-family: var(--ob-display); font-weight: 600; font-size: 1.7rem; margin-top: 4px; animation: ob-rise 0.6s 0.4s ease both; }
+
+/* Tap a word: a ripple, the word marks, the popup rises, Save turns to Saved. */
+.ob-w { position: relative; border-radius: 6px; padding: 0 6px; animation: ob-mark 5s infinite; }
+.ob-rip { position: absolute; left: 50%; top: 55%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; border: 2px solid var(--ob-accent); opacity: 0; animation: ob-rip 5s infinite; pointer-events: none; }
+.ob-pop { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); width: min(100%, 320px); display: grid; gap: 4px; font-size: 0.92rem; animation: ob-pop 5s infinite; }
+.ob-pop__hd { display: flex; align-items: center; gap: 10px; }
+.ob-pop__hd b { font-family: var(--font-arabic); font-size: 1.4rem; line-height: 1.3; }
+.ob-pop__def { font-size: 0.8rem; color: var(--ink-soft); }
+.ob-root { font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--ob-teal-soft); color: var(--ob-teal-ink); }
+.ob-save { position: relative; justify-self: start; margin-top: 6px; border-radius: 8px; padding: 5px 12px; font-size: 0.78rem; font-weight: 700; background: var(--ob-accent); color: var(--ob-on-accent); animation: ob-addbtn 5s infinite; }
+.ob-save__1 { display: block; animation: ob-p1 5s infinite; }
+.ob-save__2 { position: absolute; inset: 5px 0; text-align: center; opacity: 0; animation: ob-p2 5s infinite; }
+.ob-chip { justify-self: start; font-size: 0.8rem; font-weight: 700; padding: 5px 12px; border-radius: 999px; background: var(--ob-teal-soft); color: var(--ob-teal-ink); opacity: 0; animation: ob-chip 5s infinite; }
+@keyframes ob-mark { 0%, 12% { background: transparent; box-shadow: none; } 14%, 60% { background: var(--ob-gold-soft); box-shadow: inset 0 -4px 0 var(--ob-accent); } 64%, 92% { background: var(--ob-teal-soft); box-shadow: inset 0 -4px 0 var(--ob-teal); } 96%, 100% { background: transparent; box-shadow: none; } }
+@keyframes ob-rip { 0%, 10% { opacity: 0; transform: scale(0.4); } 12% { opacity: 0.8; transform: scale(0.6); } 24% { opacity: 0; transform: scale(2.2); } 100% { opacity: 0; } }
+@keyframes ob-pop { 0%, 18% { opacity: 0; transform: translateY(10px) scale(0.96); } 24%, 92% { opacity: 1; transform: none; } 97%, 100% { opacity: 0; } }
+@keyframes ob-addbtn { 0%, 52% { background: var(--ob-accent); color: var(--ob-on-accent); transform: scale(1); } 56% { transform: scale(0.93); } 60%, 100% { background: var(--ob-teal-soft); color: var(--ob-teal-ink); transform: scale(1); } }
+@keyframes ob-p1 { 0%, 58% { opacity: 1; } 60%, 100% { opacity: 0; } }
+@keyframes ob-p2 { 0%, 58% { opacity: 0; } 61%, 100% { opacity: 1; } }
+@keyframes ob-chip { 0%, 68% { opacity: 0; transform: translateY(8px); } 74%, 90% { opacity: 1; transform: none; } 95%, 100% { opacity: 0; } }
+
+/* Alt+D: the keys press, the card slides in, the word types itself. */
+.ob-keys { position: absolute; top: 14px; left: 16px; display: flex; gap: 6px; z-index: 1; }
+.ob-keys kbd { font: 700 0.78rem var(--ob-ui); background: var(--bg-elevated); color: var(--ink); border: 1px solid var(--border); border-bottom-width: 3px; border-radius: 7px; padding: 3px 10px; animation: ob-kc 5s infinite; }
+.ob-sbox { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); width: min(100%, 340px); justify-self: end; animation: ob-card 5s infinite; }
+.ob-sbox__f { border: 1px solid var(--ob-accent); border-radius: 8px; padding: 6px 10px; font-family: var(--font-arabic); font-size: 1.25rem; text-align: right; overflow: hidden; }
+.ob-type { display: inline-block; overflow: hidden; white-space: nowrap; width: 0; vertical-align: bottom; animation: ob-typing 5s steps(4, end) infinite; }
+.ob-sbox__res { margin-top: 8px; font-size: 0.85rem; color: var(--ink-soft); opacity: 0; animation: ob-res 5s infinite; }
+.ob-sbox__res b { font-family: var(--font-arabic); font-size: 1.1rem; color: var(--ink); }
+@keyframes ob-kc { 0%, 6% { transform: none; opacity: 0.4; } 8%, 10% { transform: translateY(2px); border-bottom-width: 1px; opacity: 1; } 14% { transform: none; opacity: 1; } 18%, 80% { opacity: 0.4; } 82% { opacity: 1; } 84%, 86% { transform: translateY(2px); border-bottom-width: 1px; opacity: 1; } 90% { transform: none; opacity: 1; } 94%, 100% { opacity: 0.4; } }
+@keyframes ob-card { 0%, 12% { opacity: 0; transform: translateX(14px); } 18%, 86% { opacity: 1; transform: none; } 92%, 100% { opacity: 0; transform: translateX(14px); } }
+@keyframes ob-typing { 0%, 26% { width: 0; } 40%, 100% { width: 2.4em; } }
+@keyframes ob-res { 0%, 46% { opacity: 0; } 52%, 100% { opacity: 1; } }
+
+/* Review: the answer shows, Good is pressed, the streak and count move. */
+.ob-rcard { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; padding: 12px 26px; text-align: center; display: grid; gap: 2px; animation: ob-rcard 4.5s infinite; }
+.ob-rcard b { font-family: var(--font-arabic); font-size: 1.9rem; line-height: 1.4; }
+.ob-rcard__ans { font-size: 0.85rem; color: var(--ink-soft); opacity: 0; animation: ob-ans 4.5s infinite; }
+.ob-revs { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.ob-revs span { font-size: 0.82rem; font-weight: 700; padding: 8px 12px; border-radius: 10px; background: var(--bg-elevated); border: 1px solid var(--border); text-align: center; }
+.ob-revs small { display: block; font-weight: 400; color: var(--ink-soft); font-size: 0.7rem; }
+.ob-revs__good { animation: ob-good 4.5s infinite; }
+.ob-stat { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; opacity: 0; animation: ob-stat 4.5s infinite; }
+.ob-stat > span { font-size: 0.8rem; font-weight: 700; padding: 5px 12px; border-radius: 999px; background: var(--ob-gold-soft); color: var(--ob-gold-ink); }
+.ob-stat > .ob-stat__v { position: relative; background: var(--ob-teal-soft); color: var(--ob-teal-ink); }
+.ob-stat__1 { animation: ob-n1 4.5s infinite; }
+.ob-stat__2 { position: absolute; left: 12px; right: 12px; opacity: 0; animation: ob-n2 4.5s infinite; }
+@keyframes ob-rcard { 0% { opacity: 0; transform: translateY(12px); } 8%, 88% { opacity: 1; transform: none; } 96%, 100% { opacity: 0; transform: translateX(-30px); } }
+@keyframes ob-ans { 0%, 18% { opacity: 0; } 24%, 100% { opacity: 1; } }
+@keyframes ob-good { 0%, 42% { background: var(--bg-elevated); color: var(--ink); transform: scale(1); } 46% { transform: scale(0.94); } 50%, 92% { background: var(--ob-accent); color: var(--ob-on-accent); border-color: var(--ob-accent); transform: scale(1); } 98%, 100% { background: var(--bg-elevated); color: var(--ink); } }
+@keyframes ob-stat { 0%, 50% { opacity: 0; transform: translateY(8px); } 58%, 88% { opacity: 1; transform: none; } 94%, 100% { opacity: 0; } }
+@keyframes ob-n1 { 0%, 66% { opacity: 1; } 70%, 100% { opacity: 0; } }
+@keyframes ob-n2 { 0%, 66% { opacity: 0; } 70%, 100% { opacity: 1; } }
+
+@keyframes ob-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes ob-bigin { from { opacity: 0; transform: scale(0.7) rotate(-6deg); } to { opacity: 1; transform: none; } }
+
+.ob-dots { display: flex; gap: 8px; align-items: center; }
+.ob-dots button { width: 8px; height: 8px; min-height: 0; padding: 0; border-radius: 50%; border: 0; background: var(--border); position: relative; transition: width 0.2s, background 0.2s; }
+.ob-dots button::after { content: ''; position: absolute; inset: -12px -4px; }
+.ob-dots button[aria-current='true'] { background: var(--ob-accent); width: 22px; border-radius: 4px; }
+
+/* Setup */
+.ob-setup { padding: 12px 8px 4px; }
+.ob-top { display: flex; align-items: center; margin-bottom: 14px; }
+.ob-mark { width: 34px; height: 34px; border-radius: 9px; background: var(--ob-accent); color: var(--ob-on-accent); display: grid; place-items: center; font-family: var(--font-arabic); font-size: 1.5rem; line-height: 1; padding-bottom: 4px; }
+.ob-steps { margin-left: auto; display: flex; gap: 8px; }
+.ob-steps i { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: width 0.2s, background 0.2s; }
+.ob-steps i.on { background: var(--ob-accent); width: 22px; border-radius: 4px; }
+.ob-step { min-height: 250px; animation: ob-rise 0.35s ease both; }
+
+.ob-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.ob-choice, .ob-dtile { position: relative; }
+.ob-choice input, .ob-dtile input { position: absolute; inset: 0; opacity: 0; margin: 0; width: 100%; height: 100%; cursor: pointer; }
+.ob-dtile input:disabled { cursor: default; }
+.ob-choice label { display: grid; gap: 4px; justify-items: center; text-align: center; padding: 26px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); height: 100%; transition: border-color 0.15s, background 0.15s; }
+.ob-choice input:hover + label { border-color: var(--ink-faint); }
+.ob-choice input:checked + label { border-color: var(--ob-accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--ob-accent); }
+.ob-choice input:focus-visible + label, .ob-dtile input:focus-visible + label { outline: 2px solid var(--ob-accent); outline-offset: 3px; }
+.ob-choice svg { color: var(--ink-faint); margin-bottom: 4px; }
+.ob-choice input:checked + label svg { color: var(--ob-accent); }
+.ob-choice strong { font-family: var(--ob-display); font-weight: 600; font-size: 1.1rem; line-height: 1.2; }
+.ob-rec { font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; color: var(--ob-accent); margin-top: 4px; }
+
+.ob-dgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.ob-grp { margin: 24px 0 8px; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 700; color: var(--ob-accent); }
+.ob-dtile label { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); transition: border-color 0.15s, background 0.15s; }
+.ob-dtile input:hover:not(:disabled) + label { border-color: var(--ink-faint); }
+.ob-dtile.on label { border-color: var(--ob-accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--ob-accent); }
+.ob-dtile svg { flex: none; color: var(--ink-faint); }
+.ob-dtile.on > label > svg { color: var(--ob-accent); }
+.ob-dtile strong { font-family: var(--ob-display); font-weight: 600; font-size: 1.05rem; line-height: 1.2; flex: 1; min-width: 0; }
+.ob-tick { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--ink-faint); display: grid; place-items: center; flex: none; }
+.ob-tick svg { color: var(--ob-on-accent); opacity: 0; }
+.ob-dtile.on .ob-tick { background: var(--ob-accent); border-color: var(--ob-accent); }
+.ob-dtile.on .ob-tick svg { opacity: 1; }
+.ob-summary { margin: 28px 0 0; font-size: 0.92rem; color: var(--ink-soft); }
+.ob-summary b { color: var(--ink); font-weight: 500; }
+
+@media (max-width: 600px) {
+  .ob { padding: 16px 12px; }
+  .ob-panel { padding: 22px 18px; }
+  .ob-art { height: 250px; }
+  .ob-hero__mark { font-size: 5.5rem; }
+  .ob-choices { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .ob-choice label { padding: 18px 6px; }
+  .ob-rec { font-size: 0.58rem; }
+  .ob-dgrid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .ob-dots { order: -1; width: 100%; justify-content: center; }
+}
+
+/* Reduced motion: each demo shows its finished state, nothing loops or moves. */
+@media (prefers-reduced-motion: reduce) {
+  .ob *, .ob *::before, .ob *::after { animation: none !important; transition: none !important; }
+  .ob-rip, .ob-save__2, .ob-stat__2 { display: none; }
+  .ob-chip, .ob-stat, .ob-sbox__res, .ob-rcard__ans { opacity: 1; }
+  .ob-type { width: 2.4em; }
+}

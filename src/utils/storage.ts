@@ -16,6 +16,8 @@ export const STORAGE_KEYS = {
   pomodoroSnapshot: 'arabic-reader:pomodoroSnapshot',
   dashboardSectionCollapsedPrefix: 'dashboard-section-collapsed:',
   diagnosticsLog: 'arabic-reader:diagnostics',
+  onboardingDone: 'arabic-reader:onboardingDone',
+  starterBookAdded: 'arabic-reader:starterBookAdded',
 } as const;
 
 export function readString(key: string): string | null {

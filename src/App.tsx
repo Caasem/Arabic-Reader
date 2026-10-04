@@ -8,6 +8,7 @@ import { PreferencesProvider } from './state/PreferencesProvider';
 import { LookSkin } from './look';
 import { ReadingFontSync } from './readerFont';
 import { libraryService } from './library/libraryService';
+import { Onboarding, shouldShowOnboarding } from './onboarding';
 import type { BookMeta, Highlight } from './types';
 import './App.css';
 
@@ -20,6 +21,8 @@ const SpeedReader = lazy(() => import('./components/speedReader/SpeedReader').th
 const SettingsPanel = lazy(() => import('./components/shared/SettingsPanel').then((m) => ({ default: m.SettingsPanel })));
 
 function App() {
+  // Read before the PreferencesProvider mounts and remembers anything.
+  const [firstRun, setFirstRun] = useState(shouldShowOnboarding);
   const [view, setView] = useState<ViewName>('library');
   const [activeBook, setActiveBook] = useState<BookMeta | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -73,6 +76,9 @@ function App() {
     <PreferencesProvider>
       <LookSkin />
       <ReadingFontSync />
+      {firstRun ? (
+        <Onboarding onDone={() => setFirstRun(false)} />
+      ) : (
       <div className="app">
         <BackupReminder onOpenSettings={() => setSettingsOpen(true)} />
         <div className="app__body">
@@ -122,6 +128,7 @@ function App() {
         )}
         <PomodoroNotifier />
       </div>
+      )}
     </PreferencesProvider>
   );
 }
