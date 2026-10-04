@@ -65,9 +65,11 @@ function bundledAlWasitDataPlugin(): Plugin {
 /** The optional classical dictionaries Al-Ṣiḥāḥ and Maqāyīs al-Lugha (see
  * public/alsihah-data and public/almaqayis-data), off by default and split
  * into their own chunks via dynamic import() like Al-Wasit. */
-function bundledLexiconPlugin(id: string, file: string): Plugin {
+function bundledLexiconPlugin(id: string, file: string, optional = false): Plugin {
   return virtualTextFilePlugin(`virtual:${id}-data`, (readText) => {
-    return `export default ${JSON.stringify(readText(file))};
+    // An optional dataset kept out of git builds as an empty dictionary when absent.
+    const text = optional && !fs.existsSync(path.join(__dirname, file)) ? '' : readText(file)
+    return `export default ${JSON.stringify(text)};
 `
   })
 }
@@ -91,6 +93,8 @@ export default defineConfig({
     bundledAlWasitDataPlugin(),
     bundledLexiconPlugin('alsihah', 'public/alsihah-data/alsihah.tsv'),
     bundledLexiconPlugin('almaqayis', 'public/almaqayis-data/almaqayis.tsv'),
+    // Optional Arabic-Russian dictionary (see baranov-data/SOURCE-README.md), off by default.
+    bundledLexiconPlugin('baranov', 'russian.txt', true),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
@@ -117,12 +121,12 @@ export default defineConfig({
         // The optional datasets aren't precached -- most users never enable
         // them -- but are cached on first use so an enabled feature keeps
         // working offline.
-        globIgnores: ['**/_virtual_alwasit-data-*.js', '**/_virtual_alsihah-data-*.js', '**/_virtual_almaqayis-data-*.js', '**/_virtual_vocab-list-data-*.js'],
+        globIgnores: ['**/_virtual_alwasit-data-*.js', '**/_virtual_alsihah-data-*.js', '**/_virtual_almaqayis-data-*.js', '**/_virtual_baranov-data-*.js', '**/_virtual_vocab-list-data-*.js'],
         runtimeCaching: [
           {
-            urlPattern: /\/assets\/_virtual_(?:alwasit|alsihah|almaqayis|vocab-list)-data-[\w-]+\.js$/,
+            urlPattern: /\/assets\/_virtual_(?:alwasit|alsihah|almaqayis|baranov|vocab-list)-data-[\w-]+\.js$/,
             handler: 'CacheFirst',
-            options: { cacheName: 'optional-datasets', expiration: { maxEntries: 6 } },
+            options: { cacheName: 'optional-datasets', expiration: { maxEntries: 7 } },
           },
         ],
         // The dictionary worker chunk (~4MB with its data) exceeds Workbox's 2MB default.

@@ -5,6 +5,7 @@ import { moveProviderId, orderProviders } from '../../../dictionary/providerOrde
 import { aramorphProvider } from '../../../dictionary/providers/aramorph/AramorphDictionaryProvider';
 import type { DictionaryPanelLayout, MorphDisplayStyle } from '../../../types';
 import { AramorphDataSettings } from './AramorphDataSettings';
+import { PersonalDictionarySettings } from './PersonalDictionarySettings';
 import { Note, type Option, RangeRow, SegmentedRow, SelectRow, SettingsSection, ToggleRow } from './controls';
 
 const MORPH_DISPLAY_STYLES: Option<MorphDisplayStyle>[] = [
@@ -168,6 +169,8 @@ export function DictionarySettings() {
         root's article — about 5,650 roots in Al-Ṣiḥāḥ, 5,270 in Maqāyīs. Their data downloads the first time you switch
         each one on; see <code>alsihah-data/SOURCE-README.md</code> and <code>almaqayis-data/SOURCE-README.md</code>.
       </Note>
+
+      <PersonalDictionarySettings onImported={() => toggleProvider('personal', true)} />
 
       <AramorphDataSettings
         ready={aramorphReady}

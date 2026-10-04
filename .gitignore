@@ -11,3 +11,6 @@ blob-report/
 .idea/
 android/.idea/
 .codegraph/
+
+# Personal dictionary files (never commit)
+personal-data/
