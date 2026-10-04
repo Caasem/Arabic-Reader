@@ -1,9 +1,7 @@
 import type { DictionaryEntry, DictionaryProvider } from '../../../types';
-import { foldAlefHamza } from '../../../reader/tokenizer/arabicTokenizer';
-import { aramorphProvider } from '../aramorph/AramorphDictionaryProvider';
-import { buildLookupKeys } from '../alwasit/lookupKeys';
+import { matchRows, rowsToEntries } from './matchRows';
 import { buildPersonalIndex, type PersonalIndex } from './index';
-import { parseDictionaryText, type PersonalRow } from './parse';
+import { parseDictionaryText } from './parse';
 import { clearPersonalDictionary, loadPersonalDictionary, savePersonalDictionary } from './store';
 
 const DEFAULT_NAME = 'My dictionary';
@@ -73,30 +71,8 @@ export class PersonalDictionaryProvider implements DictionaryProvider {
     const idx = await this.load();
     if (!idx) return [];
 
-    let analyses: Awaited<ReturnType<typeof aramorphProvider.analyze>> = [];
-    try {
-      analyses = await aramorphProvider.analyze(word);
-    } catch {
-      // AraMorph unavailable -- match the raw surface form only.
-    }
-    const keys = buildLookupKeys(word, analyses);
-
-    const matched = new Set<PersonalRow>();
-    for (const key of keys) for (const row of idx.byKey.get(key) ?? []) matched.add(row);
-    if (matched.size === 0) {
-      for (const key of keys) for (const row of idx.byFoldedKey.get(foldAlefHamza(key)) ?? []) matched.add(row);
-    }
-
-    return Array.from(matched).map(([headword, definition]) => ({
-      providerId: this.id,
-      providerName: this.name,
-      headword,
-      senses: definition
-        .split(/<br\s*\/?>|\n/i)
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .map((gloss) => ({ gloss })),
-    }));
+    const matched = await matchRows(idx, word);
+    return rowsToEntries(matched, this.id, this.name);
   }
 }
 

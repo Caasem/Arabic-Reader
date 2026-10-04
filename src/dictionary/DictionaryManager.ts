@@ -4,6 +4,7 @@ import { alWasitProvider } from './providers/alwasit/AlWasitDictionaryProvider';
 import { alSihahProvider } from './providers/alsihah/AlSihahDictionaryProvider';
 import { alMaqayisProvider } from './providers/almaqayis/AlMaqayisDictionaryProvider';
 import { personalDictionaryProvider } from './providers/personal/PersonalDictionaryProvider';
+import { baranovProvider } from './providers/personal/BaranovDictionaryProvider';
 import { orderProviders } from './providerOrder';
 
 const CACHE_LIMIT = 300;
@@ -105,6 +106,8 @@ dictionaryManager.registerProvider(aramorphProvider);
 dictionaryManager.registerProvider(alWasitProvider);
 dictionaryManager.registerProvider(alSihahProvider);
 dictionaryManager.registerProvider(alMaqayisProvider);
+// Off by default, like the other optional dictionaries.
+dictionaryManager.registerProvider(baranovProvider);
 // The user's own dictionary file (Settings > Dictionaries); empty until one is loaded.
 dictionaryManager.registerProvider(personalDictionaryProvider);
 // AraMorph's prefix/stem/suffix analysis also supplies root, lemma and POS.
