@@ -25,6 +25,20 @@ describe('parseDictionaryText', () => {
   });
 });
 
+describe('numbered wide TSV', () => {
+  const T = '\t';
+  const text = [
+    ['1', 'ا', '', '', '', '', '', '', '', '', '(أَلِفٌ)', '', 'алиф; (первая буква)'].join(T),
+    ['4', ' أَ', '', '2', '', '', '', '', '', '', '', 'частица', 'обращения о;'].join(T),
+  ].join('\n');
+  it('is detected and read headword + joined columns', () => {
+    expect(parseDictionaryText('dic.txt', text)).toEqual([
+      ['ا', '(أَلِفٌ) алиф; (первая буква)'],
+      ['أَ', 'частица обращения о;'],
+    ]);
+  });
+});
+
 describe('buildPersonalIndex', () => {
   it('matches without diacritics and with folded hamza', () => {
     const idx = buildPersonalIndex([['كِتَاب', 'книга'], ['أَمْر', 'приказ']]);

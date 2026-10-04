@@ -24,7 +24,38 @@ export function parseDictionaryText(name: string, raw: string): PersonalRow[] {
     }
   }
   if (/^#NAME\b/m.test(text.slice(0, 2000))) return parseDsl(text);
-  return parseTsv(text);
+  return looksLikeNumberedTsv(text) ? parseNumberedTsv(text) : parseTsv(text);
+}
+
+const NUMBERED_LINE_RE = /^\d+\t[^\t]*\t(?:[^\t]*\t){6,}/;
+
+/** True for the wide legacy layout: `id⇥headword⇥…many mostly-empty columns…⇥translation`. */
+export function looksLikeNumberedTsv(text: string): boolean {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim()).slice(0, 20);
+  return lines.length > 0 && lines.filter((l) => NUMBERED_LINE_RE.test(l)).length >= lines.length * 0.8;
+}
+
+/**
+ * Wide tab layout used by some Russian-Arabic dictionary dumps: the first column is a
+ * numeric id, the second the headword, and the rest (vocalized form, homograph
+ * number, part of speech, translation) are scattered across empty columns.
+ * The definition is every later non-empty column, minus bare homograph numbers.
+ */
+export function parseNumberedTsv(text: string): PersonalRow[] {
+  const rows: PersonalRow[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    const cols = line.split('\t');
+    if (cols.length < 3 || !/^\d+$/.test(cols[0].trim())) continue;
+    const headword = cols[1].trim();
+    const definition = cols
+      .slice(2)
+      .map((c) => c.trim())
+      .filter((c) => c && !/^\d+$/.test(c))
+      .join(' ')
+      .replace(/\s+/g, ' ');
+    if (headword && definition) rows.push([headword, definition]);
+  }
+  return rows;
 }
 
 export function parseTsv(text: string): PersonalRow[] {
