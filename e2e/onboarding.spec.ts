@@ -39,8 +39,9 @@ test('a first visit walks the showcase, then applies the chosen device and dicti
   const saved = await prefs(page);
   expect(saved).toMatchObject({ readingWidthPct: 65, hoverPreviewEnabled: true, quietReaderEnabled: true, enabledProviderIds: ['aramorph', 'alwasit'] });
   await expect(page.locator('.navbar')).not.toHaveClass(/navbar--collapsed/);
-  // The starter book is already on the shelf.
+  // The starter books are already on the shelf.
   await expect(page.locator('.book-card__title', { hasText: 'نَارَادَا' })).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('.book-card__title', { hasText: 'قصص النبيين للأطفال' })).toBeVisible();
 });
 
 test('choosing Phone applies the touch starting layout and a collapsed sidebar', async ({ page }) => {
@@ -73,7 +74,7 @@ test('an install that already has preferences never sees the welcome', async ({ 
   expect((await prefs(page))?.readingWidthPct).toBe(90);
 });
 
-test('an existing install gets the starter book once, and removing it keeps it gone', async ({ page }) => {
+test('an existing install gets the starter books once, and removing one keeps it gone', async ({ page }) => {
   await page.addInitScript(() => {
     if (!localStorage.getItem('arabic-reader:preferences')) localStorage.setItem('arabic-reader:preferences', JSON.stringify({ readingWidthPct: 90 }));
   });
@@ -86,5 +87,6 @@ test('an existing install gets the starter book once, and removing it keeps it g
   await expect(card).toHaveCount(0);
   await page.reload();
   await page.waitForSelector('.navbar');
+  await expect(page.locator('.book-card', { hasText: 'قصص النبيين للأطفال' })).toBeVisible();
   await expect(page.locator('.book-card', { hasText: 'نَارَادَا' })).toHaveCount(0);
 });

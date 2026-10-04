@@ -6,7 +6,7 @@ import {
   type DeviceProfile,
   type OptionalProviderId,
 } from './deviceProfile';
-import { applySidebarStart, markOnboardingDone, preloadStarterBook } from './firstRun';
+import { applySidebarStart, markOnboardingDone, preloadStarterBooks } from './firstRun';
 import './onboarding.css';
 
 const SLIDES: { label: string; title: string; lines: ReactNode[]; tags?: string[]; art: () => ReactNode }[] = [
@@ -130,7 +130,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     updatePrefs(onboardingPreferences(withProfile, withOptional));
     applySidebarStart(withProfile);
     markOnboardingDone();
-    await preloadStarterBook();
+    await preloadStarterBooks();
     onDone();
   }
 

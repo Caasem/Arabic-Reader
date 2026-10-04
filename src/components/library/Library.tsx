@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { libraryService, type BookReadingInfo } from '../../library/libraryService';
 import { LibraryHero } from '../../look';
-import { preloadStarterBook } from '../../onboarding';
+import { preloadStarterBooks } from '../../onboarding';
 import { invalidateBookVocabIndex } from '../../vocabRarity/bookVocabIndex';
 import { invalidateTokenStream } from '../../speedReader';
 import { useShamelaBrowse } from '../../shamela/useShamelaBrowse';
@@ -77,7 +77,7 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
   useEffect(() => {
     let cancelled = false;
     // The starter book goes on the shelf before the first listing, once.
-    preloadStarterBook().then(loadLibrary).then(({ list, info }) => {
+    preloadStarterBooks().then(loadLibrary).then(({ list, info }) => {
       if (cancelled) return;
       setBooks(list);
       setReadingInfo(info);
