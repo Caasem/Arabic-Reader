@@ -9,7 +9,7 @@ import { isTokenizedProvider } from '../../dictionary/tokenizedProviders';
 import { findMatchedSenses, WASIT_MATCH_CLASS } from '../../wasitMatch';
 import { annotateEntry } from '../../wasitStructure';
 import { VerbFormInfo, VerbFormMark } from '../../verbForms';
-import { groupLabel } from '../../popupClean';
+import { arabicEntriesStartFolded, groupLabel } from '../../popupClean';
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
@@ -178,13 +178,14 @@ export function DictionaryPopup({
   const [openForms, setOpenForms] = useState<Set<number>>(new Set());
   // Clean layout: Al-Wasit sub-entries (a lead sense and its continuations) saved on their own, keyed "entry:group".
   const [savedSubKeys, setSavedSubKeys] = useState<Set<string>>(new Set());
-  // Clean layout: Al-Wasit entries folded to their headword row (pressing the headword toggles it).
+  // Clean layout: Arabic entries the reader flipped from how they started (open, or folded when there are many).
   const [foldedEntries, setFoldedEntries] = useState<Set<number>>(new Set());
   // Clean layout: dictionaries whose whole section was saved from its heading.
   const [savedGroups, setSavedGroups] = useState<Set<string>>(new Set());
   useEffect(() => {
     setSavedEntryKeys(new Set());
     setSavedGroups(new Set());
+    setFoldedEntries(new Set());
   }, [word]);
   const morphology = result?.morphology?.[0];
 
@@ -309,6 +310,7 @@ export function DictionaryPopup({
     });
     return map;
   }, [result]);
+  const startFolded = clean && arabicEntriesStartFolded(entryTokenData.size, prefs.collapseManyArabicEntries);
 
   // Which Al-Wasit senses are the form that was looked up (see wasitMatch).
   const wasitMatches = useMemo(() => {
@@ -608,7 +610,7 @@ export function DictionaryPopup({
           const tokenData = isTokenizedProvider(entry.providerId) ? entryTokenData.get(i) : undefined;
           const sel = tokenData ? tokenSelections.get(i) : undefined;
           const hasSelection = !!sel && sel.size > 0;
-          const folded = clean && !!tokenData && foldedEntries.has(i);
+          const folded = clean && !!tokenData && startFolded !== foldedEntries.has(i);
 
           function toggleFold() {
             clearEntrySelection(i);

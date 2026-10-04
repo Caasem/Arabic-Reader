@@ -115,6 +115,8 @@ export interface ReaderPreferences {
   verbFormsEnabled: boolean;
   /** The aligned, roomier dictionary popup layout (src/popupClean). Off restores the classic popup. */
   dictionaryPopupCleanLayout: boolean;
+  /** Clean popup: start the Arabic definitions folded when there are more than two of them. */
+  collapseManyArabicEntries: boolean;
   /** The redesign (src/look): softer cards, serif headings, fuller colour scheme. */
   lookEnabled: boolean;
   /** Which preset palette the look starts from. */

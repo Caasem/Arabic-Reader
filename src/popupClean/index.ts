@@ -13,6 +13,14 @@ import './popupClean.css';
 
 export { PopupCleanSettings } from './PopupCleanSettings';
 
+/** More Arabic (Al-Wasit, Al-Sihah, Maqayis) entries than this start folded to their headword row. */
+export const MAX_OPEN_ARABIC_ENTRIES = 2;
+
+/** Whether the popup's Arabic entries start folded: the setting is on and there are too many to read open. */
+export function arabicEntriesStartFolded(arabicEntryCount: number, collapseEnabled: boolean): boolean {
+  return collapseEnabled && arabicEntryCount > MAX_OPEN_ARABIC_ENTRIES;
+}
+
 /** The group heading: AraMorph reads just "English"; every other dictionary keeps its own name. */
 export function groupLabel(group: { providerId: string; providerName: string }): string {
   if (group.providerId === 'aramorph') return 'English';
