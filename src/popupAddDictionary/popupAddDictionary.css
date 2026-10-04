@@ -1,0 +1,69 @@
+/*
+ * "Add a dictionary" box in the dictionary popup. Sizes are drawn at the clean
+ * layout's 150% size times --k (the classic popup gets its own --k below).
+ */
+.dict-popup:not(.dict-popup--clean) .dict-popup__add {
+  --k: 0.6667;
+}
+.dict-popup__add {
+  position: absolute;
+  z-index: 3;
+  top: calc(66px * var(--k, 0.6667));
+  left: calc(28px * var(--k, 0.6667));
+  right: calc(28px * var(--k, 0.6667));
+  padding: calc(14px * var(--k, 0.6667));
+  border: 1px solid var(--border);
+  border-radius: calc(16px * var(--k, 0.6667));
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: calc(4px * var(--k, 0.6667));
+  font-family: var(--ui, var(--font-ui));
+}
+.dict-popup--clean .dict-popup__add {
+  --k: 0.6667;
+}
+.dict-popup__add-input {
+  width: 100%;
+  font: inherit;
+  font-size: calc(17px * var(--k, 0.6667));
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: calc(12px * var(--k, 0.6667));
+  padding: calc(10px * var(--k, 0.6667)) calc(14px * var(--k, 0.6667));
+  margin-bottom: calc(4px * var(--k, 0.6667));
+}
+.dict-popup__add-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(10px * var(--k, 0.6667));
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: calc(17px * var(--k, 0.6667));
+  text-align: start;
+  padding: calc(10px * var(--k, 0.6667)) calc(8px * var(--k, 0.6667));
+  border-radius: calc(10px * var(--k, 0.6667));
+  cursor: pointer;
+}
+.dict-popup__add-row:hover,
+.dict-popup__add-row:focus-visible {
+  background: var(--accent-soft);
+}
+.dict-popup__add-key {
+  font-size: calc(12px * var(--k, 0.6667));
+  color: var(--ink-faint);
+  border: 1px solid var(--border);
+  border-radius: calc(6px * var(--k, 0.6667));
+  padding: 0 calc(7px * var(--k, 0.6667));
+}
+.dict-popup__add-empty,
+.dict-popup__add-note {
+  font-size: calc(13px * var(--k, 0.6667));
+  color: var(--ink-faint);
+  padding: calc(8px * var(--k, 0.6667)) calc(8px * var(--k, 0.6667)) 0;
+}
