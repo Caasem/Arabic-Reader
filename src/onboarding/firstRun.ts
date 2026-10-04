@@ -22,13 +22,23 @@ export function applySidebarStart(profile: DeviceProfile): void {
   writeString(STORAGE_KEYS.navbarCollapsed, sidebarStartsCollapsed(profile) ? '1' : '0');
 }
 
+let preloading: Promise<void> | null = null;
+
 /**
- * Puts the starter book on the shelf, once. A failure (offline on the very
- * first launch) is silent and retried on the next first run; it never blocks
- * the library.
+ * Puts the starter book on the shelf, once per install: on a first run and on
+ * any launch that has not added it yet (an install from before it existed).
+ * Removing it from the library does not bring it back. A failure (offline) is
+ * silent and retried next launch; it never blocks the library.
  */
-export async function preloadStarterBook(): Promise<void> {
-  if (readString(STORAGE_KEYS.starterBookAdded) === '1') return;
+export function preloadStarterBook(): Promise<void> {
+  if (readString(STORAGE_KEYS.starterBookAdded) === '1') return Promise.resolve();
+  preloading ??= addStarterBook().finally(() => {
+    preloading = null;
+  });
+  return preloading;
+}
+
+async function addStarterBook(): Promise<void> {
   try {
     // BASE_URL, not '/': see the note in Library.loadSample.
     const res = await fetch(`${import.meta.env.BASE_URL}${STARTER_BOOK_FILE}`);

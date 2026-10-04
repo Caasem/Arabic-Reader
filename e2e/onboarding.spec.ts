@@ -72,3 +72,19 @@ test('an install that already has preferences never sees the welcome', async ({ 
   await expect(page.locator('.ob')).toHaveCount(0);
   expect((await prefs(page))?.readingWidthPct).toBe(90);
 });
+
+test('an existing install gets the starter book once, and removing it keeps it gone', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('arabic-reader:preferences')) localStorage.setItem('arabic-reader:preferences', JSON.stringify({ readingWidthPct: 90 }));
+  });
+  await page.goto('/');
+  const card = page.locator('.book-card', { hasText: 'نَارَادَا' });
+  await expect(card).toBeVisible({ timeout: 15000 });
+  await card.hover();
+  await card.getByRole('button', { name: /remove/i }).click();
+  await page.getByRole('button', { name: /^remove$/i }).click();
+  await expect(card).toHaveCount(0);
+  await page.reload();
+  await page.waitForSelector('.navbar');
+  await expect(page.locator('.book-card', { hasText: 'نَارَادَا' })).toHaveCount(0);
+});
