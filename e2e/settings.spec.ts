@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { useOriginalReader } from './originalReader';
+
+test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 test('theme, font size, and dictionary-provider toggles persist and actually filter lookups', async ({ page }) => {
   await page.goto('/');

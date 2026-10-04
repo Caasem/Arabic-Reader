@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { useOriginalReader } from './originalReader';
+
+test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 test('nav labels, Paged/Scrolling layout toggle actually scrolls, and persists', async ({ page }) => {
   await page.goto('/');

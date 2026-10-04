@@ -8,6 +8,7 @@ import { searchBook, type SearchOptions, type SearchResult } from './bookSearch'
 import { spineIndexOfCfi } from './cfi';
 import { bookLocations, declaredDirection, enqueue, findTocLabel, mapNavItems, renderedContents } from './epubInternals';
 import { sanitizeSectionDocument } from './sanitizeSection';
+import { injectUserFonts, subscribeUserFonts } from '../../readerFont/userFonts';
 
 export type { SearchMatchType, SearchOptions, SearchResult } from './bookSearch';
 
@@ -64,6 +65,7 @@ export class EpubService {
    * StrictMode's double mount does exactly that in dev), the abandoned open
    * must not attach a second rendition to the same container. */
   private destroyed = false;
+  private unsubscribeFonts: (() => void) | null = null;
   private currentFlow: ReadingFlow = 'paginated';
   private currentDirection: EffectiveDirection = 'rtl';
   private currentTwoColumn = false;
@@ -119,6 +121,10 @@ export class EpubService {
       return;
     }
     this.rendition = rendition;
+    // A font uploaded (or loaded from storage) after a section rendered.
+    this.unsubscribeFonts = subscribeUserFonts(() => {
+      for (const contents of renderedContents(rendition)) if (contents.document) injectUserFonts(contents.document);
+    });
     rendition.direction(this.currentDirection);
     this.applyPreferences(prefs, options.theme);
     // Before the first display, so the first section's events aren't missed.
@@ -230,6 +236,7 @@ export class EpubService {
    * resolve against the host page -- including its base path, so they work
    * under a subpath deploy such as GitHub Pages. */
   private injectFonts(doc: Document): void {
+    injectUserFonts(doc);
     if (doc.getElementById('ar-reader-fonts')) return;
     const fontUrl = (file: string) => new URL(`fonts/${file}`, document.baseURI).href;
     const style = doc.createElement('style');
@@ -420,6 +427,8 @@ export class EpubService {
 
   destroy(): void {
     this.destroyed = true;
+    this.unsubscribeFonts?.();
+    this.unsubscribeFonts = null;
     this.rendition?.destroy();
     this.book?.destroy();
     this.rendition = null;

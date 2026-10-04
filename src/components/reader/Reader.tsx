@@ -36,6 +36,8 @@ import { QuickSettingsPopover } from './QuickSettingsPopover';
 import { VocabularyEditModal } from './VocabularyEditModal';
 import { PomodoroTimer } from '../pomodoro/PomodoroTimer';
 import { saveCleanFocus } from '../../cleanReader/cleanFocus';
+import { isCleanLocation } from '../../quietReader/location';
+import { registerBookNavigator } from '../../readerChords';
 import './Reader.css';
 
 type Panel = 'toc' | 'bookmarks' | 'search' | null;
@@ -60,6 +62,9 @@ interface ReaderProps {
   initialCfiOverride?: string;
   /** Switches the open book -- for library search results in another book. */
   onOpenBookAt?: (book: BookMeta, cfi?: string) => void;
+  /** The top bar's Clean text and Focus buttons; by default they switch on the clean text reader. */
+  onSwitchToCleanReader?: () => void;
+  onEnterCleanFocus?: () => void;
 }
 
 // The general ResizeObserver that re-paginated after sibling panels (TOC,
@@ -76,6 +81,8 @@ export function Reader({
   onVocabPanelOpenChange,
   initialCfiOverride,
   onOpenBookAt,
+  onSwitchToCleanReader,
+  onEnterCleanFocus,
 }: ReaderProps) {
   const { prefs, resolvedTheme, updatePrefs } = usePreferences();
   const prefsRef = useRef(prefs);
@@ -155,6 +162,17 @@ export function Reader({
       setSelection(info);
     },
   });
+
+  // Lets the Alt+S / Alt+V palettes (src/bookSearch, src/bookVocab) jump somewhere in this book.
+  useEffect(
+    () =>
+      registerBookNavigator((cfi) => {
+        // A clean-text place (from the new reader) means nothing to epub.js.
+        if (isCleanLocation(cfi)) return false;
+        serviceRef.current?.goTo(cfi);
+      }),
+    [serviceRef]
+  );
 
   async function openFootnote(anchor: HTMLAnchorElement, doc: Document, sectionHref: string, rect: HostRect) {
     hover.dismiss();
@@ -341,20 +359,26 @@ export function Reader({
 
   const showEndIndicator = prefs.showPageBoundaries && (prefs.readingFlow === 'paginated' ? location.atPageEnd : atSectionScrollEnd);
   const { popup, bubble, editing } = lookups;
+  // Marks made in the clean text reader point at clean-text places this reader can't open.
+  const epubBookmarks = bookmarks.filter((b) => !isCleanLocation(b.cfi));
+  const epubHighlights = bookHighlights.highlights.filter((h) => !isCleanLocation(h.cfiRange));
 
   return (
     <div className="reader">
       <ReaderTopbar
         chapterLabel={location.chapterLabel}
-        bookmarkCount={bookmarks.length}
+        bookmarkCount={epubBookmarks.length}
         onBack={onBack}
         onToggleQuickSettings={() => setQuickSettingsOpen((open) => !open)}
         onTogglePomodoro={() => setPomodoroOpen((open) => !open)}
-        onSwitchToCleanReader={() => updatePrefs({ cleanReaderEnabled: true })}
-        onEnterCleanFocus={() => {
-          saveCleanFocus(true);
-          updatePrefs({ cleanReaderEnabled: true });
-        }}
+        onSwitchToCleanReader={onSwitchToCleanReader ?? (() => updatePrefs({ cleanReaderEnabled: true }))}
+        onEnterCleanFocus={
+          onEnterCleanFocus ??
+          (() => {
+            saveCleanFocus(true);
+            updatePrefs({ cleanReaderEnabled: true });
+          })
+        }
         onToggleSearch={() => togglePanel('search')}
         onAddBookmark={handleAddBookmark}
         onToggleBookmarks={() => togglePanel('bookmarks')}
@@ -386,8 +410,8 @@ export function Reader({
 
         {panel === 'bookmarks' && (
           <BookmarksPanel
-            bookmarks={bookmarks}
-            highlights={bookHighlights.highlights}
+            bookmarks={epubBookmarks}
+            highlights={epubHighlights}
             onAdd={handleAddBookmark}
             onOpen={({ cfi }) => {
               serviceRef.current?.goTo(cfi);

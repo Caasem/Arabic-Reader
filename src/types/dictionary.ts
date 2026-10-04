@@ -15,6 +15,19 @@ export interface DictionaryEntry {
    * opposed to `root`, the consonant skeleton (كتب) shared by every word
    * derived from it. Absent when the provider has no lemma data. */
   lemma?: string;
+  /** For a verb: its form, I-X (see src/verbForms). Absent when unknown or not a verb. */
+  verbForm?: string;
+  /** Form I only: the imperfect vowel the dictionary marks (`u`, `a`, `i`, or two when either is used). */
+  imperfectVowel?: string;
+}
+
+/** One verb the dictionary lists for a root. */
+export interface VerbFamilyMember {
+  /** The citation form, Arabic. */
+  lemma: string;
+  form?: string;
+  imperfectVowel?: string;
+  gloss: string;
 }
 
 export interface MorphologicalAnalysis {

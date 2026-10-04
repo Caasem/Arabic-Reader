@@ -41,11 +41,16 @@ export interface TouchGestureBindings {
 export interface ReaderPreferences {
   theme: ReaderTheme;
   fontSizePct: number; // 100 = default
+  /** CSS font stack for book text, picked in Settings -> Font (src/readerFont). */
   fontFamily: string;
+  /** Also use `fontFamily` for Arabic text outside the book (dictionary, vocabulary, review). */
+  readingFontAppWide: boolean;
   lineHeight: number;
   readingWidthPct: number; // 100 = default column width
   /** Dictionary provider ids currently switched on. */
   enabledProviderIds: string[];
+  /** Dictionary ids in the order their entries appear in the popup (Settings -> Dictionaries). Empty = registration order. */
+  dictionaryProviderOrder: string[];
   readingFlow: ReadingFlow;
   /** Scrolling layout only. Off: scrolling stops at each chapter's end. On:
    * chapters flow into one continuous feed. Changing it reopens the book,
@@ -96,4 +101,29 @@ export interface ReaderPreferences {
   shamelaEnabled: boolean;
   /** Read books as plain text instead of in the epub reader (beta). */
   cleanReaderEnabled: boolean;
+  /** The redesigned reader (src/quietReader): clean text, one dock, the dictionary in the margin. Off: the readers above. */
+  quietReaderEnabled: boolean;
+  /** Press D in either reader to search the dictionary. */
+  dictionarySearchEnabled: boolean;
+  /** How the D-key search is laid out; touch screens always get the sheet. */
+  dictionarySearchStyle: 'floating' | 'palette' | 'drawer' | 'sheet';
+  /** Press Alt+S in the epub reader to search the whole book (src/bookSearch). */
+  bookSearchEnabled: boolean;
+  /** Press Alt+V to list the words saved from the open book (src/bookVocab). */
+  bookVocabEnabled: boolean;
+  /** Show a verb's form (I-X) and its root's other verbs in the dictionary popup (src/verbForms). */
+  verbFormsEnabled: boolean;
+  /** The aligned, roomier dictionary popup layout (src/popupClean). Off restores the classic popup. */
+  dictionaryPopupCleanLayout: boolean;
+  /** The redesign (src/look): softer cards, serif headings, fuller colour scheme. */
+  lookEnabled: boolean;
+  /** Which preset palette the look starts from. */
+  lookPalette: string;
+  /** Colours the person picked over the preset, by role (hex). */
+  lookCustom: Partial<Record<'bg' | 'surface' | 'ink' | 'accent' | 'secondary' | 'highlight' | 'warning', string>>;
+  /** Prototype: colour the Al-Wasit sense matching the looked-up word. */
+  wasitMatchHighlight: boolean;
+  /** Prototype: draw Al-Wasit's internal structure in the popup. */
+  wasitStructureEnabled: boolean;
+  wasitStructureExamples: 'dim' | 'normal';
 }

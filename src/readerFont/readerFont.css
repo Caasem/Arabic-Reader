@@ -1,0 +1,5 @@
+/* With a picked font used for all Arabic text, the clean dictionary popup
+   (src/popupClean) uses it too instead of preferring Amiri. */
+html[data-arabic-font] .dict-popup--clean {
+  --ar: var(--font-arabic);
+}

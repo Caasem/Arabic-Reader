@@ -1,4 +1,7 @@
 import { test, expect, type Page, type Frame, type CDPSession } from '@playwright/test';
+import { useOriginalReader } from './originalReader';
+
+test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 /**
  * Dispatches a real touch tap (or, with `holdMs`, a long-press) via the

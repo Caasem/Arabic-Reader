@@ -1,0 +1,72 @@
+<!-- PROTOTYPE: Three first-run onboarding layouts, selected by ?variant=gallery|split|guided.
+     Question: should the showcase lead, then hand off to device and dictionary settings? -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arabic Reader · First-run onboarding prototype</title>
+  <style>
+    :root { color-scheme: light; --ink:#27231e; --muted:#756b5f; --paper:#fffdf8; --wash:#f7f1e7; --line:#e3d8c7; --gold:#9c7a4f; --green:#315e4a; }
+    * { box-sizing:border-box; } body { margin:0; min-height:100vh; background:#eee7dc; color:var(--ink); font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; }
+    button { font:inherit; cursor:pointer; } .shell { width:min(1120px,calc(100% - 32px)); margin:24px auto 94px; background:var(--paper); border:1px solid var(--line); border-radius:20px; overflow:hidden; box-shadow:0 18px 44px #34281718; }
+    .top { height:62px; display:flex; align-items:center; justify-content:space-between; padding:0 24px; border-bottom:1px solid #eee5d9; } .brand { font-weight:650; display:flex; gap:9px; align-items:center; } .mark { display:grid; place-items:center; width:29px; height:29px; border-radius:8px; color:#fff; background:var(--gold); font:22px Georgia,serif; }.quiet { border:0; background:transparent; color:var(--muted); padding:8px; }
+    .content { padding:40px 54px 46px; } .eyebrow { color:var(--gold); font-size:13px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; } h1 { margin:7px 0 7px; font:700 clamp(30px,4vw,48px)/1.08 Georgia,serif; letter-spacing:-.025em; } .lede { max-width:630px; margin:0; color:var(--muted); }
+    .showcase { margin-top:26px; border:1px solid var(--line); border-radius:14px; overflow:hidden; background:#1c1b19; } iframe { display:block; width:100%; aspect-ratio:16/9; border:0; background:#1c1b19; } .caption { display:flex; justify-content:space-between; gap:12px; align-items:center; padding:12px 15px; color:#efe7dc; font-size:14px; } .caption span { color:#c9bbab; }
+    .actions { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:26px; } .primary { border:0; border-radius:9px; padding:11px 17px; background:var(--green); color:#fff; font-weight:650; } .back { border:0; background:transparent; color:var(--muted); padding:9px 0; }
+    .choice-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:13px; margin-top:27px; } .choice { min-height:142px; text-align:left; padding:17px; border:1px solid var(--line); border-radius:13px; background:#fcf8f1; color:var(--ink); } .choice[data-selected="true"] { border-color:var(--gold); box-shadow:inset 0 0 0 1px var(--gold); background:#fbf1e2; } .icon { display:block; color:var(--gold); font-size:23px; margin-bottom:13px; } .choice strong,.choice small { display:block; } .choice strong { font-weight:700; } .choice small { margin-top:4px; color:var(--muted); font-size:13px; }
+    .recommendation { margin-top:15px; padding:13px 15px; border-radius:10px; background:#f4eadb; color:#564833; font-size:14px; } .recommendation b { font-weight:700; }
+    .dictionary-list { display:grid; gap:11px; margin-top:26px; } .dictionary { display:flex; gap:13px; align-items:flex-start; padding:16px; border:1px solid var(--line); border-radius:13px; background:#fcf8f1; } .dictionary input { width:19px; height:19px; margin:2px 0 0; accent-color:var(--green); } .dictionary strong,.dictionary small { display:block; }.dictionary small { margin-top:3px; color:var(--muted); font-size:14px; }
+    .state { margin-top:22px; padding:12px; border-radius:9px; background:#f4f0e9; color:#625b51; font:12px ui-monospace,SFMono-Regular,Consolas,monospace; white-space:pre-wrap; } .done { text-align:center; padding:66px 30px; } .done .mark { margin:0 auto 20px; width:42px; height:42px; font-size:28px; } .done h1 { margin:auto; max-width:540px; }.done .lede { margin:13px auto 0; }
+    /* Variant: showcase as an exhibition gallery. */ .gallery .showcase { box-shadow:0 10px 26px #00000028; }
+    /* Variant: showcase and choices coexist in a split workspace. */ .split .content { padding:0; } .split-layout { display:grid; grid-template-columns:1.12fr .88fr; min-height:620px; } .split .showcase { margin:0; border:0; border-radius:0; align-self:stretch; } .split .showcase iframe { height:100%; aspect-ratio:auto; } .split .caption { border-top:1px solid #3b3935; } .split-panel { padding:46px 38px; background:var(--paper); }.split .choice-grid { grid-template-columns:1fr; margin-top:20px; }.split .choice { min-height:auto; padding:12px 14px; }.split .icon { display:inline; margin:0 8px 0 0; font-size:17px; }.split .recommendation { margin-top:10px; }.split .dictionary-list { margin-top:17px; }.split .dictionary { padding:12px; }
+    /* Variant: guided, full-width panels with a visible progress rail. */ .guided .progress { display:flex; gap:7px; margin:0 0 30px; }.guided .progress span { height:5px; flex:1; border-radius:99px; background:#eadfce; }.guided .progress span.active { background:var(--green); }.guided .showcase { max-width:740px; margin-inline:auto; }.guided .choice-grid { max-width:740px; margin-inline:auto; }.guided .dictionary-list { max-width:740px; margin-inline:auto; }.guided .lede { max-width:740px; }
+    .prototype-switcher { position:fixed; left:50%; bottom:18px; transform:translateX(-50%); display:flex; align-items:center; gap:10px; padding:8px; border-radius:999px; background:#27231e; color:#fff; box-shadow:0 10px 26px #0000002e; z-index:4; } .prototype-switcher button { border:0; background:transparent; color:inherit; padding:6px 10px; }.prototype-switcher strong { min-width:150px; text-align:center; font-size:13px; }
+    @media(max-width:760px){ .shell{width:calc(100% - 20px);margin:10px auto 88px}.content{padding:30px 21px}.choice-grid,.split-layout{grid-template-columns:1fr}.split-panel{padding:30px 21px}.split .showcase iframe{height:auto;aspect-ratio:16/9}.split .showcase{min-height:0}.actions{align-items:flex-start;flex-direction:column-reverse}.primary{width:100%} }
+  </style>
+</head>
+<body>
+  <main id="app"></main>
+  <nav class="prototype-switcher" aria-label="Prototype variants"><button id="previous" type="button" aria-label="Previous variant">←</button><strong id="variant-label"></strong><button id="next" type="button" aria-label="Next variant">→</button></nav>
+  <script>
+    const showcasePath = 'file:///C:/Users/qasim/Downloads/Arabic%20Reader%20Showcase.html';
+    const variants = ['gallery', 'split', 'guided'];
+    const variantNames = { gallery:'Gallery lead', split:'Split workspace', guided:'Guided flow' };
+    let variant = new URLSearchParams(location.search).get('variant') || 'gallery';
+    if (!variants.includes(variant)) variant = 'gallery';
+    const state = { step:'showcase', device:'Desktop', alWasit:false };
+    const app = document.getElementById('app');
+
+    function deviceSettings(device) {
+      return { Phone:'Clean Reader · 100% width · tap dictionary', Tablet:'Clean Reader · 80% width · tap dictionary', Desktop:'Quiet Reader · 65% width · floating dictionary · hover preview' }[device];
+    }
+    function shell(inner) {
+      const progress = variant === 'guided' ? `<div class="progress"><span class="${state.step === 'showcase' ? 'active' : ''}"></span><span class="${state.step === 'device' ? 'active' : ''}"></span><span class="${state.step === 'dictionaries' ? 'active' : ''}"></span></div>` : '';
+      return `<section class="shell ${variant}"><header class="top"><div class="brand"><span class="mark">ق</span> Arabic Reader</div><button class="quiet" data-action="skip" type="button">Skip setup</button></header><div class="content">${progress}${inner}</div></section>`;
+    }
+    function showcase() {
+      const frame = `<div class="showcase"><iframe src="${showcasePath}" title="Arabic Reader showcase"></iframe><div class="caption"><b>Arabic Reader</b><span>Read. Tap. Remember.</span></div></div>`;
+      const copy = `<div class="eyebrow">Welcome</div><h1>Your Arabic reading space.</h1><p class="lede">Before we set anything up, here is what Arabic Reader is built for: private, offline reading that helps you understand and remember.</p>`;
+      return variant === 'split' ? shell(`<div class="split-layout"><div>${frame}</div><div class="split-panel">${copy}<div class="actions"><span></span><button class="primary" data-action="next" type="button">Set up my reader</button></div></div></div>`) : shell(`${copy}${frame}<div class="actions"><span></span><button class="primary" data-action="next" type="button">Set up my reader</button></div>`);
+    }
+    function device() {
+      const cards = ['Phone|📱|Comfortable touch reading','Tablet|▭|Focused and spacious','Desktop|▣|Recommended for this device'].map((item) => { const [name,icon,sub] = item.split('|'); return `<button class="choice" data-device="${name}" data-selected="${state.device === name}" type="button"><span class="icon">${icon}</span><strong>${name}</strong><small>${sub}</small></button>`; }).join('');
+      return shell(`<div class="eyebrow">Reading layout</div><h1>What are you reading on?</h1><p class="lede">We detected a desktop. Pick what feels right; it only sets a starting layout.</p><div class="choice-grid">${cards}</div><div class="recommendation"><b>${state.device} setup:</b> ${deviceSettings(state.device)}</div><div class="actions"><button class="back" data-action="back" type="button">Back</button><button class="primary" data-action="next" type="button">Continue</button></div>`);
+    }
+    function dictionaries() {
+      return shell(`<div class="eyebrow">Offline dictionaries</div><h1>Choose your definitions.</h1><p class="lede">Start simple, or add a detailed Arabic-to-Arabic dictionary. You can change this later in Settings.</p><div class="dictionary-list"><label class="dictionary"><input type="checkbox" checked disabled><span><strong>Essential offline dictionary</strong><small>Definitions, roots, and word forms. Always available offline.</small></span></label><label class="dictionary"><input id="wasit" type="checkbox" ${state.alWasit ? 'checked' : ''}><span><strong>Deeper Arabic definitions</strong><small>Add Al-Wasīṭ for detailed Arabic-to-Arabic definitions. Uses additional storage.</small></span></label></div><div class="recommendation"><b>Your setup:</b> ${state.device} layout · Essential offline dictionary${state.alWasit ? ' · Al-Wasīṭ enabled' : ''}</div><div class="actions"><button class="back" data-action="back" type="button">Back</button><button class="primary" data-action="finish" type="button">Open my library</button></div>`);
+    }
+    function complete() { return shell(`<div class="done"><span class="mark">ق</span><div class="eyebrow">Ready to read</div><h1>Your reading space is ready.</h1><p class="lede">${state.device} layout with ${state.alWasit ? 'both offline dictionaries' : 'the essential offline dictionary'}.</p><div class="actions" style="justify-content:center"><button class="primary" type="button">Open my library</button></div><div class="state">${JSON.stringify({ prototype:true, onboardingComplete:true, device:state.device, enabledProviders:state.alWasit ? ['aramorph','alwasit'] : ['aramorph'] }, null, 2)}</div></div>`); }
+    function render() {
+      app.innerHTML = state.step === 'showcase' ? showcase() : state.step === 'device' ? device() : state.step === 'dictionaries' ? dictionaries() : complete();
+      document.getElementById('variant-label').textContent = variantNames[variant];
+    }
+    app.addEventListener('click', (event) => { const button = event.target.closest('button'); if (!button) return; if (button.dataset.device) { state.device = button.dataset.device; render(); return; } const action = button.dataset.action; if (action === 'next') { state.step = state.step === 'showcase' ? 'device' : 'dictionaries'; render(); } if (action === 'back') { state.step = state.step === 'dictionaries' ? 'device' : 'showcase'; render(); } if (action === 'finish' || action === 'skip') { state.step = 'complete'; render(); } });
+    app.addEventListener('change', (event) => { if (event.target.id === 'wasit') { state.alWasit = event.target.checked; render(); } });
+    function switchVariant(direction) { const index = variants.indexOf(variant); variant = variants[(index + direction + variants.length) % variants.length]; const url = new URL(location); url.searchParams.set('variant', variant); history.replaceState({}, '', url); render(); }
+    document.getElementById('previous').addEventListener('click', () => switchVariant(-1)); document.getElementById('next').addEventListener('click', () => switchVariant(1));
+    addEventListener('keydown', (event) => { if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return; if (event.key === 'ArrowLeft') switchVariant(-1); if (event.key === 'ArrowRight') switchVariant(1); });
+    render();
+  </script>
+</body>
+</html>

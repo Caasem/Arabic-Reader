@@ -5,7 +5,10 @@ import { ReaderSwitch } from './cleanReader/ReaderSwitch';
 import { BackupReminder } from './components/shared/BackupReminder';
 import { PomodoroNotifier } from './components/pomodoro/PomodoroNotifier';
 import { PreferencesProvider } from './state/PreferencesProvider';
+import { LookSkin } from './look';
+import { ReadingFontSync } from './readerFont';
 import { libraryService } from './library/libraryService';
+import { Onboarding, shouldShowOnboarding } from './onboarding';
 import type { BookMeta, Highlight } from './types';
 import './App.css';
 
@@ -18,9 +21,13 @@ const SpeedReader = lazy(() => import('./components/speedReader/SpeedReader').th
 const SettingsPanel = lazy(() => import('./components/shared/SettingsPanel').then((m) => ({ default: m.SettingsPanel })));
 
 function App() {
+  // Read before the PreferencesProvider mounts and remembers anything.
+  const [firstRun, setFirstRun] = useState(shouldShowOnboarding);
   const [view, setView] = useState<ViewName>('library');
   const [activeBook, setActiveBook] = useState<BookMeta | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Which settings group to show first (the reader's own settings links).
+  const [settingsGroup, setSettingsGroup] = useState<string | undefined>(undefined);
   // 'vocabLevels' is the Reader with its Vocabulary Levels panel open (so
   // switching doesn't remount epub.js), shown as its own nav tab.
   const [vocabPanelOpen, setVocabPanelOpen] = useState(false);
@@ -67,6 +74,11 @@ function App() {
 
   return (
     <PreferencesProvider>
+      <LookSkin />
+      <ReadingFontSync />
+      {firstRun ? (
+        <Onboarding onDone={() => setFirstRun(false)} />
+      ) : (
       <div className="app">
         <BackupReminder onOpenSettings={() => setSettingsOpen(true)} />
         <div className="app__body">
@@ -89,6 +101,10 @@ function App() {
                   onFocusChromeChange={setChromeHidden}
                   initialCfiOverride={pendingCfi}
                   onOpenBookAt={openBook}
+                  onOpenSettings={(group) => {
+                    setSettingsGroup(group);
+                    setSettingsOpen(true);
+                  }}
                 />
               )}
               {view === 'vocabulary' && <VocabularyList />}
@@ -101,11 +117,18 @@ function App() {
         </div>
         {settingsOpen && (
           <Suspense fallback={null}>
-            <SettingsPanel onClose={() => setSettingsOpen(false)} />
+            <SettingsPanel
+              initialGroup={settingsGroup}
+              onClose={() => {
+                setSettingsOpen(false);
+                setSettingsGroup(undefined);
+              }}
+            />
           </Suspense>
         )}
         <PomodoroNotifier />
       </div>
+      )}
     </PreferencesProvider>
   );
 }

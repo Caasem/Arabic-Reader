@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
+import { useOriginalReader } from './originalReader';
+
+test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 test('sentence context, quick-add shortcut, review grading, and backup export/import', async ({ page }) => {
   await page.goto('/');

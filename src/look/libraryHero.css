@@ -1,0 +1,126 @@
+/* The hero renders only while the look is on (see LibraryHero.tsx). */
+.look-hero {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 22px;
+  border-radius: 22px;
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.look-hero__cover {
+  flex-shrink: 0;
+  width: 96px;
+  aspect-ratio: 2 / 3;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--look-secondary);
+  color: #ffffff;
+  font-family: var(--font-arabic);
+  font-size: 40px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.3);
+}
+
+.look-hero__cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.look-hero__body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.look-hero__eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.look-hero__title {
+  margin: 0;
+  font-family: var(--look-display);
+  font-size: 26px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.look-hero__author {
+  font-size: 14px;
+  opacity: 0.75;
+}
+
+.look-hero__progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  max-width: 420px;
+}
+
+.look-hero__track {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--bg) 22%, transparent);
+  overflow: hidden;
+}
+
+.look-hero__fill {
+  height: 100%;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--look-secondary) 55%, #ffffff);
+}
+
+.look-hero__percent {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+.look-hero__resume {
+  align-self: flex-start;
+  margin-top: 10px;
+  min-height: 44px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--look-on-accent);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.look-hero__resume:focus-visible {
+  outline: 2px solid var(--bg);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .look-hero {
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .look-hero__cover {
+    width: 76px;
+    font-size: 30px;
+  }
+
+  .look-hero__title {
+    font-size: 21px;
+  }
+}

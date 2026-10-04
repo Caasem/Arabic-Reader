@@ -16,6 +16,16 @@ declare module 'virtual:alwasit-data' {
   export default tsv;
 }
 
+declare module 'virtual:alsihah-data' {
+  const tsv: string;
+  export default tsv;
+}
+
+declare module 'virtual:almaqayis-data' {
+  const tsv: string;
+  export default tsv;
+}
+
 /** package.json's `version`, baked in at build time (see the `define` in
  * vite.config.ts) so the running app can show which build it is. */
 declare const __APP_VERSION__: string;

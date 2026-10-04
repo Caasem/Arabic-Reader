@@ -1,0 +1,216 @@
+/*
+ * The "Ink" redesign. Everything is scoped to html[data-look], which
+ * useLookSkin() sets only while the look is switched on, so with it off none
+ * of this applies. Colours come from the --look-* variables written by
+ * buildLookCss(); the app's own tokens (--bg, --accent, ...) are remapped by
+ * the same call, so most of the app follows without a rule here.
+ * The dictionary popup is deliberately untouched: it has no rules below.
+ */
+
+html[data-look] {
+  --look-display: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --radius: 16px;
+}
+
+/* Headings */
+html[data-look] :is(.library__header h1, .vocab__header h1, .review__header h1, .dashboard__header h1) {
+  font-family: var(--look-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Sidebar */
+html[data-look] .navbar__item {
+  border-radius: 12px;
+}
+
+html[data-look] .navbar__item--active {
+  color: var(--look-accent-ink);
+}
+
+html[data-look] .navbar__mark {
+  border-radius: 11px;
+}
+
+/* Buttons and chips */
+html[data-look] .btn {
+  border-radius: 12px;
+}
+
+html[data-look] .library__filter-item--active {
+  color: var(--look-accent-ink);
+  font-weight: 600;
+}
+
+/* Library */
+html[data-look] .book-card__cover {
+  border-radius: 12px;
+}
+
+html[data-look] .book-card__progress-bar {
+  background: var(--look-secondary);
+}
+
+/* Vocabulary and dashboard cards */
+html[data-look] :is(.vocab-card, .stat-tile) {
+  border-radius: 16px;
+}
+
+html[data-look] .stat-tile--streak {
+  background: var(--look-highlight-soft);
+  border-color: transparent;
+}
+
+html[data-look] .stat-tile--streak .stat-tile__value {
+  color: var(--look-highlight-ink);
+}
+
+html[data-look] .trend-charts__line {
+  stroke: var(--look-secondary);
+}
+
+html[data-look] .trend-charts__area {
+  fill: var(--look-secondary-soft);
+}
+
+html[data-look] .activity-cal__cell--l1 {
+  background: color-mix(in srgb, var(--look-secondary) 30%, var(--bg));
+}
+
+html[data-look] .activity-cal__cell--l2 {
+  background: color-mix(in srgb, var(--look-secondary) 55%, var(--bg));
+}
+
+html[data-look] .activity-cal__cell--l3 {
+  background: color-mix(in srgb, var(--look-secondary) 78%, var(--bg));
+}
+
+html[data-look] .activity-cal__cell--l4 {
+  background: var(--look-secondary);
+}
+
+/* Review: four grades told apart by fill and weight as well as hue */
+html[data-look] .review__btn {
+  border-radius: 14px;
+}
+
+html[data-look] .review__btn--reveal {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--look-on-accent);
+}
+
+html[data-look] .review__btn--again {
+  background: transparent;
+  border: 1.5px solid var(--look-warning);
+  color: var(--look-warning-ink);
+}
+
+html[data-look] .review__btn--hard {
+  background: var(--look-highlight-soft);
+  border-color: transparent;
+  color: var(--look-highlight-ink);
+}
+
+html[data-look] .review__btn--good {
+  background: var(--look-secondary-soft);
+  border-color: transparent;
+  color: var(--look-secondary-ink);
+}
+
+html[data-look] .review__btn--easy {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--look-on-accent);
+}
+
+/* Settings */
+html[data-look] .settings-panel {
+  border-radius: 24px;
+}
+
+html[data-look] .settings-toggle input:checked {
+  background: var(--look-secondary);
+}
+
+html[data-look] .settings-panel__nav-item--active {
+  color: var(--look-accent-ink);
+}
+
+html[data-look] .segmented__item--active {
+  color: var(--look-accent-ink);
+}
+
+html[data-look] .settings-group__title {
+  font-family: var(--look-display);
+  letter-spacing: -0.02em;
+}
+
+/* Word status as pills: new / learning / known / mastered */
+html[data-look] .vocab-card__mastery {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: var(--border);
+  color: var(--ink-soft);
+}
+
+html[data-look] .vocab-card__mastery[data-mastery='new'] {
+  background: var(--look-highlight-soft);
+  color: var(--look-highlight-ink);
+}
+
+html[data-look] .vocab-card__mastery[data-mastery='learning'] {
+  background: var(--accent-soft);
+  color: var(--look-accent-ink);
+}
+
+html[data-look] .vocab-card__mastery[data-mastery='known'] {
+  background: var(--look-secondary-soft);
+  color: var(--look-secondary-ink);
+}
+
+html[data-look] .vocab-card__mastery[data-mastery='mastered'] {
+  background: var(--look-secondary);
+  color: #ffffff;
+}
+
+/* Narrow screens: the bottom tab bar becomes a floating pill */
+@media (max-width: 860px) {
+  html[data-look] .navbar,
+  html[data-look] .navbar--collapsed {
+    width: auto;
+    margin: 0 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 30px;
+    background: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
+    backdrop-filter: blur(18px) saturate(1.5);
+    box-shadow: 0 10px 30px rgba(28, 27, 25, 0.14);
+  }
+
+  html[data-look] .navbar--hidden {
+    width: auto;
+    margin: 0;
+    padding: 0;
+    border-width: 0;
+    box-shadow: none;
+  }
+
+  html[data-look] .navbar__list {
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  html[data-look] .navbar__item {
+    flex-shrink: 0;
+    min-width: 64px;
+    min-height: 48px;
+    border-radius: 24px;
+    padding: 6px 10px;
+  }
+}

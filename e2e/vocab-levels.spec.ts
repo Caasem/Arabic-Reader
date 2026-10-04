@@ -1,5 +1,8 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
+import { useOriginalReader } from './originalReader';
+
+test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 test('Vocab Levels: rarity data, tier switching, jump-to-word, export, and Settings status', async ({ page }) => {
   await page.goto('/');

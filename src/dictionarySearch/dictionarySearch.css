@@ -1,0 +1,215 @@
+/* Layout shells */
+.dsearch {
+  position: fixed;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background: var(--bg-elevated);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  font-family: var(--font-ui);
+  box-shadow: var(--shadow);
+}
+.dsearch-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  background: rgba(28, 27, 25, 0.42);
+}
+.dsearch--floating {
+  border-radius: 14px;
+  max-height: min(520px, calc(100vh - 24px));
+  overflow: hidden;
+}
+.dsearch--palette {
+  top: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(600px, calc(100vw - 24px));
+  max-height: calc(100vh - 168px);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(28, 27, 25, 0.28);
+  overflow: hidden;
+}
+.dsearch--drawer {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(400px, 100vw);
+  border-width: 0 0 0 1px;
+}
+.dsearch--sheet {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(600px, 75vh);
+  border-radius: 20px 20px 0 0;
+  border-width: 1px 0 0;
+  box-shadow: 0 -12px 40px rgba(28, 27, 25, 0.25);
+}
+.dsearch__handle {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  margin: 10px auto 2px;
+  flex-shrink: 0;
+}
+
+/* Header (floating + drawer) */
+.dsearch__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px 0 10px;
+  flex-shrink: 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+.dsearch__header--grip {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.dsearch__header--grip:active {
+  cursor: grabbing;
+}
+.dsearch__title {
+  flex-grow: 1;
+}
+.dsearch__key {
+  font: inherit;
+  color: var(--ink-soft);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 6px;
+  background: var(--bg-elevated);
+}
+.dsearch__close {
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+.dsearch--drawer .dsearch__header {
+  height: 52px;
+  font-size: 14px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Body */
+.dsearch__body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex-grow: 1;
+}
+.dsearch__input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+.dsearch--palette .dsearch__input-row {
+  padding: 16px 20px;
+}
+.dsearch__input {
+  flex-grow: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-arabic);
+  font-size: 20px;
+}
+.dsearch--palette .dsearch__input {
+  font-size: 22px;
+}
+.dsearch__results {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 6px;
+}
+.dsearch__hint {
+  margin: 0;
+  padding: 12px 10px;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+.dsearch__entry {
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.dsearch__entry--active {
+  background: var(--accent-soft);
+  cursor: default;
+}
+.dsearch__entry-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.dsearch__headword {
+  font-family: var(--font-arabic);
+  font-size: 24px;
+  line-height: 1.5;
+}
+.dsearch__meta {
+  flex-grow: 1;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.dsearch__provider {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 6px;
+}
+.dsearch__gloss {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.dsearch__senses {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.dsearch__add {
+  margin-top: 10px;
+  min-height: 32px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--bg-elevated);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dsearch__add:disabled {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--ink-soft);
+  cursor: default;
+}
+.dsearch--sheet .dsearch__add {
+  min-height: 44px;
+  border-radius: 12px;
+}

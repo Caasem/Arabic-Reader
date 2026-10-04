@@ -12,6 +12,7 @@ import {
   createMorphTableFromText,
   serializeTables,
   deserializeTables,
+  transliterate,
   type AramorphTables,
   type SerializedAramorphTables,
 } from './engine';
@@ -27,7 +28,11 @@ const errorMessage = (err: unknown) => (err instanceof Error ? err.message : Str
 /** Installs tables for `texts`, reusing a cached parse when one matches. The
  * cache is only an optimization: failing to read or write it (quota, private
  * mode, a corrupt row) falls back to parsing and never fails the load. */
-async function buildTables(texts: Record<DictFileName, string>, fingerprint = fingerprintDictTexts(texts)): Promise<void> {
+/** Bump when createDictTable starts keeping something new, so older cached parses are discarded. */
+const PARSER_VERSION = 'verb-forms-1';
+
+async function buildTables(texts: Record<DictFileName, string>, dataFingerprint = fingerprintDictTexts(texts)): Promise<void> {
+  const fingerprint = `${dataFingerprint}#${PARSER_VERSION}`;
   const cached = await loadCachedParsedTables(fingerprint).catch(() => null);
   if (cached) {
     try {
@@ -66,6 +71,7 @@ ready.then(
 type Incoming =
   | { id: number; type: 'lookup'; word: string }
   | { id: number; type: 'analyzeMany'; words: string[] }
+  | { id: number; type: 'verbFamily'; root: string }
   | { id: number; type: 'importTexts'; texts: Record<DictFileName, string> }
   | { id: number; type: 'resetToBundled' };
 
@@ -83,6 +89,11 @@ self.onmessage = async (e: MessageEvent<Incoming>) => {
         const resultsByWord: Record<string, ReturnType<AramorphEngine['lookup']>> = {};
         for (const word of msg.words) resultsByWord[word] = engine.lookup(word);
         postMessage({ id: msg.id, type: 'manyResults', resultsByWord });
+        break;
+      }
+      case 'verbFamily': {
+        await ready;
+        postMessage({ id: msg.id, type: 'verbFamily', members: engine.verbFamily(transliterate(msg.root)) });
         break;
       }
       case 'importTexts': {

@@ -1,0 +1,55 @@
+import type { DictionaryEntry, MorphologicalAnalysis } from '../types';
+import { foldAlefHamza, normalize } from '../reader/tokenizer/arabicTokenizer';
+
+/** Al-Wasit opens each derived-form sense with its own citation form in
+ * parentheses -- "(كَتَبَ) الكتابَ ...", "(أَكْتَبَهُ): علَّمه ...". Senses that
+ * continue the previous one start with "و-" instead and have no such form. */
+const LEAD_FORM_RE = /^\s*\(([^()]+)\)/;
+
+function key(text: string): string {
+  return foldAlefHamza(normalize(text)).trim();
+}
+
+/** The citation form a sense opens with, or null for a continuation sense. */
+export function leadForm(gloss: string): string | null {
+  return LEAD_FORM_RE.exec(gloss)?.[1] ?? null;
+}
+
+/**
+ * Al-Sihah has no parentheses: each line opens with its headword, usually
+ * after a conjunction -- "واسْتَوْفى حقّه وتَوَفَّاهُ بمعنًى", "والوَفاةُ: الموتُ".
+ * The spellings that first word can stand for: as written, without the leading
+ * "و", and without the article "ال" (after the "و" too).
+ */
+export function openingKeys(gloss: string): string[] {
+  const first = key(gloss.trim().split(/\s+/)[0]?.replace(/[:،,.؛]+$/, '') ?? '');
+  if (!first) return [];
+  const withoutWaw = first.length > 2 && first.startsWith('و') ? first.slice(1) : first;
+  const keys = new Set([first, withoutWaw]);
+  for (const k of [first, withoutWaw]) if (k.length > 3 && k.startsWith('ال')) keys.add(k.slice(2));
+  return [...keys];
+}
+
+/**
+ * Indexes of the entry's senses whose citation form is what the reader
+ * looked up (Al-Wasit's "(form)" leads, Maqayis's opening "(root)", Al-Sihah's
+ * opening word): the tapped surface form itself, or a lemma AraMorph resolved it
+ * to (tapping كَاتَبْتُهُ marks the "(كَاتَبَ)" sense). Diacritics and alef/hamza
+ * variants are ignored, same as the dictionary's own matching.
+ */
+export function findMatchedSenses(entry: DictionaryEntry, word: string, morphology: MorphologicalAnalysis[] = []): Set<number> {
+  const wanted = new Set<string>([key(word)]);
+  for (const m of morphology) if (m.lemma) wanted.add(key(m.lemma));
+  wanted.delete('');
+
+  const matched = new Set<number>();
+  entry.senses.forEach((sense, i) => {
+    if (entry.providerId === 'alsihah') {
+      if (openingKeys(sense.gloss).some((k) => wanted.has(k))) matched.add(i);
+      return;
+    }
+    const lead = leadForm(sense.gloss);
+    if (lead && wanted.has(key(lead))) matched.add(i);
+  });
+  return matched;
+}

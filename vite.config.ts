@@ -62,6 +62,16 @@ function bundledAlWasitDataPlugin(): Plugin {
   })
 }
 
+/** The optional classical dictionaries Al-Ṣiḥāḥ and Maqāyīs al-Lugha (see
+ * public/alsihah-data and public/almaqayis-data), off by default and split
+ * into their own chunks via dynamic import() like Al-Wasit. */
+function bundledLexiconPlugin(id: string, file: string): Plugin {
+  return virtualTextFilePlugin(`virtual:${id}-data`, (readText) => {
+    return `export default ${JSON.stringify(readText(file))};
+`
+  })
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   // Relative: the app is also served from a GitHub Pages project subpath,
@@ -79,6 +89,8 @@ export default defineConfig({
     bundledDictDataPlugin(),
     bundledVocabListPlugin(),
     bundledAlWasitDataPlugin(),
+    bundledLexiconPlugin('alsihah', 'public/alsihah-data/alsihah.tsv'),
+    bundledLexiconPlugin('almaqayis', 'public/almaqayis-data/almaqayis.tsv'),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
@@ -105,12 +117,12 @@ export default defineConfig({
         // The optional datasets aren't precached -- most users never enable
         // them -- but are cached on first use so an enabled feature keeps
         // working offline.
-        globIgnores: ['**/_virtual_alwasit-data-*.js', '**/_virtual_vocab-list-data-*.js'],
+        globIgnores: ['**/_virtual_alwasit-data-*.js', '**/_virtual_alsihah-data-*.js', '**/_virtual_almaqayis-data-*.js', '**/_virtual_vocab-list-data-*.js'],
         runtimeCaching: [
           {
-            urlPattern: /\/assets\/_virtual_(?:alwasit|vocab-list)-data-[\w-]+\.js$/,
+            urlPattern: /\/assets\/_virtual_(?:alwasit|alsihah|almaqayis|vocab-list)-data-[\w-]+\.js$/,
             handler: 'CacheFirst',
-            options: { cacheName: 'optional-datasets', expiration: { maxEntries: 4 } },
+            options: { cacheName: 'optional-datasets', expiration: { maxEntries: 6 } },
           },
         ],
         // The dictionary worker chunk (~4MB with its data) exceeds Workbox's 2MB default.

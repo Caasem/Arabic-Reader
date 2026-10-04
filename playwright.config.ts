@@ -21,6 +21,9 @@ export default defineConfig({
     baseURL: 'http://localhost:4173',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    // A returning user: the first-run welcome (e2e/onboarding.spec.ts) would
+    // otherwise cover the app in every other test.
+    storageState: 'e2e/.auth/returning-user.json',
   },
   projects: [
     {

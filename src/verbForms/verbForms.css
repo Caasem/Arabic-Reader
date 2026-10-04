@@ -1,0 +1,73 @@
+.verb-forms {
+  direction: ltr;
+  text-align: left;
+  margin: 2px 0 6px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.verb-forms__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.verb-forms__mark {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--ink-soft);
+}
+.verb-forms__numeral {
+  min-width: 34px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.verb-forms__vowel {
+  color: var(--ink-faint);
+}
+.verb-forms__toggle {
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 3px;
+}
+.verb-forms__toggle bdi {
+  font-family: var(--font-arabic);
+  font-size: 13px;
+}
+.verb-forms__list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 4px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.verb-forms__item,
+.verb-forms__note {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 10px;
+}
+.verb-forms__note {
+  color: var(--ink-faint);
+}
+.verb-forms__item--current {
+  background: var(--accent-soft);
+}
+.verb-forms__lemma {
+  font-family: var(--font-arabic);
+  font-size: 17px;
+  min-width: 70px;
+  color: var(--ink);
+}
+.verb-forms__gloss {
+  flex: 1;
+}

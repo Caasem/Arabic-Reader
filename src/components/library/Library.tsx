@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { libraryService, type BookReadingInfo } from '../../library/libraryService';
+import { LibraryHero } from '../../look';
 import { invalidateBookVocabIndex } from '../../vocabRarity/bookVocabIndex';
 import { invalidateTokenStream } from '../../speedReader';
 import { useShamelaBrowse } from '../../shamela/useShamelaBrowse';
@@ -210,6 +211,8 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
           />
         </div>
       </header>
+
+      {!loading && <LibraryHero books={books} readingInfo={readingInfo} onOpen={onOpenBook} />}
 
       {showOfflineNotice && (
         <div className="library__notice">

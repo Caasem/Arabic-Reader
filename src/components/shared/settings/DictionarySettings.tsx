@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { usePreferences } from '../../../state/PreferencesContext';
 import { dictionaryManager } from '../../../dictionary';
+import { moveProviderId, orderProviders } from '../../../dictionary/providerOrder';
 import { aramorphProvider } from '../../../dictionary/providers/aramorph/AramorphDictionaryProvider';
 import type { DictionaryPanelLayout, MorphDisplayStyle } from '../../../types';
 import { AramorphDataSettings } from './AramorphDataSettings';
@@ -20,7 +21,7 @@ const PANEL_LAYOUTS: Option<DictionaryPanelLayout>[] = [
 export function DictionarySettings() {
   const { prefs, updatePrefs } = usePreferences();
   const [aramorphReady, setAramorphReady] = useState(aramorphProvider.isReady);
-  const providers = dictionaryManager.getProviders();
+  const providers = orderProviders(dictionaryManager.getProviders(), prefs.dictionaryProviderOrder ?? []);
   const enabledProviders = providers.filter((p) => prefs.enabledProviderIds.includes(p.id));
 
   // The bundled dataset finishes loading after this mounts.
@@ -33,6 +34,10 @@ export function DictionarySettings() {
       cancelled = true;
     };
   }, []);
+
+  function moveProvider(id: string, delta: -1 | 1) {
+    updatePrefs({ dictionaryProviderOrder: moveProviderId(providers.map((p) => p.id), id, delta) });
+  }
 
   function toggleProvider(id: string, on: boolean) {
     const next = on ? Array.from(new Set([...prefs.enabledProviderIds, id])) : prefs.enabledProviderIds.filter((p) => p !== id);
@@ -125,7 +130,8 @@ export function DictionarySettings() {
         opening the popup or clicking "+ Add."
       </ToggleRow>
 
-      {providers.map((p) => (
+      <Note>The order below is the order dictionaries appear in the popup (and which one is first in Split). Use the arrows to change it.</Note>
+      {providers.map((p, idx) => (
         <div className="settings-row settings-row--dict" key={p.id}>
           <label className="settings-toggle">
             <input
@@ -135,6 +141,14 @@ export function DictionarySettings() {
             />
             <span className="settings-toggle__label">{p.name}</span>
           </label>
+          <span className="settings-order">
+            <button type="button" className="settings-order__btn" disabled={idx === 0} onClick={() => moveProvider(p.id, -1)} aria-label={`Move ${p.name} up`} title="Move up">
+              ↑
+            </button>
+            <button type="button" className="settings-order__btn" disabled={idx === providers.length - 1} onClick={() => moveProvider(p.id, 1)} aria-label={`Move ${p.name} down`} title="Move down">
+              ↓
+            </button>
+          </span>
           {p.id === 'aramorph' && (
             <span className={'settings-badge' + (aramorphReady ? ' settings-badge--ready' : '')}>
               {aramorphReady ? 'Data loaded' : aramorphProvider.status === 'failed' ? 'Failed to load' : 'No data loaded'}
@@ -147,6 +161,12 @@ export function DictionarySettings() {
         above) is only downloaded the first time you switch it on, and its licensing status is less clear-cut than
         this app's other sources — see <code>alwasit-data/SOURCE-README.md</code> for details before enabling it if you
         plan to redistribute this app.
+      </Note>
+      <Note>
+        Al-Ṣiḥāḥ (al-Jawharī) and Maqāyīs al-Lugha (Ibn Fāris) are classical works in the public domain and are also off
+        by default. Both are filed by root, so a lookup resolves the tapped word to its root through AraMorph and shows that
+        root's article — about 5,650 roots in Al-Ṣiḥāḥ, 5,270 in Maqāyīs. Their data downloads the first time you switch
+        each one on; see <code>alsihah-data/SOURCE-README.md</code> and <code>almaqayis-data/SOURCE-README.md</code>.
       </Note>
 
       <AramorphDataSettings

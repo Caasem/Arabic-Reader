@@ -9,7 +9,8 @@ import { tokenize } from '../tokenizer/arabicTokenizer';
  * This is the only place that mutates rendered book DOM. It deliberately
  * does not attach click handlers itself — the caller attaches a single
  * delegated listener on `root`, per the existing extension's approach, so
- * this function stays a pure "tag the words" step.
+ * this function stays a pure "tag the words" step. Text inside an element
+ * marked `data-no-wrap` (e.g. a footnote marker button) is left alone.
  */
 export function wrapArabicWords(root: Document | HTMLElement): number {
   const doc = 'body' in root ? (root as Document) : (root.ownerDocument as Document);
@@ -22,7 +23,7 @@ export function wrapArabicWords(root: Document | HTMLElement): number {
       const parent = node.parentElement;
       if (!parent) return NodeFilter.FILTER_REJECT;
       if (parent.classList.contains('ar-word')) return NodeFilter.FILTER_REJECT;
-      if (parent.closest('.ar-word')) return NodeFilter.FILTER_REJECT;
+      if (parent.closest('.ar-word, [data-no-wrap]')) return NodeFilter.FILTER_REJECT;
       if (['SCRIPT', 'STYLE'].includes(parent.tagName)) return NodeFilter.FILTER_REJECT;
       return /[؀-ۿ]/.test(node.textContent || '') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
     },

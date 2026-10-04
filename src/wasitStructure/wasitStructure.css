@@ -1,0 +1,29 @@
+/* Al-Wasit's structure, drawn on top of the popup's existing word tokens:
+   forms separated, continuations indented, abbreviations as chips. */
+.dict-popup__token-sense.wasit-sense--lead:not(:first-child) {
+  margin-top: 10px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+.dict-popup__token-sense.wasit-sense--cont {
+  padding-inline-start: 14px;
+}
+
+.dict-popup__token.wasit-role--head {
+  font-weight: 600;
+}
+
+.dict-popup__token.wasit-role--plural {
+  color: var(--ink-soft);
+}
+
+.dict-popup__token.wasit-role--tag {
+  font-size: 0.82em;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.wasit-examples--dim .dict-popup__token.wasit-role--example {
+  color: var(--ink-faint);
+}
