@@ -90,5 +90,5 @@ export function enabledProvidersFor(optional: readonly OptionalProviderId[]): st
 
 /** Everything onboarding writes, as one preferences patch. */
 export function onboardingPreferences(profile: DeviceProfile, optional: readonly OptionalProviderId[]): Partial<ReaderPreferences> {
-  return { ...profilePreferences(profile), enabledProviderIds: enabledProvidersFor(optional) };
+  return { ...profilePreferences(profile), theme: 'dark', enabledProviderIds: enabledProvidersFor(optional) };
 }
