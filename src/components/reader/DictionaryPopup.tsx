@@ -3,13 +3,15 @@ import type { DictionaryEntry, DictionaryLookupResult, WordInstance, WordRarity 
 import { getWordRarity, isRarityDataReady, TIER_LABELS } from '../../vocabRarity/rarity';
 import { normalize } from '../../reader/tokenizer/arabicTokenizer';
 import { usePreferences } from '../../state/PreferencesContext';
-import { IconEdit, IconChevronLeft, IconChevronRight } from '../shared/icons';
+import { IconEdit, IconChevronLeft, IconChevronRight, IconBook } from '../shared/icons';
 import { buildEntryTokenSenses, reconstructSelection, type DefinitionToken } from './definitionTokens';
 import { isTokenizedProvider } from '../../dictionary/tokenizedProviders';
 import { findMatchedSenses, WASIT_MATCH_CLASS } from '../../wasitMatch';
 import { annotateEntry } from '../../wasitStructure';
 import { VerbFormInfo, VerbFormMark } from '../../verbForms';
 import { arabicEntriesStartFolded, groupLabel } from '../../popupClean';
+import { dictionaryManager } from '../../dictionary';
+import { AddDictionaryPanel } from '../../popupAddDictionary';
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
@@ -115,7 +117,7 @@ function groupEntriesByProvider(entries: DictionaryEntry[]): EntryGroup[] {
 
 export function DictionaryPopup({
   word,
-  result,
+  result: lookedUp,
   instance,
   saved,
   loading,
@@ -167,6 +169,40 @@ export function DictionaryPopup({
   onSaveEntries?: (entries: DictionaryEntry[]) => void;
 }) {
   const { prefs, updatePrefs } = usePreferences();
+
+  // "Add a dictionary" (src/popupAddDictionary): turning one on re-runs this word's lookup here,
+  // so the new section appears without the reader having to tap the word again.
+  const [addOpen, setAddOpen] = useState(false);
+  const [refreshed, setRefreshed] = useState<DictionaryLookupResult | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const result = refreshed ?? lookedUp;
+  useEffect(() => {
+    setRefreshed(null);
+    setAddOpen(false);
+  }, [word]);
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key.toLowerCase() !== 'd' || e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      e.preventDefault();
+      setAddOpen((o) => !o);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  async function addDictionary(id: string) {
+    const next = Array.from(new Set([...prefs.enabledProviderIds, id]));
+    updatePrefs({ enabledProviderIds: next });
+    dictionaryManager.setEnabledProviders(next);
+    setAddOpen(false);
+    setRefreshing(true);
+    try {
+      setRefreshed(await dictionaryManager.lookup(word));
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   // Purely local, resets whenever the popup moves to a new word -- not
   // meant to track "is this permanently saved" (that's `saved`, computed
@@ -861,6 +897,15 @@ export function DictionaryPopup({
           </button>
         )}
 
+      {addOpen && (
+        <AddDictionaryPanel
+          providers={dictionaryManager.getProviders()}
+          enabledIds={prefs.enabledProviderIds}
+          onAdd={addDictionary}
+          onClose={() => setAddOpen(false)}
+        />
+      )}
+
       <div className="dict-popup__scroll">
         <button className="dict-popup__close" onClick={onClose} aria-label="Close">
           ×
@@ -884,6 +929,15 @@ export function DictionaryPopup({
               <IconEdit size={12} />
             </button>
           )}
+          <button
+            className="dict-popup__header-btn"
+            onClick={() => setAddOpen((o) => !o)}
+            aria-label="Add a dictionary"
+            aria-expanded={addOpen}
+            title="Add a dictionary (D)"
+          >
+            <IconBook size={12} />
+          </button>
         </div>
 
         <div className="dict-popup__word">
@@ -896,17 +950,17 @@ export function DictionaryPopup({
           )}
         </div>
 
-        {loading && <div className="dict-popup__loading">Looking up…</div>}
+        {(loading || refreshing) && <div className="dict-popup__loading">Looking up…</div>}
 
-        {!loading && result?.failedProviders?.length ? (
+        {!loading && !refreshing && result?.failedProviders?.length ? (
           <div className="dict-popup__provider-error" role="status">
             Couldn't load: {result.failedProviders.map((p) => p.name).join(', ')}
           </div>
         ) : null}
 
-        {!loading && !result?.entries.length && <div className="dict-popup__empty">No entry found for this word yet.</div>}
+        {!loading && !refreshing && !result?.entries.length && <div className="dict-popup__empty">No entry found for this word yet.</div>}
 
-        {!loading && result?.entries.length ? (
+        {!loading && !refreshing && result?.entries.length ? (
           effectiveLayout === 'split' ? (
             isNarrow ? (
               <>

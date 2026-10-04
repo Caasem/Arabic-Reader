@@ -133,7 +133,7 @@
   padding-left: 20px;
   /* Clears .dict-popup__header-actions (right: 12px, two 22px circles plus
      gap) the same way padding-left already clears .dict-popup__close. */
-  padding-right: 60px;
+  padding-right: 88px;
   display: flex;
   align-items: baseline;
   gap: 8px;

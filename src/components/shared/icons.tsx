@@ -227,3 +227,12 @@ export function IconBookmarkFilled({ size = 15, ...rest }: IconProps) {
     </svg>
   );
 }
+
+export function IconBook({ size = 16, ...rest }: IconProps) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3Z" />
+      <path d="M5 17a3 3 0 0 1 3-3h10" />
+    </svg>
+  );
+}
