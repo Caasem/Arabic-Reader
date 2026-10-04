@@ -18,8 +18,9 @@ The dictionary defaults to **off** in Settings, and its data is a separate chunk
 downloaded only when switched on. Users can also load their own copy through
 Settings → Dictionaries → Load dictionary file.
 
-## Data file is not in git
+## Which file the build reads
 
-`baranov-data/russian.txt` is gitignored. Copy the file there before building to
-include the dictionary; without it the build succeeds and the Baranov dictionary
-is simply empty. (A copy also lives at the repo root as `russian.txt`.)
+The build reads the repo-root `russian.txt` (the complete file, about 39,000
+lines). `baranov-data/russian.txt` is an incomplete copy (about 7,000 lines) and
+is not used. If the root file is missing, the build still succeeds and the
+Baranov dictionary is simply empty.
