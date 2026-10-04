@@ -43,11 +43,8 @@ const SLIDES: { label: string; title: string; lines: ReactNode[]; tags?: string[
   {
     label: 'Dictionary search',
     title: 'Search without leaving the page.',
-    lines: [
-      <>Press <b>Alt+D</b> to look up a word.</>,
-      'Search English–Arabic, Al-Wasīṭ and the classical dictionaries.',
-    ],
-    tags: ['Al-Ṣiḥāḥ', 'Maqāyīs al-Lugha', '+ more'],
+    lines: [<>Press <b>Alt+D</b> to look up a word.</>],
+    tags: ['English–Arabic', 'Al-Ṣiḥāḥ', 'Maqāyīs al-Lugha', '+ more'],
     art: () => (
       <>
         <div className="ob-keys" aria-hidden="true"><kbd>Alt</kbd><kbd>D</kbd></div>
