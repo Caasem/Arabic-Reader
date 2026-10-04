@@ -9,7 +9,7 @@ import {
 import { applySidebarStart, markOnboardingDone, preloadStarterBook } from './firstRun';
 import './onboarding.css';
 
-const SLIDES: { label: string; title: string; lines: ReactNode[]; art: () => ReactNode }[] = [
+const SLIDES: { label: string; title: string; lines: ReactNode[]; tags?: string[]; art: () => ReactNode }[] = [
   {
     label: 'Welcome',
     title: 'Read. Tap. Remember.',
@@ -45,8 +45,9 @@ const SLIDES: { label: string; title: string; lines: ReactNode[]; art: () => Rea
     title: 'Search without leaving the page.',
     lines: [
       <>Press <b>Alt+D</b> to look up a word.</>,
-      'English–Arabic, and classical dictionaries: Al-Ṣiḥāḥ, Maqāyīs al-Lugha.',
+      'Search English–Arabic, Al-Wasīṭ and the classical dictionaries.',
     ],
+    tags: ['Al-Ṣiḥāḥ', 'Maqāyīs al-Lugha', '+ more'],
     art: () => (
       <>
         <div className="ob-keys" aria-hidden="true"><kbd>Alt</kbd><kbd>D</kbd></div>
@@ -157,6 +158,11 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                   <span key={i}>{line}{i < current.lines.length - 1 && <br />}</span>
                 ))}
               </p>
+              {current.tags && (
+                <ul className="ob-tags">
+                  {current.tags.map((t) => <li key={t} className={t.startsWith('+') ? 'ob-tags__more' : undefined}>{t}</li>)}
+                </ul>
+              )}
             </div>
           </div>
         ) : (
