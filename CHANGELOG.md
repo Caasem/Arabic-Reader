@@ -4,6 +4,24 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.25.0 — 2026-10-04
+
+Bring your own dictionary, plus an optional Arabic-Russian dictionary.
+
+- **Load your own dictionary file.** Settings → Dictionaries → *Load dictionary
+  file* reads a `.tsv`/`.txt`, `.csv`, `.json` or Lingvo `.dsl` file (or the wide
+  numbered-TSV layout used by some Russian-Arabic dumps) and adds it to the
+  popup. It is stored only in your browser's IndexedDB and never uploaded.
+- **Baranov (Arabic-Russian), optional.** A new dictionary built from the
+  repo's `russian.txt` (about 38,000 articles), off by default and downloaded
+  only the first time you switch it on. Its source and license are unverified;
+  see `baranov-data/SOURCE-README.md`.
+- Both look words up by headword, also trying the root and dictionary form
+  AraMorph finds, the same way Al-Wasīṭ does.
+
+(The entries between v0.10.0 and this one were tracked in `package.json` and
+commit messages only; this file and `VERSION` were not updated for them.)
+
 ## v0.10.0 — 2026-09-14
 
 A hardening pass over the whole app: security (EPUB content sanitized against
