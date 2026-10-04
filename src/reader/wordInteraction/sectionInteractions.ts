@@ -135,7 +135,18 @@ export function attachSectionInteractions(
       handlers.onBackgroundClick();
       return;
     }
-    if (element.dataset.word) handlers.onWordClick(targetOf(element));
+    if (!element.dataset.word) return;
+    // A mouse double-click (the browser's own click count, so it follows the OS
+    // double-click speed) saves the word straight to vocabulary. The first click
+    // already opened the popup, which stays open and shows the word as saved. The
+    // touch double tap is handled below, and a handled tap swallows its click.
+    const pointerType = (e as PointerEvent).pointerType;
+    if (e.detail >= 2 && pointerType !== 'touch' && pointerType !== 'pen') {
+      doc.getSelection()?.removeAllRanges(); // the browser selects the word on a double-click
+      handlers.onTouchAction('quickSave', targetOf(element));
+      return;
+    }
+    handlers.onWordClick(targetOf(element));
   });
 
   body.addEventListener('mouseover', (e) => {

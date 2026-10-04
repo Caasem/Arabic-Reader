@@ -39,7 +39,7 @@
   --qr-shadow: 0 18px 48px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 
-.qr button {
+:where(.qr) button {
   font-family: inherit;
   color: inherit;
 }
@@ -184,7 +184,7 @@
 
 .qr-text {
   box-sizing: border-box;
-  padding: 0 4px;
+  padding: 0 4px; /* TEXT_PAD in QuietReader.tsx */
   color: var(--ink);
   text-align: justify;
   orphans: 2;
