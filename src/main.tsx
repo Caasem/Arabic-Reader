@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/shared/ErrorBoundary.tsx'
 import { installGlobalErrorLogging } from './diagnostics/diagnosticsLog'
+import { runMigrationGate } from './persistence/migrationGate'
 
 installGlobalErrorLogging()
 
@@ -19,10 +20,22 @@ if (import.meta.env.DEV) {
   })
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </StrictMode>,
-)
+const rootElement = document.getElementById('root')!
+
+// The data upgrade (schema v10) must not run before its verified backup exists,
+// so nothing renders -- and nothing opens the database -- until the gate passes.
+runMigrationGate()
+  .then(() => {
+    createRoot(rootElement).render(
+      <StrictMode>
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
+      </StrictMode>,
+    )
+  })
+  .catch((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error)
+    rootElement.textContent = `${message} Reload the page to try again. Your data has not been changed.`
+    rootElement.style.cssText = 'padding:2rem;font:16px system-ui;max-width:40rem;margin:auto'
+  })
