@@ -92,6 +92,7 @@ const DICTS: { id: 'aramorph' | OptionalProviderId; label: string; mark: string 
   { id: 'alwasit', label: 'Al-Wasīṭ', mark: 'و' },
   { id: 'alsihah', label: 'Al-Ṣiḥāḥ', mark: 'ص' },
   { id: 'almaqayis', label: 'Maqāyīs al-Lugha', mark: 'م' },
+  { id: 'baranov', label: 'Baranov (Arabic–Russian)', mark: 'Р' },
 ];
 
 const DEVICE_NAME: Record<DeviceProfile, string> = { phone: 'Phone', tablet: 'Tablet', desktop: 'Desktop' };
@@ -198,7 +199,13 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                   </div>
                   <p className="ob-grp">Classical</p>
                   <div className="ob-dgrid">
-                    {DICTS.slice(2).map((d) => (
+                    {DICTS.slice(2, 4).map((d) => (
+                      <DictTile key={d.id} d={d} on={optional.includes(d.id as OptionalProviderId)} onToggle={() => toggleDict(d.id as OptionalProviderId)} />
+                    ))}
+                  </div>
+                  <p className="ob-grp">Russian</p>
+                  <div className="ob-dgrid">
+                    {DICTS.slice(4).map((d) => (
                       <DictTile key={d.id} d={d} on={optional.includes(d.id as OptionalProviderId)} onToggle={() => toggleDict(d.id as OptionalProviderId)} />
                     ))}
                   </div>

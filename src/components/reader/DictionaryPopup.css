@@ -345,6 +345,56 @@
   margin-inline-start: 6px;
 }
 
+.dict-popup__sense-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.dict-popup__tag--lead {
+  display: block;
+  margin-inline-start: 0;
+}
+
+.dict-popup__lead {
+  display: block;
+  font-family: var(--font-arabic);
+  font-size: 15px;
+  color: var(--ink-soft);
+}
+
+.dict-popup__examples {
+  list-style: none;
+  margin: 3px 0 4px;
+  padding: 0;
+}
+
+.dict-popup .dict-popup__senses .dict-popup__examples > li {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1px;
+  margin-bottom: 4px;
+  font-size: inherit;
+}
+
+.dict-popup .dict-popup__senses .dict-popup__examples > li::before {
+  content: none;
+}
+
+.dict-popup__example-ar {
+  display: block;
+  text-align: start;
+  font-family: var(--font-arabic);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.dict-popup__example-gloss {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
 .dict-popup__entry-morph {
   display: inline-flex;
   gap: 8px;

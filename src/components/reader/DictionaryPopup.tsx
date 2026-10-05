@@ -12,6 +12,9 @@ import { VerbFormInfo, VerbFormMark } from '../../verbForms';
 import { arabicEntriesStartFolded, groupLabel } from '../../popupClean';
 import { dictionaryManager } from '../../dictionary';
 import { AddDictionaryPanel } from '../../popupAddDictionary';
+
+/** Dictionaries whose part-of-speech tag reads better before the definition (a verb form leads the entry). */
+const LEAD_TAG_PROVIDERS = new Set(['baranov', 'personal']);
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
@@ -811,8 +814,30 @@ export function DictionaryPopup({
                 <ul className="dict-popup__senses">
                   {entry.senses.map((s, si) => (
                     <li key={si}>
-                      {s.gloss}
-                      {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
+                      {LEAD_TAG_PROVIDERS.has(entry.providerId) ? (
+                        <div className="dict-popup__sense-main">
+                          {s.notes && <bdi className="dict-popup__lead" dir="rtl">{s.notes}</bdi>}
+                          {(s.pos || s.gender) && (
+                            <span className="dict-popup__tag dict-popup__tag--lead">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>
+                          )}
+                          {s.gloss}
+                          {s.examples && (
+                            <ul className="dict-popup__examples">
+                              {s.examples.map((ex, ei) => (
+                                <li key={ei}>
+                                  <bdi lang="ar" dir="rtl" className="dict-popup__example-ar">{ex.ar}</bdi>
+                                  <span className="dict-popup__example-gloss">{ex.gloss}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          {s.gloss}
+                          {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
+                        </>
+                      )}
                     </li>
                   ))}
                 </ul>
