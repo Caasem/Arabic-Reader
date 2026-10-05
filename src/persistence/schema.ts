@@ -12,6 +12,7 @@ import type {
   ReadingSession,
   PomodoroSession,
 } from '../types';
+import { backfilledUpdatedAt, SYNCED_TABLES, type FrontierRow, type OutboxRow, type SyncMetaRow, type SyncedTableName } from './syncedTables';
 
 /**
  * The IndexedDB schema, via Dexie. This is the only module that knows
@@ -26,13 +27,19 @@ class ArabicReaderDB extends Dexie {
   wordInstances!: Table<WordInstance & { key: string }, string>;
   vocabulary!: Table<VocabularyItem, string>;
   highlights!: Table<Highlight, string>;
-  preferences!: Table<{ id: string } & ReaderPreferences, string>;
+  preferences!: Table<{ id: string; updatedAt?: number } & ReaderPreferences, string>;
   speedReaderPositions!: Table<SpeedReaderPosition, string>;
   speedReaderSessions!: Table<SpeedReaderSession, string>;
   readingSessions!: Table<ReadingSession, string>;
   bookmarks!: Table<Bookmark, string>;
   bookLocations!: Table<{ bookId: string; data: string; total: number }, string>;
   pomodoroSessions!: Table<PomodoroSession, string>;
+  /** Single row (`id: 'local'`): sync identity, switch, and causal state. */
+  syncMeta!: Table<SyncMetaRow, string>;
+  /** Change events captured by the write layer, waiting to be published. */
+  syncOutbox!: Table<OutboxRow, string>;
+  /** Per-record causal frontier (see src/sync/merge.ts). */
+  recordFrontier!: Table<FrontierRow, string>;
 
   constructor() {
     super('arabic-reader');
@@ -111,6 +118,26 @@ class ArabicReaderDB extends Dexie {
     this.version(9).stores({
       vocabulary: 'id, surfaceForm, lemma, mastery, bookId, addedAt, fsrsDue, [bookId+surfaceForm]',
     });
+    // v10: sync groundwork (docs/specs/storage-and-sync.md). `updatedAt` on every
+    // synced row, plus the tables the write layer uses to capture changes. No
+    // events are created here; they only start once sync is switched on.
+    this.version(10)
+      .stores({
+        syncMeta: 'id',
+        syncOutbox: 'eventId, publishedAt',
+        recordFrontier: 'key',
+      })
+      .upgrade(async (tx) => {
+        const now = Date.now();
+        for (const table of Object.keys(SYNCED_TABLES) as SyncedTableName[]) {
+          await tx
+            .table(table)
+            .toCollection()
+            .modify((row: Record<string, unknown>) => {
+              if (typeof row.updatedAt !== 'number') row.updatedAt = backfilledUpdatedAt(table, row, now);
+            });
+        }
+      });
   }
 }
 

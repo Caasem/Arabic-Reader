@@ -12,6 +12,8 @@ export interface BookMeta {
   sizeBytes: number;
   /** Total locations/chars used to compute reading progress, filled in after first open. */
   totalLocations?: number;
+  /** Last change to this row; set by the persistence write layer (schema v10). */
+  updatedAt?: number;
 }
 
 /** The one automatic "where I left off" per book. */
@@ -62,4 +64,6 @@ export interface Bookmark {
   chapterHref?: string;
   chapterLabel?: string;
   createdAt: number;
+  /** Set by the persistence write layer (schema v10). */
+  updatedAt?: number;
 }

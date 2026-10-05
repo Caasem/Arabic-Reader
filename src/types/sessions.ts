@@ -19,6 +19,8 @@ export interface PomodoroSession {
   status: PomodoroSessionStatus;
   startedAt: number;
   endedAt: number;
+  /** Set by the persistence write layer (schema v10). */
+  updatedAt?: number;
 }
 
 /** The phase in progress, persisted so a reload resumes it. */
@@ -77,6 +79,8 @@ export interface SpeedReaderSession {
   averageWpm: number;
   bookProgressPercent: number; // 0..1, at the end of the session
   endedAt: number;
+  /** Set by the persistence write layer (schema v10). */
+  updatedAt?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,4 +105,6 @@ export interface ReadingSession {
   lookupCount: number;
   startPercent: number;
   endPercent: number;
+  /** Set by the persistence write layer (schema v10). */
+  updatedAt?: number;
 }
