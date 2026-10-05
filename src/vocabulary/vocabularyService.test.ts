@@ -48,3 +48,15 @@ describe('FSRS scheduling', () => {
     expect(reviewed.successfulRecalls).toBe(1);
   });
 });
+
+describe('custom cards', () => {
+  it('saves a hand-written card that is due immediately and has no dictionary entries', async () => {
+    const item = await vocabularyService.saveCustomCard({ front: 'مثال', back: 'an example', sentence: 'هذا مثال.', book });
+    expect(item.custom).toBe(true);
+    expect(item.entries).toEqual([]);
+    expect(item.meaning).toBe('an example');
+    expect(item.fsrsReps).toBe(0);
+    const [stored] = await vocabularyService.getForWord(book.id, 'مثال');
+    expect(stored.id).toBe(item.id);
+  });
+});
