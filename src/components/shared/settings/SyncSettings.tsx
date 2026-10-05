@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { logDiagnostic } from '../../../diagnostics/diagnosticsLog';
+import { startAutoSync, subscribeAutoSync } from '../../../sync/autoSync';
+import type { SchedulerState } from '../../../sync/scheduler';
 import {
   chooseSyncFolder,
   readFolderSyncStatus,
@@ -23,10 +25,22 @@ export function SyncSettings() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [auto, setAuto] = useState<SchedulerState | null>(null);
+
   const refresh = useCallback(() => readFolderSyncStatus().then(setStatus), []);
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Automatic runs change "last synced"; keep the screen current without a click.
+  useEffect(
+    () =>
+      subscribeAutoSync((state) => {
+        setAuto(state);
+        if (state && !state.running) void refresh();
+      }),
+    [refresh],
+  );
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -51,6 +65,7 @@ export function SyncSettings() {
   const turnOn = () =>
     run(async () => {
       const r = await turnOnFolderSync(deviceName.trim() || 'This computer');
+      startAutoSync(); // no-op if already running
       setMessage(describeResult(r.published, r.eventsApplied, r.retryLater, r.fromNewerVersion));
     });
 
@@ -79,7 +94,8 @@ export function SyncSettings() {
         Keep your vocabulary, highlights, bookmarks, reading positions and settings the same on all your computers,
         through a folder you choose, such as one inside Dropbox, OneDrive or iCloud Drive. Nothing is sent to any server
         of ours. Book files are not synced: add the same book on each device. Sync is not a backup, so keep exporting
-        backups too. For now, sync runs when you press the button below.
+        backups too. Sync runs by itself a few seconds after you make a change, when you open the app, and every few
+        minutes while it is open. You can also press Sync now.
       </Note>
 
       <div className="settings-row">
@@ -135,6 +151,18 @@ export function SyncSettings() {
             <span className="settings-row__label">Last synced</span>
             <div className="settings-row__control">
               {status.lastSyncedAt ? new Date(status.lastSyncedAt).toLocaleString() : 'Not yet'}
+            </div>
+          </div>
+          <div className="settings-row">
+            <span className="settings-row__label">Automatic sync</span>
+            <div className="settings-row__control">
+              {auto === null
+                ? 'Not running'
+                : auto.failures > 0
+                  ? `Problem, will retry: ${auto.lastError}`
+                  : auto.running
+                    ? 'Syncing…'
+                    : 'On'}
             </div>
           </div>
           <div className="settings-aramorph__actions">

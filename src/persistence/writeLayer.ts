@@ -1,5 +1,6 @@
 import { applyEvent, createLocalEvent } from '../sync/merge';
 import { recordKey, type SyncEvent, type SyncState } from '../sync/types';
+import { signalLocalSyncChange } from './changeSignal';
 import { ArabicReaderDB, db as defaultDb } from './schema';
 import { SYNCED_TABLES, type SyncMetaRow, type SyncedTableName } from './syncedTables';
 
@@ -19,7 +20,7 @@ import { SYNCED_TABLES, type SyncMetaRow, type SyncedTableName } from './syncedT
 
 type Row = Record<string, unknown>;
 
-export function createWriteLayer(db: ArabicReaderDB) {
+export function createWriteLayer(db: ArabicReaderDB, onCaptured: () => void = signalLocalSyncChange) {
   /** Tables a caller's own transaction must include so these helpers can join it. */
   const syncScope = (...tables: SyncedTableName[]) => [
     ...tables.map((t) => db.table(t)),
@@ -65,6 +66,7 @@ export function createWriteLayer(db: ArabicReaderDB) {
 
   /** Insert or replace a row. */
   async function putSynced<T extends object>(table: SyncedTableName, record: T): Promise<void> {
+    let captured = false;
     await db.transaction('rw', syncScope(table), async () => {
       const meta = await db.syncMeta.get('local');
       const row = record as Row;
@@ -75,12 +77,15 @@ export function createWriteLayer(db: ArabicReaderDB) {
       }
       const event = await capture(meta, table, primaryKey(table, row), 'put', row, now);
       await db.table(table).put(event.payload as Row);
+      captured = true;
     });
+    if (captured) onCaptured();
   }
 
   /** Insert or replace many rows of one table, each with its own event. */
   async function bulkPutSynced<T extends object>(table: SyncedTableName, records: T[]): Promise<void> {
     if (records.length === 0) return;
+    let captured = false;
     await db.transaction('rw', syncScope(table), async () => {
       const meta = await db.syncMeta.get('local');
       const now = Date.now();
@@ -94,8 +99,10 @@ export function createWriteLayer(db: ArabicReaderDB) {
         const event = await capture(current, table, primaryKey(table, row), 'put', row, now);
         await db.table(table).put(event.payload as Row);
         current = (await db.syncMeta.get('local')) as SyncMetaRow;
+        captured = true;
       }
     });
+    if (captured) onCaptured();
   }
 
   /** Merge a patch into an existing row; a no-op when the row does not exist. */
@@ -111,13 +118,16 @@ export function createWriteLayer(db: ArabicReaderDB) {
    * record's frontier) is what other devices receive; the local row is removed.
    */
   async function deleteSynced(table: SyncedTableName, id: string): Promise<void> {
+    let captured = false;
     await db.transaction('rw', syncScope(table), async () => {
       const meta = await db.syncMeta.get('local');
       if (meta?.enabled && (await db.table(table).get(id))) {
         await capture(meta, table, id, 'delete', { [SYNCED_TABLES[table]]: id, deleted: true }, Date.now());
+        captured = true;
       }
       await db.table(table).delete(id);
     });
+    if (captured) onCaptured();
   }
 
   return { syncScope, allSyncedScope, capture, putSynced, bulkPutSynced, updateSynced, deleteSynced };

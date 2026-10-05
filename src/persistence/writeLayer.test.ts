@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { persistenceService } from './db';
 import { db } from './schema';
 import { enableSyncCapture, isSyncEnabled } from './syncControl';
-import { allSyncedScope, deleteSynced, putSynced, updateSynced } from './writeLayer';
+import { allSyncedScope, createWriteLayer, deleteSynced, putSynced, updateSynced } from './writeLayer';
 import { recordKey } from '../sync/types';
 
 const vocab = (id: string, extra: Record<string, unknown> = {}) =>
@@ -154,5 +154,25 @@ describe('with sync on', () => {
     await persistenceService.savePreferences(prefs);
     expect(await persistenceService.getPreferences()).not.toHaveProperty('updatedAt');
     expect((await db.syncOutbox.toArray()).some((e) => e.table === 'preferences')).toBe(true);
+  });
+});
+
+describe('change signal', () => {
+  it('fires after a captured write, never when sync is off or nothing was captured', async () => {
+    let calls = 0;
+    const layer = createWriteLayer(db, () => void calls++);
+
+    await layer.putSynced('vocabulary', vocab('v1')); // sync is off in this test
+    expect(calls).toBe(0);
+
+    await enableSyncCapture();
+    await layer.putSynced('vocabulary', vocab('v1'));
+    expect(calls).toBe(1);
+    await layer.bulkPutSynced('vocabulary', [vocab('v2'), vocab('v3')]);
+    expect(calls).toBe(2); // once per call, not per row
+    await layer.deleteSynced('vocabulary', 'v1');
+    expect(calls).toBe(3);
+    await layer.deleteSynced('vocabulary', 'ghost'); // nothing to delete, nothing captured
+    expect(calls).toBe(3);
   });
 });

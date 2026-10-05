@@ -7,6 +7,7 @@ import { PomodoroNotifier } from './components/pomodoro/PomodoroNotifier';
 import { PreferencesProvider } from './state/PreferencesProvider';
 import { LookSkin } from './look';
 import { ReadingFontSync } from './readerFont';
+import { AutoSync } from './sync/AutoSyncMount';
 import { libraryService } from './library/libraryService';
 import { Onboarding, shouldShowOnboarding } from './onboarding';
 import type { BookMeta, Highlight } from './types';
@@ -76,6 +77,7 @@ function App() {
     <PreferencesProvider>
       <LookSkin />
       <ReadingFontSync />
+      <AutoSync />
       {firstRun ? (
         <Onboarding onDone={() => setFirstRun(false)} />
       ) : (

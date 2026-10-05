@@ -103,7 +103,14 @@ Records that existed before the outbox have no events. **The v10 migration does 
 - A device offline longer than 90 days is warned it is out of date and must choose: merge as new records, or replace with the synced copy.
 
 ### Triggers
-Reliability comes from: the **debounced sync about 10 seconds after the last change**, **sync on next app open**, and a manual **"Sync now"**. Sync on close/backgrounding is **best-effort only**, since browsers and mobile OSes can suspend or kill the app before it finishes. It improves timeliness but nothing may depend on it. The outbox guarantees unpublished changes are retried on the next trigger. No background timer on mobile.
+Implemented in `src/sync/scheduler.ts` (pure timing logic, tested with fake timers) and wired in `src/sync/autoSync.ts`.
+- **Local change:** a captured write starts a **10 second debounce** (each further change restarts it), then one sync runs.
+- **Opening the app, coming back online, Sync now:** run immediately and skip any backoff.
+- **Window hidden or closing:** requests a run, **best-effort only**. Browsers and OSes can end the app first, so nothing depends on it. The outbox guarantees unpublished changes are retried on the next trigger.
+- **Slow poll (desktop):** every **5 minutes while the window is visible**, to pick up other devices' changes. Folder sync only exists on desktop for now. Mobile gets no background timer.
+- **Failure:** automatic runs back off 30 s, 60 s, 2 min, 4 min, then 5 min at most. Triggers the user caused (open, online, Sync now) do not wait for the backoff. A successful run resets it.
+- **Runs never overlap.** A trigger that arrives mid-run causes exactly one more run afterwards.
+- The local change signal is raised after the write transaction returns. It can fire once for a write that a surrounding transaction later rolls back; the cost is one empty sync, never a wrong one.
 
 ### Device identity and restore
 - Random device id plus a user-editable name. The device id and its `seq` counter are stored **in the database, inside the same transaction as the outbox write**, so a `seq` is never reused on one installation.
