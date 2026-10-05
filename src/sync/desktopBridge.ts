@@ -16,8 +16,15 @@ export interface SyncFolderBridge {
   remove(rel: string): Promise<void>;
 }
 
+/** Window control only the desktop app can do. */
+export interface WindowBridge {
+  setFullScreen(on: boolean): Promise<void>;
+  toggleFullScreen(): Promise<void>;
+}
+
 export interface DesktopBridge {
   syncFolder: SyncFolderBridge;
+  window: WindowBridge;
 }
 
 declare global {

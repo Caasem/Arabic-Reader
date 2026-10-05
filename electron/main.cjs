@@ -122,6 +122,14 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
     },
   });
+  // F11 toggles real fullscreen anywhere in the app (the hidden menu bar's own
+  // accelerator is unreliable once autoHideMenuBar has hidden it).
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type === 'keyDown' && input.key === 'F11') {
+      event.preventDefault();
+      mainWindow.setFullScreen(!mainWindow.isFullScreen());
+    }
+  });
   mainWindow.loadURL(`${APP_ORIGIN}/`);
 }
 
@@ -172,6 +180,14 @@ function handleSync(channel, fn) {
     return fn(event, ...args);
   });
 }
+
+// --- Window ------------------------------------------------------------------
+const windowOf = (event) => BrowserWindow.fromWebContents(event.sender);
+handleSync('window:set-fullscreen', (event, on) => windowOf(event)?.setFullScreen(Boolean(on)));
+handleSync('window:toggle-fullscreen', (event) => {
+  const win = windowOf(event);
+  win?.setFullScreen(!win.isFullScreen());
+});
 
 handleSync('sync-folder:get', () => syncRoot);
 handleSync('sync-folder:choose', async (event) => {

@@ -5,8 +5,10 @@ import App from './App.tsx'
 import { ErrorBoundary } from './components/shared/ErrorBoundary.tsx'
 import { installGlobalErrorLogging } from './diagnostics/diagnosticsLog'
 import { runMigrationGate } from './persistence/migrationGate'
+import { markDesktopApp } from './utils/desktop'
 
 installGlobalErrorLogging()
+markDesktopApp()
 
 // Dev-only console handle on the live dictionary singletons, e.g.
 // `await __dbg.dictionaryManager.lookup('كان')`. Never shipped: production

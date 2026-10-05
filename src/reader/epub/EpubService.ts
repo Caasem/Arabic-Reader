@@ -9,6 +9,7 @@ import { spineIndexOfCfi } from './cfi';
 import { bookLocations, declaredDirection, enqueue, findTocLabel, mapNavItems, renderedContents } from './epubInternals';
 import { sanitizeSectionDocument } from './sanitizeSection';
 import { injectUserFonts, subscribeUserFonts } from '../../readerFont/userFonts';
+import { hideScrollbarsIn } from '../../utils/desktop';
 
 export type { SearchMatchType, SearchOptions, SearchResult } from './bookSearch';
 
@@ -237,6 +238,7 @@ export class EpubService {
    * under a subpath deploy such as GitHub Pages. */
   private injectFonts(doc: Document): void {
     injectUserFonts(doc);
+    hideScrollbarsIn(doc);
     if (doc.getElementById('ar-reader-fonts')) return;
     const fontUrl = (file: string) => new URL(`fonts/${file}`, document.baseURI).href;
     const style = doc.createElement('style');
