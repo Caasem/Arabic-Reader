@@ -35,6 +35,8 @@ export interface SyncMetaRow {
   lastUpdatedAt: number;
   applied: AppliedState;
   clock: SeqMap;
+  /** Remote batch files already applied (`<deviceId>/<file>`), so a pull skips them. */
+  processedFiles?: string[];
 }
 
 /** An event waiting to be published; `publishedAt` is set once the log write is confirmed. */
@@ -66,4 +68,31 @@ export function backfilledUpdatedAt(table: SyncedTableName, row: Record<string, 
     default:
       return now;
   }
+}
+
+/**
+ * A change that sync overwrote, kept on this device only (never synced) so the
+ * user can undo it until `expiresAt` (90 days).
+ */
+export interface ActivityRow {
+  id: string;
+  at: number;
+  expiresAt: number;
+  table: string;
+  recordId: string;
+  /** The concurrent event that lost, with the payload it carried. */
+  loserEventId: string;
+  loserPayload: unknown;
+  winnerEventId: string;
+}
+
+/** A delete and an edit of the same record happened concurrently. Both are kept until resolved. */
+export interface ConflictRow {
+  /** `recordKey(table, recordId)`. */
+  key: string;
+  table: string;
+  recordId: string;
+  detectedAt: number;
+  /** Event ids involved (the frontier at detection time). */
+  eventIds: string[];
 }

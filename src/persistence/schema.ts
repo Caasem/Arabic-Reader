@@ -12,7 +12,7 @@ import type {
   ReadingSession,
   PomodoroSession,
 } from '../types';
-import { backfilledUpdatedAt, SYNCED_TABLES, type FrontierRow, type OutboxRow, type SyncMetaRow, type SyncedTableName } from './syncedTables';
+import { backfilledUpdatedAt, SYNCED_TABLES, type ActivityRow, type ConflictRow, type FrontierRow, type OutboxRow, type SyncMetaRow, type SyncedTableName } from './syncedTables';
 
 /**
  * The IndexedDB schema, via Dexie. This is the only module that knows
@@ -20,7 +20,7 @@ import { backfilledUpdatedAt, SYNCED_TABLES, type FrontierRow, type OutboxRow, t
  * interface in db.ts, which is assembled from the repo modules in this
  * folder (booksRepo, vocabularyRepo, etc.), all built on the `db` below.
  */
-class ArabicReaderDB extends Dexie {
+export class ArabicReaderDB extends Dexie {
   books!: Table<BookMeta, string>;
   bookFiles!: Table<{ bookId: string; data: Blob }, string>;
   positions!: Table<ReadingPosition, string>;
@@ -40,9 +40,14 @@ class ArabicReaderDB extends Dexie {
   syncOutbox!: Table<OutboxRow, string>;
   /** Per-record causal frontier (see src/sync/merge.ts). */
   recordFrontier!: Table<FrontierRow, string>;
+  /** Local-only record of changes sync overwrote, so the user can undo them. */
+  activityLog!: Table<ActivityRow, string>;
+  /** Records where a delete and an edit happened concurrently, awaiting the user. */
+  syncConflicts!: Table<ConflictRow, string>;
 
-  constructor() {
-    super('arabic-reader');
+  /** `name` is only ever overridden by tests that need two devices in one process. */
+  constructor(name = 'arabic-reader') {
+    super(name);
     this.version(1).stores({
       books: 'id, addedAt, title',
       bookFiles: 'bookId',
@@ -126,6 +131,8 @@ class ArabicReaderDB extends Dexie {
         syncMeta: 'id',
         syncOutbox: 'eventId, publishedAt',
         recordFrontier: 'key',
+        activityLog: 'id, at',
+        syncConflicts: 'key',
       })
       .upgrade(async (tx) => {
         const now = Date.now();
