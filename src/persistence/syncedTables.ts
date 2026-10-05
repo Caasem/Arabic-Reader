@@ -88,6 +88,8 @@ export interface ActivityRow {
   loserEventId: string;
   loserPayload: unknown;
   winnerEventId: string;
+  /** What won, kept so the screen can show both sides. Older rows lack it; the current row is used instead. */
+  winnerPayload?: unknown;
 }
 
 /** A delete and an edit of the same record happened concurrently. Both are kept until resolved. */

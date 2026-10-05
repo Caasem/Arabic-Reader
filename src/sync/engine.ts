@@ -59,6 +59,20 @@ export interface SyncEngineOptions {
 
 type Row = Record<string, unknown>;
 
+/** Fields that differ between two otherwise identical copies of a record. */
+const VOLATILE_FIELDS = ['updatedAt', 'addedAt'];
+
+/** True when two payloads say the same thing, ignoring when each copy was made. */
+function sameContent(a: unknown, b: unknown): boolean {
+  const strip = (v: unknown) =>
+    JSON.stringify(
+      Object.entries((v ?? {}) as Record<string, unknown>)
+        .filter(([k]) => !VOLATILE_FIELDS.includes(k))
+        .sort(([x], [y]) => (x < y ? -1 : 1)),
+    );
+  return strip(a) === strip(b);
+}
+
 /** How many events an applied-set covers. */
 const appliedCount = (a: AppliedState): number =>
   Object.values(a.prefix).reduce((n, p) => n + p, 0) + Object.values(a.extra).reduce((n, e) => n + e.length, 0);
@@ -111,6 +125,8 @@ export function createSyncEngine({
     if (!reduced) return;
     await db.table(table).put(reduced.winner.payload as Row);
     for (const loser of reduced.losers) {
+      // Two devices that made the same change (a starter book, say) have nothing to review.
+      if (sameContent(loser.payload, reduced.winner.payload)) continue;
       await db.activityLog.put({
         id: `${loser.eventId}>${reduced.winner.eventId}`,
         at: now(),
@@ -120,6 +136,7 @@ export function createSyncEngine({
         loserEventId: loser.eventId,
         loserPayload: loser.payload,
         winnerEventId: reduced.winner.eventId,
+        winnerPayload: reduced.winner.payload,
       });
     }
   }

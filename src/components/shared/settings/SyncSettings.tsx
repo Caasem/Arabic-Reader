@@ -10,6 +10,7 @@ import {
   type FolderSyncStatus,
 } from '../../../sync/folderSync';
 import { Note, SettingsSection } from './controls';
+import { SyncActivitySection } from './SyncActivitySection';
 
 function describeResult(published: number, applied: number, retryLater: number, fromNewerVersion: number): string {
   const parts = [`Sent ${published} change${published === 1 ? '' : 's'}, received ${applied}.`];
@@ -172,6 +173,8 @@ export function SyncSettings() {
           </div>
         </>
       )}
+
+      {status.enabled && <SyncActivitySection refreshKey={status.lastSyncedAt} />}
 
       {message && (
         <p className="settings-section__note" role="status">

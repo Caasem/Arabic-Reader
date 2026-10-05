@@ -1,3 +1,4 @@
+import { hiddenDuplicateIds } from '../../library/duplicates';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { libraryService, type BookReadingInfo } from '../../library/libraryService';
 import { LibraryHero } from '../../look';
@@ -204,9 +205,12 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
   // a personal library is at most a few hundred books, so there's no real
   // cost to redoing this on every keystroke, and it keeps `refresh()` (the
   // only place that actually talks to IndexedDB) untouched by any of it.
+  const hiddenStubs = useMemo(() => hiddenDuplicateIds(books, fileIds), [books, fileIds]);
+  const shelfBooks = useMemo(() => books.filter((b) => !hiddenStubs.has(b.id)), [books, hiddenStubs]);
+
   const visibleBooks = useMemo(() => {
     const q = query.trim().toLowerCase();
-    let list = books;
+    let list = shelfBooks;
     if (q) {
       list = list.filter((b) => b.title.toLowerCase().includes(q) || (b.author ?? '').toLowerCase().includes(q));
     }
@@ -231,7 +235,7 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
     }
     // 'added' needs no re-sort -- `books` already comes back addedAt-descending from the DB.
     return sorted;
-  }, [books, readingInfo, query, statusFilter, sortBy]);
+  }, [shelfBooks, readingInfo, query, statusFilter, sortBy]);
 
   return (
     <div className="library">
@@ -266,7 +270,7 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
         </div>
       </header>
 
-      {!loading && <LibraryHero books={books} readingInfo={readingInfo} onOpen={openBook} />}
+      {!loading && <LibraryHero books={shelfBooks} readingInfo={readingInfo} onOpen={openBook} />}
 
       {showOfflineNotice && (
         <div className="library__notice">
@@ -322,7 +326,7 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
       {loading ? (
         <div className="library__empty">Loading…</div>
       ) : visibleBooks.length === 0 && shamela.results.length === 0 && !shamela.searching ? (
-        books.length === 0 && !query.trim() ? (
+        shelfBooks.length === 0 && !query.trim() ? (
           <div className="library__empty">
             <p>No books yet.</p>
             <p className="library__empty-sub">Add an EPUB, or try the sample book to see the reader in action.</p>

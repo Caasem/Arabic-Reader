@@ -51,7 +51,10 @@ async function addStarterBooks(): Promise<void> {
       const res = await fetch(`${import.meta.env.BASE_URL}${book.file}`);
       if (!res.ok) continue;
       const blob = await res.blob();
-      await libraryService.importEpub(new File([blob], book.file, { type: 'application/epub+zip' }));
+      // A fixed id, so two devices that sync see the starter book as one book, not two.
+      await libraryService.importEpub(new File([blob], book.file, { type: 'application/epub+zip' }), {
+        id: `starter-${book.file.replace(/\.epub$/, '')}`,
+      });
       writeString(book.flag, '1');
     } catch {
       // best-effort only

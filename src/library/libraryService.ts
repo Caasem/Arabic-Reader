@@ -14,7 +14,8 @@ export interface BookReadingInfo {
  * listing and removing books.
  */
 export class LibraryService {
-  async importEpub(file: File): Promise<BookMeta> {
+  /** `id` is only for books every install gets (the starter books), so devices that sync share one record. */
+  async importEpub(file: File, options: { id?: string } = {}): Promise<BookMeta> {
     const buf = await file.arrayBuffer();
     const book = ePub(buf.slice(0)); // epub.js may detach the buffer
     let coverDataUrl: string | undefined;
@@ -33,7 +34,7 @@ export class LibraryService {
     }
 
     const meta: BookMeta = {
-      id: newId('book'),
+      id: options.id ?? newId('book'),
       title: metadata.title || file.name.replace(/\.epub$/i, ''),
       author: metadata.creator || undefined,
       language: metadata.language || undefined,

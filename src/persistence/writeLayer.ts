@@ -20,6 +20,11 @@ import { SYNCED_TABLES, type SyncMetaRow, type SyncedTableName } from './syncedT
 
 type Row = Record<string, unknown>;
 
+/** `resolves`: ids of events this change explicitly supersedes (used by Undo and conflict resolution). */
+export interface WriteOptions {
+  resolves?: string[];
+}
+
 export function createWriteLayer(db: ArabicReaderDB, onCaptured: () => void = signalLocalSyncChange) {
   /** Tables a caller's own transaction must include so these helpers can join it. */
   const syncScope = (...tables: SyncedTableName[]) => [
@@ -44,6 +49,7 @@ export function createWriteLayer(db: ArabicReaderDB, onCaptured: () => void = si
     op: 'put' | 'delete',
     record: Row,
     now: number,
+    resolves?: string[],
   ): Promise<SyncEvent> {
     const key = recordKey(table, recordId);
     const frontier = await db.recordFrontier.get(key);
@@ -55,6 +61,7 @@ export function createWriteLayer(db: ArabicReaderDB, onCaptured: () => void = si
       op,
       payload: null,
       now,
+      resolves,
     });
     const event: SyncEvent = { ...draft, payload: { ...record, updatedAt: draft.updatedAt } };
     const next = applyEvent(state, event);
@@ -65,7 +72,11 @@ export function createWriteLayer(db: ArabicReaderDB, onCaptured: () => void = si
   }
 
   /** Insert or replace a row. */
-  async function putSynced<T extends object>(table: SyncedTableName, record: T): Promise<void> {
+  async function putSynced<T extends object>(
+    table: SyncedTableName,
+    record: T,
+    options: WriteOptions = {},
+  ): Promise<void> {
     let captured = false;
     await db.transaction('rw', syncScope(table), async () => {
       const meta = await db.syncMeta.get('local');
@@ -75,7 +86,7 @@ export function createWriteLayer(db: ArabicReaderDB, onCaptured: () => void = si
         await db.table(table).put({ ...row, updatedAt: now });
         return;
       }
-      const event = await capture(meta, table, primaryKey(table, row), 'put', row, now);
+      const event = await capture(meta, table, primaryKey(table, row), 'put', row, now, options.resolves);
       await db.table(table).put(event.payload as Row);
       captured = true;
     });
@@ -117,12 +128,12 @@ export function createWriteLayer(db: ArabicReaderDB, onCaptured: () => void = si
    * Delete a row. With sync on, the delete event (and its tombstone in the
    * record's frontier) is what other devices receive; the local row is removed.
    */
-  async function deleteSynced(table: SyncedTableName, id: string): Promise<void> {
+  async function deleteSynced(table: SyncedTableName, id: string, options: WriteOptions = {}): Promise<void> {
     let captured = false;
     await db.transaction('rw', syncScope(table), async () => {
       const meta = await db.syncMeta.get('local');
       if (meta?.enabled && (await db.table(table).get(id))) {
-        await capture(meta, table, id, 'delete', { [SYNCED_TABLES[table]]: id, deleted: true }, Date.now());
+        await capture(meta, table, id, 'delete', { [SYNCED_TABLES[table]]: id, deleted: true }, Date.now(), options.resolves);
         captured = true;
       }
       await db.table(table).delete(id);
@@ -132,6 +143,8 @@ export function createWriteLayer(db: ArabicReaderDB, onCaptured: () => void = si
 
   return { syncScope, allSyncedScope, capture, putSynced, bulkPutSynced, updateSynced, deleteSynced };
 }
+
+export type WriteLayer = ReturnType<typeof createWriteLayer>;
 
 const layer = createWriteLayer(defaultDb);
 export const { syncScope, allSyncedScope, capture, putSynced, bulkPutSynced, updateSynced, deleteSynced } = layer;
