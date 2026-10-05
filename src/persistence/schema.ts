@@ -12,6 +12,7 @@ import type {
   ReadingSession,
   PomodoroSession,
 } from '../types';
+import type { SensePickRow } from './sensePicksRepo';
 import { backfilledUpdatedAt, SYNCED_TABLES, type ActivityRow, type ConflictRow, type FrontierRow, type OutboxRow, type SyncMetaRow, type SyncedTableName } from './syncedTables';
 
 /**
@@ -44,6 +45,8 @@ export class ArabicReaderDB extends Dexie {
   activityLog!: Table<ActivityRow, string>;
   /** Records where a delete and an edit happened concurrently, awaiting the user. */
   syncConflicts!: Table<ConflictRow, string>;
+  /** The reader's own chosen meaning per word, dictionary and book. Local only: not synced and not in backups (yet). */
+  sensePicks!: Table<SensePickRow, string>;
 
   /** `name` is only ever overridden by tests that need two devices in one process. */
   constructor(name = 'arabic-reader') {
@@ -145,6 +148,10 @@ export class ArabicReaderDB extends Dexie {
             });
         }
       });
+    // v11: the reader's own meaning picks (src/sensePicks). A new, empty, local-only table.
+    this.version(11).stores({
+      sensePicks: 'key, bookKey, updatedAt',
+    });
   }
 }
 

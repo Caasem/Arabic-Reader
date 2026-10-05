@@ -23,6 +23,7 @@ import * as backup from './backupExportRepo';
 import * as speedReader from './speedReaderRepo';
 import * as readingSessions from './sessionsRepo';
 import * as pomodoro from './pomodoroRepo';
+import * as sensePicks from './sensePicksRepo';
 
 export { db };
 export type { TimeBounds };
@@ -110,6 +111,11 @@ export interface PersistenceService {
   // Pomodoro, `startedAt` in [since, until)
   savePomodoroSession(session: PomodoroSession): Promise<void>;
   getPomodoroSessions(range?: TimeBounds): Promise<PomodoroSession[]>;
+
+  // Meaning picks (src/sensePicks): local only.
+  getSensePicks(bookKey: string, lemmaKey: string): Promise<Map<string, string>>;
+  setSensePick(pick: { bookKey: string; lemmaKey: string; providerId: string; senseKey: string }): Promise<void>;
+  clearSensePick(pick: { bookKey: string; lemmaKey: string; providerId: string }): Promise<void>;
 }
 
 export const persistenceService: PersistenceService = {
@@ -123,4 +129,5 @@ export const persistenceService: PersistenceService = {
   ...speedReader,
   ...readingSessions,
   ...pomodoro,
+  ...sensePicks,
 };
