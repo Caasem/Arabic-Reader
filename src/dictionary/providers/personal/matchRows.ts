@@ -1,30 +1,37 @@
 import type { DictionaryEntry } from '../../../types';
 import { foldAlefHamza } from '../../../reader/tokenizer/arabicTokenizer';
 import { aramorphProvider } from '../aramorph/AramorphDictionaryProvider';
-import { buildLookupKeys } from '../alwasit/lookupKeys';
+import { keyTiers } from './keyTiers';
+import { formatDefinition } from './formatDefinition';
 import type { PersonalIndex } from './index';
 import type { PersonalRow } from './parse';
 
 /**
  * Rows whose headword matches the tapped word, or the roots and dictionary forms
- * AraMorph finds for it (as Al-Wasit does). Falls back to alef/hamza-folded keys.
+ * AraMorph finds for it (as Al-Wasit does), best match first: the word itself, then
+ * its dictionary forms, then its roots. Falls back to alef/hamza-folded keys.
  */
-export async function matchRows(idx: PersonalIndex, word: string): Promise<Set<PersonalRow>> {
+export async function matchRows(idx: PersonalIndex, word: string): Promise<PersonalRow[]> {
   let analyses: Awaited<ReturnType<typeof aramorphProvider.analyze>> = [];
   try {
     analyses = await aramorphProvider.analyze(word);
   } catch {
     // AraMorph unavailable -- match the raw surface form only.
   }
-  const keys = buildLookupKeys(word, analyses);
+  const tiers = keyTiers(word, analyses);
 
-  const matched = new Set<PersonalRow>();
-  for (const key of keys) for (const row of idx.byKey.get(key) ?? []) matched.add(row);
-  if (matched.size === 0) {
-    for (const key of keys) for (const row of idx.byFoldedKey.get(foldAlefHamza(key)) ?? []) matched.add(row);
+  const found = new Map<PersonalRow, number>();
+  tiers.forEach((keys, tier) => {
+    for (const key of keys) for (const row of idx.byKey.get(key) ?? []) if (!found.has(row)) found.set(row, tier);
+  });
+  if (found.size === 0) {
+    tiers.forEach((keys, tier) => {
+      for (const key of keys) for (const row of idx.byFoldedKey.get(foldAlefHamza(key)) ?? []) if (!found.has(row)) found.set(row, tier);
+    });
   }
-
-  return matched;
+  return Array.from(found.entries())
+    .sort((a, b) => a[1] - b[1])
+    .map(([row]) => row);
 }
 
 export function rowsToEntries(rows: Iterable<PersonalRow>, providerId: string, providerName: string): DictionaryEntry[] {
@@ -32,10 +39,6 @@ export function rowsToEntries(rows: Iterable<PersonalRow>, providerId: string, p
     providerId,
     providerName,
     headword,
-    senses: definition
-      .split(/<br\s*\/?>|\n/i)
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map((gloss) => ({ gloss })),
+    senses: formatDefinition(headword, definition),
   }));
 }
