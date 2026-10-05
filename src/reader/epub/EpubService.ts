@@ -243,6 +243,14 @@ export class EpubService {
     style.id = 'ar-reader-fonts';
     style.textContent = `
       @font-face {
+        font-family: 'Lala';
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: swap;
+        src: url('${fontUrl('Lala.ttf')}') format('truetype');
+        unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFC;
+      }
+      @font-face {
         font-family: 'Noto Naskh Arabic';
         font-style: normal;
         font-weight: 400 700;
