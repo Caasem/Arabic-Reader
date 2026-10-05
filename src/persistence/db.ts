@@ -115,6 +115,7 @@ export interface PersistenceService {
 
   // Meaning picks (src/sensePicks): local only.
   getSensePicks(bookKey: string, lemmaKey: string): Promise<SensePickRow[]>;
+  getSensePicksForBook(bookKey: string): Promise<SensePickRow[]>;
   setSensePick(pick: SensePickInput): Promise<void>;
   clearSensePick(pick: { bookKey: string; lemmaKey: string; providerId: string; entryKey: string }): Promise<void>;
   /** Removes every pick for this word in this book, for when the reader removes the saved word. */

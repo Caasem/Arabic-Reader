@@ -530,6 +530,7 @@ Each phase has an exit test. Stop or change course if it fails.
 - Implement `senseKey`, `lemmaKey`, `bookKey` with tests.
 - Add the local `sensePicks` table (re-keyed by `entryKey`) and fill it from the reader's own saves, so the entries they saved come first in their own popup. No new control, tag or setting is needed for this.
 - Estimate readers per book and picks per word from real usage.
+- **Reader export (built, v0.31.0).** Alt+P opens a panel like Alt+V with the entries saved from the open book and **Save file** / **Copy**. The file lists, per word, the dictionary, entry, optional meaning, source and the day of each save, with readable labels (word, headword, verb form). It holds no sentences, notes, cards, review history, other books, install ID or exact times, and nothing is sent anywhere. `node scripts/summarize-saved-entries.mjs <files or folder>` reads the files readers send and reports, per word and dictionary, how many readers saved each entry and whether 60% or more agree. This is the convergence test: if readers of one book do not agree, the crowd layer needs rethinking before any server is built.
 - **Exit:** the ranking order works locally. A decision on pooling vs per-book is based on measured numbers. If expected readers per book are under about 50, ship pooled-only.
 
 ### Phase 1: Backend and saves

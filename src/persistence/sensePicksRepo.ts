@@ -14,6 +14,10 @@ export interface SensePickRow {
   /** Present only when a finer save (a selection or an edit) pinned down one meaning inside the entry. */
   senseKey?: string;
   source: SensePickSource;
+  /** Readable labels for the saved-entries file (src/picksExport). Kept on this device only. */
+  word?: string;
+  headword?: string;
+  verbForm?: string;
   updatedAt: number;
 }
 
@@ -22,6 +26,11 @@ export type SensePickInput = Omit<SensePickRow, 'key' | 'updatedAt' | 'senseKey'
 const prefix = (bookKey: string, lemmaKey: string): string => `${bookKey}|${lemmaKey}|`;
 const rowKey = (p: { bookKey: string; lemmaKey: string; providerId: string; entryKey: string }): string =>
   `${prefix(p.bookKey, p.lemmaKey)}${p.providerId}|${p.entryKey}`;
+
+/** Every saved entry for every word of this book, for the Alt+P file. */
+export async function getSensePicksForBook(bookKey: string): Promise<SensePickRow[]> {
+  return db.sensePicks.where('bookKey').equals(bookKey).toArray();
+}
 
 /** Every entry saved for this word in this book. */
 export async function getSensePicks(bookKey: string, lemmaKey: string): Promise<SensePickRow[]> {

@@ -10,6 +10,13 @@ import { applyPicks } from './rank';
  */
 type BookRef = Pick<BookMeta, 'title' | 'author' | 'language'>;
 
+/** The readable labels kept beside a pick, for the saved-entries file. */
+const labels = (word: string, entry: DictionaryEntry) => ({
+  word,
+  headword: entry.headword,
+  ...(entry.verbForm ? { verbForm: entry.verbForm } : {}),
+});
+
 function context(book: BookRef, word: string, result: DictionaryLookupResult): { bookKey: string; lemmaKey: string } | null {
   if (!book.title) return null;
   const morphology = result.morphology?.[0];
@@ -29,7 +36,7 @@ export function recordEntrySave(book: BookRef, word: string, result: DictionaryL
   return guarded(async () => {
     const ctx = result && context(book, word, result);
     if (!ctx) return;
-    await persistenceService.setSensePick({ ...ctx, providerId: entry.providerId, entryKey: entryKey(entry), source: 'entry' });
+    await persistenceService.setSensePick({ ...ctx, providerId: entry.providerId, entryKey: entryKey(entry), source: 'entry', ...labels(word, entry) });
   });
 }
 
@@ -51,6 +58,7 @@ export function recordSelectionSave(
       entryKey: entryKey(entry),
       senseKey: sense ? senseKey(entry.providerId, entry.headword, sense) : null,
       source: 'selection',
+      ...labels(word, entry),
     });
   });
 }
@@ -77,6 +85,7 @@ export function recordEditSave(
       entryKey: entryKey(match.entry),
       senseKey: match.sense ? senseKey(match.entry.providerId, match.entry.headword, match.sense) : null,
       source: 'edit',
+      ...labels(word, match.entry),
     });
   });
 }

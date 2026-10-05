@@ -4,6 +4,19 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.31.0 — 2026-10-05
+
+Alt+P: share the entries you saved from a book.
+
+- **A panel like Alt+V.** Press Alt+P while reading to see how many dictionary entries you
+  saved from this book, a few lines of what a file would contain, and **Save file** or
+  **Copy**. Alt+P again or Esc closes it.
+- **For a small test.** A few readers send their file, and
+  `node scripts/summarize-saved-entries.mjs <files>` shows whether they saved the same
+  entries (`docs/specs/crowd-sense-ranking.md`, phase 0). Nothing is sent anywhere.
+- **What the file holds.** Your saved entries per word, with the dictionary and the day. No
+  sentences, notes, flashcards, review history, other books or name.
+
 ## v0.30.0 — 2026-10-05
 
 The entry you save comes first next time.
