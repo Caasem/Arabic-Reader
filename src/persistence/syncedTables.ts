@@ -39,6 +39,8 @@ export interface SyncMetaRow {
   processedFiles?: string[];
   /** When the last full sync pass finished. */
   lastSyncedAt?: number;
+  /** Events applied (all devices) when this device last wrote a snapshot, to decide when the next is due. */
+  lastSnapshotApplied?: number;
 }
 
 /** An event waiting to be published; `publishedAt` is set once the log write is confirmed. */

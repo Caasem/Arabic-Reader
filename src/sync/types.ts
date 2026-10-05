@@ -49,3 +49,8 @@ export interface SyncState {
 }
 
 export const recordKey = (table: string, recordId: string): string => `${table}\u0000${recordId}`;
+
+export function splitRecordKey(key: string): { table: string; recordId: string } {
+  const at = key.indexOf('\u0000');
+  return { table: key.slice(0, at), recordId: key.slice(at + 1) };
+}

@@ -1,4 +1,4 @@
-import type { SyncEvent } from './types';
+import type { SyncEvent, SyncState } from './types';
 
 /**
  * On-disk format of the synced folder (docs/specs/storage-and-sync.md, section 5).
@@ -79,4 +79,88 @@ export function parseBatch(text: string, expectedDeviceId: string, tables: reado
   if (raw.deviceId !== expectedDeviceId) return { ok: false, reason: 'invalid' };
   if (!raw.events.every((e) => isValidEvent(e, tables) && e.deviceId === expectedDeviceId)) return { ok: false, reason: 'invalid' };
   return { ok: true, batch: raw as unknown as BatchFile };
+}
+
+// ---------------------------------------------------------------------------
+// Snapshots
+// ---------------------------------------------------------------------------
+
+/**
+ * A device's whole merge state, so a new or long-offline device does not have
+ * to replay every batch. Immutable and uniquely named; a device only creates
+ * new ones and deletes its own superseded ones. Readers join all snapshots, so
+ * there is no "newest" to pick.
+ */
+export interface SnapshotFile {
+  formatVersion: typeof FORMAT_VERSION;
+  kind: 'snapshot';
+  deviceId: string;
+  snapshotId: string;
+  /** Increases with each snapshot a device writes. */
+  gen: number;
+  createdAt: number;
+  /** Declared number of events in all frontiers; a mismatch means a partly synced file. */
+  eventCount: number;
+  state: SyncState;
+}
+
+/** `<deviceId>/snapshot-<gen>-<snapshotId>.json` */
+export const snapshotPath = (deviceId: string, gen: number, snapshotId: string): string =>
+  `${deviceId}/snapshot-${gen}-${snapshotId}.json`;
+
+export function parseSnapshotPath(path: string): { deviceId: string; gen: number; snapshotId: string } | null {
+  const m = /^([^/]+)\/snapshot-(\d+)-([^/]+)\.json$/.exec(path);
+  return m ? { deviceId: m[1], gen: Number(m[2]), snapshotId: m[3] } : null;
+}
+
+const countEvents = (state: SyncState): number => Object.values(state.frontiers).reduce((n, f) => n + f.length, 0);
+
+export function encodeSnapshot(deviceId: string, snapshotId: string, gen: number, createdAt: number, state: SyncState): string {
+  const file: SnapshotFile = {
+    formatVersion: FORMAT_VERSION,
+    kind: 'snapshot',
+    deviceId,
+    snapshotId,
+    gen,
+    createdAt,
+    eventCount: countEvents(state),
+    state,
+  };
+  return JSON.stringify(file);
+}
+
+const isSeqMap = (v: unknown): boolean => isObject(v) && Object.values(v).every((n) => Number.isInteger(n) && (n as number) >= 0);
+
+function isValidState(state: unknown, tables: readonly string[]): state is SyncState {
+  if (!isObject(state) || !isObject(state.applied) || !isObject(state.frontiers)) return false;
+  const { prefix, extra } = state.applied;
+  return (
+    isSeqMap(prefix) &&
+    isObject(extra) &&
+    Object.values(extra).every((list) => Array.isArray(list) && list.every((n) => Number.isInteger(n) && n >= 1)) &&
+    isSeqMap(state.clock) &&
+    Object.values(state.frontiers).every((f) => Array.isArray(f) && f.every((e) => isValidEvent(e, tables)))
+  );
+}
+
+export type ParsedSnapshot =
+  | { ok: true; snapshot: SnapshotFile }
+  | { ok: false; reason: 'unreadable' | 'incomplete' | 'newer-version' | 'invalid' };
+
+/** Parse a snapshot file. Problems are reported, never thrown, like `parseBatch`. */
+export function parseSnapshot(text: string, expectedDeviceId: string, tables: readonly string[]): ParsedSnapshot {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch {
+    return { ok: false, reason: 'unreadable' };
+  }
+  if (!isObject(raw) || raw.kind !== 'snapshot') return { ok: false, reason: 'invalid' };
+  if (typeof raw.formatVersion === 'number' && raw.formatVersion > FORMAT_VERSION) return { ok: false, reason: 'newer-version' };
+  if (raw.formatVersion !== FORMAT_VERSION || raw.deviceId !== expectedDeviceId || typeof raw.snapshotId !== 'string') {
+    return { ok: false, reason: 'invalid' };
+  }
+  if (!isValidState(raw.state, tables)) return { ok: false, reason: 'invalid' };
+  if (raw.eventCount !== countEvents(raw.state)) return { ok: false, reason: 'incomplete' };
+  return { ok: true, snapshot: raw as unknown as SnapshotFile };
 }

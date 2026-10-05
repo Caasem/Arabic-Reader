@@ -63,7 +63,7 @@ Engine owned by the app; transport is a folder the user picks (iCloud Drive, Dro
 
 ### Layout
 - **Immutable batch files, never appended to.** Each publish writes **one new file** under the device's own folder, `<deviceId>/batch-<firstSeq>-<lastSeq>-<batchId>.json`, containing complete events (`batchId` is random). A file is written once under a temporary name and renamed into place where the transport supports it; it is never rewritten or appended. Readers **ignore files that fail to parse or whose declared event count doesn't match** and retry on the next sync (a partly synced cloud file). Because every file name is unique and nothing is overwritten, there is no check-then-write race: two writers sharing an id (a clone) both leave their files in the folder, and no event is lost.
-- Compacted **snapshots are immutable and uniquely named** per device and generation (`snapshot-<deviceId>-<gen>.json`). A device only ever creates new snapshot files and only deletes its own superseded ones.
+- Compacted **snapshots are immutable and uniquely named** per device and generation (`<deviceId>/snapshot-<gen>-<snapshotId>.json`, inside the device's own folder like its batches). A device only ever creates new snapshot files and only deletes its own superseded ones. **Implemented** in `src/sync/engine.ts` (`compactIfDue`): a snapshot is written once 500 events have been applied since the last one; it is read back and verified before anything is deleted; readers join every other device's snapshot in the same transaction as the batch files, so a new device can start from a snapshot alone.
 - **One definition of "applied".** For every peer device, a device (and every snapshot) tracks exactly two things, and the term "watermark" is not used anywhere else:
   - `prefix[d]`: the highest `seq` such that **all** events `1..prefix[d]` from device `d` are applied (contiguous). `prefix` and `extra` are used **only for dedupe**. They are not the causal clock (see `clock` below).
   - `extra[d]`: the set of `seq`s **above** `prefix[d]` that are already applied but not contiguous (a gap sits below them).
@@ -99,7 +99,8 @@ Wall clocks can drift or go backwards, so they do not decide ordering alone.
 Records that existed before the outbox have no events. **The v10 migration does not create events.** The first time sync is turned on for a device, the engine **seeds one `put` event per existing non-deleted record** (and a `delete` event per soft-deleted record still inside the 90-day window) through the normal write-path module, in batches, with ordinary `seq` numbers. Everything in the system is then events, with no special initial-snapshot case. Seeded events carry the record's own `updatedAt`, so a device joining later does not clobber newer data on others. Two devices that each seeded their own copy of the same real-world item (a word added on both) produce two records with different ids; merging those duplicates is a product question, not a sync one, and is out of scope here.
 
 ### Deletion markers
-- Kept 90 days, then compacted away.
+- **Not expired yet (deviation from the first draft).** The first draft dropped deletion markers after 90 days. That is only safe together with the "this device is out of date" warning below, which is not built: without it, a device that was offline longer than that would bring a deleted word back. Tombstones are tiny, so snapshots keep them until that warning exists.
+- Own batch files are deleted only when a snapshot of the same device covers them **and** their newest event is older than 90 days.
 - A device offline longer than 90 days is warned it is out of date and must choose: merge as new records, or replace with the synced copy.
 
 ### Triggers

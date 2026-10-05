@@ -83,22 +83,32 @@ export function applyEvent(state: SyncState, e: SyncEvent): SyncState {
 
 export const applyAll = (state: SyncState, events: SyncEvent[]): SyncState => events.reduce(applyEvent, state);
 
-/** Join two replica states or snapshots. Commutative, associative and idempotent. */
-export function joinStates(a: SyncState, b: SyncState): SyncState {
-  const prefix = maxMap(a.applied.prefix, b.applied.prefix);
-  const devices = new Set([...Object.keys(a.applied.prefix), ...Object.keys(b.applied.prefix), ...Object.keys(a.applied.extra), ...Object.keys(b.applied.extra)]);
+/** Union of two frontiers for one record, with anything another event dominates removed. */
+export const joinFrontier = (a: SyncEvent[], b: SyncEvent[]): SyncEvent[] => maximal([...a, ...b]);
+
+/** Join two applied-sets: pointwise max of the prefixes, union of the extras, then normalise. */
+export function joinApplied(a: AppliedState, b: AppliedState): AppliedState {
+  const prefix = maxMap(a.prefix, b.prefix);
+  const devices = new Set([...Object.keys(a.prefix), ...Object.keys(b.prefix), ...Object.keys(a.extra), ...Object.keys(b.extra)]);
   const extra: Record<DeviceId, number[]> = {};
   const finalPrefix: SeqMap = {};
   for (const d of devices) {
-    const n = normalise(prefix[d] ?? 0, [...(a.applied.extra[d] ?? []), ...(b.applied.extra[d] ?? [])]);
+    const n = normalise(prefix[d] ?? 0, [...(a.extra[d] ?? []), ...(b.extra[d] ?? [])]);
     finalPrefix[d] = n.prefix;
     if (n.extra.length > 0) extra[d] = n.extra;
   }
+  return { prefix: finalPrefix, extra };
+}
+
+export const joinClock = (a: SeqMap, b: SeqMap): SeqMap => maxMap(a, b);
+
+/** Join two replica states or snapshots. Commutative, associative and idempotent. */
+export function joinStates(a: SyncState, b: SyncState): SyncState {
   const frontiers: Record<string, SyncEvent[]> = {};
   for (const key of new Set([...Object.keys(a.frontiers), ...Object.keys(b.frontiers)])) {
-    frontiers[key] = maximal([...(a.frontiers[key] ?? []), ...(b.frontiers[key] ?? [])]);
+    frontiers[key] = joinFrontier(a.frontiers[key] ?? [], b.frontiers[key] ?? []);
   }
-  return { applied: { prefix: finalPrefix, extra }, clock: maxMap(a.clock, b.clock), frontiers };
+  return { applied: joinApplied(a.applied, b.applied), clock: joinClock(a.clock, b.clock), frontiers };
 }
 
 // ---------------------------------------------------------------------------
