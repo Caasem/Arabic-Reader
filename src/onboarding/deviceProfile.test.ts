@@ -45,13 +45,13 @@ describe('profilePreferences', () => {
     expect(profilePreferences('desktop').touchGestures).toBeUndefined();
   });
 
-  it('scrolls all, single-column, in Amiri everywhere', () => {
+  it('scrolls all, single-column, and leaves the font to the default', () => {
     for (const p of ['phone', 'tablet', 'desktop'] as const) {
       const prefs = profilePreferences(p);
       expect(prefs.readingFlow).toBe('scrolled');
       expect(prefs.continuousScrollEnabled).toBe(true);
       expect(prefs.twoColumnEnabled).toBe(false);
-      expect(prefs.fontFamily).toMatch(/^'Amiri'/);
+      expect(prefs.fontFamily).toBeUndefined();
     }
   });
 
