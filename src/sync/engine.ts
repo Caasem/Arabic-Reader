@@ -192,6 +192,7 @@ export function createSyncEngine({ db, transport, now = Date.now }: SyncEngineOp
     const pulled = await pull();
     const published = await publish();
     await pruneActivity();
+    await db.syncMeta.update('local', { lastSyncedAt: now() });
     return { ...pulled, published };
   }
 

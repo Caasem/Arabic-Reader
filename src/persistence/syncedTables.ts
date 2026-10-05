@@ -37,6 +37,8 @@ export interface SyncMetaRow {
   clock: SeqMap;
   /** Remote batch files already applied (`<deviceId>/<file>`), so a pull skips them. */
   processedFiles?: string[];
+  /** When the last full sync pass finished. */
+  lastSyncedAt?: number;
 }
 
 /** An event waiting to be published; `publishedAt` is set once the log write is confirmed. */
