@@ -35,7 +35,8 @@ export function useFontChoices() {
   }, []);
 
   const choices: FontChoice[] = [
-    { stack: DEFAULT_PREFS.fontFamily, label: BUILT_IN_FAMILY, detail: 'Built in' },
+    { stack: DEFAULT_PREFS.fontFamily, label: 'Lala', detail: 'Built in' },
+    { stack: stackFor(BUILT_IN_FAMILY), label: BUILT_IN_FAMILY, detail: 'Built in' },
     ...userFonts.fonts.map((font) => ({
       stack: stackFor(font.cssFamily),
       label: font.family,
