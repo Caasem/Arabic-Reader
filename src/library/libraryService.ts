@@ -54,6 +54,17 @@ export class LibraryService {
     return persistenceService.getBookFile(id);
   }
 
+  /** Books whose file is on this device. A book synced from another device may have none yet. */
+  async listBookFileIds(): Promise<Set<string>> {
+    return new Set(await persistenceService.getBookFileIds());
+  }
+
+  /** Give a book that arrived without its file (via sync) the file, keeping its id and history. */
+  async attachBookFile(id: string, file: File): Promise<void> {
+    if (!file.name.toLowerCase().endsWith('.epub')) throw new Error('Choose the EPUB file for this book.');
+    await persistenceService.saveBookFile(id, file);
+  }
+
   async removeBook(id: string): Promise<void> {
     await persistenceService.deleteBook(id);
   }

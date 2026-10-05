@@ -17,6 +17,14 @@ export async function getBook(id: string): Promise<BookMeta | undefined> {
 export async function getBookFile(id: string): Promise<Blob | undefined> {
   return (await db.bookFiles.get(id))?.data;
 }
+/** Ids of the books whose file is on this device (a synced book may arrive without one). */
+export async function getBookFileIds(): Promise<string[]> {
+  return (await db.bookFiles.toCollection().primaryKeys()) as string[];
+}
+/** Attach (or replace) a book's file without touching its metadata. */
+export async function saveBookFile(id: string, file: Blob): Promise<void> {
+  await db.bookFiles.put({ bookId: id, data: file });
+}
 export async function deleteBook(id: string): Promise<void> {
   await db.transaction('rw', [db.bookFiles, ...syncScope('books', 'positions')], async () => {
     await deleteSynced('books', id);
