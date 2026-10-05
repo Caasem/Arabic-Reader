@@ -3,6 +3,8 @@ export interface DictionaryEntrySense {
   pos?: string; // part of speech, e.g. "noun", "verb"
   gender?: string;
   notes?: string;
+  /** Worked examples: an Arabic phrase with its gloss. */
+  examples?: { ar: string; gloss: string }[];
 }
 
 export interface DictionaryEntry {

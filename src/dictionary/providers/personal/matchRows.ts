@@ -2,6 +2,7 @@ import type { DictionaryEntry } from '../../../types';
 import { foldAlefHamza } from '../../../reader/tokenizer/arabicTokenizer';
 import { aramorphProvider } from '../aramorph/AramorphDictionaryProvider';
 import { keyTiers } from './keyTiers';
+import { vowelScore } from './vowels';
 import { formatDefinition } from './formatDefinition';
 import type { PersonalIndex } from './index';
 import type { PersonalRow } from './parse';
@@ -29,9 +30,11 @@ export async function matchRows(idx: PersonalIndex, word: string): Promise<Perso
       for (const key of keys) for (const row of idx.byFoldedKey.get(foldAlefHamza(key)) ?? []) if (!found.has(row)) found.set(row, tier);
     });
   }
+  // Same tier: a headword whose vowels match the tapped word's comes first (homographs).
   return Array.from(found.entries())
-    .sort((a, b) => a[1] - b[1])
-    .map(([row]) => row);
+    .map(([row, tier]) => ({ row, tier, vowels: tier === 0 ? vowelScore(word, row[0]) : 2 }))
+    .sort((a, b) => a.tier - b.tier || a.vowels - b.vowels)
+    .map((x) => x.row);
 }
 
 export function rowsToEntries(rows: Iterable<PersonalRow>, providerId: string, providerName: string): DictionaryEntry[] {
