@@ -117,6 +117,8 @@ export interface ReaderPreferences {
   dictionaryPopupCleanLayout: boolean;
   /** Clean popup: start the Arabic definitions folded when there are more than two of them. */
   collapseManyArabicEntries: boolean;
+  /** Entries the reader saved for a word in a book come first in their dictionary next time (src/sensePicks). No setting shows it yet. */
+  savedEntriesFirst: boolean;
   /** The redesign (src/look): softer cards, serif headings, fuller colour scheme. */
   lookEnabled: boolean;
   /** Which preset palette the look starts from. */

@@ -4,6 +4,18 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.30.0 — 2026-10-05
+
+The entry you save comes first next time.
+
+- **Saved entries lead.** Save an entry with its round + (or save picked words from it, or
+  edit and save its meaning), and the next time you open that word in the same book, that
+  entry is first in its dictionary. Dictionaries keep your order.
+- **Nothing new on screen.** No button, icon or setting was added. Saving everything with
+  *Save Vocabulary* does not count, and removing the saved word forgets the picks.
+- **Local only.** This is kept on this device and is not sent anywhere. It is the first step
+  of the crowd-ranking plan (`docs/specs/crowd-sense-ranking.md`).
+
 ## v0.27.0 — 2026-10-05
 
 Baranov (Arabic-Russian) entries behave like the English and Arabic ones in the popup.
