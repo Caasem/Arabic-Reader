@@ -42,6 +42,7 @@ import { formatClock, remainingMs, usePomodoroSnapshot } from './pomodoroClock';
 import { TimerPopover } from './TimerPopover';
 import { useMarks } from './useMarks';
 import './quietReader.css';
+import { senseText } from '../dictionary/senseText';
 
 /** Text size at 100%; the font-size preference scales it. */
 const BASE_FONT_PX = 22;
@@ -1142,7 +1143,7 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
           bookId={book.id}
           word={lookups.editing.word}
           alreadySaved={lookups.editing.saved}
-          fallbackMeaning={lookups.editing.result?.entries[0]?.senses[0]?.gloss ?? ''}
+          fallbackMeaning={(lookups.editing.result?.entries[0]?.senses[0] ? senseText(lookups.editing.result.entries[0].senses[0]) : '')}
           fallbackSentence={lookups.editing.instance?.sentence}
           onCancel={lookups.cancelEditing}
           onSave={(patch) => lookups.saveEdit(patch).then(bumpSaved)}

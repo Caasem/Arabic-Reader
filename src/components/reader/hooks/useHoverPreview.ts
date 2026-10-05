@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { dictionaryManager } from '../../../dictionary';
 import { anchorOf, rectInHost } from '../../../reader/wordInteraction/rectInHost';
+import { senseText } from '../../../dictionary/senseText';
 
 /** Long enough that a pointer passing over text doesn't flash a preview per word. */
 const HOVER_PREVIEW_DELAY_MS = 200;
@@ -38,7 +39,8 @@ export function useHoverPreview() {
       const { x, y } = anchorOf(rectInHost(element));
       const result = await dictionaryManager.lookup(word);
       if (token !== tokenRef.current) return;
-      const gloss = result.entries[0]?.senses[0]?.gloss;
+      const first = result.entries[0]?.senses[0];
+      const gloss = first && senseText(first);
       if (!gloss) return; // nothing found: stay silent rather than show an empty pill
       setPreview({
         x,

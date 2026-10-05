@@ -1,5 +1,6 @@
 import type { DictionaryEntry, DictionaryProvider } from '../../../types';
-import { matchRows, rowsToEntries } from './matchRows';
+import { matchRows } from './matchRows';
+import { rowsToEntries } from './rowsToEntries';
 import { buildPersonalIndex, type PersonalIndex } from './index';
 import { parseDictionaryText, type PersonalRow } from './parse';
 import { buildReverseIndex, reverseSearch, type ReverseIndex } from './reverse';
@@ -82,8 +83,8 @@ export class PersonalDictionaryProvider implements DictionaryProvider {
     const idx = await this.load();
     if (!idx) return [];
 
-    const matched = await matchRows(idx, word);
-    return rowsToEntries(matched, this.id, this.name);
+    const { rows: matched, root } = await matchRows(idx, word);
+    return rowsToEntries(matched, this.id, this.name, root);
   }
 }
 

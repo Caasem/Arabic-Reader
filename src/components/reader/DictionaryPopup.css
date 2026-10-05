@@ -345,6 +345,30 @@
   margin-inline-start: 6px;
 }
 
+.dict-popup__senses--words {
+  user-select: none;
+  touch-action: pan-y;
+}
+
+.dict-popup .dict-popup__senses .dict-popup__examples-more::before {
+  content: none;
+}
+
+.dict-popup__examples-more button {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.dict-popup__entry--best {
+  border-inline-start: 2px solid var(--accent);
+  padding-inline-start: 8px;
+}
+
 .dict-popup__sense-main {
   flex: 1;
   min-width: 0;

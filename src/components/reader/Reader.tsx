@@ -39,6 +39,7 @@ import { saveCleanFocus } from '../../cleanReader/cleanFocus';
 import { isCleanLocation } from '../../quietReader/location';
 import { registerBookNavigator } from '../../readerChords';
 import './Reader.css';
+import { senseText } from '../../dictionary/senseText';
 
 type Panel = 'toc' | 'bookmarks' | 'search' | null;
 
@@ -485,7 +486,7 @@ export function Reader({
           bookId={book.id}
           word={editing.word}
           alreadySaved={editing.saved}
-          fallbackMeaning={editing.result?.entries[0]?.senses[0]?.gloss ?? ''}
+          fallbackMeaning={(editing.result?.entries[0]?.senses[0] ? senseText(editing.result.entries[0].senses[0]) : '')}
           fallbackSentence={editing.instance?.sentence}
           onCancel={lookups.cancelEditing}
           onSave={lookups.saveEdit}

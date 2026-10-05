@@ -4,6 +4,24 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.27.0 — 2026-10-05
+
+Baranov (Arabic-Russian) entries behave like the English and Arabic ones in the popup.
+
+- **Verb forms.** A verb article carries its form and imperfect vowel, and tapping
+  it opens the root's other verbs, as English entries do.
+- **Folding.** With more than two Baranov entries, they start folded to their
+  headword rows (the same setting as the Arabic dictionaries); long entries show
+  three examples and a "N more examples" button.
+- **Pick words to save.** Every word in a meaning or an example can be tapped or
+  dragged, and *Save selection* saves just those words. Files you load yourself
+  work the same way.
+- **Best match and section add.** The entry whose spelling and vowels match the
+  tapped word is marked, the section heading reads "Baranov · Russian", and its
+  "+" saves the whole section.
+- **Empty-meaning fix.** An entry that is only examples no longer leaves the hover
+  preview, the vocabulary meaning or the search result blank.
+
 ## v0.26.0 — 2026-10-05
 
 Russian-to-Arabic search, and tidier Baranov (Arabic-Russian) entries.

@@ -3,6 +3,7 @@ import type { DictionaryLookupResult } from '../../types';
 import { anchoredPosition } from '../shared/anchoredPosition';
 import { useEscapeKey } from '../shared/useEscapeKey';
 import './DictionaryBubble.css';
+import { senseText } from '../../dictionary/senseText';
 
 /** Condensed bubble shown for touch gestures bound to "Show definition
  * bubble" (see Settings → Touch gestures). Deliberately much smaller than
@@ -50,7 +51,7 @@ export function DictionaryBubble({
   onDismiss: () => void;
 }) {
   const primary = result?.entries[0];
-  const gloss = primary?.senses[0]?.gloss;
+  const gloss = primary?.senses[0] && senseText(primary.senses[0]);
   const condensed =
     gloss && gloss.length > BUBBLE_GLOSS_MAX_CHARS ? gloss.slice(0, BUBBLE_GLOSS_MAX_CHARS - 1) + '…' : gloss;
 
