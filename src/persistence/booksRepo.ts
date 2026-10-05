@@ -1,9 +1,10 @@
 import type { BookMeta, ReadingPosition } from '../types';
 import { db } from './schema';
+import { deleteSynced, putSynced, syncScope, updateSynced } from './writeLayer';
 
 export async function saveBook(meta: BookMeta, file: Blob): Promise<void> {
-  await db.transaction('rw', db.books, db.bookFiles, async () => {
-    await db.books.put(meta);
+  await db.transaction('rw', [db.bookFiles, ...syncScope('books')], async () => {
+    await putSynced('books', meta);
     await db.bookFiles.put({ bookId: meta.id, data: file });
   });
 }
@@ -17,18 +18,18 @@ export async function getBookFile(id: string): Promise<Blob | undefined> {
   return (await db.bookFiles.get(id))?.data;
 }
 export async function deleteBook(id: string): Promise<void> {
-  await db.transaction('rw', db.books, db.bookFiles, db.positions, async () => {
-    await db.books.delete(id);
+  await db.transaction('rw', [db.bookFiles, ...syncScope('books', 'positions')], async () => {
+    await deleteSynced('books', id);
     await db.bookFiles.delete(id);
-    await db.positions.delete(id);
+    await deleteSynced('positions', id);
   });
 }
 export async function updateBookMeta(id: string, patch: Partial<BookMeta>): Promise<void> {
-  await db.books.update(id, patch);
+  await updateSynced('books', id, patch);
 }
 
 export async function saveReadingPosition(pos: ReadingPosition): Promise<void> {
-  await db.positions.put(pos);
+  await putSynced('positions', pos);
 }
 export async function getReadingPosition(bookId: string): Promise<ReadingPosition | undefined> {
   return db.positions.get(bookId);

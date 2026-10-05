@@ -1,8 +1,9 @@
 import type { VocabularyItem } from '../types';
 import { db } from './schema';
+import { deleteSynced, putSynced } from './writeLayer';
 
 export async function saveVocabularyItem(item: VocabularyItem): Promise<void> {
-  await db.vocabulary.put(item);
+  await putSynced('vocabulary', item);
 }
 export async function getVocabularyItem(id: string): Promise<VocabularyItem | undefined> {
   return db.vocabulary.get(id);
@@ -18,7 +19,7 @@ export async function getVocabularyForWord(bookId: string, surfaceForm: string):
   return db.vocabulary.where('[bookId+surfaceForm]').equals([bookId, surfaceForm]).toArray();
 }
 export async function deleteVocabularyItem(id: string): Promise<void> {
-  await db.vocabulary.delete(id);
+  await deleteSynced('vocabulary', id);
 }
 export async function isSaved(surfaceForm: string, bookId: string): Promise<boolean> {
   return (await db.vocabulary.where('[bookId+surfaceForm]').equals([bookId, surfaceForm]).count()) > 0;
