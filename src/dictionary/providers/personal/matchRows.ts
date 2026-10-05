@@ -1,9 +1,7 @@
-import type { DictionaryEntry } from '../../../types';
 import { foldAlefHamza } from '../../../reader/tokenizer/arabicTokenizer';
 import { aramorphProvider } from '../aramorph/AramorphDictionaryProvider';
 import { keyTiers } from './keyTiers';
 import { vowelScore } from './vowels';
-import { formatDefinition } from './formatDefinition';
 import type { PersonalIndex } from './index';
 import type { PersonalRow } from './parse';
 
@@ -12,7 +10,7 @@ import type { PersonalRow } from './parse';
  * AraMorph finds for it (as Al-Wasit does), best match first: the word itself, then
  * its dictionary forms, then its roots. Falls back to alef/hamza-folded keys.
  */
-export async function matchRows(idx: PersonalIndex, word: string): Promise<PersonalRow[]> {
+export async function matchRows(idx: PersonalIndex, word: string): Promise<{ rows: PersonalRow[]; root?: string }> {
   let analyses: Awaited<ReturnType<typeof aramorphProvider.analyze>> = [];
   try {
     analyses = await aramorphProvider.analyze(word);
@@ -31,17 +29,10 @@ export async function matchRows(idx: PersonalIndex, word: string): Promise<Perso
     });
   }
   // Same tier: a headword whose vowels match the tapped word's comes first (homographs).
-  return Array.from(found.entries())
+  const root = analyses.find((a) => a.root && a.root !== '---')?.root;
+  const rows = Array.from(found.entries())
     .map(([row, tier]) => ({ row, tier, vowels: tier === 0 ? vowelScore(word, row[0]) : 2 }))
     .sort((a, b) => a.tier - b.tier || a.vowels - b.vowels)
     .map((x) => x.row);
-}
-
-export function rowsToEntries(rows: Iterable<PersonalRow>, providerId: string, providerName: string): DictionaryEntry[] {
-  return Array.from(rows).map(([headword, definition]) => ({
-    providerId,
-    providerName,
-    headword,
-    senses: formatDefinition(headword, definition),
-  }));
+  return { rows, root };
 }

@@ -7,6 +7,12 @@ const SENSE_MARK_RE = /(?:^|\s)\d{1,2}\)\s*/g;
 const CYRILLIC_RE = /[Ѐ-ӿ]/;
 const ARABIC_START_RE = /^[^\p{L}]*[\u0600-\u06FF]/u;
 
+/** The verb form (I-X) and imperfect vowel (`a`/`u`/`i`) a Baranov-style article opens with, if any. */
+export function verbPrefix(definition: string): { form: string; vowel?: string } | undefined {
+  const m = VERB_PREFIX_RE.exec(definition.trim());
+  return m ? { form: m[1], vowel: m[2] ? VOWELS[m[2]] : undefined } : undefined;
+}
+
 /**
  * Turns a dictionary article's running text into senses:
  *  - `~` stands for the headword in examples, so it is written out (unvocalized, as examples are);

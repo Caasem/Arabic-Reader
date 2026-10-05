@@ -1,6 +1,7 @@
 import type { DictionaryEntry, DictionaryProvider } from '../../../types';
 import { buildPersonalIndex, type PersonalIndex } from './index';
-import { matchRows, rowsToEntries } from './matchRows';
+import { matchRows } from './matchRows';
+import { rowsToEntries } from './rowsToEntries';
 import { parseDictionaryText, type PersonalRow } from './parse';
 import { buildReverseIndex, reverseSearch, type ReverseIndex } from './reverse';
 
@@ -26,7 +27,8 @@ export class BaranovDictionaryProvider implements DictionaryProvider {
 
   async lookup(word: string): Promise<DictionaryEntry[]> {
     const { index } = await this.getData();
-    return rowsToEntries(await matchRows(index, word), this.id, this.name);
+    const { rows, root } = await matchRows(index, word);
+    return rowsToEntries(rows, this.id, this.name, root);
   }
 
   async reverseSearch(query: string): Promise<DictionaryEntry[]> {

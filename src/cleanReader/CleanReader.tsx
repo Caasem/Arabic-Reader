@@ -26,6 +26,7 @@ import { elementAsDocument } from './elementAsDocument';
 import { parseCleanEpub, type CleanBook } from './parseCleanEpub';
 import { useCleanSavedWords } from './useCleanSavedWords';
 import './cleanReader.css';
+import { senseText } from '../dictionary/senseText';
 
 /** Base reading size at 100%; the shared font-size preference scales it. */
 const BASE_FONT_PX = 22;
@@ -409,7 +410,7 @@ export function CleanReader({
           bookId={book.id}
           word={editing.word}
           alreadySaved={editing.saved}
-          fallbackMeaning={editing.result?.entries[0]?.senses[0]?.gloss ?? ''}
+          fallbackMeaning={(editing.result?.entries[0]?.senses[0] ? senseText(editing.result.entries[0].senses[0]) : '')}
           fallbackSentence={editing.instance?.sentence}
           onCancel={lookups.cancelEditing}
           onSave={lookups.saveEdit}

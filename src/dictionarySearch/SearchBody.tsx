@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { vocabularyService } from '../vocabulary';
 import type { BookMeta, DictionaryEntry } from '../types';
 import { isRussianQuery, useDictionarySearch } from './useDictionarySearch';
+import { senseText } from '../dictionary/senseText';
 
 interface Props {
   book: BookMeta;
@@ -150,7 +151,7 @@ function EntryRow({
         <>
           <ul className="dsearch__senses">
             {entry.senses.map((sense, i) => (
-              <li key={i}>{sense.gloss || sense.examples?.map((ex) => ex.gloss).join('; ')}</li>
+              <li key={i}>{senseText(sense)}</li>
             ))}
           </ul>
           <button type="button" className="dsearch__add" disabled={saved} onClick={onAdd}>
@@ -158,7 +159,7 @@ function EntryRow({
           </button>
         </>
       ) : (
-        <div className="dsearch__gloss">{entry.senses[0]?.gloss || entry.senses[0]?.examples?.[0]?.gloss}</div>
+        <div className="dsearch__gloss">{entry.senses[0] && senseText(entry.senses[0])}</div>
       )}
     </div>
   );

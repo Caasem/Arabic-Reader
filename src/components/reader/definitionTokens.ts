@@ -49,3 +49,38 @@ export function reconstructSelection(tokens: DefinitionToken[], selected: Set<nu
   }
   return out;
 }
+
+/** An entry whose senses carry examples (Baranov and files loaded by the user), tokenized in
+ * reading order -- each sense's text, then each example's Arabic and its gloss -- so one
+ * word selection can span them. `flat` is the whole stream; `senses` holds the same token
+ * objects grouped for rendering. */
+export interface ExampleEntryTokens {
+  flat: DefinitionToken[];
+  senses: { gloss: DefinitionToken[]; examples: { ar: DefinitionToken[]; gloss: DefinitionToken[] }[] }[];
+}
+
+export function buildExampleEntryTokens(entry: DictionaryEntry): ExampleEntryTokens {
+  const flat: DefinitionToken[] = [];
+  const space = () => flat.push({ text: ' ', isWord: false, globalIdx: flat.length });
+  const tokenize = (text: string): DefinitionToken[] => {
+    const out: DefinitionToken[] = [];
+    for (const part of text.split(/(\s+)/).filter((t) => t.length > 0)) {
+      const token: DefinitionToken = { text: part, isWord: !!part.trim(), globalIdx: flat.length };
+      flat.push(token);
+      out.push(token);
+    }
+    return out;
+  };
+  const senses = entry.senses.map((s) => {
+    if (flat.length) space();
+    const gloss = tokenize(s.gloss);
+    const examples = (s.examples ?? []).map((ex) => {
+      if (flat.length) space();
+      const ar = tokenize(ex.ar);
+      space();
+      return { ar, gloss: tokenize(ex.gloss) };
+    });
+    return { gloss, examples };
+  });
+  return { flat, senses };
+}

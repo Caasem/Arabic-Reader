@@ -27,5 +27,6 @@ export function groupLabel(group: { providerId: string; providerName: string }):
   if (group.providerId === 'alwasit') return 'Al-Mu‘jam al-Wasīṭ · Arabic';
   if (group.providerId === 'alsihah') return 'Al-Ṣiḥāḥ · Arabic';
   if (group.providerId === 'almaqayis') return 'Maqāyīs al-Lugha · Arabic';
+  if (group.providerId === 'baranov') return 'Baranov · Russian';
   return group.providerName;
 }

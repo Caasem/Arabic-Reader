@@ -7,6 +7,7 @@ import type { BookMeta } from '../types';
 import { buildBookModel, type BookModel } from './bookModel';
 import { searchTexts, type CleanHit, type CleanMatch } from './cleanSearch';
 import { searchSameRoot } from './rootSearch';
+import { senseText } from '../dictionary/senseText';
 
 export type SearchScope = 'page' | 'book' | 'library' | 'dict';
 
@@ -109,7 +110,7 @@ export function useReaderSearch({
             after: '',
             book,
             where: `Dictionary · ${e.providerName}`,
-            gloss: e.senses.map((s) => s.gloss).join('; '),
+            gloss: e.senses.map(senseText).join('; '),
             lookUp: e.headword,
           }));
         } else if (scope === 'library') {

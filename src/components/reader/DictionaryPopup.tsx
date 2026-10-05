@@ -4,17 +4,21 @@ import { getWordRarity, isRarityDataReady, TIER_LABELS } from '../../vocabRarity
 import { normalize } from '../../reader/tokenizer/arabicTokenizer';
 import { usePreferences } from '../../state/PreferencesContext';
 import { IconEdit, IconChevronLeft, IconChevronRight, IconBook } from '../shared/icons';
-import { buildEntryTokenSenses, reconstructSelection, type DefinitionToken } from './definitionTokens';
+import { buildEntryTokenSenses, buildExampleEntryTokens, reconstructSelection, type DefinitionToken, type ExampleEntryTokens } from './definitionTokens';
 import { isTokenizedProvider } from '../../dictionary/tokenizedProviders';
 import { findMatchedSenses, WASIT_MATCH_CLASS } from '../../wasitMatch';
 import { annotateEntry } from '../../wasitStructure';
 import { VerbFormInfo, VerbFormMark } from '../../verbForms';
 import { arabicEntriesStartFolded, groupLabel } from '../../popupClean';
+import { vowelScore } from '../../dictionary/providers/personal/vowels';
 import { dictionaryManager } from '../../dictionary';
 import { AddDictionaryPanel } from '../../popupAddDictionary';
 
-/** Dictionaries whose part-of-speech tag reads better before the definition (a verb form leads the entry). */
-const LEAD_TAG_PROVIDERS = new Set(['baranov', 'personal']);
+/** Dictionaries whose senses carry examples: the verb-form tag leads the entry, its words can be
+ * selected and saved on their own, and long ones fold (Baranov, and a file the reader loaded). */
+const EXAMPLE_PROVIDERS = new Set(['baranov', 'personal']);
+/** Examples shown before the "N more examples" button. */
+const EXAMPLES_SHOWN = 3;
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
@@ -221,7 +225,10 @@ export function DictionaryPopup({
   const [foldedEntries, setFoldedEntries] = useState<Set<number>>(new Set());
   // Clean layout: dictionaries whose whole section was saved from its heading.
   const [savedGroups, setSavedGroups] = useState<Set<string>>(new Set());
+  // Entries whose examples are all shown (the rest show the first few).
+  const [expandedExamples, setExpandedExamples] = useState<Set<number>>(new Set());
   useEffect(() => {
+    setExpandedExamples(new Set());
     setSavedEntryKeys(new Set());
     setSavedGroups(new Set());
     setFoldedEntries(new Set());
@@ -351,6 +358,16 @@ export function DictionaryPopup({
   }, [result]);
   const startFolded = clean && arabicEntriesStartFolded(entryTokenData.size, prefs.collapseManyArabicEntries);
 
+  // Baranov-style entries: tokenized in reading order (sense, then each example) for word selection.
+  const exampleTokenData = useMemo(() => {
+    const map = new Map<number, ExampleEntryTokens>();
+    result?.entries.forEach((e, i) => {
+      if (EXAMPLE_PROVIDERS.has(e.providerId)) map.set(i, buildExampleEntryTokens(e));
+    });
+    return map;
+  }, [result]);
+  const startFoldedExamples = clean && arabicEntriesStartFolded(exampleTokenData.size, prefs.collapseManyArabicEntries);
+
   // Which Al-Wasit senses are the form that was looked up (see wasitMatch).
   const wasitMatches = useMemo(() => {
     const map = new Map<number, Set<number>>();
@@ -385,7 +402,7 @@ export function DictionaryPopup({
   }
 
   function addTokenRange(entryIdx: number, lo: number, hi: number) {
-    const tokens = entryTokenData.get(entryIdx)?.flat;
+    const tokens = entryTokenData.get(entryIdx)?.flat ?? exampleTokenData.get(entryIdx)?.flat;
     if (!tokens) return;
     setTokenSelections((prev) => {
       const next = new Map(prev);
@@ -625,7 +642,7 @@ export function DictionaryPopup({
       <div className="dict-popup__group" key={group.providerId}>
         <div className="dict-popup__group-header">
           {clean ? groupLabel(group) : group.providerName}
-          {clean && onSaveEntries && isTokenizedProvider(group.providerId) && group.entries.length > 1 && (
+          {clean && onSaveEntries && (isTokenizedProvider(group.providerId) || EXAMPLE_PROVIDERS.has(group.providerId)) && group.entries.length > 1 && (
             <button
               className="dict-popup__sense-add dict-popup__group-add"
               disabled={savedGroups.has(group.providerId)}
@@ -647,9 +664,13 @@ export function DictionaryPopup({
           // actually exists to hand it to. Every other provider's entries
           // keep the plain, non-interactive sense list below.
           const tokenData = isTokenizedProvider(entry.providerId) ? entryTokenData.get(i) : undefined;
-          const sel = tokenData ? tokenSelections.get(i) : undefined;
+          const exTokens = EXAMPLE_PROVIDERS.has(entry.providerId) ? exampleTokenData.get(i) : undefined;
+          const wordData = tokenData ?? exTokens;
+          const sel = wordData ? tokenSelections.get(i) : undefined;
           const hasSelection = !!sel && sel.size > 0;
-          const folded = clean && !!tokenData && startFolded !== foldedEntries.has(i);
+          const folded = clean && ((!!tokenData && startFolded !== foldedEntries.has(i)) || (!!exTokens && startFoldedExamples !== foldedEntries.has(i)));
+          // The entry whose spelling (and vowels, when the tapped word has them) is the one looked up.
+          const exactMatch = !!exTokens && group.entries.length > 1 && normalize(entry.headword) === normalize(word) && vowelScore(word, entry.headword) < 2;
 
           function toggleFold() {
             clearEntrySelection(i);
@@ -661,8 +682,8 @@ export function DictionaryPopup({
           }
 
           function saveThisSelection() {
-            if (!tokenData || !sel || !onSaveSelection) return;
-            onSaveSelection(entry, reconstructSelection(tokenData.flat, sel));
+            if (!wordData || !sel || !onSaveSelection) return;
+            onSaveSelection(entry, reconstructSelection(wordData.flat, sel));
             clearEntrySelection(i);
           }
 
@@ -691,7 +712,8 @@ export function DictionaryPopup({
               className={
                 'dict-popup__entry' +
                 (clean && entry.verbForm ? ' dict-popup__entry--tappable' : '') +
-                (clean && tokenData ? ' dict-popup__entry--subs' : '')
+                (clean && tokenData ? ' dict-popup__entry--subs' : '') +
+                (exactMatch ? ' dict-popup__entry--best' : '')
               }
               data-entry-index={i}
               key={entry.providerId + i}
@@ -711,7 +733,7 @@ export function DictionaryPopup({
             >
               {clean && saveButton}
               <div className="dict-popup__entry-head">
-                {clean && tokenData ? (
+                {clean && wordData ? (
                   <span
                     className="dict-popup__headword dict-popup__headword--toggle"
                     role="button"
@@ -810,36 +832,69 @@ export function DictionaryPopup({
                     );
                   })}
                 </div>
-              ) : (
-                <ul className="dict-popup__senses">
-                  {entry.senses.map((s, si) => (
-                    <li key={si}>
-                      {LEAD_TAG_PROVIDERS.has(entry.providerId) ? (
-                        <div className="dict-popup__sense-main">
-                          {s.notes && <bdi className="dict-popup__lead" dir="rtl">{s.notes}</bdi>}
-                          {(s.pos || s.gender) && (
-                            <span className="dict-popup__tag dict-popup__tag--lead">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>
-                          )}
-                          {s.gloss}
-                          {s.examples && (
-                            <ul className="dict-popup__examples">
-                              {s.examples.map((ex, ei) => (
-                                <li key={ei}>
-                                  <bdi lang="ar" dir="rtl" className="dict-popup__example-ar">{ex.ar}</bdi>
-                                  <span className="dict-popup__example-gloss">{ex.gloss}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      ) : (
-                        <>
-                          {s.gloss}
-                          {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
-                        </>
-                      )}
-                    </li>
-                  ))}
+              ) : exTokens && folded ? null : (
+                <ul
+                  className={'dict-popup__senses' + (exTokens ? ' dict-popup__senses--words' : '')}
+                  onPointerMove={exTokens ? handleTokensPointerMove : undefined}
+                >
+                  {entry.senses.map((s, si) => {
+                    const st = exTokens?.senses[si];
+                    const shown = !s.examples ? 0 : expandedExamples.has(i) ? s.examples.length : EXAMPLES_SHOWN;
+                    const renderWords = (tokens: DefinitionToken[]) =>
+                      tokens.map((t) =>
+                        t.isWord ? (
+                          <span
+                            key={t.globalIdx}
+                            data-entry={i}
+                            data-idx={t.globalIdx}
+                            className={'dict-popup__token' + (sel?.has(t.globalIdx) ? ' dict-popup__token--selected' : '')}
+                            onPointerDown={(e) => handleTokenPointerDown(i, t.globalIdx, e)}
+                          >
+                            {t.text}
+                          </span>
+                        ) : (
+                          <span key={t.globalIdx}>{t.text}</span>
+                        ),
+                      );
+                    return (
+                      <li key={si}>
+                        {EXAMPLE_PROVIDERS.has(entry.providerId) ? (
+                          <div className="dict-popup__sense-main">
+                            {s.notes && <bdi className="dict-popup__lead" dir="rtl">{s.notes}</bdi>}
+                            {(s.pos || s.gender) && (
+                              <span className="dict-popup__tag dict-popup__tag--lead">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>
+                            )}
+                            {st ? renderWords(st.gloss) : s.gloss}
+                            {s.examples && (
+                              <ul className="dict-popup__examples">
+                                {s.examples.slice(0, shown).map((ex, ei) => (
+                                  <li key={ei}>
+                                    <bdi lang="ar" dir="rtl" className="dict-popup__example-ar">{st ? renderWords(st.examples[ei].ar) : ex.ar}</bdi>
+                                    <span className="dict-popup__example-gloss">{st ? renderWords(st.examples[ei].gloss) : ex.gloss}</span>
+                                  </li>
+                                ))}
+                                {s.examples.length > shown && (
+                                  <li className="dict-popup__examples-more">
+                                    <button
+                                      type="button"
+                                      onClick={() => setExpandedExamples((prev) => new Set(prev).add(i))}
+                                    >
+                                      {s.examples.length - shown} more example{s.examples.length - shown === 1 ? '' : 's'}
+                                    </button>
+                                  </li>
+                                )}
+                              </ul>
+                            )}
+                          </div>
+                        ) : (
+                          <>
+                            {s.gloss}
+                            {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
+                          </>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
               {clean && <VerbFormInfo entry={entry} clean open={openForms.has(i)} />}

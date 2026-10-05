@@ -4,12 +4,13 @@ import { persistenceService } from '../persistence';
 import { normalize } from '../reader/tokenizer/arabicTokenizer';
 import { newId } from '../utils/id';
 import { applyReview, freshFsrsFields, GRADE_TO_RATING, scheduler, toFsrsCard, type ReviewGrade } from './fsrs';
+import { senseText } from '../dictionary/senseText';
 
 export { formatDueIn, type ReviewGrade } from './fsrs';
 
 /** All of one entry's senses joined into one display string. */
 export function entryMeaning(entry: DictionaryEntry): string {
-  return entry.senses.map((s) => s.gloss).join('; ');
+  return entry.senses.map(senseText).join('; ');
 }
 
 /** Every entry's meaning joined -- the "all definitions" card. */
