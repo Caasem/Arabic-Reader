@@ -89,6 +89,16 @@ export class DictionaryManager {
     return result;
   }
 
+  /** Russian-to-Arabic: asks every enabled dictionary that supports it. Never throws. */
+  async reverseSearch(query: string): Promise<DictionaryLookupResult> {
+    const active = orderProviders(this.providers, this.providerOrder).filter((p) => p.reverseSearch && this.isEnabled(p.id));
+    const outcomes = await Promise.allSettled(active.map((p) => p.reverseSearch!(query)));
+    const entries: DictionaryLookupResult['entries'] = [];
+    const failedProviders: { id: string; name: string }[] = [];
+    outcomes.forEach((o, i) => (o.status === 'fulfilled' ? entries.push(...o.value) : failedProviders.push({ id: active[i].id, name: active[i].name })));
+    return { word: query, entries, ...(failedProviders.length ? { failedProviders } : {}) };
+  }
+
   private cacheKey(word: string): string {
     const ids = this.enabledProviderIds ? Array.from(this.enabledProviderIds).sort().join(',') : 'all';
     return `${ids}@${this.providerOrder.join(',')}::${word}`;

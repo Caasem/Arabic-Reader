@@ -56,6 +56,8 @@ export interface DictionaryProvider {
   id: string;
   name: string;
   lookup(word: string): Promise<DictionaryEntry[]>;
+  /** Entries whose definition mentions a Russian word or phrase (Arabic-Russian dictionaries only). */
+  reverseSearch?(query: string): Promise<DictionaryEntry[]>;
   /** Notifies when the provider's underlying data changes (e.g. a custom
    * dataset upload), so cached lookups can be discarded. */
   onDataChanged?(listener: () => void): () => void;

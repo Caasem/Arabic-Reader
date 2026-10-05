@@ -1,7 +1,8 @@
 import type { DictionaryEntry, DictionaryProvider } from '../../../types';
 import { matchRows, rowsToEntries } from './matchRows';
 import { buildPersonalIndex, type PersonalIndex } from './index';
-import { parseDictionaryText } from './parse';
+import { parseDictionaryText, type PersonalRow } from './parse';
+import { buildReverseIndex, reverseSearch, type ReverseIndex } from './reverse';
 import { clearPersonalDictionary, loadPersonalDictionary, savePersonalDictionary } from './store';
 
 const DEFAULT_NAME = 'My dictionary';
@@ -19,6 +20,8 @@ export class PersonalDictionaryProvider implements DictionaryProvider {
   private index: Promise<PersonalIndex | null> | null = null;
   private listeners = new Set<() => void>();
   private count = 0;
+  private rows: PersonalRow[] = [];
+  private reverse: ReverseIndex | null = null;
 
   onDataChanged(listener: () => void): () => void {
     this.listeners.add(listener);
@@ -31,6 +34,7 @@ export class PersonalDictionaryProvider implements DictionaryProvider {
         if (!stored) return null;
         this.name = stored.label || DEFAULT_NAME;
         this.count = stored.rows.length;
+        this.rows = stored.rows;
         return buildPersonalIndex(stored.rows);
       });
     }
@@ -64,7 +68,14 @@ export class PersonalDictionaryProvider implements DictionaryProvider {
 
   private reset(): void {
     this.index = null;
+    this.reverse = null;
     this.listeners.forEach((l) => l());
+  }
+
+  async reverseSearch(query: string): Promise<DictionaryEntry[]> {
+    if (!(await this.load())) return [];
+    this.reverse ??= buildReverseIndex(this.rows);
+    return rowsToEntries(reverseSearch(this.reverse, query), this.id, this.name);
   }
 
   async lookup(word: string): Promise<DictionaryEntry[]> {

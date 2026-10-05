@@ -1,7 +1,8 @@
 import type { DictionaryEntry, DictionaryProvider } from '../../../types';
 import { buildPersonalIndex, type PersonalIndex } from './index';
 import { matchRows, rowsToEntries } from './matchRows';
-import { parseDictionaryText } from './parse';
+import { parseDictionaryText, type PersonalRow } from './parse';
+import { buildReverseIndex, reverseSearch, type ReverseIndex } from './reverse';
 
 /**
  * Optional Arabic-Russian dictionary from baranov-data/russian.txt (see
@@ -12,18 +13,26 @@ export class BaranovDictionaryProvider implements DictionaryProvider {
   id = 'baranov';
   name = 'Baranov (Arabic-Russian)';
 
-  private index: Promise<PersonalIndex> | null = null;
+  private data: Promise<{ rows: PersonalRow[]; index: PersonalIndex }> | null = null;
+  private reverse: ReverseIndex | null = null;
 
-  private getIndex(): Promise<PersonalIndex> {
-    this.index ??= import('virtual:baranov-data').then((mod) =>
-      buildPersonalIndex(parseDictionaryText('russian.txt', mod.default)),
-    );
-    return this.index;
+  private getData() {
+    this.data ??= import('virtual:baranov-data').then((mod) => {
+      const rows = parseDictionaryText('russian.txt', mod.default);
+      return { rows, index: buildPersonalIndex(rows) };
+    });
+    return this.data;
   }
 
   async lookup(word: string): Promise<DictionaryEntry[]> {
-    const idx = await this.getIndex();
-    return rowsToEntries(await matchRows(idx, word), this.id, this.name);
+    const { index } = await this.getData();
+    return rowsToEntries(await matchRows(index, word), this.id, this.name);
+  }
+
+  async reverseSearch(query: string): Promise<DictionaryEntry[]> {
+    const { rows } = await this.getData();
+    this.reverse ??= buildReverseIndex(rows);
+    return rowsToEntries(reverseSearch(this.reverse, query), this.id, this.name);
   }
 }
 

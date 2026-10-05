@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { vocabularyService } from '../vocabulary';
 import type { BookMeta, DictionaryEntry } from '../types';
-import { useDictionarySearch } from './useDictionarySearch';
+import { isRussianQuery, useDictionarySearch } from './useDictionarySearch';
 
 interface Props {
   book: BookMeta;
@@ -33,7 +33,7 @@ export function SearchBody({ book, initialQuery, onClose }: Props) {
 
   useEffect(() => {
     let stale = false;
-    if (word) void vocabularyService.isSaved(book.id, word).then((saved) => !stale && saved && setSavedWord(word));
+    if (word && !isRussianQuery(word)) void vocabularyService.isSaved(book.id, word).then((saved) => !stale && saved && setSavedWord(word));
     return () => {
       stale = true;
     };
@@ -44,7 +44,7 @@ export function SearchBody({ book, initialQuery, onClose }: Props) {
     if (!entry || added || alreadySaved) return;
     const morph = result?.morphology?.[0];
     await vocabularyService.saveToVocabulary({
-      surfaceForm: word,
+      surfaceForm: isRussianQuery(word) ? entry.headword : word,
       entries: [entry],
       lemma: entry.lemma ?? morph?.lemma,
       root: entry.root ?? morph?.root,
@@ -94,9 +94,9 @@ export function SearchBody({ book, initialQuery, onClose }: Props) {
       </div>
 
       <div className="dsearch__results" role="listbox" aria-label="Results">
-        {!query.trim() && <p className="dsearch__hint">Type an Arabic word.</p>}
+        {!query.trim() && <p className="dsearch__hint">Type an Arabic word, or a Russian word to search Baranov.</p>}
         {query.trim() && loading && !result && <p className="dsearch__hint">Searching…</p>}
-        {query.trim() && !loading && result && entries.length === 0 && <p className="dsearch__hint">No entry found.</p>}
+        {query.trim() && !loading && result && entries.length === 0 && <p className="dsearch__hint">{isRussianQuery(query) ? 'No Arabic entry found. Is Baranov switched on in Settings?' : 'No entry found.'}</p>}
         {result?.failedProviders?.length ? (
           <p className="dsearch__hint">Couldn't load: {result.failedProviders.map((p) => p.name).join(', ')}.</p>
         ) : null}
@@ -150,7 +150,7 @@ function EntryRow({
         <>
           <ul className="dsearch__senses">
             {entry.senses.map((sense, i) => (
-              <li key={i}>{sense.gloss}</li>
+              <li key={i}>{sense.gloss || sense.examples?.map((ex) => ex.gloss).join('; ')}</li>
             ))}
           </ul>
           <button type="button" className="dsearch__add" disabled={saved} onClick={onAdd}>
@@ -158,7 +158,7 @@ function EntryRow({
           </button>
         </>
       ) : (
-        <div className="dsearch__gloss">{entry.senses[0]?.gloss}</div>
+        <div className="dsearch__gloss">{entry.senses[0]?.gloss || entry.senses[0]?.examples?.[0]?.gloss}</div>
       )}
     </div>
   );
