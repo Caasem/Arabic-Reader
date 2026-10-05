@@ -37,7 +37,7 @@ import { VocabularyEditModal } from './VocabularyEditModal';
 import { PomodoroTimer } from '../pomodoro/PomodoroTimer';
 import { saveCleanFocus } from '../../cleanReader/cleanFocus';
 import { isCleanLocation } from '../../quietReader/location';
-import { registerBookNavigator } from '../../readerChords';
+import { announceReaderSelection, registerBookNavigator, registerReaderMarks } from '../../readerChords';
 import './Reader.css';
 import { senseText } from '../../dictionary/senseText';
 
@@ -173,6 +173,55 @@ export function Reader({
         serviceRef.current?.goTo(cfi);
       }),
     [serviceRef]
+  );
+
+  // Alt+N (note) and Alt+F (flashcard) read the selection and add highlights through readerChords.
+  const selectionRef = useRef(selection);
+  const highlightsRef = useRef(bookHighlights);
+  useEffect(() => {
+    selectionRef.current = selection;
+    highlightsRef.current = bookHighlights;
+  });
+  useEffect(() => announceReaderSelection(), [selection]);
+  useEffect(
+    () =>
+      registerReaderMarks({
+        captureSelection() {
+          const s = selectionRef.current;
+          if (!s) return null;
+          const svc = serviceRef.current;
+          const href = svc?.getCurrentSectionHref();
+          return { text: s.text, location: s.cfiRange, chapterHref: href ?? '', chapterLabel: svc?.getChapterLabelFor(href) ?? '' };
+        },
+        // The original layout has no cheap way to find the first visible sentence: notes need a selection here.
+        capturePage: () => null,
+        existing(c) {
+          const h = highlightsRef.current.highlights.find((x) => x.cfiRange === c.location);
+          return h ? { note: h.note ?? '' } : null;
+        },
+        async saveNote(c, note, color) {
+          const svc = serviceRef.current;
+          const found = highlightsRef.current.highlights.find((x) => x.cfiRange === c.location);
+          if (found) highlightsRef.current.replaced(await annotationService.updateNote(found, note));
+          else {
+            const created = await annotationService.create({
+              book,
+              cfiRange: c.location,
+              text: c.text,
+              color,
+              chapterHref: c.chapterHref,
+              chapterLabel: c.chapterLabel,
+              note,
+            });
+            highlightsRef.current.added(created);
+            svc?.renderHighlight(c.location, color);
+          }
+          svc?.clearSelection();
+          setSelection(null);
+        },
+        wordSaved: (word) => savedWords.setSaved(word, true),
+      }),
+    [book, serviceRef, savedWords]
   );
 
   async function openFootnote(anchor: HTMLAnchorElement, doc: Document, sectionHref: string, rect: HostRect) {

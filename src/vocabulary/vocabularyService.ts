@@ -143,6 +143,43 @@ export class VocabularyService {
     return item;
   }
 
+  /** A card written by hand: `front` is what is asked, `back` the answer. Reviewed like any saved word. */
+  async saveCustomCard(params: {
+    front: string;
+    back: string;
+    sentence?: string;
+    root?: string;
+    pos?: string;
+    book: BookMeta;
+    chapterHref?: string;
+    location?: string;
+  }): Promise<VocabularyItem> {
+    const now = Date.now();
+    const item: VocabularyItem = {
+      id: newId('vocab'),
+      surfaceForm: params.front,
+      root: params.root,
+      pos: params.pos,
+      meaning: params.back,
+      entries: [],
+      bookId: params.book.id,
+      bookTitle: params.book.title,
+      chapterHref: params.chapterHref,
+      sentence: params.sentence,
+      location: params.location,
+      addedAt: now,
+      lookupCount: 0,
+      encounterCount: 0,
+      mastery: 'new',
+      successfulRecalls: 0,
+      custom: true,
+      ...freshFsrsFields(now),
+    };
+    await persistenceService.saveVocabularyItem(item);
+    await persistenceService.updateWordInstance(item.bookId, normalize(item.surfaceForm), { saved: true });
+    return item;
+  }
+
   async removeFromVocabulary(id: string): Promise<void> {
     const item = await persistenceService.getVocabularyItem(id);
     await persistenceService.deleteVocabularyItem(id);

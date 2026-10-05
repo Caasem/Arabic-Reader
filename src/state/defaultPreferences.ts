@@ -41,6 +41,8 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   dictionarySearchStyle: 'floating',
   bookSearchEnabled: true,
   bookVocabEnabled: true,
+  noteCardEnabled: true,
+  flashCardEnabled: true,
   verbFormsEnabled: true,
   dictionaryPopupCleanLayout: true,
   collapseManyArabicEntries: true,
