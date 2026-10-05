@@ -1,4 +1,3 @@
-import { stackFor } from '../readerFont/fontStack';
 import type { ReaderPreferences } from '../types';
 
 /** Which kind of screen the person reads on. First-run onboarding picks one,
@@ -52,13 +51,12 @@ export function detectDeviceProfile(): DeviceProfile {
 }
 
 /** Preferences a profile starts from. Scroll all (one continuous scroll through
- * the book), single-column Amiri on all three. */
+ * the book), single-column on all three. The font is left alone, so the app default applies. */
 export function profilePreferences(profile: DeviceProfile): Partial<ReaderPreferences> {
   const shared: Partial<ReaderPreferences> = {
     readingFlow: 'scrolled',
     continuousScrollEnabled: true,
     twoColumnEnabled: false,
-    fontFamily: stackFor('Amiri'),
   };
   if (profile === 'desktop') {
     return {
