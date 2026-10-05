@@ -6,15 +6,16 @@ Related: [storage-and-sync.md](storage-and-sync.md) (this feature must not leak 
 
 ## 1. Goal
 
-A word often shows many dictionary meanings. Readers mark the meaning that fits (✓). With consent, those picks are counted across all readers. They are pseudonymous: linked to a random install ID, not a name or email, but still linkable to each other and to the books and words chosen (sections 2 and 12). The popup then lists the most chosen meaning first and moves the rest lower.
+A word often shows many dictionary entries and meanings. When a reader saves a word from the popup, the entry they chose is a vote for it. There is **no new control**: the signal is the reader's normal saves (the round + on an entry, saving a selection, saving an edited meaning). With consent, those saves are counted across all readers. They are pseudonymous: linked to a random install ID, not a name or email, but still linkable to each other and to the books and words chosen (sections 2 and 12). The popup then lists the most saved entry first inside each dictionary, and, where the data supports it, the most chosen meaning first inside an entry. The rest move lower.
 
-**What the reader sees:** an order, a "Best fit here" tag, a dotted underline on words readers often stop on, a "Before this chapter" list, an auto-built glossary, and a flashcard that starts with the best-fit meaning. **No vote counts are ever shown in the app.**
+**What the reader sees:** an order, a "Best fit here" tag, a dotted underline on words readers often stop on, a "Before this chapter" list, an auto-built glossary, and a flashcard that starts with the best-fit meaning. **No vote counts are ever shown in the app, and no button, icon or screen is added to the popup to collect votes.**
 
 ### Non-goals
 
 - Nothing is sold, licensed or disclosed to a third party, and no export to outsiders is built. The hosting provider is the one exception in kind: it runs the servers as a processor under our contract, so it can see network addresses and the stored votes. The consent text says this.
 - The crowd never adds, edits or removes dictionary content. It only **reorders** meanings that already exist.
 - No free-text "suggest a meaning".
+- No new buttons or controls in the dictionary popup for voting. Only what the reader already does counts.
 - No accounts with passwords.
 
 ## 2. Principles
@@ -35,7 +36,7 @@ A word often shows many dictionary meanings. Readers mark the meaning that fits 
 ```
  Reader device                         Our backend                          Reader devices
  ─────────────                         ───────────                          ──────────────
- popup ✓ tap ──► consent gate ──► outbox queue ──(HTTPS, signed)──► Ingest API ──► Votes store
+ save in popup ──► consent gate ──► outbox queue ──(HTTPS, signed)──► Ingest API ──► Votes store
                                                                          │ validates, rate-limits
                                                                          ▼
                                                                   Aggregation job (nightly)
@@ -68,6 +69,18 @@ senseKey = base32( sha256( providerId | normalize(headword) | normalize(gloss) )
 - Two senses whose normalised content is identical share one key and are indistinguishable. This is accepted: they are the same meaning to a reader, and a sense index is **not** used because it would change when a dictionary is re-ordered.
 - `providerId` is part of the key, so a key is only meaningful inside one dictionary (see 8.2).
 - A pack carries, per word, a list of `senseKey` values. A key the client does not know is ignored.
+
+### 5.1b `entryKey`: one dictionary entry
+
+The round + saves a whole entry, so the main vote unit is the entry, not the meaning. An entry is one headword block in one dictionary (a verb form, a noun), with its own meanings.
+
+```
+entryKey = base32( sha256( providerId | normalizeArabic(headword) | normalizeArabic(root) | verbForm )[0..10] )
+```
+
+- It is computed at render time from the entry's own fields (`headword`, `root`, `verbForm`), like `senseKey`, and uses no position.
+- Two entries that normalise identically share a key, as with `senseKey`.
+- A `senseKey` (5.1) is only used when a finer signal can name a single meaning inside an entry (see 8.2 and 10.5).
 
 ### 5.2 `lemmaKey`: what a word is
 
@@ -104,10 +117,13 @@ Per vote (one message item):
 |---|---|---|
 | `bookKey` | `k7q2m9…` | From section 5.3 |
 | `lemmaKey` | `p4d8x1…` | From section 5.2 |
-| `providerId` | `baranov` | Which dictionary the meaning belongs to |
-| `senseKey` | `h2v9c0…` | From section 5.1 |
+| `providerId` | `baranov` | Which dictionary the entry belongs to |
+| `entryKey` | `e5t1a8…` | From section 5.1b. The main vote unit |
+| `senseKey` | `h2v9c0…` | Optional, from section 5.1. Only when one meaning inside the entry can be named (see 10.5) |
+| `source` | `entry`, `selection` or `edit` | Which existing save action produced the vote |
+| `pos` | `0` | Zero-based position of the saved entry (or meaning) when it was shown, used to correct for position bias (8.2) |
 | `rev` | `17` | Per-install revision of this vote, see 7.4 |
-| `action` | `pick` or `clear` | One pick per install per word per book |
+| `action` | `save` or `unsave` | Saving a word adds the vote; removing the saved word retracts it |
 | `day` | `2026-10-05` | Date only, UTC |
 | `form` | `II` | Optional verb form, only if known |
 
@@ -124,7 +140,7 @@ Optional later signals (each needs its own switch line in Settings and a spec am
 | Component | Job | Notes |
 |---|---|---|
 | **Ingest API** | Validate, rate-limit, write votes | One small stateless service |
-| **Votes store** | Latest vote per `(installId, bookKey, lemmaKey, providerId)` | SQL table |
+| **Votes store** | Latest vote per `(installId, bookKey, lemmaKey, providerId, entryKey)` | SQL table |
 | **Aggregation job** | Count, weight, apply thresholds, write packs | Nightly, idempotent |
 | **Pack storage + CDN** | Serve signed ranking files | Static, cacheable |
 | **Admin console** | See the backend table, roll back, kill-switch | A few authenticated pages or a CLI |
@@ -156,11 +172,15 @@ votes(
   bookKey    TEXT NOT NULL,
   lemmaKey   TEXT NOT NULL,
   providerId TEXT NOT NULL,
-  senseKey   TEXT,                 -- NULL means cleared (a tombstone)
+  entryKey   TEXT NOT NULL,
+  senseKey   TEXT,                 -- optional finer signal, see 10.5
+  source     TEXT NOT NULL,        -- entry | selection | edit
+  pos        INTEGER NOT NULL,     -- position shown at save time, for bias correction
+  saved      INTEGER NOT NULL,     -- 1 = saved, 0 = retracted (a tombstone)
   rev        INTEGER NOT NULL,     -- per-install revision, see 7.4
   form       TEXT,
   day        TEXT NOT NULL,
-  PRIMARY KEY (installId, bookKey, lemmaKey, providerId)   -- one live vote per word per dictionary per book
+  PRIMARY KEY (installId, bookKey, lemmaKey, providerId, entryKey)   -- one live vote per entry per word per book
 )
 
 snapshots(
@@ -168,11 +188,11 @@ snapshots(
 )
 ```
 
-There is no vote history table. A `clear` keeps its row with `senseKey = NULL` and its `rev` as a tombstone (section 7.4).
+There is no vote history table. An `unsave` keeps its row with `saved = 0` and its `rev` as a tombstone (section 7.4). A reader can save several entries of the same word in one dictionary; each is its own vote.
 
 ### 7.4 Ordering of offline votes
 
-A device can queue picks and clears while offline and retry after a timeout, so arrival order is not edit order. Every vote therefore carries a revision.
+A device can queue saves and un-saves while offline and retry after a timeout, so arrival order is not edit order. Every vote therefore carries a revision.
 
 - The client keeps one monotonic counter `seq` per install and stamps each change to a vote with the next value as its `rev`. It is persisted before the item is queued.
 - The server applies an item only if `rev` is **greater** than the stored `rev` for that vote key. An equal or lower `rev` is ignored and reported as already applied, so a retried request is **idempotent** and an old queued pick can never overwrite a newer clear (or the reverse).
@@ -183,8 +203,8 @@ A device can queue picks and clears while offline and retry after a timeout, so 
 - `maxRev` is updated once per request, in the same transaction as the vote writes, to the highest `rev` applied.
 - **Per-item results.** `POST /votes` returns `200` with a result for each item: `applied`, `stale` (ignored, nothing to do), or `rejected` with a code (`rev_too_far`, `too_old`, `unknown_sense`, `bad_item`). The client removes `applied` and `stale` items from its queue and keeps `rejected` ones only if the code is retryable (none are, so they are dropped and logged locally). The response always includes the install's current `maxRev`.
 - **Recovery never rewrites history.** If the client's local counter is below the server's `maxRev` (a restored device, or the same key reused after a reinstall), the client raises its counter to `maxRev` so that **new** user actions get revisions above everything the server has seen. **Pending items keep the revision they were created with.** They are never re-stamped, because that would let an old pick outrank a clear the server has already accepted (a queued pick at `rev=3`, a newer clear accepted at `rev=4`, and the old pick re-stamped to `rev=5` would win).
-- **The server alone decides whether a pending item is stale**, per vote key: it applies the item only if its `rev` is higher than the stored `rev` for that `(installId, bookKey, lemmaKey, providerId)`, or no row exists. A pending item at `rev=3` against a stored `rev=4` is reported `stale` and the client drops it. A pending item for a key the server has never seen is applied even though its `rev` is below `maxRev`, since revisions are per install and `maxRev` reflects other votes. Equal revisions are always `stale`.
-- **After a stale result the local pick may differ from the server's state.** That is harmless: rankings are the only consumer. The reader's own popup keeps showing their local choice, and tapping ✓ again is a new user action that gets a fresh revision above `maxRev` and takes effect.
+- **The server alone decides whether a pending item is stale**, per vote key: it applies the item only if its `rev` is higher than the stored `rev` for that `(installId, bookKey, lemmaKey, providerId, entryKey)`, or no row exists. A pending item at `rev=3` against a stored `rev=4` is reported `stale` and the client drops it. A pending item for a key the server has never seen is applied even though its `rev` is below `maxRev`, since revisions are per install and `maxRev` reflects other votes. Equal revisions are always `stale`.
+- **After a stale result the local pick may differ from the server's state.** That is harmless: rankings are the only consumer. The reader's own popup keeps showing their local choice, and saving the word again is a new user action that gets a fresh revision above `maxRev` and takes effect.
 - A client whose counter is above the accepted window sends nothing until it has read `maxRev` from a response and reset its counter to it. These rules mean a legitimate offline queue is never rejected unpredictably and never overrides a newer server state.
 
 ### 7.3.1 Rate-limit counters
@@ -211,7 +231,14 @@ weight = min(1, ageDays / 14) × min(1, distinctBooks / 2)
 
 **Rankings are computed per `(lemmaKey, providerId)`, never across dictionaries.** Sense keys include the provider, readers see different sets of dictionaries, and a reader cannot pick a meaning they were never shown. Pooling all dictionaries' meanings for one lemma would bias shares towards whichever dictionary is most often enabled. Each dictionary's senses compete only with that dictionary's other senses, so the app reorders senses inside each dictionary group and does not reorder the groups themselves (that remains the reader's dictionary order).
 
-The "Best fit here" tag is shown on the top sense of the reader's primary (first) dictionary group only. Other groups are reordered without a tag. A dictionary with a single sense for the word has nothing to rank and is skipped. Two dictionaries that give the same meaning do not share votes; merging near-duplicate meanings across dictionaries is a later phase (section 15, phase 4).
+**Entry level and meaning level.** A save names an entry, so ranking works in two steps inside each dictionary:
+
+1. **Entries.** An install's weight for a word in a dictionary is split equally across the entries it saved, so saving everything adds no more than saving one. An entry's score is the sum of those shares. Entries are reordered by score.
+2. **Meanings inside an entry.** Only votes that carry a `senseKey` (a saved selection or an edited meaning that matches one meaning) count here. Meanings are reordered only when this level passes its own thresholds; otherwise they keep the dictionary's order inside the entry. An entry with one meaning needs no second step.
+
+**Position bias.** Readers tend to save what is shown first, and a ranking that moves X to the top makes X more likely to be saved, which entrenches it. Each vote carries `pos` so aggregation can down-weight saves of whatever was shown first. Open decision 11 covers an optional hold-out: a fixed share of installs (chosen from the `installId`) always see dictionary order, and their saves calibrate the rest.
+
+The "Best fit here" tag, if the app shows one, is shown on the top entry (and its top meaning, when meaning level passes) of the reader's primary (first) dictionary group only. Other groups are reordered without a tag. A dictionary with a single entry that has a single meaning for the word has nothing to rank and is skipped. Two dictionaries that give the same meaning do not share votes; merging near-duplicate meanings across dictionaries is a later phase (section 15, phase 4).
 
 Final order for a word in a book uses smoothing so a thin per-book signal leans on the pooled prior:
 
@@ -225,7 +252,7 @@ Rank by `share_book`. The top meaning is tagged "Best fit" only when the thresho
 
 | Rule | Value |
 |---|---|
-| Weighted picks for the word in that dictionary (pooled level) | at least 30 |
+| Weighted saves for the word in that dictionary (pooled level). Applied to entries, and separately to meanings inside an entry | at least 30 |
 | Distinct installs for the word in that dictionary | at least 10 |
 | Top meaning's share | at least 40% |
 | Lead over the second meaning | at least 10 points |
@@ -324,7 +351,7 @@ Everyone can contribute without signing in. Signing in is optional and makes a r
 }
 ```
 
-- Each word has one entry per dictionary it has a ranking for: `"p4d8x1…": { "baranov": { "order": [...], "best": "..." } }`. `order` lists meaning keys, best first. `best` is present only when the thresholds pass.
+- Each word has one record per dictionary it has a ranking for: `"p4d8x1…": { "baranov": { "entries": ["e5t1…", "c9k2…"], "bestEntry": "e5t1…", "senses": { "e5t1…": { "order": ["h2v9…", "q1m3…"], "best": "h2v9…" } } } }`. `entries` lists entry keys, best first. `senses` has a record only for an entry whose meaning-level ranking passed its thresholds. `bestEntry` and `best` are present only when the thresholds pass.
 - **No counts** are in a pack. They stay in the backend.
 - `hard` and `also` (co-lookups) arrive in later phases.
 
@@ -352,24 +379,40 @@ All of this is behind a single feature flag (`crowdRanking`) that also respects 
 |---|---|---|
 | Meaning keys | new `src/crowd/senseKey.ts` | `senseKey`, `lemmaKey`, `bookKey` helpers, with unit tests |
 | Ranking cache | new `src/crowd/packStore.ts` | Fetch manifest, verify signature, cache packs in IndexedDB, refresh daily |
-| Applying a ranking | `src/dictionary/` (alongside `providerOrder.ts`) | Reorder senses within an entry before the popup groups them |
-| Popup | `src/components/reader/DictionaryPopup.tsx` | "Best fit here" tag, "Other meanings" divider, ✓ pick button, hard-word hint, related words |
-| Personal picks | new local table (see below) | The reader's own pick always wins in their own popup |
+| Applying a ranking | `src/dictionary/` (alongside `providerOrder.ts`) | Reorder entries inside each dictionary, and meanings inside an entry, before the popup groups them |
+| Popup | `src/components/reader/DictionaryPopup.tsx` | **No new controls.** Optional, off-by-default visual markers only (a line beside the best entry, faded or folded other meanings). The default is order only |
+| Save hooks | the popup's existing save callbacks (`onSaveEntry`, `onSaveSelection`) and the edit-save path | Emit a vote when a save happens, per 10.5 |
+| Personal saves | new local table (see below) | The entry the reader saved comes first in their own popup |
 | Consent gate | new `src/crowd/consent.ts` | Single place every send goes through |
 | Outbox | new `src/crowd/queue.ts` | Capped, expiring, cleared on opt-out |
 | Settings | `src/components/shared/settings/` | The switches mocked up in the mockup (best-fit order, hard-word marks, related words, card default, chapter preview, sharing) |
-| Flashcards | existing Alt+F / Alt+N code | Default definition = reader's pick, else best fit |
+| Flashcards | existing Alt+F / Alt+N code | Default definition = the entry the reader saved, else the best-fit entry's first meaning |
 
 ### 10.1 Local tables
 
-- `sensePicks` (local, per user): `{ bookKey, lemmaKey, senseKey, updatedAt }`. This is the reader's own choice. It **may** be added to the synced tables later so personal picks follow the reader across devices. That is a separate decision under [storage-and-sync.md](storage-and-sync.md).
+- `sensePicks` (local, per user): `{ bookKey, lemmaKey, providerId, entryKey, senseKey?, source, updatedAt }`, one row per saved entry per word per book, filled by the reader's own saves and used to put their saved entries first. **Note:** the Phase 0 table already committed on `feat/crowd-sense-phase0` is keyed by `(bookKey, lemmaKey, providerId)` and holds one `senseKey`; it must be re-keyed by `entryKey` before the popup is wired, which is safe because it has not shipped. It **may** be added to the synced tables later so personal picks follow the reader across devices. That is a separate decision under [storage-and-sync.md](storage-and-sync.md).
 - `crowdQueue` and the install key are **local only and excluded from sync and backup**. Add them to the exclusion list in `src/persistence/syncedTables.ts` and add a test that fails if they ever appear in a synced table.
 
 ### 10.2 Consent behaviour
 
-- Off by default. The wording shown at opt-in: "Help improve meanings for everyone. When you pick a meaning, we receive which book, which word and which meaning you chose, linked to a random ID for this app install, not your name or email. We see your network address when you connect but do not keep it with your picks. Picks are combined with others to order meanings in this app and are never sold or given to anyone else. Our hosting provider runs the server and can see network addresses and the stored picks. You can delete your picks any time."
+- Off by default. The wording shown at opt-in: "Help improve meanings for everyone. When you save a word from the dictionary popup, we receive which book, which word and which dictionary entry you saved (and which meaning, if you saved only part of an entry), linked to a random ID for this app install, not your name or email. We see your network address when you connect but do not keep it with your saves. Saves are combined with others to order entries and meanings in this app and are never sold or given to anyone else. Our hosting provider runs the server and can see network addresses and the stored saves. You can delete what you shared any time."
 - Turning it off: stop sends, clear the queue, offer "Delete my shared picks" (section 12).
 - A test proves that no network call to the crowd host happens while sharing is off.
+
+### 10.5 Which saves count
+
+The reader already has these actions; none of them changes. Only saves made from a popup opened on a word **in a book** count, because a vote needs a `bookKey`. Saves from dictionary search or without a book are ignored.
+
+| Existing action | Counts as | `source` |
+|---|---|---|
+| Round + on an entry | A vote for that entry. No `senseKey` | `entry` |
+| Save selection (picked words in an entry) | A vote for that entry. If the selected words fall inside exactly one meaning, the vote also carries that `senseKey`; otherwise it stays entry-level | `selection` |
+| Edit, then save | A vote for the entry whose meaning the saved text matches, with a `senseKey` when it matches one meaning. **Not counted if the reader left the prefilled default unchanged**, because the app chose it, not the reader | `edit` |
+| Main Save Vocabulary (every entry) | Nothing. It says nothing about which entry fits | none |
+| Round + on a whole section heading | Nothing, for the same reason | none |
+| Removing the saved word | Retracts every vote the reader made for that word in that book (`unsave`) | none |
+
+Saving the same entry again, or in another session, replaces the same vote. The client records `pos` (where the entry or meaning was shown) when it builds the vote.
 
 ### 10.3 Rendering rule
 
@@ -399,12 +442,12 @@ Base: `https://<host>/v1`. HTTPS only, TLS 1.2+. All bodies JSON, max 8 KB.
   "seq": 17,                   // highest rev in this request (see 7.4)
   "sentAt": "2026-10-05T10:02:11Z",
   "appVersion": "0.30.0",
-  "items": [ { "bookKey":"…", "lemmaKey":"…", "providerId":"baranov", "senseKey":"…", "rev":17, "action":"pick", "day":"2026-10-05", "form":"II" } ],
+  "items": [ { "bookKey":"…", "lemmaKey":"…", "providerId":"baranov", "entryKey":"…", "senseKey":null, "source":"entry", "pos":0, "rev":17, "action":"save", "day":"2026-10-05", "form":"II" } ],
   "sig": "ed25519:…"           // over the canonical JSON of everything above
 }
 ```
 
-Server checks, in order: size, schema, signature, `sentAt` within ±10 min, nonce not seen, rate limit, banned flag, then per item: the `(lemmaKey, providerId, senseKey)` triple is on the allow-list (11.1) and `rev` is within the accepted window (7.4). Returns `200` with per-item results (7.4), or a `4xx` with a short code if the whole request is invalid. Maximum 50 items per request.
+Server checks, in order: size, schema, signature, `sentAt` within ±10 min, nonce not seen, rate limit, banned flag, then per item: `(lemmaKey, providerId, entryKey)` is on the allow-list and, when present, so is `(entryKey, senseKey)` (11.1) and `rev` is within the accepted window (7.4). Returns `200` with per-item results (7.4), or a `4xx` with a short code if the whole request is invalid. Maximum 50 items per request.
 
 ### `POST /delete`
 
@@ -426,7 +469,7 @@ Static, cacheable, `ETag`/`If-None-Match`.
 
 ### 11.1 Rejecting made-up meanings
 
-The server holds an allow-list of valid `(lemmaKey, providerId, senseKey)` **triples** built from the same dictionary data the app ships. An item whose full triple is not on the list is rejected, so a meaning can only be voted for under the dictionary it belongs to and the check matches the ranking model (8.2). The list is regenerated from the data build, and updated before any dictionary change ships.
+The server holds an allow-list of valid `(lemmaKey, providerId, entryKey)` **triples**, and of `(entryKey, senseKey)` pairs, built from the same dictionary data the app ships. An item whose triple (and pair, when it has a `senseKey`) is not on the list is rejected, so an entry or meaning can only be voted for under the dictionary it belongs to and the check matches the ranking model (8.2). The list is regenerated from the data build, and updated before any dictionary change ships.
 
 ## 12. Privacy, retention and deletion
 
@@ -485,16 +528,16 @@ Each phase has an exit test. Stop or change course if it fails.
 ### Phase 0: Measure and prepare (no server)
 
 - Implement `senseKey`, `lemmaKey`, `bookKey` with tests.
-- Add the local `sensePicks` table and the ✓ pick plus "Best fit" tag from the reader's own picks.
+- Add the local `sensePicks` table (re-keyed by `entryKey`) and fill it from the reader's own saves, so the entries they saved come first in their own popup. No new control, tag or setting is needed for this.
 - Estimate readers per book and picks per word from real usage.
 - **Exit:** the ranking order works locally. A decision on pooling vs per-book is based on measured numbers. If expected readers per book are under about 50, ship pooled-only.
 
-### Phase 1: Backend and picks
+### Phase 1: Backend and saves
 
 - Ingest API, votes store, nightly aggregation, signed packs, admin table.
 - App: consent gate, queue, pack cache, applying a ranking, kill switch.
 - Closed testing with a small invite group.
-- **Exit:** a pick travels device → server → pack → another device and changes the order there. Tests show nothing is sent while off. Roll back works.
+- **Exit:** a save travels device → server → pack → another device and changes the order there. Tests show nothing is sent while off. Roll back works.
 
 ### Phase 2: Public opt-in release
 
@@ -535,6 +578,8 @@ Each phase has an exit test. Stop or change course if it fails.
 8. **Retention length** (12 months of inactivity) against the privacy cost of keeping linkable votes at all.
 9. **Trust tiers (8.7):** whether to launch with Apple sign-in, the weights, and who is allowed to be a curator.
 10. **What happens to the feature if we stop running the server.** Proposal: the last signed manifest stays cached, `enabled` flips to false at the final release, and the app shows dictionary order.
+11. **Position-bias hold-out (8.2):** whether a fixed share of installs (for example 10%) always sees dictionary order so their saves calibrate the rest, and how large that share should be.
+12. **Entry-level ranking only in v1?** Meaning-level ranking relies on the less common selection and edit saves. Launching with entries only is simpler and may be enough.
 
 ## 18. Risks
 
@@ -545,5 +590,7 @@ Each phase has an exit test. Stop or change course if it fails.
 | Poisoned rankings | Medium | Wrong order | Section 13 controls, rollback |
 | Privacy complaint or legal issue | Low–Medium | High | Minimal data, aggregate-only, review before launch |
 | Server cost or outage | Low | Low | Static read path, serverless hosting, graceful fallback |
+| Saves are noisier than an explicit pick | High | Weak or mixed votes | Entry-level first, ignore save-all, split weight across saved entries, thresholds, prefilled edits do not count |
+| Position bias entrenches the top entry | Medium | A ranking that confirms itself | `pos` on every vote, down-weighting, optional hold-out (decision 11) |
 | Popularity is not correctness | Medium | Misleading "best fit" | Wording "fits most readers", other meanings always visible, easy to disagree |
 | Maintenance burden | Medium | Time | Small scope, automated alerts, monthly review |

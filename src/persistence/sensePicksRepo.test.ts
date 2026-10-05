@@ -29,8 +29,10 @@ async function seedV10Database(): Promise<void> {
   legacy.close();
 }
 
-describe('meaning picks storage', () => {
-  it('adds the table on upgrade from v10 without touching existing data, then stores picks per dictionary', async () => {
+const base = { bookKey: 'b', lemmaKey: 'w', providerId: 'aramorph', source: 'entry' as const };
+
+describe('saved-entry storage', () => {
+  it('adds the table on upgrade from v10 without touching existing data, then stores one row per saved entry', async () => {
     await seedV10Database();
     const { db } = await import('./schema');
     const { getSensePicks, setSensePick, clearSensePick } = await import('./sensePicksRepo');
@@ -38,26 +40,44 @@ describe('meaning picks storage', () => {
     expect(await db.vocabulary.get('v1')).toMatchObject({ surfaceForm: 'كتاب' });
     expect(await db.sensePicks.count()).toBe(0);
 
-    await setSensePick({ bookKey: 'b', lemmaKey: 'w', providerId: 'aramorph', senseKey: 's1' });
-    await setSensePick({ bookKey: 'b', lemmaKey: 'w', providerId: 'baranov', senseKey: 's2' });
-    await setSensePick({ bookKey: 'b', lemmaKey: 'other', providerId: 'aramorph', senseKey: 's9' });
-    await setSensePick({ bookKey: 'b2', lemmaKey: 'w', providerId: 'aramorph', senseKey: 's8' });
-    expect(await getSensePicks('b', 'w')).toEqual(new Map([['aramorph', 's1'], ['baranov', 's2']]));
+    await setSensePick({ ...base, entryKey: 'e1' });
+    await setSensePick({ ...base, entryKey: 'e2' });
+    await setSensePick({ ...base, providerId: 'baranov', entryKey: 'e1' });
+    await setSensePick({ ...base, lemmaKey: 'other', entryKey: 'e9' });
+    await setSensePick({ ...base, bookKey: 'b2', entryKey: 'e8' });
+    const rows = await getSensePicks('b', 'w');
+    expect(rows.map((r) => `${r.providerId}:${r.entryKey}`).sort()).toEqual(['aramorph:e1', 'aramorph:e2', 'baranov:e1']);
 
-    // Picking again in the same dictionary replaces, it does not add.
-    await setSensePick({ bookKey: 'b', lemmaKey: 'w', providerId: 'aramorph', senseKey: 's3' });
-    expect((await getSensePicks('b', 'w')).get('aramorph')).toBe('s3');
-    expect(await db.sensePicks.count()).toBe(4);
-
-    await clearSensePick({ bookKey: 'b', lemmaKey: 'w', providerId: 'aramorph' });
-    expect(await getSensePicks('b', 'w')).toEqual(new Map([['baranov', 's2']]));
-    expect(await getSensePicks('b2', 'w')).toEqual(new Map([['aramorph', 's8']]));
+    await clearSensePick({ ...base, entryKey: 'e1' });
+    expect((await getSensePicks('b', 'w')).map((r) => `${r.providerId}:${r.entryKey}`).sort()).toEqual(['aramorph:e2', 'baranov:e1']);
+    expect(await getSensePicks('b2', 'w')).toHaveLength(1);
   });
 
-  it('keeps a lemma key that is a prefix of another from matching it', async () => {
+  it('saving the same entry again replaces it, and a finer save adds the meaning', async () => {
+    const { getSensePicks, setSensePick } = await import('./sensePicksRepo');
+    await setSensePick({ ...base, bookKey: 'rep', entryKey: 'e1' });
+    await setSensePick({ ...base, bookKey: 'rep', entryKey: 'e1', source: 'selection', senseKey: 's9' });
+    const rows = await getSensePicks('rep', 'w');
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ source: 'selection', senseKey: 's9' });
+    await setSensePick({ ...base, bookKey: 'rep', entryKey: 'e1', senseKey: null });
+    expect((await getSensePicks('rep', 'w'))[0].senseKey).toBeUndefined();
+  });
+
+  it('removing the saved word clears every pick for it and only it', async () => {
+    const { getSensePicks, setSensePick, clearWordPicks } = await import('./sensePicksRepo');
+    await setSensePick({ ...base, bookKey: 'cw', entryKey: 'e1' });
+    await setSensePick({ ...base, bookKey: 'cw', providerId: 'baranov', entryKey: 'e2' });
+    await setSensePick({ ...base, bookKey: 'cw', lemmaKey: 'keep', entryKey: 'e3' });
+    await clearWordPicks('cw', 'w');
+    expect(await getSensePicks('cw', 'w')).toEqual([]);
+    expect(await getSensePicks('cw', 'keep')).toHaveLength(1);
+  });
+
+  it('does not let a book or word key that is a prefix of another match it', async () => {
     const { setSensePick, getSensePicks } = await import('./sensePicksRepo');
-    await setSensePick({ bookKey: 'bk', lemmaKey: 'abc', providerId: 'p', senseKey: 'x' });
-    await setSensePick({ bookKey: 'bk', lemmaKey: 'abcd', providerId: 'p', senseKey: 'y' });
-    expect(await getSensePicks('bk', 'abc')).toEqual(new Map([['p', 'x']]));
+    await setSensePick({ ...base, bookKey: 'bk', lemmaKey: 'abc', entryKey: 'x' });
+    await setSensePick({ ...base, bookKey: 'bk', lemmaKey: 'abcd', entryKey: 'y' });
+    expect((await getSensePicks('bk', 'abc')).map((r) => r.entryKey)).toEqual(['x']);
   });
 });

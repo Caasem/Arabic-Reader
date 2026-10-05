@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { bookKey, lemmaKey, normalizeArabic, normalizeText, senseKey } from './keys';
+import { bookKey, entryKey, lemmaKey, normalizeArabic, normalizeText, senseKey } from './keys';
 import { sha256Hex } from './sha256';
 
 describe('sha256', () => {
@@ -73,5 +73,26 @@ describe('lemmaKey and bookKey', () => {
   });
   it('bookKey works without an author or language', () => {
     expect(bookKey({ title: 'كتاب' })).toBe(bookKey({ title: 'كتاب', author: '', language: '' }));
+  });
+});
+
+describe('entryKey', () => {
+  const verb = { providerId: 'aramorph', headword: 'كَتَبَ', root: 'كتب', verbForm: 'I' };
+
+  it('is stable and short', () => {
+    expect(entryKey(verb)).toBe(entryKey({ ...verb }));
+    expect(entryKey(verb)).toMatch(/^[a-z2-7]{16}$/);
+  });
+  it('tells apart verb forms of the same root, and the dictionaries', () => {
+    expect(entryKey({ ...verb, headword: 'كَتَّبَ', verbForm: 'II' })).not.toBe(entryKey(verb));
+    expect(entryKey({ ...verb, verbForm: 'II' })).not.toBe(entryKey(verb));
+    expect(entryKey({ ...verb, providerId: 'baranov' })).not.toBe(entryKey(verb));
+  });
+  it('ignores vowel marks on the headword and root, and does not depend on the meanings', () => {
+    expect(entryKey({ ...verb, headword: 'كتب' })).toBe(entryKey(verb));
+    expect(entryKey({ providerId: 'aramorph', headword: 'كَتَبَ', root: 'كَتَب', verbForm: 'I' })).toBe(entryKey(verb));
+  });
+  it('works for an entry with no root or verb form', () => {
+    expect(entryKey({ providerId: 'alsihah', headword: 'كَتَبَ' })).toBe(entryKey({ providerId: 'alsihah', headword: 'كتب', root: '', verbForm: '' }));
   });
 });

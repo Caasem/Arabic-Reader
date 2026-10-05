@@ -48,6 +48,14 @@ export function senseKey(providerId: string, headword: string, sense: Dictionary
   return shortHash([providerId, normalizeArabic(headword), normalizeText(senseText(sense))], 10);
 }
 
+/**
+ * One dictionary entry: a headword block with its own meanings (a verb form, a noun). This is the unit
+ * a save names, since the round + saves a whole entry. Built from the entry's own fields, never its position.
+ */
+export function entryKey(entry: { providerId: string; headword: string; root?: string; verbForm?: string }): string {
+  return shortHash([entry.providerId, normalizeArabic(entry.headword), normalizeArabic(entry.root ?? ''), normalizeText(entry.verbForm ?? '')], 10);
+}
+
 /** A word, from its lemma (or the word itself when there is none) and part of speech. */
 export function lemmaKey(lemma: string, pos?: string): string {
   return shortHash([normalizeArabic(lemma), normalizeText(pos ?? '')], 10);

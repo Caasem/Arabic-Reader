@@ -24,6 +24,7 @@ import * as speedReader from './speedReaderRepo';
 import * as readingSessions from './sessionsRepo';
 import * as pomodoro from './pomodoroRepo';
 import * as sensePicks from './sensePicksRepo';
+import type { SensePickInput, SensePickRow } from './sensePicksRepo';
 
 export { db };
 export type { TimeBounds };
@@ -113,9 +114,11 @@ export interface PersistenceService {
   getPomodoroSessions(range?: TimeBounds): Promise<PomodoroSession[]>;
 
   // Meaning picks (src/sensePicks): local only.
-  getSensePicks(bookKey: string, lemmaKey: string): Promise<Map<string, string>>;
-  setSensePick(pick: { bookKey: string; lemmaKey: string; providerId: string; senseKey: string }): Promise<void>;
-  clearSensePick(pick: { bookKey: string; lemmaKey: string; providerId: string }): Promise<void>;
+  getSensePicks(bookKey: string, lemmaKey: string): Promise<SensePickRow[]>;
+  setSensePick(pick: SensePickInput): Promise<void>;
+  clearSensePick(pick: { bookKey: string; lemmaKey: string; providerId: string; entryKey: string }): Promise<void>;
+  /** Removes every pick for this word in this book, for when the reader removes the saved word. */
+  clearWordPicks(bookKey: string, lemmaKey: string): Promise<void>;
 }
 
 export const persistenceService: PersistenceService = {

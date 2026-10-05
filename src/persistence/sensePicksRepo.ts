@@ -1,28 +1,43 @@
 import { db } from './schema';
 
-/** One chosen meaning, for one word in one dictionary in one book. The reader's own choice, kept on this device. */
+/** Which existing save action produced a row (docs/specs/crowd-sense-ranking.md, section 10.5). */
+export type SensePickSource = 'entry' | 'selection' | 'edit';
+
+/** One dictionary entry the reader saved, for one word in one book. Kept on this device. */
 export interface SensePickRow {
-  /** `${bookKey}|${lemmaKey}|${providerId}`: one pick per word per dictionary per book. */
+  /** `${bookKey}|${lemmaKey}|${providerId}|${entryKey}`: one row per saved entry per word per book. */
   key: string;
   bookKey: string;
   lemmaKey: string;
   providerId: string;
-  senseKey: string;
+  entryKey: string;
+  /** Present only when a finer save (a selection or an edit) pinned down one meaning inside the entry. */
+  senseKey?: string;
+  source: SensePickSource;
   updatedAt: number;
 }
 
-const pickRowKey = (bookKey: string, lemmaKey: string, providerId: string): string => `${bookKey}|${lemmaKey}|${providerId}`;
+export type SensePickInput = Omit<SensePickRow, 'key' | 'updatedAt' | 'senseKey'> & { senseKey?: string | null };
 
-/** This word's picks in this book, as dictionary id -> meaning key. */
-export async function getSensePicks(bookKey: string, lemmaKey: string): Promise<Map<string, string>> {
-  const rows = await db.sensePicks.where('key').startsWith(`${bookKey}|${lemmaKey}|`).toArray();
-  return new Map(rows.map((r) => [r.providerId, r.senseKey]));
+const prefix = (bookKey: string, lemmaKey: string): string => `${bookKey}|${lemmaKey}|`;
+const rowKey = (p: { bookKey: string; lemmaKey: string; providerId: string; entryKey: string }): string =>
+  `${prefix(p.bookKey, p.lemmaKey)}${p.providerId}|${p.entryKey}`;
+
+/** Every entry saved for this word in this book. */
+export async function getSensePicks(bookKey: string, lemmaKey: string): Promise<SensePickRow[]> {
+  return db.sensePicks.where('key').startsWith(prefix(bookKey, lemmaKey)).toArray();
 }
 
-export async function setSensePick(pick: { bookKey: string; lemmaKey: string; providerId: string; senseKey: string }): Promise<void> {
-  await db.sensePicks.put({ ...pick, key: pickRowKey(pick.bookKey, pick.lemmaKey, pick.providerId), updatedAt: Date.now() });
+/** Saves an entry, replacing an earlier save of the same entry (for example when a finer save names a meaning). */
+export async function setSensePick(pick: SensePickInput): Promise<void> {
+  const { senseKey, ...rest } = pick;
+  await db.sensePicks.put({ ...rest, ...(senseKey ? { senseKey } : {}), key: rowKey(pick), updatedAt: Date.now() });
 }
 
-export async function clearSensePick(pick: { bookKey: string; lemmaKey: string; providerId: string }): Promise<void> {
-  await db.sensePicks.delete(pickRowKey(pick.bookKey, pick.lemmaKey, pick.providerId));
+export async function clearSensePick(pick: { bookKey: string; lemmaKey: string; providerId: string; entryKey: string }): Promise<void> {
+  await db.sensePicks.delete(rowKey(pick));
+}
+
+export async function clearWordPicks(bookKey: string, lemmaKey: string): Promise<void> {
+  await db.sensePicks.where('key').startsWith(prefix(bookKey, lemmaKey)).delete();
 }
