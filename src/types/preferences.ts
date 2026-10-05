@@ -111,6 +111,10 @@ export interface ReaderPreferences {
   bookSearchEnabled: boolean;
   /** Press Alt+V to list the words saved from the open book (src/bookVocab). */
   bookVocabEnabled: boolean;
+  /** Press Alt+N to write a note on the selection, in a floating card (src/noteCard). */
+  noteCardEnabled: boolean;
+  /** Press Alt+F to write a flashcard of your own, in a floating card (src/flashCard). */
+  flashCardEnabled: boolean;
   /** Show a verb's form (I-X) and its root's other verbs in the dictionary popup (src/verbForms). */
   verbFormsEnabled: boolean;
   /** The aligned, roomier dictionary popup layout (src/popupClean). Off restores the classic popup. */

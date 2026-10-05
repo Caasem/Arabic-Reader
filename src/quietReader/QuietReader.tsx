@@ -14,7 +14,7 @@ import { useCleanSavedWords } from '../cleanReader/useCleanSavedWords';
 import '../cleanReader/cleanReader.css';
 import { logDiagnostic } from '../diagnostics/diagnosticsLog';
 import { libraryService } from '../library/libraryService';
-import { registerBookNavigator, type LocationHint } from '../readerChords';
+import { announceReaderSelection, registerBookNavigator, registerReaderMarks, sentenceSpan, type LocationHint } from '../readerChords';
 import { ReadingSessionTracker } from '../reader/session';
 import { normalize } from '../reader/tokenizer/arabicTokenizer';
 import { attachSectionInteractions, createGestureState, type SectionInteractionHandlers, type WordTarget } from '../reader/wordInteraction/sectionInteractions';
@@ -612,6 +612,63 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
     [model, goTo, jumpTo, locateWord]
   );
 
+  // Alt+N (note) and Alt+F (flashcard) read the selection and add highlights through readerChords.
+  const selectionRef = useRef(selection);
+  const marksRef = useRef(marks);
+  const measureVisibleRef = useRef(measureVisible);
+  const bumpSavedRef = useRef(bumpSaved);
+  useEffect(() => {
+    selectionRef.current = selection;
+    marksRef.current = marks;
+    measureVisibleRef.current = measureVisible;
+    bumpSavedRef.current = bumpSaved;
+  });
+  useEffect(() => announceReaderSelection(), [selection]);
+  useEffect(() => {
+    if (!model) return;
+    const titleOf = (chapter: number) => model.book.chapters[chapter]?.title ?? '';
+    return registerReaderMarks({
+      captureSelection() {
+        const s = selectionRef.current;
+        if (!s) return null;
+        return {
+          text: s.text,
+          location: formatCleanLocation(s),
+          chapterHref: `clean:${s.chapter}`,
+          chapterLabel: titleOf(s.chapter),
+          sentence: model.texts[s.chapter] ? model.texts[s.chapter].slice(sentenceSpan(model.texts[s.chapter], s.start).start, sentenceSpan(model.texts[s.chapter], s.end).end) : undefined,
+        };
+      },
+      capturePage() {
+        const v = measureVisibleRef.current();
+        const text = v ? model.texts[v.chapter] : undefined;
+        if (!v || !text) return null;
+        const span = sentenceSpan(text, v.start);
+        const start = Math.max(span.start, v.start);
+        const end = span.end;
+        if (end <= start) return null;
+        const place = { chapter: v.chapter, start, end };
+        return { text: text.slice(start, end), location: formatCleanLocation(place), chapterHref: `clean:${v.chapter}`, chapterLabel: titleOf(v.chapter), fromPage: true };
+      },
+      existing(c) {
+        const h = marksRef.current.highlights.find((x) => x.cfiRange === c.location);
+        return h ? { note: h.note ?? '' } : null;
+      },
+      async saveNote(c, note, color) {
+        const m = marksRef.current;
+        const found = m.highlights.find((x) => x.cfiRange === c.location);
+        if (found) await m.setNote(found, note);
+        else await m.addHighlight({ location: c.location, text: c.text, color, chapterHref: c.chapterHref, chapterLabel: c.chapterLabel, note });
+        window.getSelection()?.removeAllRanges();
+        setSelection(null);
+      },
+      wordSaved(word) {
+        savedWords.setSaved(word, true);
+        bumpSavedRef.current();
+      },
+    });
+  }, [model, savedWords]);
+
   // --- Word taps --------------------------------------------------------------------------------------
   const withLocation = useCallback((target: WordTarget): WordTarget => {
     const section = sectionOf(target.element);
@@ -799,7 +856,7 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
     const onKeyDown = (e: KeyboardEvent) => {
       trackerRef.current?.recordActivity();
       // An Alt+S / Alt+D / Alt+V palette handles its own keys.
-      if (e.defaultPrevented || (e.target as HTMLElement | null)?.closest?.('.bsearch, .bvocab, .dsearch')) return;
+      if (e.defaultPrevented || (e.target as HTMLElement | null)?.closest?.('.bsearch, .bvocab, .dsearch, .fcard')) return;
       if (e.key === 'Escape') {
         escapeRef.current();
         return;
