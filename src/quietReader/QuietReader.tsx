@@ -20,7 +20,6 @@ import { normalize } from '../reader/tokenizer/arabicTokenizer';
 import { attachSectionInteractions, createGestureState, type SectionInteractionHandlers, type WordTarget } from '../reader/wordInteraction/sectionInteractions';
 import { distinctWordsIn, wrapArabicWords } from '../reader/wordInteraction/wrapWords';
 import { usePreferences } from '../state/PreferencesContext';
-import { DEFAULT_PREFS } from '../state/defaultPreferences';
 import { SAVED_WORD_COLOR } from '../theme/tokens';
 import type { BookMeta, Highlight, HighlightColor, VocabularyItem } from '../types';
 import { vocabularyService } from '../vocabulary';
@@ -240,7 +239,7 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   const labels = region >= 860;
   const stageTop = focus ? 84 : narrow ? 68 : 92;
   const stageBottom = focus ? 72 : narrow ? 120 : 118;
-  const fontFamily = prefs.fontFamily === DEFAULT_PREFS.fontFamily ? `'Lotus', ${prefs.fontFamily}` : prefs.fontFamily;
+  const fontFamily = prefs.fontFamily;
 
   const htmls = useMemo(() => model?.book.chapters.map((c) => chapterHtml(c, { notes: true })) ?? [], [model]);
   const rendered = useMemo(() => (mode === 'all' ? htmls.map((_, i) => i) : model ? [chapter] : []), [mode, htmls, model, chapter]);
