@@ -4,6 +4,23 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.26.0 — 2026-10-05
+
+Russian-to-Arabic search, and tidier Baranov (Arabic-Russian) entries.
+
+- **Search by Russian word.** In the dictionary search (Alt+D), typing Russian
+  searches the Baranov definitions and lists the Arabic entries, best matches
+  first (a word that opens a meaning, then one inside a meaning, then one only
+  in an example). Adding a result saves the Arabic headword. Needs Baranov
+  switched on in Settings.
+- **Cleaner entries.** The verb form (for example "verb, form I, imperfect u")
+  and the Arabic verbal noun lead each entry, and examples are shown as an
+  Arabic line with its Russian gloss beneath.
+- **Homographs.** When several entries share a spelling, the one whose vowel
+  marks match the tapped word comes first.
+- **Onboarding.** The first-run dictionary picker offers Baranov in a new
+  "Russian" group.
+
 ## v0.25.1 — 2026-10-05
 
 Better-looking Baranov (Arabic-Russian) entries.
