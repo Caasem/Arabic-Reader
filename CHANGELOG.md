@@ -4,6 +4,18 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.25.1 — 2026-10-05
+
+Better-looking Baranov (Arabic-Russian) entries.
+
+- **`~` is written out.** The tilde, which stands for the headword in examples,
+  now shows the headword (without vowel marks).
+- **Better match order.** Results are ranked: the tapped word first, then its
+  dictionary forms, then its roots.
+- **Senses split.** `1) … 2) …` become separate senses, and a leading verb form
+  such as `I у` shows as "verb, form I, imperfect u". Files you load yourself
+  get the same treatment.
+
 ## v0.25.0 — 2026-10-04
 
 Bring your own dictionary, plus an optional Arabic-Russian dictionary.
