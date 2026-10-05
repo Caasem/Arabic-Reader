@@ -1,10 +1,3 @@
-/* Lotus is a licensed Linotype font, so it is never bundled with the app: this
-   only picks it up when it is installed on the device. */
-@font-face {
-  font-family: 'Lotus';
-  src: local('Lotus'), local('Lotus Linotype'), local('LotusLinotype'), local('Lotus Light');
-}
-
 .clean-reader__stage {
   flex: 1;
   position: relative;
