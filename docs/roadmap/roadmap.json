@@ -45,8 +45,8 @@
         "governance",
         "data-arch-spec"
       ],
-      "spec": "adr/0002-local-first-backend-exception.md",
-      "notes": "One stack for static Shamela books and the crowd ranking service (for example R2 plus a Worker). Write the ADR first. Cloud shape is in specs/data-architecture.md section 5.",
+      "spec": "adr/0005-cloudflare-hosting.md",
+      "notes": "Provider decided: Cloudflare (ADR 0005, accepted 2026-10-06). One setup for static Shamela books, data packs and the crowd service.",
       "brief": "features/infra-cloud.md",
       "milestone": "M1"
     },
@@ -384,7 +384,7 @@
       "deps": [
         "governance"
       ],
-      "notes": "Four data classes, BlobStore, PackManager, SyncTransport, cloud shape. Draft written; needs your review and the infrastructure ADR.",
+      "notes": "Draft written. Decided 2026-10-06: Cloudflare (ADR 0005); user files sync only through the reader's own folder. Open: ADR 0002 and 0003 (to discuss), OPFS vs IndexedDB on iOS (device probe).",
       "spec": "specs/data-architecture.md",
       "brief": "features/data-arch-spec.md",
       "milestone": "M1"
@@ -426,7 +426,7 @@
       "deps": [
         "sync-v10"
       ],
-      "notes": "Second SyncTransport, same batch format and merge engine. Spec section 6 of storage-and-sync.md. Needs the account question settled (ADR).",
+      "notes": "Kept in M1 (maintainer, 2026-10-06). Needs its own ADR first: it stores reading records on a third-party server with an email sign-in, which ADR 0002 as drafted does not allow. Settle together with ADR 0002.",
       "brief": "features/dexie-cloud.md",
       "milestone": "M1"
     },

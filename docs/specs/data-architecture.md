@@ -15,7 +15,7 @@ Every piece of data belongs to exactly one class. The class decides where it liv
 | Class | Examples | Size | Owner | Local home | Cloud home | Syncs between devices |
 |---|---|---|---|---|---|---|
 | **A. User records** | vocabulary, FSRS state, highlights, notes, bookmarks, positions, preferences, book list | small, many rows | the reader | Dexie (IndexedDB), through the write layer | none by default; optional sync transport | Yes, merged row by row |
-| **B. User files** | imported books, PDFs, audio, uploaded fonts, user dictionaries | large, immutable | the reader | blob store | optional, user-chosen (their folder or their cloud), never ours by default | Optional, by content hash |
+| **B. User files** | imported books, PDFs, audio, uploaded fonts, user dictionaries | large, immutable | the reader | blob store | only the reader's own sync folder; never our servers (decided 2026-10-06) | Optional, by content hash, through the sync folder |
 | **C. Reference packs** | dictionaries, Shamela books, poetry corpus, frequency lists, Anki templates | large, public, versioned | us | blob store, cache | static host (R2 or similar) | No, each device downloads its own |
 | **D. Aggregate data** | crowd votes up, rankings down | tiny up, medium down | us | outbox queue and a signed ranking file | ingest API plus ranking file | No, never merged into A |
 
@@ -58,7 +58,7 @@ Interfaces to define (names are the contract, signatures come in each layer's sp
 
 ## 5. Cloud architecture (optional, not required to run)
 
-Per ADR 0002 the backend is narrow and the app works without it. Proposed stack, to be confirmed in an infrastructure ADR:
+Per ADR 0002 the backend is narrow and the app works without it. Hosting provider: Cloudflare ([ADR 0005](../adr/0005-cloudflare-hosting.md), accepted 2026-10-06).
 - **Static packs**: object storage with CORS and a CDN (Cloudflare R2). Immutable, hash-named files. Cheap and cacheable. Used by Shamela hosting, poetry, audio and dictionaries.
 - **Crowd service**: a small serverless function plus a database (Worker plus D1) for ingest and for building the signed ranking file on a schedule.
 - **Sync server**: none for now. Folder sync is serverless; Dexie Cloud is a hosted third party. Own server only if both prove insufficient.
@@ -82,6 +82,6 @@ A plug-in later gets: read access to class A through the repos, its own namespac
 ## 8. Open questions
 
 - OPFS versus IndexedDB for web blobs, given iOS Safari limits and eviction (needs a test on a device).
-- Whether class B ever syncs through us, or only through the user's own folder or cloud.
+- ~~Whether class B ever syncs through us.~~ **Decided 2026-10-06 (maintainer): never.** The reader's own files (books, audio, video) sync only through the reader's own sync folder, by content hash. They are never stored on our servers.
 - Quota policy on iOS, where the system can evict web storage.
 - Self-hosting: do we document running your own pack host and ranking service?
