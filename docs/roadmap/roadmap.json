@@ -15,7 +15,7 @@
       "title": "Storage and sync v10",
       "area": "foundation",
       "status": "in-progress",
-      "effort": 0.5,
+      "effort": 3,
       "deps": [],
       "branch": "feat/storage-sync-v10",
       "spec": "specs/storage-and-sync.md",
@@ -65,7 +65,7 @@
       "title": "Crowd data: sense ranking and vocabulary statistics",
       "area": "data",
       "status": "built-local",
-      "effort": 2,
+      "effort": 1,
       "deps": [
         "infra-cloud",
         "sync-v10"
