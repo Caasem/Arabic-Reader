@@ -48,7 +48,7 @@
       "spec": "adr/0002-local-first-backend-exception.md",
       "notes": "One stack for static Shamela books and the crowd ranking service (for example R2 plus a Worker). Write the ADR first. Cloud shape is in specs/data-architecture.md section 5.",
       "brief": "features/infra-cloud.md",
-      "milestone": "M3"
+      "milestone": "M1"
     },
     {
       "id": "shamela-host",
@@ -401,7 +401,7 @@
       ],
       "notes": "One byte store for books, PDFs, audio and packs with web, Electron and mobile backends. Migrate existing book files; de-duplicates by hash. Test OPFS versus IndexedDB on iOS first.",
       "brief": "features/blob-store.md",
-      "milestone": "M2"
+      "milestone": "M1"
     },
     {
       "id": "pack-manager",
@@ -415,7 +415,7 @@
       ],
       "notes": "Signed manifest, resumable download, hash verification, eviction, offline from cache. Proof: move one dictionary onto it.",
       "brief": "features/pack-manager.md",
-      "milestone": "M3"
+      "milestone": "M1"
     },
     {
       "id": "dexie-cloud",
@@ -428,7 +428,7 @@
       ],
       "notes": "Second SyncTransport, same batch format and merge engine. Spec section 6 of storage-and-sync.md. Needs the account question settled (ADR).",
       "brief": "features/dexie-cloud.md",
-      "milestone": "M3"
+      "milestone": "M1"
     },
     {
       "id": "storage-ux",
@@ -441,7 +441,7 @@
       ],
       "notes": "Usage by class, per-class cleanup, export all your data in open formats.",
       "brief": "features/storage-ux.md",
-      "milestone": "M2"
+      "milestone": "M1"
     },
     {
       "id": "poetry-web",
@@ -459,18 +459,18 @@
   "milestones": [
     {
       "id": "M1",
-      "title": "Consolidate",
-      "goal": "One healthy main branch: integration and docs merged, sync finished for Android and hardened, the data architecture agreed, duplicate branches cleaned up, CI on every PR, sanitised iOS scripting checked on an iPhone."
+      "title": "Data foundation",
+      "goal": "Storage and infrastructure every later feature builds on: integration merged, the four data classes agreed, folder sync finished and hardened, a content-addressed BlobStore, signed downloadable data packs, one cost-capped cloud setup, an account-based sync option decided, and a storage screen with full export. Plus CI and branch clean-up."
     },
     {
       "id": "M2",
       "title": "Core reader v1.0",
-      "goal": "The reading, lookup and review loop is complete and dependable: quicker saving, a full-page dictionary, sentences and cloze review, Anki end to end, more book formats, and storage you can see and export. Ready for a public 1.0."
+      "goal": "The reading, lookup and review loop is complete and dependable: quicker saving, a full-page dictionary, sentences and cloze review, Anki end to end, more book formats. Ready for a public 1.0."
     },
     {
       "id": "M3",
       "title": "Expansion",
-      "goal": "Beyond books and beyond the device: hosted Shamela and data packs, shared meanings, the standalone lookup module and the surfaces built on it (web extension, video, audiobooks, camera), plus import and study tools."
+      "goal": "Beyond books and beyond the device: hosted Shamela, shared meanings, the standalone lookup module and the surfaces built on it (web extension, video, audiobooks, camera), plus import and study tools."
     },
     {
       "id": "later",
