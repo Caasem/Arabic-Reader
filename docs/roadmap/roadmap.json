@@ -17,7 +17,6 @@
       "status": "in-progress",
       "effort": 3,
       "deps": [],
-      "branch": "feat/storage-sync-v10",
       "spec": "specs/storage-and-sync.md",
       "notes": "Version 1 built on desktop and merging in PR #13. Remaining: Android transport, hardening (binding token, clone and fork detection), restore from folder, retire device, out-of-date warning, backup hardening, iOS.",
       "brief": "features/sync-v10.md",
@@ -27,11 +26,11 @@
       "id": "governance",
       "title": "Governance and docs",
       "area": "foundation",
-      "status": "in-progress",
+      "status": "done",
       "effort": 0.3,
       "deps": [],
       "spec": "governance.md",
-      "notes": "Governance doc, ADR and spec templates, roadmap site, one feature spec per item in docs/features. Milestones added. Remaining: CI crowd typecheck, branch clean-up.",
+      "notes": "Done 2026-10-06: docs map, governance rules (one active branch, one session per folder, CI gate), ADR and spec templates, roadmap site with milestones and spec links, a spec per item, branches cleaned up (main plus two parked), CI fixed (offline test, Android build, crowd server typecheck).",
       "brief": "features/governance.md",
       "milestone": "M1"
     },
@@ -126,9 +125,10 @@
       "deps": [
         "popup-extract"
       ],
-      "notes": "Subtitle tracks as tappable text.",
+      "notes": "Parked prototype on branch prototype/clip-lesson-watcher (pushed): a standalone clip watcher with tappable transcript words. Port ideas, do not merge as-is.",
       "brief": "features/video.md",
-      "milestone": "M3"
+      "milestone": "M3",
+      "branch": "prototype/clip-lesson-watcher"
     },
     {
       "id": "audiobooks",
@@ -452,7 +452,7 @@
       "deps": [],
       "branch": "feat/poetry-web",
       "spec": "specs/poetry-web.md",
-      "notes": "Local-only Node and SQLite backend built from the user's own disc (ADR 0004). Backend first; web UI, library reader and recordings to follow. Licensed content is never committed. Parked here at the maintainer's request: developed in its own folder; may be integrated later as a plug-in. No feature spec in docs/features.",
+      "notes": "Parked. Branch feat/poetry-web (local only, 8 commits on top of the sync work). Developed in its own folder; may be integrated later as a plug-in. No feature spec in docs/features.",
       "milestone": "later"
     }
   ],

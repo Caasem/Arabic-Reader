@@ -31,6 +31,13 @@ test('service worker precaches the app shell and dictionary; the app and diction
     )
     .toBe(true);
 
+  // A controller can exist before the worker finishes activating; reloading then
+  // can reach the network instead of the worker (flaky on CI). Wait for 'activated'.
+  await page.evaluate(async () => {
+    const sw = (await navigator.serviceWorker.ready).active!;
+    if (sw.state !== 'activated') await new Promise<void>((r) => sw.addEventListener('statechange', () => sw.state === 'activated' && r()));
+  });
+
   await context.setOffline(true);
   await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
   const navbarVisible = await page

@@ -1,6 +1,6 @@
 # Governance and documentation
 
-Roadmap id: `governance` · Area: Foundation · Status: in progress · Depends on: nothing · Enables: `infra-cloud`, `data-arch-spec`
+Roadmap id: `governance` · Area: Foundation · Status: done (2026-10-06) · Depends on: nothing · Enables: `infra-cloud`, `data-arch-spec`
 
 ## 1. Purpose
 

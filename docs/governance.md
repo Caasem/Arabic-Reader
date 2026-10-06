@@ -23,11 +23,16 @@ The project is one maintainer plus Claude sessions. Process exists to stop conte
 - **Data gate:** any schema change has a migration, a pre-upgrade backup and a test. No change touches sync tables without the storage-and-sync spec being updated.
 - **Licence gate:** third-party data (dictionaries, Shamela, fonts, audio) has its licence recorded in the spec. Licensed assets are never committed (see the Lotus font rule).
 - **Test gate:** `npm run test:unit` and `npm run build` pass; user-facing flows have an e2e test or a written manual check.
+- **CI gate:** a PR merges only when its GitHub checks (Tests, Build Android APK) are green. A check that is red on `main` is fixed before new work merges; a flaky test is fixed, not retried until it passes.
 
 ## 4. Branches and releases
 
-- `main` is releasable. Work happens on `feat/*`; long branches (like sync) merge `main` in regularly rather than all at the end.
-- Bump the version per user-visible commit (see memory note on version bumps); the number appears in the app's Library notice.
+- `main` is releasable. Work happens on `feat/*` (or `docs/*`, `fix/*`) branched from the latest `main`.
+- **One active branch at a time.** Besides `main` there is at most one branch in progress. Finish it (PR, green CI, merge, delete the branch and its worktree) before starting the next. Parked work is allowed only as a named branch listed in the roadmap item's `branch` field with status "parked" in its notes.
+- **One session, one folder, one branch.** Each Claude session works in its own folder (worktree) on its own branch. A session never commits to a branch that another session or folder has checked out, and never edits files in another session's folder. Before committing, check `git branch --show-current` is the branch the task names.
+- **Merge `main` in early.** A branch that lives longer than a day merges `main` in at least daily, so conflicts stay small.
+- **After merging:** delete the branch locally and on GitHub, remove its worktree, and update the roadmap item.
+- Bump the version per user-visible commit; the number appears in the app's Library notice. Docs-only and CI-only changes do not bump the version.
 - Keep unmerged-branch knowledge in the roadmap's `branch` field so nothing is only in someone's head.
 
 ## 5. Review
@@ -37,7 +42,7 @@ The project is one maintainer plus Claude sessions. Process exists to stop conte
 
 ## 6. Cadence
 
-- At the start of a session: open the roadmap site, pick the next node on the critical path unless there is a reason not to.
+- At the start of a session: open the roadmap site, choose the earliest unfinished milestone, and pick the next item on its critical path unless there is a reason not to. Copy that item's development prompt from `docs/features/<id>.md`.
 - At the end of a session: update node status and, if a decision was made, write the ADR. Five minutes, not an hour.
 - Monthly: prune stale `idea` nodes, re-estimate effort, run the consolidate-memory skill.
 
