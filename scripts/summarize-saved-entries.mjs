@@ -37,4 +37,7 @@ if (exports.length === 0) {
   console.error('No usable files.');
   process.exit(1);
 }
+const synthetic = exports.filter((e) => e.synthetic).length;
+if (synthetic > 0) console.log(`NOTE: ${synthetic} of ${exports.length} files are synthetic dummy data, not real readers.
+`);
 process.stdout.write(formatSummary(summarizeExports(exports)));
