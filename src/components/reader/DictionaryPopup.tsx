@@ -9,7 +9,7 @@ import { isTokenizedProvider } from '../../dictionary/tokenizedProviders';
 import { findMatchedSenses, WASIT_MATCH_CLASS } from '../../wasitMatch';
 import { annotateEntry } from '../../wasitStructure';
 import { VerbFormInfo, VerbFormMark } from '../../verbForms';
-import { arabicEntriesStartFolded, groupLabel } from '../../popupClean';
+import { arabicEntriesStartFolded, EntryDock, entryGist, groupLabel, type DockItem } from '../../popupClean';
 import { vowelScore } from '../../dictionary/providers/personal/vowels';
 import { dictionaryManager } from '../../dictionary';
 import { AddDictionaryPanel } from '../../popupAddDictionary';
@@ -267,6 +267,12 @@ export function DictionaryPopup({
   // 'single' actually removes information from view.
   const allGroups = groupEntriesByProvider(result?.entries ?? []);
   const canSplit = allGroups.length > 1;
+  // Clean layout: one dock tab per Al-Wasit entry (a word with several roots has several).
+  const dockItems: DockItem[] = (allGroups.find((g) => g.providerId === 'alwasit')?.entries ?? []).map(({ entry, index }) => ({
+    index,
+    headword: entry.headword,
+    gist: entryGist(entry.senses[0]?.gloss ?? ''),
+  }));
   const effectiveLayout: 'merged' | 'split' | 'single' =
     prefs.dictionaryPanelLayout === 'single' ? 'single' : prefs.dictionaryPanelLayout === 'split' && canSplit ? 'split' : 'merged';
 
@@ -966,6 +972,8 @@ export function DictionaryPopup({
           if (e.propertyName === 'width') recalcPosition();
         }}
       >
+        {clean && !isNarrow && dockItems.length > 1 && <EntryDock items={dockItems} popupRef={popupRef} scale={scale} />}
+
         {canSplit && effectiveLayout !== 'single' && (
           <button
             className="dict-popup__chevron"

@@ -19,6 +19,11 @@ export default defineConfig({
   timeout: 45_000,
   use: {
     baseURL: 'http://localhost:4173',
+    // The bundled default book (src/defaultBook) is switched off for tests: specs expect an empty library.
+    storageState: {
+      cookies: [],
+      origins: [{ origin: 'http://localhost:4173', localStorage: [{ name: 'arabic-reader:defaultBook:9760', value: '1' }] }],
+    },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     // A returning user: the first-run welcome (e2e/onboarding.spec.ts) would

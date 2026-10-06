@@ -4,6 +4,13 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.30.0 — 2026-10-06
+
+- **Entry dock.** In the clean popup, a word with several Al-Wasit entries (one per
+  root) gets a dock of labelled tabs; pressing one jumps to that entry, and the
+  current one is lit. It appears as soon as the popup opens.
+- **Default book.** A first-time library gets al-Akhbar al-Tiwal, added once per browser.
+
 ## v0.27.0 — 2026-10-05
 
 Baranov (Arabic-Russian) entries behave like the English and Arabic ones in the popup.
