@@ -239,6 +239,16 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
 
   return (
     <div className="library">
+      {/* "Add file" for a book whose file is on another device. Kept out of the header's
+          actions so that row has a single file input (the import). */}
+      <input
+        ref={attachInputRef}
+        type="file"
+        accept=".epub"
+        hidden
+        aria-label="Choose the file for this book"
+        onChange={(e) => handleAttach(e.target.files)}
+      />
       <header className="library__header">
         <div>
           <h1>Library</h1>
@@ -251,14 +261,6 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
           <button className="btn btn--primary" onClick={() => fileInputRef.current?.click()} disabled={importing}>
             {importing ? 'Adding…' : '+ Add EPUB'}
           </button>
-          <input
-            ref={attachInputRef}
-            type="file"
-            accept=".epub"
-            hidden
-            aria-label="Choose the file for this book"
-            onChange={(e) => handleAttach(e.target.files)}
-          />
           <input
             ref={fileInputRef}
             type="file"
