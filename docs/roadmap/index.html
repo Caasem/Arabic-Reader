@@ -50,6 +50,14 @@
   .path { padding:12px 16px; margin:0 20px 12px; }
   .path ol { margin:6px 0 0; padding-left:20px; }
   .path a { color:var(--prog); }
+  .miles { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; margin:0 20px 12px; }
+  .mile { text-align:left; font:inherit; color:inherit; padding:12px 14px; cursor:pointer; }
+  .mile[aria-pressed="true"] { border-color:var(--crit); box-shadow:0 0 0 1px var(--crit); }
+  .mile h3 { margin:0 0 4px; font-size:14px; }
+  .mile p { margin:6px 0 0; color:var(--muted); font-size:12px; }
+  .meter { height:6px; border-radius:3px; background:var(--line); overflow:hidden; margin-top:8px; }
+  .meter span { display:block; height:100%; background:var(--done); }
+  .warn { margin:0 20px 12px; padding:10px 14px; border-left:4px solid var(--crit); }
   .legend { color:var(--muted); font-size:12px; padding:0 20px 20px; }
 </style>
 </head>
@@ -58,6 +66,8 @@
   <h1>Arabic Reader roadmap</h1>
   <span class="sub" id="updated"></span>
 </header>
+<div class="miles" id="miles"></div>
+<div class="card warn" id="warn" hidden></div>
 <div class="stats card" id="stats"></div>
 <div class="path card" id="path"></div>
 <div class="bar" id="filters"></div>
@@ -65,7 +75,7 @@
   <div class="card" id="graphWrap"><svg id="graph"></svg></div>
   <aside class="card" id="detail"><p class="sub">Click a node to see details, dependencies and what it unblocks.</p></aside>
 </main>
-<p class="legend">Edges point from a prerequisite to the work that needs it. Pink = critical path (longest remaining effort chain). Effort is a rough estimate in weeks; edit <code>docs/roadmap/roadmap.json</code> and reload.</p>
+<p class="legend">Edges point from a prerequisite to the work that needs it. Pink = critical path: the longest chain of remaining work up to the selected milestone (a milestone includes everything before it). Click a milestone to focus on it; click it again to see everything. Effort is a rough estimate in weeks; edit <code>docs/roadmap/roadmap.json</code> and reload.</p>
 
 <script>
 const COLORS = { 'done':'--done', 'in-progress':'--prog', 'built-local':'--local', 'planned':'--plan', 'idea':'--idea' };
@@ -80,6 +90,11 @@ const el = (tag, attrs = {}, parent) => {
 };
 
 let data, byId, children, depth, remaining, critical, selected = null, hideStatus = new Set(), areaFilter = null;
+// Milestones are cumulative: choosing M2 means "everything needed to finish M2", so M1 items are in scope too.
+let scope = null, milestoneRank = {};
+const msOf = i => i.milestone || 'later';
+const inScope = i => !scope || milestoneRank[msOf(i)] <= milestoneRank[scope];
+const kids = id => children[id].filter(c => inScope(byId[c]));
 
 fetch('roadmap.json', { cache: 'no-store' }).then(r => r.json()).then(init)
   .catch(e => document.body.insertAdjacentHTML('beforeend', '<p style="padding:20px">Could not load roadmap.json. Start the site with <code>npm run roadmap</code>. ' + e + '</p>'));
@@ -93,11 +108,57 @@ function init(d) {
     children[p].push(i.id);
   }));
   document.getElementById('updated').textContent = 'Updated ' + d.updated;
+  (d.milestones || []).forEach((m, n) => milestoneRank[m.id] = n);
+  try { const saved = localStorage.getItem('roadmap.scope'); if (saved && saved in milestoneRank) scope = saved; } catch {}
+  renderWarnings();
+  renderFilters();
+  refresh();
+}
+
+function refresh() {
   compute();
+  renderMilestones();
   renderStats();
   renderPath();
-  renderFilters();
   draw();
+  if (selected) select(selected, true);
+}
+
+function setScope(id) {
+  scope = scope === id ? null : id;
+  try { scope ? localStorage.setItem('roadmap.scope', scope) : localStorage.removeItem('roadmap.scope'); } catch {}
+  if (selected && !inScope(byId[selected])) selected = null;
+  refresh();
+}
+
+function renderMilestones() {
+  const box = document.getElementById('miles');
+  box.innerHTML = '';
+  (data.milestones || []).forEach(m => {
+    const items = data.items.filter(i => msOf(i) === m.id);
+    const done = items.filter(i => i.status === 'done').length;
+    const left = +items.filter(i => i.status !== 'done').reduce((s, i) => s + i.effort, 0).toFixed(1);
+    const b = document.createElement('button');
+    b.className = 'card mile';
+    b.setAttribute('aria-pressed', String(scope === m.id));
+    b.innerHTML = `<h3>${m.id === 'later' ? '' : m.id + ' · '}${m.title}</h3>
+      <span class="sub">${done} of ${items.length} done · ${left} wk left</span>
+      <div class="meter"><span style="width:${items.length ? (100 * done / items.length) : 0}%"></span></div>
+      <p>${m.goal}</p>`;
+    b.onclick = () => setScope(m.id);
+    box.appendChild(b);
+  });
+}
+
+// An item may not depend on work in a later milestone.
+function renderWarnings() {
+  const bad = [];
+  data.items.forEach(i => i.deps.forEach(d => {
+    if (milestoneRank[msOf(byId[d])] > milestoneRank[msOf(i)]) bad.push(`${i.title} (${msOf(i)}) needs ${byId[d].title} (${msOf(byId[d])})`);
+  }));
+  const w = document.getElementById('warn');
+  w.hidden = !bad.length;
+  w.innerHTML = bad.length ? '<b>Milestone order problems</b><br>' + bad.join('<br>') : '';
 }
 
 // Depth = longest chain of prerequisites. Remaining = effort of unfinished work only,
@@ -106,34 +167,40 @@ function compute() {
   depth = {}; remaining = {};
   const dep = id => depth[id] ??= byId[id].deps.length ? 1 + Math.max(...byId[id].deps.map(dep)) : 0;
   const rem = id => remaining[id] ??= (byId[id].status === 'done' ? 0 : byId[id].effort) +
-    (children[id].length ? Math.max(...children[id].map(rem)) : 0);
-  data.items.forEach(i => { dep(i.id); rem(i.id); });
+    (kids(id).length ? Math.max(...kids(id).map(rem)) : 0);
+  const scoped = data.items.filter(inScope);
+  data.items.forEach(i => dep(i.id));
+  scoped.forEach(i => rem(i.id));
   // trace the chain from the root with the largest remaining total
-  const roots = data.items.filter(i => !i.deps.length);
+  const roots = scoped.filter(i => !i.deps.length);
   let cur = roots.sort((a, b) => remaining[b.id] - remaining[a.id])[0];
   critical = [];
   while (cur) {
     critical.push(cur.id);
-    const next = children[cur.id].map(c => byId[c]).sort((a, b) => remaining[b.id] - remaining[a.id])[0];
-    cur = next;
+    cur = kids(cur.id).map(c => byId[c]).sort((a, b) => remaining[b.id] - remaining[a.id])[0];
   }
 }
 
 function renderStats() {
-  const open = data.items.filter(i => i.status !== 'done');
-  const total = open.reduce((s, i) => s + i.effort, 0);
-  const counts = Object.keys(LABEL).map(s => [s, data.items.filter(i => i.status === s).length]);
-  const crit = critical.reduce((s, id) => s + (byId[id].status === 'done' ? 0 : byId[id].effort), 0);
+  const items = data.items.filter(inScope);
+  const total = +items.filter(i => i.status !== 'done').reduce((s, i) => s + i.effort, 0).toFixed(1);
+  const counts = Object.keys(LABEL).map(s => [s, items.filter(i => i.status === s).length]);
+  const crit = +critical.reduce((s, id) => s + (byId[id].status === 'done' ? 0 : byId[id].effort), 0).toFixed(1);
   document.getElementById('stats').innerHTML =
-    `<div><b>${data.items.length}</b>items</div><div><b>${total}</b>weeks of work left (all items)</div>` +
+    `<div><b>${items.length}</b>items${scope ? ' up to ' + scopeName() : ''}</div><div><b>${total}</b>weeks of work left</div>` +
     `<div><b style="color:var(--crit)">${crit}</b>weeks on the critical path</div>` +
     counts.map(([s, n]) => `<div><b style="color:var(${COLORS[s]})">${n}</b>${LABEL[s]}</div>`).join('');
 }
 
 function renderPath() {
-  document.getElementById('path').innerHTML = '<b>Critical path</b> <span class="sub">(the chain that sets the earliest possible finish; anything off it has slack)</span><ol>' +
+  document.getElementById('path').innerHTML = '<b>Critical path' + (scope ? ' to ' + scopeName() : ' (all items)') + '</b> <span class="sub">(the chain that sets the earliest possible finish; anything off it has slack)</span><ol>' +
     critical.map(id => `<li><a href="#" data-id="${id}">${byId[id].title}</a> <span class="sub">${byId[id].effort} wk, ${LABEL[byId[id].status]}</span></li>`).join('') + '</ol>';
   document.querySelectorAll('#path a').forEach(a => a.onclick = e => { e.preventDefault(); select(a.dataset.id); });
+}
+
+function scopeName() {
+  const m = (data.milestones || []).find(x => x.id === scope);
+  return m ? (m.id === 'later' ? m.title : m.id + ' ' + m.title) : '';
 }
 
 function renderFilters() {
@@ -161,7 +228,7 @@ function renderFilters() {
 
 function draw() {
   const W = 210, H = 58, GX = 80, GY = 22, PAD = 16, TOP = 28;
-  const visible = data.items.filter(i => !hideStatus.has(i.status) && (!areaFilter || i.area === areaFilter));
+  const visible = data.items.filter(i => inScope(i) && !hideStatus.has(i.status) && (!areaFilter || i.area === areaFilter));
   const cols = {};
   visible.forEach(i => (cols[depth[i.id]] ??= []).push(i));
   const pos = {};
@@ -198,7 +265,7 @@ function draw() {
     if (onCrit) el('rect', { x: -5, y: 8, width: 4, height: H - 16, rx: 2, fill: css('--crit') }, g);
     const t = el('text', { x: 10, y: 22 }, g); t.textContent = clip(i.title, 30);
     const s = el('text', { x: 10, y: 42, class: 'st' }, g);
-    s.textContent = `${LABEL[i.status]} · ${i.effort} wk` + (i.branch ? ' · branch' : '');
+    s.textContent = `${msOf(i) === 'later' ? 'Later' : msOf(i)} · ${LABEL[i.status]} · ${i.effort} wk` + (i.branch ? ' · branch' : '');
     g.onclick = () => select(i.id);
   });
 }
@@ -207,9 +274,11 @@ const clip = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;
 function upstream(id, seen = new Set()) { byId[id].deps.forEach(d => { if (!seen.has(d)) { seen.add(d); upstream(d, seen); } }); return seen; }
 function downstream(id, seen = new Set()) { children[id].forEach(d => { if (!seen.has(d)) { seen.add(d); downstream(d, seen); } }); return seen; }
 
-function select(id) {
-  selected = selected === id ? null : id;
-  draw();
+function select(id, keep = false) {
+  if (!keep) {
+    selected = selected === id ? null : id;
+    draw();
+  }
   const box = document.getElementById('detail');
   if (!selected) { box.innerHTML = '<p class="sub">Click a node to see details, dependencies and what it unblocks.</p>'; return; }
   const i = byId[id];
@@ -220,6 +289,7 @@ function select(id) {
     ${critical.includes(id) ? '<span class="pill" style="background:var(--crit)">Critical path</span>' : ''}
     <p>${i.notes || ''}</p>
     <dl>
+      <dt>Milestone</dt><dd>${(data.milestones || []).find(m => m.id === msOf(i))?.title ?? msOf(i)}</dd>
       <dt>Area</dt><dd>${data.areas[i.area]}</dd>
       <dt>Effort</dt><dd>${i.effort} wk (estimate)</dd>
       <dt>Needs</dt><dd>${list(i.deps)}</dd>

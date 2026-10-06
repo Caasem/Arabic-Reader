@@ -20,7 +20,8 @@
       "branch": "feat/storage-sync-v10",
       "spec": "specs/storage-and-sync.md",
       "notes": "Version 1 built on desktop and merging in PR #13. Remaining: Android transport, hardening (binding token, clone and fork detection), restore from folder, retire device, out-of-date warning, backup hardening, iOS.",
-      "brief": "features/sync-v10.md"
+      "brief": "features/sync-v10.md",
+      "milestone": "M1"
     },
     {
       "id": "governance",
@@ -30,8 +31,9 @@
       "effort": 0.3,
       "deps": [],
       "spec": "governance.md",
-      "notes": "Governance doc, ADR and spec templates, roadmap site, one feature spec per item in docs/features. Remaining: milestones, CI crowd typecheck, branch clean-up.",
-      "brief": "features/governance.md"
+      "notes": "Governance doc, ADR and spec templates, roadmap site, one feature spec per item in docs/features. Milestones added. Remaining: CI crowd typecheck, branch clean-up.",
+      "brief": "features/governance.md",
+      "milestone": "M1"
     },
     {
       "id": "infra-cloud",
@@ -45,7 +47,8 @@
       ],
       "spec": "adr/0002-local-first-backend-exception.md",
       "notes": "One stack for static Shamela books and the crowd ranking service (for example R2 plus a Worker). Write the ADR first. Cloud shape is in specs/data-architecture.md section 5.",
-      "brief": "features/infra-cloud.md"
+      "brief": "features/infra-cloud.md",
+      "milestone": "M3"
     },
     {
       "id": "shamela-host",
@@ -58,7 +61,8 @@
         "pack-manager"
       ],
       "notes": "scripts/shamela-host (upload.mjs, cors.json) exists, untracked. Licence of each source must be recorded.",
-      "brief": "features/shamela-host.md"
+      "brief": "features/shamela-host.md",
+      "milestone": "M3"
     },
     {
       "id": "crowd-ranking",
@@ -72,7 +76,8 @@
       ],
       "spec": "specs/crowd-sense-ranking.md",
       "notes": "Built and tested (client, server, Alt+P), merging in PR #13. Not deployed. Remaining: deployment, privacy page, optional marker, local statistics.",
-      "brief": "features/crowd-ranking.md"
+      "brief": "features/crowd-ranking.md",
+      "milestone": "M3"
     },
     {
       "id": "poetry",
@@ -83,7 +88,8 @@
       "deps": [
         "plugin-api"
       ],
-      "notes": "Parked. The poetry-web app (separate folder, own session) is the working version of this idea and may come in later as a plug-in. No feature spec until then."
+      "notes": "Parked. The poetry-web app (separate folder, own session) is the working version of this idea and may come in later as a plug-in. No feature spec until then.",
+      "milestone": "later"
     },
     {
       "id": "popup-extract",
@@ -95,7 +101,8 @@
         "sync-v10"
       ],
       "notes": "Make word lookup work on any text, not only the book reader. Unlocks extension, video and audiobooks. Audit coupling in DictionaryPopup first.",
-      "brief": "features/popup-extract.md"
+      "brief": "features/popup-extract.md",
+      "milestone": "M3"
     },
     {
       "id": "web-extension",
@@ -107,7 +114,8 @@
         "popup-extract"
       ],
       "notes": "Tap-to-define on any web page, saves into the same vocabulary.",
-      "brief": "features/web-extension.md"
+      "brief": "features/web-extension.md",
+      "milestone": "M3"
     },
     {
       "id": "video",
@@ -119,7 +127,8 @@
         "popup-extract"
       ],
       "notes": "Subtitle tracks as tappable text.",
-      "brief": "features/video.md"
+      "brief": "features/video.md",
+      "milestone": "M3"
     },
     {
       "id": "audiobooks",
@@ -132,7 +141,8 @@
         "pack-manager"
       ],
       "notes": "Text-synced audio: highlight while playing. Audio hosting needs the cloud stack and licences.",
-      "brief": "features/audiobooks.md"
+      "brief": "features/audiobooks.md",
+      "milestone": "M3"
     },
     {
       "id": "plugin-api",
@@ -145,7 +155,8 @@
         "video"
       ],
       "notes": "Design only after two or three internal features show what extension points are needed. Needs its own ADR on permissions and review.",
-      "brief": "features/plugin-api.md"
+      "brief": "features/plugin-api.md",
+      "milestone": "later"
     },
     {
       "id": "hashiya",
@@ -157,7 +168,8 @@
         "plugin-api"
       ],
       "notes": "Miro-like environment over the text. Largest unknown; a good first real plug-in.",
-      "brief": "features/hashiya.md"
+      "brief": "features/hashiya.md",
+      "milestone": "later"
     },
     {
       "id": "community",
@@ -170,7 +182,8 @@
         "crowd-ranking"
       ],
       "notes": "Start as a GitHub-hosted registry of plug-ins and shared glossaries; a real site only when people want to publish or discuss.",
-      "brief": "features/community.md"
+      "brief": "features/community.md",
+      "milestone": "later"
     },
     {
       "id": "alt-note-flash",
@@ -180,7 +193,8 @@
       "effort": 0,
       "deps": [],
       "notes": "Floating cards that do not block the reader. Latest commit on the sync branch (v0.29.0).",
-      "brief": "features/alt-note-flash.md"
+      "brief": "features/alt-note-flash.md",
+      "milestone": "M1"
     },
     {
       "id": "plus-lookup",
@@ -190,7 +204,8 @@
       "effort": 1,
       "deps": [],
       "notes": "A + control that returns one chosen entry for the tapped word. src/popupAddDictionary and saveLookup already exist: audit what is covered first.",
-      "brief": "features/plus-lookup.md"
+      "brief": "features/plus-lookup.md",
+      "milestone": "M2"
     },
     {
       "id": "click-space-save",
@@ -200,7 +215,8 @@
       "effort": 0.5,
       "deps": [],
       "notes": "Shortcut to save the tapped word without opening the card. src/readerChords exists, so this is probably a new chord.",
-      "brief": "features/click-space-save.md"
+      "brief": "features/click-space-save.md",
+      "milestone": "M2"
     },
     {
       "id": "dict-fullpage",
@@ -210,7 +226,8 @@
       "effort": 2,
       "deps": [],
       "notes": "Maximise the popup into a full page like a normal book dictionary, switch between dictionaries, and search it as a plain dictionary from the reader. src/dictionarySearch exists: audit.",
-      "brief": "features/dict-fullpage.md"
+      "brief": "features/dict-fullpage.md",
+      "milestone": "M2"
     },
     {
       "id": "formats-simple",
@@ -220,7 +237,8 @@
       "effort": 2,
       "deps": [],
       "notes": "Convert to the internal book model on import. TXT first (half a week), then MOBI/AZW3. Also the formats the watched folder can pick up.",
-      "brief": "features/formats-simple.md"
+      "brief": "features/formats-simple.md",
+      "milestone": "M2"
     },
     {
       "id": "formats-pdf",
@@ -232,7 +250,8 @@
         "formats-simple"
       ],
       "notes": "Hardest format: reflowing text, RTL order and diacritics. Scanned PDFs need OCR (separate idea).",
-      "brief": "features/formats-pdf.md"
+      "brief": "features/formats-pdf.md",
+      "milestone": "M3"
     },
     {
       "id": "anki-e2e",
@@ -242,7 +261,8 @@
       "effort": 2,
       "deps": [],
       "notes": "Basic AnkiConnect sync exists (src/anki). Audit gaps: note types, media, two-way review state, deck mapping, no-Anki-running fallback (.apkg export).",
-      "brief": "features/anki-e2e.md"
+      "brief": "features/anki-e2e.md",
+      "milestone": "M2"
     },
     {
       "id": "export-hub",
@@ -254,7 +274,8 @@
         "anki-e2e"
       ],
       "notes": "One export model with several writers, built on the Anki audit.",
-      "brief": "features/export-hub.md"
+      "brief": "features/export-hub.md",
+      "milestone": "M3"
     },
     {
       "id": "sentence-mining",
@@ -264,7 +285,8 @@
       "effort": 1.5,
       "deps": [],
       "notes": "Suggested. Save the surrounding sentence with the card and offer cloze cards. Feeds Anki and the export hub.",
-      "brief": "features/sentence-mining.md"
+      "brief": "features/sentence-mining.md",
+      "milestone": "M2"
     },
     {
       "id": "tts",
@@ -274,7 +296,8 @@
       "effort": 2,
       "deps": [],
       "notes": "Suggested. Speak a word or sentence; attach audio to cards. Needs a licence check on voices.",
-      "brief": "features/tts.md"
+      "brief": "features/tts.md",
+      "milestone": "M3"
     },
     {
       "id": "book-readiness",
@@ -284,7 +307,8 @@
       "effort": 2,
       "deps": [],
       "notes": "Suggested. Estimate difficulty from word frequency and your known vocabulary; list words to learn before a chapter. Overlaps the crowd spec, so reuse its data. Crowd data is optional (a second ordering signal), not a prerequisite.",
-      "brief": "features/book-readiness.md"
+      "brief": "features/book-readiness.md",
+      "milestone": "M3"
     },
     {
       "id": "kindle-import",
@@ -294,7 +318,8 @@
       "effort": 1,
       "deps": [],
       "notes": "Suggested. Read My Clippings.txt and Kindle vocab.db into vocabulary and highlights.",
-      "brief": "features/kindle-import.md"
+      "brief": "features/kindle-import.md",
+      "milestone": "M3"
     },
     {
       "id": "ocr-camera",
@@ -306,7 +331,8 @@
         "popup-extract"
       ],
       "notes": "Suggested. Point at a printed page or scanned PDF and tap words. Mobile first.",
-      "brief": "features/ocr-camera.md"
+      "brief": "features/ocr-camera.md",
+      "milestone": "M3"
     },
     {
       "id": "root-explorer",
@@ -318,7 +344,8 @@
         "dict-fullpage"
       ],
       "notes": "Suggested. Browse a root family and verb forms from any entry. Verb-form data is already parked in memory.",
-      "brief": "features/root-explorer.md"
+      "brief": "features/root-explorer.md",
+      "milestone": "M3"
     },
     {
       "id": "watch-folder",
@@ -331,7 +358,8 @@
         "blob-store"
       ],
       "notes": "Point the app at a folder; new books are imported automatically, duplicates skipped by content hash. Desktop (Electron) can watch continuously by reusing the folder bridge built for sync; mobile can only scan on open (Android folder access, iOS security-scoped bookmark). EPUB first; other formats arrive with the format work. Decide: copy into the library or reference in place, and what happens when the file is deleted from the folder. Needs a spec (file access and duplicate handling).",
-      "brief": "features/watch-folder.md"
+      "brief": "features/watch-folder.md",
+      "milestone": "M3"
     },
     {
       "id": "device-scan",
@@ -344,7 +372,8 @@
         "formats-pdf"
       ],
       "notes": "One-tap scan that finds every EPUB and PDF (later MOBI/TXT) and lists them in a \"Found on this device\" view, with filters by format, folder, size, date and already-imported, and a multi-select import. The user chooses which to import; nothing is imported silently. Platform limits: desktop can walk chosen drives or folders; Android needs MediaStore or all-files access (store policy review); iOS cannot scan the whole device, only user-picked folders. Needs a spec covering permissions and what is read (paths and metadata only until a file is chosen). Builds on the watched-folder scanner.",
-      "brief": "features/device-scan.md"
+      "brief": "features/device-scan.md",
+      "milestone": "M3"
     },
     {
       "id": "data-arch-spec",
@@ -357,7 +386,8 @@
       ],
       "notes": "Four data classes, BlobStore, PackManager, SyncTransport, cloud shape. Draft written; needs your review and the infrastructure ADR.",
       "spec": "specs/data-architecture.md",
-      "brief": "features/data-arch-spec.md"
+      "brief": "features/data-arch-spec.md",
+      "milestone": "M1"
     },
     {
       "id": "blob-store",
@@ -370,7 +400,8 @@
         "sync-v10"
       ],
       "notes": "One byte store for books, PDFs, audio and packs with web, Electron and mobile backends. Migrate existing book files; de-duplicates by hash. Test OPFS versus IndexedDB on iOS first.",
-      "brief": "features/blob-store.md"
+      "brief": "features/blob-store.md",
+      "milestone": "M2"
     },
     {
       "id": "pack-manager",
@@ -383,7 +414,8 @@
         "infra-cloud"
       ],
       "notes": "Signed manifest, resumable download, hash verification, eviction, offline from cache. Proof: move one dictionary onto it.",
-      "brief": "features/pack-manager.md"
+      "brief": "features/pack-manager.md",
+      "milestone": "M3"
     },
     {
       "id": "dexie-cloud",
@@ -395,7 +427,8 @@
         "sync-v10"
       ],
       "notes": "Second SyncTransport, same batch format and merge engine. Spec section 6 of storage-and-sync.md. Needs the account question settled (ADR).",
-      "brief": "features/dexie-cloud.md"
+      "brief": "features/dexie-cloud.md",
+      "milestone": "M3"
     },
     {
       "id": "storage-ux",
@@ -407,7 +440,8 @@
         "blob-store"
       ],
       "notes": "Usage by class, per-class cleanup, export all your data in open formats.",
-      "brief": "features/storage-ux.md"
+      "brief": "features/storage-ux.md",
+      "milestone": "M2"
     },
     {
       "id": "poetry-web",
@@ -418,7 +452,30 @@
       "deps": [],
       "branch": "feat/poetry-web",
       "spec": "specs/poetry-web.md",
-      "notes": "Local-only Node and SQLite backend built from the user's own disc (ADR 0004). Backend first; web UI, library reader and recordings to follow. Licensed content is never committed. Parked here at the maintainer's request: developed in its own folder; may be integrated later as a plug-in. No feature spec in docs/features."
+      "notes": "Local-only Node and SQLite backend built from the user's own disc (ADR 0004). Backend first; web UI, library reader and recordings to follow. Licensed content is never committed. Parked here at the maintainer's request: developed in its own folder; may be integrated later as a plug-in. No feature spec in docs/features.",
+      "milestone": "later"
+    }
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "title": "Consolidate",
+      "goal": "One healthy main branch: integration and docs merged, sync finished for Android and hardened, the data architecture agreed, duplicate branches cleaned up, CI on every PR, sanitised iOS scripting checked on an iPhone."
+    },
+    {
+      "id": "M2",
+      "title": "Core reader v1.0",
+      "goal": "The reading, lookup and review loop is complete and dependable: quicker saving, a full-page dictionary, sentences and cloze review, Anki end to end, more book formats, and storage you can see and export. Ready for a public 1.0."
+    },
+    {
+      "id": "M3",
+      "title": "Expansion",
+      "goal": "Beyond books and beyond the device: hosted Shamela and data packs, shared meanings, the standalone lookup module and the surfaces built on it (web extension, video, audiobooks, camera), plus import and study tools."
+    },
+    {
+      "id": "later",
+      "title": "Later",
+      "goal": "Unscheduled. Platform bets that wait for users who ask for them: plug-ins, Hashiya, community, poetry."
     }
   ]
 }
