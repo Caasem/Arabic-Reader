@@ -693,8 +693,9 @@ export function DictionaryPopup({
             clearEntrySelection(i);
           }
 
+          // Shown for a single entry too, so saving one entry (and recording it as the reader's pick) always works the same way.
           const saveButton =
-            onSaveEntry && result!.entries.length > 1 ? (
+            onSaveEntry ? (
               <button
                 className={'dict-popup__entry-save' + (hasSelection ? ' dict-popup__entry-save--selection' : '')}
                 onClick={() => {

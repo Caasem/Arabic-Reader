@@ -200,10 +200,10 @@
       "id": "plus-lookup",
       "title": "+ icon: single-entry lookup in the reader",
       "area": "reader",
-      "status": "planned",
+      "status": "done",
       "effort": 1,
       "deps": [],
-      "notes": "A + control that returns one chosen entry for the tapped word. src/popupAddDictionary and saveLookup already exist: audit what is covered first.",
+      "notes": "Done in v0.34.0: the per-entry + shows for single-entry lookups.",
       "brief": "features/plus-lookup.md",
       "milestone": "M2"
     },
