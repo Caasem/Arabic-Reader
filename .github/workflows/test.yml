@@ -2,11 +2,7 @@ name: Tests
 
 on:
   push:
-    # TEMPORARY, this branch only: verifies the hardening-pass refactor on
-    # CI, not just locally. Revert before merging -- main should be the
-    # only branch this fires for on push otherwise (pull_request below
-    # already covers a PR from any branch).
-    branches: [main, refactor/hardening-pass]
+    branches: [main]
   pull_request:
 
 jobs:
@@ -25,6 +21,9 @@ jobs:
 
       - name: Type-check
         run: npx tsc -b --noEmit
+
+      - name: Type-check the crowd server
+        run: npm run crowd:typecheck
 
       - name: Lint
         run: npm run lint

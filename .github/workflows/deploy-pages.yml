@@ -2,11 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    # TEMPORARY, this branch only: lets a push here deploy to Pages for
-    # manual testing (see the hardening-pass refactor) without touching main
-    # or its own copy of this file. Revert before merging -- main should be
-    # the only branch this fires for otherwise.
-    branches: [main, refactor/hardening-pass]
+    branches: [main]
   workflow_dispatch:
 
 permissions:

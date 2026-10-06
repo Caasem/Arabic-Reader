@@ -169,8 +169,11 @@ test('focus, the timer, and vocab levels', async ({ page }) => {
   const levels = page.getByRole('complementary', { name: 'Vocab levels' });
   await expect(levels).toBeVisible();
   const enable = levels.getByRole('button', { name: 'Turn on vocab levels' });
+  const beginner = levels.getByRole('button', { name: 'Beginner' });
+  // isVisible() doesn't wait: on a slow machine neither button is drawn yet. Wait for one of them.
+  await expect(enable.or(beginner)).toBeVisible({ timeout: 15000 });
   if (await enable.isVisible()) await enable.click();
-  await levels.getByRole('button', { name: 'Beginner' }).click();
+  await beginner.click();
   await expect(levels.locator('.qr-levels__row').first()).toBeVisible({ timeout: 20000 });
 });
 
