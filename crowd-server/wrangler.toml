@@ -1,0 +1,22 @@
+# Cloudflare Worker for crowd sense ranking (docs/specs/crowd-sense-ranking.md, section 7.2).
+# Nothing here is deployed yet. Fill in the ids below after creating the resources (see README.md).
+name = "arabic-reader-crowd"
+main = "src/worker.ts"
+compatibility_date = "2026-10-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "arabic-reader-crowd"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "PACKS"
+bucket_name = "arabic-reader-crowd-packs"
+
+# Once a day: clean up, aggregate, sign and publish the rankings.
+[triggers]
+crons = ["17 3 * * *"]
+
+# Secrets, never in this file (set with `wrangler secret put`):
+#   SIGNING_KEY   the Ed25519 private key as a JWK string (see scripts/gen-signing-key.mjs)
+#   ADMIN_TOKEN   at least 16 random characters, for /v1/admin/*

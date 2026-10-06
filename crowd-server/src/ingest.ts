@@ -32,7 +32,10 @@ export interface AllowList {
 
 /** Accepts any entry of a known dictionary. A `SetAllowList` is stricter once the dictionary data is listed. */
 export class ProviderAllowList implements AllowList {
-  constructor(private readonly providers: readonly string[]) {}
+  private readonly providers: readonly string[];
+  constructor(providers: readonly string[]) {
+    this.providers = providers;
+  }
   allowed(providerId: string): boolean {
     return this.providers.includes(providerId);
   }
