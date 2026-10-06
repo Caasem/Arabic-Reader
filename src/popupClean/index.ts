@@ -12,6 +12,8 @@
 import './popupClean.css';
 
 export { PopupCleanSettings } from './PopupCleanSettings';
+export { EntryDock, type DockItem } from './EntryDock';
+export { entryGist } from './entryGist';
 
 /** More Arabic (Al-Wasit, Al-Sihah, Maqayis) entries than this start folded to their headword row. */
 export const MAX_OPEN_ARABIC_ENTRIES = 2;

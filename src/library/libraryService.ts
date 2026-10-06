@@ -14,7 +14,8 @@ export interface BookReadingInfo {
  * listing and removing books.
  */
 export class LibraryService {
-  async importEpub(file: File): Promise<BookMeta> {
+  /** `id` is only for books every install gets (the starter books), so devices that sync share one record. */
+  async importEpub(file: File, options: { id?: string } = {}): Promise<BookMeta> {
     const buf = await file.arrayBuffer();
     const book = ePub(buf.slice(0)); // epub.js may detach the buffer
     let coverDataUrl: string | undefined;
@@ -33,7 +34,7 @@ export class LibraryService {
     }
 
     const meta: BookMeta = {
-      id: newId('book'),
+      id: options.id ?? newId('book'),
       title: metadata.title || file.name.replace(/\.epub$/i, ''),
       author: metadata.creator || undefined,
       language: metadata.language || undefined,
@@ -52,6 +53,17 @@ export class LibraryService {
 
   async getBookFile(id: string): Promise<Blob | undefined> {
     return persistenceService.getBookFile(id);
+  }
+
+  /** Books whose file is on this device. A book synced from another device may have none yet. */
+  async listBookFileIds(): Promise<Set<string>> {
+    return new Set(await persistenceService.getBookFileIds());
+  }
+
+  /** Give a book that arrived without its file (via sync) the file, keeping its id and history. */
+  async attachBookFile(id: string, file: File): Promise<void> {
+    if (!file.name.toLowerCase().endsWith('.epub')) throw new Error('Choose the EPUB file for this book.');
+    await persistenceService.saveBookFile(id, file);
   }
 
   async removeBook(id: string): Promise<void> {

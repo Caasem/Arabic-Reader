@@ -18,11 +18,13 @@ import { NoteSettings } from '../../noteCard';
 import { FlashSettings } from '../../flashCard';
 import { VerbFormsSettings } from '../../verbForms';
 import { PopupCleanSettings } from '../../popupClean';
+import { CrowdSettings } from '../../crowdSync';
 import { LookSettings } from '../../look';
 import { FontSettings } from '../../readerFont';
 import { WasitMatchSettings } from '../../wasitMatch';
 import { WasitStructureSettings } from '../../wasitStructure';
 import { ShamelaBetaSettings } from './settings/ShamelaBetaSettings';
+import { SyncSettings } from './settings/SyncSettings';
 import { QuietReaderSettings } from '../../quietReader/QuietReaderSettings';
 import './SettingsPanel.css';
 
@@ -78,7 +80,7 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
     id: 'library',
     label: 'Library & data',
     blurb: 'Where books come from and keeping your data safe.',
-    sections: [<ShamelaBetaSettings key="shamela" />, <BackupSettings key="backup" />],
+    sections: [<ShamelaBetaSettings key="shamela" />, <BackupSettings key="backup" />, <SyncSettings key="sync" />, <CrowdSettings key="crowd" />],
   },
   {
     id: 'advanced',

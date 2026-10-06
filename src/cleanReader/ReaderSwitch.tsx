@@ -6,6 +6,7 @@ import { BookSearchHost } from '../bookSearch';
 import { BookVocabHost } from '../bookVocab';
 import { NoteHost } from '../noteCard';
 import { FlashHost } from '../flashCard';
+import { PicksExportHost } from '../picksExport';
 import { useReaderView } from '../quietReader/readerView';
 import { saveCleanFocus } from './cleanFocus';
 
@@ -31,7 +32,7 @@ export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: 
   const { prefs } = usePreferences();
   const [view, setView] = useReaderView(props.book.id);
 
-  // Alt+D, Alt+S, Alt+V, Alt+N and Alt+F open their palettes and cards over whichever reader is showing.
+  // Alt+D, Alt+S, Alt+V, Alt+N, Alt+F and Alt+P open their palettes and cards over whichever reader is showing.
   const hosts = (
     <>
       <DictionarySearchHost book={props.book} />
@@ -39,6 +40,7 @@ export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: 
       <BookVocabHost book={props.book} />
       <NoteHost />
       <FlashHost book={props.book} />
+      <PicksExportHost book={props.book} />
     </>
   );
 

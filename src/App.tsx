@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { NavBar, type ViewName } from './components/shared/NavBar';
 import { Library } from './components/library/Library';
 import { ReaderSwitch } from './cleanReader/ReaderSwitch';
@@ -7,6 +7,9 @@ import { PomodoroNotifier } from './components/pomodoro/PomodoroNotifier';
 import { PreferencesProvider } from './state/PreferencesProvider';
 import { LookSkin } from './look';
 import { ReadingFontSync } from './readerFont';
+import { AutoSync } from './sync/AutoSyncMount';
+import { CrowdSyncHost } from './crowdSync';
+import { fullscreen, isDesktopApp } from './utils/desktop';
 import { libraryService } from './library/libraryService';
 import { Onboarding, shouldShowOnboarding } from './onboarding';
 import type { BookMeta, Highlight } from './types';
@@ -33,6 +36,20 @@ function App() {
   const [vocabPanelOpen, setVocabPanelOpen] = useState(false);
   // Reader Focus mode went idle: fade the sidebar out too.
   const [chromeHidden, setChromeHidden] = useState(false);
+  // In the desktop app, Focus takes the whole screen (title bar included), and
+  // leaving Focus gives it back. Only undoes what Focus itself did, so a window
+  // the user put into fullscreen with F11 stays that way.
+  const focusFullscreen = useRef(false);
+  useEffect(() => {
+    if (!isDesktopApp()) return;
+    if (view === 'read' && chromeHidden) {
+      fullscreen.enter();
+      focusFullscreen.current = true;
+    } else if (focusFullscreen.current) {
+      fullscreen.exit();
+      focusFullscreen.current = false;
+    }
+  }, [view, chromeHidden]);
   // A library search result in another book opens at that location instead
   // of the book's saved reading position.
   const [pendingCfi, setPendingCfi] = useState<string | undefined>(undefined);
@@ -76,6 +93,8 @@ function App() {
     <PreferencesProvider>
       <LookSkin />
       <ReadingFontSync />
+      <AutoSync />
+      <CrowdSyncHost />
       {firstRun ? (
         <Onboarding onDone={() => setFirstRun(false)} />
       ) : (

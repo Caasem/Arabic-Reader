@@ -55,6 +55,8 @@ export interface VocabularyItem {
   location?: string;
 
   addedAt: number;
+  /** Last change to this row; set by the persistence write layer (schema v10). */
+  updatedAt?: number;
   firstLookupAt?: number;
   lastLookupAt?: number;
   lookupCount: number;

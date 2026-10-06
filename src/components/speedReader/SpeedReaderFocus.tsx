@@ -1,3 +1,4 @@
+import { fullscreen } from '../../utils/desktop';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BookMeta, DictionaryLookupResult, ReaderPreferences, RsvpToken, WordInstance } from '../../types';
 import { lookupWord, saveLookup } from '../../vocabulary/lookupWord';
@@ -158,18 +159,12 @@ export function SpeedReaderFocus({
   // block the reading experience itself, just the true-fullscreen chrome.
   // ---------------------------------------------------------------------
   useEffect(() => {
-    containerRef.current?.requestFullscreen?.().catch(() => {});
-    return () => {
-      if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-    };
+    fullscreen.enter(containerRef.current);
+    return () => fullscreen.exit();
   }, []);
 
   function toggleFullscreen() {
-    if (document.fullscreenElement) {
-      document.exitFullscreen?.().catch(() => {});
-    } else {
-      containerRef.current?.requestFullscreen?.().catch(() => {});
-    }
+    fullscreen.toggle(containerRef.current);
   }
 
   // ---------------------------------------------------------------------
@@ -270,7 +265,7 @@ export function SpeedReaderFocus({
   }
 
   function handleExit() {
-    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    fullscreen.exit();
     onExit();
   }
 

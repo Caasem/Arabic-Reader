@@ -4,6 +4,55 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.33.0 — 2026-10-06
+
+Shared meanings, built and switched off.
+
+- **Settings → Library & data → Shared meanings.** With it on, the entries you save are
+  counted together with other readers' saves, linked to a random ID rather than your name or email, and the entry most
+  readers saved comes first in its dictionary. Your own saved entry still comes first for you.
+  Off by default. This build has no service address, so the switch reads "Not available in this
+  build" and nothing is sent or fetched.
+- **Delete what I shared** removes your saves from the server and gives this device a new ID.
+  The recovery code shown once after you first share lets you do it if you lose the device.
+- **The server** (`crowd-server/`) and its runbook are in the repository, tested but not
+  deployed. See `docs/specs/crowd-sense-ranking.md`, section 19, and
+  `docs/privacy-shared-meanings.md`.
+
+## v0.32.0 — 2026-10-06
+
+Alt+P: share the entries you saved from a book.
+
+- **A panel like Alt+V.** Press Alt+P while reading to see how many dictionary entries you
+  saved from this book, a few lines of what a file would contain, and **Save file** or
+  **Copy**. Alt+P again or Esc closes it.
+- **For a small test.** A few readers send their file, and
+  `node scripts/summarize-saved-entries.mjs <files>` shows whether they saved the same
+  entries (`docs/specs/crowd-sense-ranking.md`, phase 0). Nothing is sent anywhere.
+- **What the file holds.** Your saved entries per word, with the dictionary and the day. No
+  sentences, notes, flashcards, review history, other books or name.
+
+## v0.31.0 — 2026-10-06
+
+The entry you save comes first next time.
+
+- **Saved entries lead.** Save an entry with its round + (or save picked words from it, or
+  edit and save its meaning), and the next time you open that word in the same book, that
+  entry is first in its dictionary. Dictionaries keep your order.
+- **Nothing new on screen.** No button, icon or setting was added. Saving everything with
+  *Save Vocabulary* does not count, and removing the saved word forgets the picks.
+- **Local only.** This is kept on this device and is not sent anywhere. It is the first step
+  of the crowd-ranking plan (`docs/specs/crowd-sense-ranking.md`).
+
+## v0.30.0 — 2026-10-06
+
+- **Entry dock.** In the clean popup, a word with several Al-Wasit entries (one per
+  root) gets a dock of labelled tabs; pressing one jumps to that entry, and the
+  current one is lit. It appears as soon as the popup opens.
+- **Third starter book.** al-Akhbar al-Tiwal (al-Dinawari) joins the starter books:
+  added once per install, with a fixed id so synced devices see one copy, and
+  removing it keeps it gone.
+
 ## v0.27.0 — 2026-10-05
 
 Baranov (Arabic-Russian) entries behave like the English and Arabic ones in the popup.

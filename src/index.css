@@ -156,3 +156,13 @@ a {
 .hl-swatch--active {
   border-color: var(--ink);
 }
+
+/* The desktop app has no scrollbars: panels and lists still scroll with the
+   wheel, trackpad and keys. Book pages get the same rule injected separately. */
+html[data-desktop],
+html[data-desktop] * {
+  scrollbar-width: none;
+}
+html[data-desktop] ::-webkit-scrollbar {
+  display: none;
+}

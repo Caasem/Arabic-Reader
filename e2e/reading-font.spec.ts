@@ -49,10 +49,10 @@ async function openFontSettings(page: Page) {
 
 test('an uploaded font becomes the reading font, survives a reload, and can be removed', async ({ page }) => {
   await openSampleBook(page);
-  await expect.poll(() => bookBodyFont(page)).toContain('Noto Naskh Arabic');
+  await expect.poll(() => bookBodyFont(page)).toContain('Lala');
 
   let section = await openFontSettings(page);
-  await expect(section.getByRole('radio', { name: /Noto Naskh Arabic/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(section.getByRole('radio', { name: /Lala/ })).toHaveAttribute('aria-checked', 'true');
 
   // Not a font: refused with a message, nothing changes.
   await section.locator('input[type="file"]').setInputFiles(path.join(fontsDir, '..', 'favicon.svg'));
@@ -84,10 +84,10 @@ test('an uploaded font becomes the reading font, survives a reload, and can be r
   await remove.click();
   await section.getByRole('button', { name: /Confirm removing NotoNaskhArabic latin/ }).click();
   await expect(section.getByRole('radio', { name: /NotoNaskhArabic latin/ })).toHaveCount(0);
-  await expect(section.getByRole('radio', { name: /Noto Naskh Arabic/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(section.getByRole('radio', { name: /Lala/ })).toHaveAttribute('aria-checked', 'true');
   await page.click('.settings-panel__close');
 
-  await expect.poll(() => bookBodyFont(page)).toContain('Noto Naskh Arabic');
+  await expect.poll(() => bookBodyFont(page)).toContain('Lala');
   await expect.poll(() => bookBodyFont(page)).not.toContain(UPLOADED_FAMILY);
   await expect.poll(() => appArabicFont(page)).not.toContain(UPLOADED_FAMILY);
 });
