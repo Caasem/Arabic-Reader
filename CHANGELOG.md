@@ -4,6 +4,21 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.32.0 — 2026-10-06
+
+Shared meanings, built and switched off.
+
+- **Settings → Library & data → Shared meanings.** With it on, the entries you save are
+  counted, anonymously by a random ID, together with other readers' saves, and the entry most
+  readers saved comes first in its dictionary. Your own saved entry still comes first for you.
+  Off by default. This build has no service address, so the switch reads "Not available in this
+  build" and nothing is sent or fetched.
+- **Delete what I shared** removes your saves from the server and gives this device a new ID.
+  The recovery code shown once after you first share lets you do it if you lose the device.
+- **The server** (`crowd-server/`) and its runbook are in the repository, tested but not
+  deployed. See `docs/specs/crowd-sense-ranking.md`, section 19, and
+  `docs/privacy-shared-meanings.md`.
+
 ## v0.31.0 — 2026-10-05
 
 Alt+P: share the entries you saved from a book.

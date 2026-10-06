@@ -4,6 +4,7 @@ import { sha256Hex, importPrivateJwk, signEd25519 } from './crypto';
 import { handleDelete, handleVotes, ProviderAllowList, SetAllowList, type AllowList, type Reply } from './ingest';
 import { getConfig } from './config';
 import { maintain, publish, type PublishDeps, type Signer } from './publish';
+import { cachedAppleJwks, handleAccountDelete, handleLink, handleUnlink, type AppleConfig } from './account';
 
 /**
  * The HTTP layer (section 11) and the Cloudflare Worker entry. `handleRequest` is plain Request in, Response out,
@@ -12,6 +13,8 @@ import { maintain, publish, type PublishDeps, type Signer } from './publish';
 
 export interface Services extends PublishDeps {
   adminToken?: string;
+  /** Present only when sign in with Apple is set up (section 8.7). */
+  apple?: AppleConfig;
 }
 
 const CORS = {
@@ -65,6 +68,16 @@ export async function handleRequest(request: Request, services: Services): Promi
     return json(r.status, r.json);
   }
 
+  if (method === 'POST' && pathname.startsWith('/v1/account/')) {
+    if (!services.apple) return json(404, { error: 'not_found' }, CORS);
+    const raw = await request.text();
+    const deps = { db: services.db, now: services.now, ip: request.headers.get('cf-connecting-ip') ?? '0.0.0.0' };
+    if (pathname === '/v1/account/link') return fromReply(await handleLink(deps, services.apple, raw));
+    if (pathname === '/v1/account/unlink') return fromReply(await handleUnlink(deps, raw));
+    if (pathname === '/v1/account/delete') return fromReply(await handleAccountDelete(deps, raw));
+    return json(404, { error: 'not_found' }, CORS);
+  }
+
   if (method === 'POST' && (pathname === '/v1/votes' || pathname === '/v1/delete')) {
     const raw = await request.text();
     const ip = request.headers.get('cf-connecting-ip') ?? '0.0.0.0';
@@ -112,6 +125,9 @@ export interface Env {
   /** The Ed25519 private key as a JWK string. Set with `wrangler secret put`. */
   SIGNING_KEY: string;
   ADMIN_TOKEN?: string;
+  /** Both needed to turn on sign in with Apple. Set with `wrangler secret put` and a var. */
+  APPLE_AUDIENCE?: string;
+  SERVER_SECRET?: string;
 }
 
 export function d1Db(d1: D1Like): Db {
@@ -156,7 +172,11 @@ export function r2Storage(bucket: R2Like): PackStorage {
 async function servicesFor(env: Env): Promise<Services> {
   const key = await importPrivateJwk(JSON.parse(env.SIGNING_KEY) as JsonWebKey);
   const signer: Signer = { sign: (m) => signEd25519(key, m) };
-  return { db: d1Db(env.DB), storage: r2Storage(env.PACKS), signer, now: () => Date.now(), adminToken: env.ADMIN_TOKEN };
+  const apple: AppleConfig | undefined =
+    env.APPLE_AUDIENCE && env.SERVER_SECRET && env.SERVER_SECRET.length >= 32
+      ? { audience: env.APPLE_AUDIENCE, serverSecret: new TextEncoder().encode(env.SERVER_SECRET), jwks: cachedAppleJwks() }
+      : undefined;
+  return { db: d1Db(env.DB), storage: r2Storage(env.PACKS), signer, now: () => Date.now(), adminToken: env.ADMIN_TOKEN, apple };
 }
 
 export default {

@@ -81,6 +81,11 @@ export async function handleAdmin(
     await db.run(`UPDATE installs SET banned = ? WHERE installId = ?`, [path === '/ban' ? 1 : 0, body.installId]);
     return { status: 200, json: { installId: body.installId, banned: path === '/ban' } };
   }
+  if (method === 'POST' && path === '/tier') {
+    if (typeof body.installId !== 'string' || typeof body.tier !== 'number' || ![0, 1, 2, 3].includes(body.tier)) return { status: 400, json: { error: 'bad_schema' } };
+    await db.run(`UPDATE installs SET tier = ? WHERE installId = ?`, [body.tier, body.installId]);
+    return { status: 200, json: { installId: body.installId, tier: body.tier } };
+  }
   if (method === 'POST' && path === '/deny') {
     const config = await getConfig(db);
     const add = (cur: string[], more: unknown) => [...new Set([...cur, ...(Array.isArray(more) ? more.filter((x): x is string => typeof x === 'string') : [])])];

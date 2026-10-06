@@ -90,20 +90,35 @@ export async function aggregate(db: Db, now: number, config: ServiceConfig): Pro
   // Weights: age and distinct books (8.1).
   const books = new Map<string, number>();
   for (const r of await db.all<{ installId: string; n: number }>(`SELECT installId, COUNT(DISTINCT bookKey) AS n FROM votes WHERE saved = 1 GROUP BY installId`)) books.set(r.installId, r.n);
-  const installs = await db.all<{ installId: string; firstSeenDay: string; tier: number }>(`SELECT installId, firstSeenDay, tier FROM installs WHERE banned = 0`);
+  const installs = await db.all<{ installId: string; firstSeenDay: string; tier: number; accountId: string | null }>(`SELECT installId, firstSeenDay, tier, accountId FROM installs WHERE banned = 0`);
   const weightOf = new Map<string, { weight: number; tier: number }>();
   for (const i of installs) weightOf.set(i.installId, { weight: installWeight(i.firstSeenDay, books.get(i.installId) ?? 0, i.tier, today, config), tier: i.tier });
 
   const denyBook = new Set(config.deny.bookKeys);
   const denyLemma = new Set(config.deny.lemmaKeys);
-  const raw = await db.all<Omit<VoteRow, 'weight' | 'tier'>>(
-    `SELECT installId, bookKey, lemmaKey, providerId, entryKey, senseKey, pos FROM votes WHERE saved = 1`,
+  const raw = await db.all<Omit<VoteRow, 'weight' | 'tier'> & { accountId: string | null; appliedAt: number }>(
+    `SELECT v.installId, v.bookKey, v.lemmaKey, v.providerId, v.entryKey, v.senseKey, v.pos, v.appliedAt, i.accountId
+     FROM votes v JOIN installs i ON i.installId = v.installId WHERE v.saved = 1`,
   );
-  const votes: VoteRow[] = [];
+  // A signed-in reader counts once however many devices they use: their newest vote for an entry stands, and they
+  // carry the weight of their strongest install (section 8.7, step 5). Anonymous installs count one by one.
+  const accountWeight = new Map<string, number>();
+  for (const i of installs) {
+    if (i.accountId) accountWeight.set(i.accountId, Math.max(accountWeight.get(i.accountId) ?? 0, weightOf.get(i.installId)!.weight));
+  }
+  const newest = new Map<string, (typeof raw)[number]>();
   for (const v of raw) {
+    const voter = v.accountId ?? v.installId;
+    const key = `${voter}|${v.bookKey}|${v.lemmaKey}|${v.providerId}|${v.entryKey}`;
+    const have = newest.get(key);
+    if (!have || v.appliedAt > have.appliedAt) newest.set(key, v);
+  }
+  const votes: VoteRow[] = [];
+  for (const v of newest.values()) {
     const w = weightOf.get(v.installId);
-    if (!w || w.weight <= 0 || denyBook.has(v.bookKey) || denyLemma.has(v.lemmaKey) || !config.providers.includes(v.providerId)) continue;
-    votes.push({ ...v, weight: w.weight, tier: w.tier });
+    const weight = v.accountId ? (accountWeight.get(v.accountId) ?? 0) : (w?.weight ?? 0);
+    if (!w || weight <= 0 || denyBook.has(v.bookKey) || denyLemma.has(v.lemmaKey) || !config.providers.includes(v.providerId)) continue;
+    votes.push({ installId: v.accountId ? 'acct:' + v.accountId : v.installId, bookKey: v.bookKey, lemmaKey: v.lemmaKey, providerId: v.providerId, entryKey: v.entryKey, senseKey: v.senseKey, pos: v.pos, weight, tier: w.tier });
   }
 
   // An install's weight for a word in a dictionary is split across the entries it saved (8.2),

@@ -1,6 +1,6 @@
 # Crowd sense ranking: infrastructure spec
 
-Status: draft for review, 2026-10-05. Not implemented.
+Status: built and tested locally, not deployed (2026-10-06). See section 19 for what exists, what differs from this text, and what is left.
 Platforms: Web, Windows/Mac (Electron), iOS and Android (Capacitor), same web code as everything else.
 Related: [storage-and-sync.md](storage-and-sync.md) (this feature must not leak into it, see section 10).
 
@@ -595,3 +595,62 @@ Each phase has an exit test. Stop or change course if it fails.
 | Position bias entrenches the top entry | Medium | A ranking that confirms itself | `pos` on every vote, down-weighting, optional hold-out (decision 11) |
 | Popularity is not correctness | Medium | Misleading "best fit" | Wording "fits most readers", other meanings always visible, easy to disagree |
 | Maintenance burden | Medium | Time | Small scope, automated alerts, monthly review |
+
+## 19. Implementation status (2026-10-06)
+
+Built on `feat/crowd-sense-backend`. The server and the app side run end to end in tests (`crowd-server/test`,
+`src/crowdSync/endToEnd.test.ts`), including the phase 1 exit test: a save travels device, server, ranking file, another
+device, and changes the order there. **Nothing is deployed.** The app has no service address built in, so the feature is
+dormant: the Settings switch says "Not available in this build", and nothing is sent or fetched.
+
+### Where things are
+
+| Spec | Built in |
+|---|---|
+| 5 identifiers | `src/sensePicks/keys.ts` (entry, meaning, word, book keys); `crowd-server/src/crypto.ts` (install id) |
+| 6, 7, 11 votes, ordering, API | `crowd-server/src/protocol.ts`, `ingest.ts`, `db.ts` |
+| 8 aggregation, weights, thresholds, hold-out | `crowd-server/src/aggregate.ts` |
+| 8.6, 9, 14 packs, manifest, snapshots, rollback, alerts, maintenance | `crowd-server/src/publish.ts` |
+| 14 admin | `crowd-server/src/admin.ts` |
+| 8.7 Apple sign-in, accounts, tiers | `crowd-server/src/account.ts`, `aggregate.ts` |
+| 7.2 hosting | `crowd-server/src/worker.ts`, `wrangler.toml`, `schema.sql`, `README.md` (runbook) |
+| 10 client | `src/crowdSync/` (consent gate, install key, queue, sender, manifest and pack cache, applying a ranking, Settings, host) and `src/sensePicks/recordSaves.ts` |
+| 10.5 which saves count | `src/sensePicks/recordSaves.ts`, `matching.ts` |
+| 12 privacy | `docs/privacy-shared-meanings.md` (draft, not reviewed) |
+
+### Decisions taken while building (these were open in section 17)
+
+1. Hosting: Cloudflare Workers, D1 and R2, as suggested in 7.2.
+2. Both ranking levels are built, per book smoothed towards pooled by word. The thresholds decide when each applies.
+3. Entry level and meaning level are both built. Meaning level needs the rarer selection and edit saves and passes its own thresholds.
+4. Hold-out: 10% of installs, chosen by install id, always see dictionary order. The share is a server setting carried in the manifest.
+5. Admin access: one bearer token held by the maintainer. No other roles.
+6. Personal saves stay local and are not synced.
+7. Retention: installs idle for 12 months are deleted. Tombstones 30 days, ledger 35 days, backups and snapshots 30 days.
+8. Receiving rankings needs the same consent as sending. With sharing off the app makes no call to the crowd host at all.
+
+### Where the build differs from the text above
+
+- **Allow-list (11.1):** checks `(providerId, entryKey)` pairs, and `(entryKey, senseKey)` pairs when a meaning is named. The
+  lemma key is checked for shape only, because a word's lemma comes from analysis at look-up time and cannot be listed ahead.
+  Without an uploaded allow-list the server accepts any entry of a known dictionary.
+- **Recovery code (5.4, 11):** the server stores `sha256("recovery|" + code)` as a verifier. The app proves ownership with an
+  HMAC keyed by that verifier over the request, so the code itself is never stored or sent.
+- **Manifest** carries `holdoutPercent` (8.2), so the app knows who is in the hold-out group.
+- **Rate limits (13):** per install per hour, per address per hour, and new installs per address per day, kept in D1 rows.
+- **Delete when sharing is off:** the reader's explicit "Delete what I shared" works even with sharing switched off. It is the one call allowed then.
+- **Trust tiers (8.7):** anonymous 0.3, signed-in 1, established up to 1.5, curator 3, only while the `trustTiers` setting is on
+  (default off, so every install counts equally until Apple sign-in exists). The tier of an established reader is set by
+  the maintainer. The consistency factor is not built: it needs a vote history that this spec deliberately does not keep.
+
+### Not built
+
+- **Apple sign-in button in the app.** The server side is built and tested (link, unlink, delete account, per-account counting).
+  The app side needs Apple credentials and a native or web sign-in plugin. Revoking the Apple token on account deletion also needs Apple client credentials.
+- **Phase 3 reader features:** lookup rate, co-lookups and saved-to-card rate, and the screens that would use them ("Before this
+  chapter", the glossary, hard-word marks, "Readers also checked"). They are new interface, and the signals they need are not collected.
+- **Optional visual markers in the popup** (a line beside the best entry, faded or folded other meanings, a "Best fit" label).
+  The default, order only, is what is built.
+- **Phase 4 extras:** verb-form hints from saves, sentence-context ranking, merging near-duplicate meanings across dictionaries.
+- **Deployment, the signing key, the public key in the app, the service address,** and a legal review of the privacy page.
+- **Editions (5.3):** only `bookKey` is used; `editionKey` is not.
