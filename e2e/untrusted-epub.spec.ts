@@ -63,12 +63,16 @@ test('scripts embedded in an EPUB never run, and word taps still work', async ({
   await page.click('.book-card');
   await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
 
-  const frame = () => page.frames().find((f) => f !== page.mainFrame())!;
-  await expect.poll(() => frame().evaluate(() => document.querySelectorAll('.ar-word').length), { timeout: 15000 }).toBeGreaterThan(0);
+  // The reader's own section frame, not "any child frame": the hostile book's <iframe srcdoc> can
+  // exist for a moment before the sanitiser removes it, and picking it fails as a detached frame.
+  const frame = async () => (await (await page.locator('.reader__epub iframe').first().elementHandle())?.contentFrame())!;
+  await expect
+    .poll(async () => (await frame().catch(() => null))?.evaluate(() => document.querySelectorAll('.ar-word').length).catch(() => 0) ?? 0, { timeout: 15000 })
+    .toBeGreaterThan(0);
 
   // Give any surviving payload (image error handler, etc.) a chance to fire.
   await page.waitForTimeout(1000);
-  await frame().evaluate(() => {
+  await (await frame()).evaluate(() => {
     document.querySelector('p')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
   });
 
@@ -82,7 +86,7 @@ test('scripts embedded in an EPUB never run, and word taps still work', async ({
   expect(pwned.flags, 'book-supplied script executed in the app').toEqual([]);
   expect(pwned.storage).toBeNull();
 
-  const sectionState = await frame().evaluate(() => ({
+  const sectionState = await (await frame()).evaluate(() => ({
     scripts: document.getElementsByTagNameNS('*', 'script').length,
     handlers: document.querySelectorAll('[onclick], [onerror]').length,
     csp: document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute('content') ?? null,
@@ -92,7 +96,7 @@ test('scripts embedded in an EPUB never run, and word taps still work', async ({
   expect(sectionState.csp).toContain("script-src 'none'");
 
   // Tapping a word still opens the dictionary.
-  await frame().evaluate(() => {
+  await (await frame()).evaluate(() => {
     document.querySelector('.ar-word')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
   });
   await expect(page.locator('.dict-popup')).toBeVisible({ timeout: 8000 });
