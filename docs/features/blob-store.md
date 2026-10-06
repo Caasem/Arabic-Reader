@@ -2,6 +2,8 @@
 
 Roadmap id: `blob-store` · Area: Foundation · Status: planned · Depends on: `data-arch-spec`, `sync-v10` · Enables: `pack-manager`, `storage-ux`, `watch-folder`, `formats-pdf` originals, `audiobooks`, `video`
 
+> **Design authority:** `docs/specs/data-architecture.md` (sections 5-6 and 12) fixes the interfaces and build order for this item. Where this spec and that design differ, the design wins.
+
 ## 1. Purpose
 
 Large files are stored ad hoc today: book files as Blobs in the Dexie table `bookFiles` (keyed by book id), uploaded fonts in their own IndexedDB database, dictionary data in provider-specific stores, some data bundled as JS chunks. There is no de-duplication (the same EPUB imported twice is stored twice), no way to measure usage per class, and every new feature (PDF originals, audio, video, packs) would need its own store. BlobStore is one byte store for class B (user files) and class C (packs), addressed by content hash.

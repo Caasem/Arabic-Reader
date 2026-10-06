@@ -2,6 +2,8 @@
 
 Roadmap id: `pack-manager` · Area: Foundation · Status: planned · Depends on: `blob-store`, `infra-cloud` · Enables: `shamela-host`, `audiobooks`, `book-readiness` (frequency packs), `tts` (audio packs)
 
+> **Design authority:** `docs/specs/data-architecture.md` (sections 5-6 and 12) fixes the interfaces and build order for this item. Where this spec and that design differ, the design wins.
+
 ## 1. Purpose
 
 Reference data (dictionaries, frequency lists, Shamela books, audio, future corpora) is large, public, versioned and owned by us, not the reader (class C). Today each kind is handled differently: Al-Wasit and others are bundled as lazy JS chunks; AraMorph data is imported by the reader from files; Shamela books are fetched page by page from a third-party proxy; crowd rankings have their own signed manifest (`src/crowdSync`). A single PackManager downloads, verifies, caches, updates and evicts packs the same way, works offline from cache, and lets the bundled app stay small.
@@ -17,7 +19,7 @@ Reference data (dictionaries, frequency lists, Shamela books, audio, future corp
 
 **For developers**
 - `packs.catalog(): Promise<PackInfo[]>` (from the signed catalog, cached), `packs.ensure(id): Promise<PackHandle>` (downloads if needed, returns when ready), `packs.status(id)`, `packs.subscribe(id, listener)`, `packs.remove(id)`, `packs.open(id).file(path): Promise<Blob>` for multi-file packs.
-- A pack is described in the **catalog** (`catalog.json`, signed with Ed25519): `{ id, version, title, description, licence, sizeBytes, files: [{ path, bytes, sha256 }], minAppVersion, kind: 'dictionary'|'frequency'|'shamela-book'|'audio'|'other' }`.
+- A pack is described in the **catalog** (the signed manifest: ECDSA P-256 per `docs/specs/data-architecture.md` section 5.3 and ADR 0007; the field list there is authoritative): `{ id, version, title, description, licence, sizeBytes, files: [{ path, bytes, sha256 }], minAppVersion, kind: 'dictionary'|'frequency'|'shamela-book'|'audio'|'other' }`.
 
 ## 3. User Flows
 
@@ -39,7 +41,7 @@ Reference data (dictionaries, frequency lists, Shamela books, audio, future corp
 
 ## 6. Technical Requirements
 
-- Signature verification with Web Crypto Ed25519 where available, else a small audited library (`@noble/ed25519`, MIT). Public key(s) built into the app; support two keys for rotation. Reuse the crowd client's verification code if it fits (`src/crowdSync`).
+- Signature verification with Web Crypto ECDSA P-256 (available on every target), as decided in `docs/specs/data-architecture.md` (D6) and ADR 0007. Public keys built into the app; two accepted keys for rotation. Reuse the crowd client's verification code if it fits (`src/crowdSync`).
 - Downloads with `fetch` and Range requests for resume; files > 50 MB downloaded in 8 MB ranges, each range appended to a temporary blob; hash verified at the end (streaming SHA-256 for large files, shared with BlobStore).
 - Compression: files may be served `.br` or `.gz`; decompress with `DecompressionStream` where supported, else a WASM fallback.
 - First migrations onto packs: one existing dictionary as proof (Al-Sihah or Maqayis, currently a bundled chunk), keeping it bundled as fallback until the pack path is proven.
@@ -80,7 +82,7 @@ Dependencies: blob-store (docs/features/blob-store.md) for storage; infra-cloud 
 What exists: crowd ranking packs with signature checks in src/crowdSync (reuse its verification if suitable); bundled dictionaries as virtual modules (e.g. virtual:alwasit-data in src/dictionary/providers/alwasit); dictionary settings in src/components/shared/settings.
 
 Build (read docs/features/pack-manager.md first):
-1. src/packManager/ with catalog fetch + Ed25519 verification (two public keys), ensure/status/subscribe/remove/open, range-resume downloads, decompression, verification, atomic version switch; local-only packs table (schema bump, migration test).
+1. src/packManager/ with manifest fetch + ECDSA P-256 verification (two public keys), ensure/status/subscribe/remove/open, range-resume downloads, decompression, verification, atomic version switch; local-only packs table (schema bump, migration test).
 2. <PackRow> component; settings for auto-update on Wi-Fi and base URL override (Advanced).
 3. Proof: serve one dictionary as a pack (keep bundled fallback), switch its provider to load from the pack when ready.
 4. A script scripts/packs/build-pack.mjs that builds a pack (files, hashes) and a signed catalog (key from an env var, never committed).

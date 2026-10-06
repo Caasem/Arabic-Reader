@@ -1,0 +1,13 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": ["https://caasem.github.io", "app://bundle", "http://localhost:5173", "http://localhost:4173"],
+        "methods": ["GET", "HEAD"],
+        "headers": ["*"]
+      },
+      "exposeHeaders": ["Content-Length", "Content-Encoding", "ETag"],
+      "maxAgeSeconds": 86400
+    }
+  ]
+}

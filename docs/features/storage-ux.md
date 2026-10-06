@@ -2,6 +2,8 @@
 
 Roadmap id: `storage-ux` · Area: Reader experience · Status: planned · Depends on: `blob-store`
 
+> **Design authority:** `docs/specs/data-architecture.md` (sections 5-6 and 12) fixes the interfaces and build order for this item. Where this spec and that design differ, the design wins.
+
 ## 1. Purpose
 
 The app keeps everything on the device: books, dictionaries (some are tens of MB), fonts, frequency lists, vocabulary and history. Browsers and phones can run out of space or evict web storage, and readers have no way to see what is using space, free it safely, or take all their data out in open formats. Backup exists (`src/persistence/backup.ts`, Settings "Backup") but covers vocabulary, word instances and highlights only.

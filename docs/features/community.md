@@ -41,7 +41,7 @@ Once readers can extend the app (plug-ins) and share useful data (glossaries, wo
 ## 6. Technical Requirements
 
 - Registry fetch from a raw GitHub URL or the static host (`infra-cloud`), with ETag; validated against a JSON schema; entries failing validation are hidden.
-- sha256 verification before install; optionally registry signing (Ed25519, same key handling as packs) in stage 2.
+- sha256 verification before install; optionally registry signing (ECDSA P-256, same key handling as packs) in stage 2.
 - Website (stage 2): a static-site generator (Astro or Eleventy, MIT) in a separate repo or `website/` folder, deployed by GitHub Actions to Pages; Arabic and English pages; RTL.
 
 ## 7. Edge Cases & Error Handling

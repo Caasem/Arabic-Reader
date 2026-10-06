@@ -46,7 +46,7 @@
         "data-arch-spec"
       ],
       "spec": "adr/0005-cloudflare-hosting.md",
-      "notes": "Provider decided: Cloudflare (ADR 0005, accepted 2026-10-06). One setup for static Shamela books, data packs and the crowd service.",
+      "notes": "Provider decided: Cloudflare (ADR 0005, accepted). Pack hosting format in ADR 0007 (proposed: R2, signed manifest); accept it and set the spending cap.",
       "brief": "features/infra-cloud.md",
       "milestone": "M1"
     },
@@ -384,7 +384,7 @@
       "deps": [
         "governance"
       ],
-      "notes": "Draft written. Accepted 2026-10-06: ADR 0002 (revised), 0003, 0005 (Cloudflare); user files only through the reader's own folder. Open: final BlobStore/PackManager interfaces, OPFS vs IndexedDB on iOS (device probe).",
+      "notes": "Design ready for review (2026-10-06): classes, StorageRegistry, BlobStore and PackManager interfaces, book-file migration, decisions D1-D6, M1 build order (M1a-M1h). Accepted: ADR 0002 (revised), 0003, 0005. Proposed: ADR 0007 (pack hosting). Next after your review: build M1a (StorageRegistry).",
       "spec": "specs/data-architecture.md",
       "brief": "features/data-arch-spec.md",
       "milestone": "M1"
