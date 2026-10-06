@@ -1,6 +1,6 @@
 import ePub from 'epubjs';
 import { persistenceService } from '../persistence';
-import type { BookMeta } from '../types';
+import type { BookFormat, BookMeta } from '../types';
 import { newId } from '../utils/id';
 
 export interface BookReadingInfo {
@@ -14,8 +14,22 @@ export interface BookReadingInfo {
  * listing and removing books.
  */
 export class LibraryService {
+  /**
+   * Adds any supported book file: EPUB as is, TXT, Markdown, MOBI and AZW3 converted to EPUB first
+   * (src/importFormats). `warnings` lists anything the conversion had to leave out.
+   */
+  async importBook(file: File): Promise<{ meta: BookMeta; converted?: { format: BookFormat; chapters: number; warnings: string[] } }> {
+    const { formatOf, convertToEpub } = await import('../importFormats');
+    const format = formatOf(file.name);
+    if (!format) throw new Error(`"${file.name}" isn't a book type Arabic Reader can open. Add an EPUB, TXT, Markdown, MOBI or AZW3 file.`);
+    if (format === 'epub') return { meta: await this.importEpub(file) };
+    const converted = await convertToEpub(file);
+    const meta = await this.importEpub(converted.epub, { format, originalFileName: file.name });
+    return { meta, converted: { format, chapters: converted.chapters, warnings: converted.warnings } };
+  }
+
   /** `id` is only for books every install gets (the starter books), so devices that sync share one record. */
-  async importEpub(file: File, options: { id?: string } = {}): Promise<BookMeta> {
+  async importEpub(file: File, options: { id?: string; format?: BookFormat; originalFileName?: string } = {}): Promise<BookMeta> {
     const buf = await file.arrayBuffer();
     const book = ePub(buf.slice(0)); // epub.js may detach the buffer
     let coverDataUrl: string | undefined;
@@ -38,7 +52,8 @@ export class LibraryService {
       title: metadata.title || file.name.replace(/\.epub$/i, ''),
       author: metadata.creator || undefined,
       language: metadata.language || undefined,
-      format: 'epub',
+      format: options.format ?? 'epub',
+      ...(options.originalFileName ? { originalFileName: options.originalFileName } : {}),
       coverDataUrl,
       addedAt: Date.now(),
       sizeBytes: file.size,

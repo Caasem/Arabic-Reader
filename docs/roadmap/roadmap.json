@@ -233,10 +233,10 @@
       "id": "formats-simple",
       "title": "Import TXT, Markdown and MOBI/AZW3",
       "area": "interop",
-      "status": "planned",
+      "status": "done",
       "effort": 2,
       "deps": [],
-      "notes": "Convert to the internal book model on import. TXT first (half a week), then MOBI/AZW3. Also the formats the watched folder can pick up.",
+      "notes": "Done in v0.36.0 (src/importFormats). Converts on the main thread (the MOBI parser needs DOMParser, which workers lack). \"Keep original files\" waits for BlobStore.",
       "brief": "features/formats-simple.md",
       "milestone": "M2"
     },

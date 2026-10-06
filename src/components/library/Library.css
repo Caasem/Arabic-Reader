@@ -399,3 +399,10 @@
   margin-top: 0.4rem;
   width: 100%;
 }
+
+/* Drag-and-drop: a book file held over the library. */
+.library--drop {
+  outline: 2px dashed var(--accent, #9c7a4f);
+  outline-offset: -8px;
+  border-radius: 12px;
+}

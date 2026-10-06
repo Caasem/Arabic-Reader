@@ -1,7 +1,7 @@
 {
   "name": "arabic-reader-app",
   "private": true,
-  "version": "0.35.0",
+  "version": "0.36.0",
   "license": "GPL-2.0",
   "type": "module",
   "main": "electron/main.cjs",
@@ -34,6 +34,9 @@
     "@capacitor/ios": "^8.5.1",
     "dexie": "^4.4.5",
     "epubjs": "^0.3.93",
+    "fflate": "^0.8.3",
+    "foliate-js": "^1.0.1",
+    "marked": "^18.1.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "ts-fsrs": "^5.4.1"
