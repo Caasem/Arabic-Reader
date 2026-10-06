@@ -972,7 +972,22 @@ export function DictionaryPopup({
           if (e.propertyName === 'width') recalcPosition();
         }}
       >
-        {clean && !isNarrow && dockItems.length > 1 && <EntryDock items={dockItems} popupRef={popupRef} scale={scale} />}
+        {clean && !isNarrow && dockItems.length > 1 && (
+          <EntryDock
+            items={dockItems}
+            popupRef={popupRef}
+            scale={scale}
+            onJump={(i) =>
+              // Open the entry the tab points at, whether entries started folded or open.
+              setFoldedEntries((prev) => {
+                const next = new Set(prev);
+                if (startFolded) next.add(i);
+                else next.delete(i);
+                return next;
+              })
+            }
+          />
+        )}
 
         {canSplit && effectiveLayout !== 'single' && (
           <button

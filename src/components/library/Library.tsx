@@ -1,6 +1,5 @@
 import { hiddenDuplicateIds } from '../../library/duplicates';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ensureDefaultBook } from '../../defaultBook';
 import { libraryService, type BookReadingInfo } from '../../library/libraryService';
 import { LibraryHero } from '../../look';
 import { preloadStarterBooks } from '../../onboarding';
@@ -95,10 +94,6 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
       setReadingInfo(info);
       setFileIds(files);
       setLoading(false);
-    });
-    // The bundled default book, added once per browser (src/defaultBook).
-    void ensureDefaultBook().then((added) => {
-      if (added && !cancelled) reloadLibrary();
     });
     return () => {
       cancelled = true;

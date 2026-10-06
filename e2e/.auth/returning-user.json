@@ -3,7 +3,7 @@
   "origins": [
     {
       "origin": "http://localhost:4173",
-      "localStorage": [{ "name": "arabic-reader:onboardingDone", "value": "1" }, { "name": "arabic-reader:starterBookAdded", "value": "1" }, { "name": "arabic-reader:starterBookAdded:qisas-al-nabiyyin", "value": "1" }]
+      "localStorage": [{ "name": "arabic-reader:onboardingDone", "value": "1" }, { "name": "arabic-reader:starterBookAdded", "value": "1" }, { "name": "arabic-reader:starterBookAdded:qisas-al-nabiyyin", "value": "1" }, { "name": "arabic-reader:starterBookAdded:al-akhbar-al-tiwal", "value": "1" }]
     }
   ]
 }

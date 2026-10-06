@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type RefObject } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 
 export interface DockItem {
   /** Index of the entry in the lookup result (matches the entry's data-entry-index). */
@@ -21,11 +21,25 @@ function scrollParent(el: HTMLElement): HTMLElement | null {
  * A dock of labelled tabs on the popup's edge, one per Al-Wasit entry (so one per
  * root the word led to). Pressing a tab scrolls that entry into view; the tab for
  * the entry being read stays lit. It is there from the moment the popup opens, and
- * sits on whichever side of the popup has room.
+ * sits on whichever side of the popup has room. `onJump` runs before the scroll, so
+ * the popup can unfold a folded entry first.
  */
-export function EntryDock({ items, popupRef, scale }: { items: DockItem[]; popupRef: RefObject<HTMLDivElement | null>; scale: number }) {
+export function EntryDock({
+  items,
+  popupRef,
+  scale,
+  onJump,
+}: {
+  items: DockItem[];
+  popupRef: RefObject<HTMLDivElement | null>;
+  scale: number;
+  onJump?: (index: number) => void;
+}) {
   const [side, setSide] = useState<Side>('left');
   const [active, setActive] = useState(items[0]?.index ?? 0);
+  // The tab last pressed stays lit until the reader scrolls themselves: folded entries
+  // are short, so the jump may not be able to bring the entry to the top.
+  const pinned = useRef<number | null>(null);
   const key = items.map((i) => i.index).join(',');
 
   const entryEl = useCallback(
@@ -39,6 +53,10 @@ export function EntryDock({ items, popupRef, scale }: { items: DockItem[]; popup
     const rect = popup.getBoundingClientRect();
     const need = DOCK_WIDTH_PX * scale + 8;
     setSide(rect.left >= need ? 'left' : window.innerWidth - rect.right >= need ? 'right' : null);
+    if (pinned.current !== null) {
+      setActive(pinned.current);
+      return;
+    }
 
     let current = items[0].index;
     items.forEach((item, n) => {
@@ -56,22 +74,35 @@ export function EntryDock({ items, popupRef, scale }: { items: DockItem[]; popup
     const popup = popupRef.current;
     if (!popup) return;
     const frame = requestAnimationFrame(update);
+    const unpin = () => {
+      pinned.current = null;
+    };
     popup.addEventListener('scroll', update, true);
+    popup.addEventListener('wheel', unpin, { passive: true });
+    popup.addEventListener('touchmove', unpin, { passive: true });
     window.addEventListener('resize', update);
     return () => {
       cancelAnimationFrame(frame);
       popup.removeEventListener('scroll', update, true);
+      popup.removeEventListener('wheel', unpin);
+      popup.removeEventListener('touchmove', unpin);
       window.removeEventListener('resize', update);
     };
     // `key` re-runs this when the set of entries changes.
   }, [update, popupRef, key]);
 
   function go(index: number) {
-    const el = entryEl(index);
-    if (!el) return;
-    el.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    el.classList.add('dict-popup__entry--flash');
-    window.setTimeout(() => el.classList.remove('dict-popup__entry--flash'), FLASH_MS);
+    pinned.current = index;
+    setActive(index);
+    onJump?.(index);
+    // After the unfold has rendered.
+    requestAnimationFrame(() => {
+      const el = entryEl(index);
+      if (!el) return;
+      el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      el.classList.add('dict-popup__entry--flash');
+      window.setTimeout(() => el.classList.remove('dict-popup__entry--flash'), FLASH_MS);
+    });
   }
 
   if (!side || items.length < 2) return null;

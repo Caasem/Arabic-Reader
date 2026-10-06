@@ -9,7 +9,9 @@ release.
 - **Entry dock.** In the clean popup, a word with several Al-Wasit entries (one per
   root) gets a dock of labelled tabs; pressing one jumps to that entry, and the
   current one is lit. It appears as soon as the popup opens.
-- **Default book.** A first-time library gets al-Akhbar al-Tiwal, added once per browser.
+- **Third starter book.** al-Akhbar al-Tiwal (al-Dinawari) joins the starter books:
+  added once per install, with a fixed id so synced devices see one copy, and
+  removing it keeps it gone.
 
 ## v0.27.0 — 2026-10-05
 

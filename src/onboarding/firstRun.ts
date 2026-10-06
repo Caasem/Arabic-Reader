@@ -7,6 +7,8 @@ import { sidebarStartsCollapsed, type DeviceProfile } from './deviceProfile';
 const STARTER_BOOKS = [
   { file: 'narada-kamel-kilani.epub', flag: STORAGE_KEYS.starterBookAdded },
   { file: 'qisas-al-nabiyyin.epub', flag: `${STORAGE_KEYS.starterBookAdded}:qisas-al-nabiyyin` },
+  // al-Akhbar al-Tiwal by al-Dinawari, from Shamela.
+  { file: 'al-akhbar-al-tiwal.epub', flag: `${STORAGE_KEYS.starterBookAdded}:al-akhbar-al-tiwal` },
 ];
 
 /**

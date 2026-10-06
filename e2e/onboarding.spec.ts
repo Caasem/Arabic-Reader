@@ -42,6 +42,7 @@ test('a first visit walks the showcase, then applies the chosen device and dicti
   // The starter books are already on the shelf.
   await expect(page.locator('.book-card__title', { hasText: 'نَارَادَا' })).toBeVisible({ timeout: 15000 });
   await expect(page.locator('.book-card__title', { hasText: 'قصص النبيين للأطفال' })).toBeVisible();
+  await expect(page.locator('.book-card__title', { hasText: 'الأخبار الطوال' })).toBeVisible();
 });
 
 test('choosing Phone applies the touch starting layout and a collapsed sidebar', async ({ page }) => {
