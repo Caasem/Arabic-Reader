@@ -13,6 +13,7 @@ import type {
   PomodoroSession,
 } from '../types';
 import type { SensePickRow } from './sensePicksRepo';
+import type { CrowdStateRow, PackRow, QueueRow } from '../crowdSync/types';
 import { backfilledUpdatedAt, SYNCED_TABLES, type ActivityRow, type ConflictRow, type FrontierRow, type OutboxRow, type SyncMetaRow, type SyncedTableName } from './syncedTables';
 
 /**
@@ -47,6 +48,12 @@ export class ArabicReaderDB extends Dexie {
   syncConflicts!: Table<ConflictRow, string>;
   /** The reader's own chosen meaning per word, dictionary and book. Local only: not synced and not in backups (yet). */
   sensePicks!: Table<SensePickRow, string>;
+  /** Crowd ranking identity, counters and the accepted manifest. One row, local only (src/crowdSync). */
+  crowdState!: Table<CrowdStateRow, string>;
+  /** Votes waiting to be sent. Local only. */
+  crowdQueue!: Table<QueueRow, string>;
+  /** Cached, verified ranking files. Local only. */
+  crowdPacks!: Table<PackRow, string>;
 
   /** `name` is only ever overridden by tests that need two devices in one process. */
   constructor(name = 'arabic-reader') {
@@ -151,6 +158,12 @@ export class ArabicReaderDB extends Dexie {
     // v11: the reader's own meaning picks (src/sensePicks). A new, empty, local-only table.
     this.version(11).stores({
       sensePicks: 'key, bookKey, updatedAt',
+    });
+    // v12: shared meanings (src/crowdSync): identity and counters, the vote queue, cached ranking files. Local only.
+    this.version(12).stores({
+      crowdState: 'id',
+      crowdQueue: 'key, rev',
+      crowdPacks: 'path',
     });
   }
 }

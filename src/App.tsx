@@ -8,6 +8,7 @@ import { PreferencesProvider } from './state/PreferencesProvider';
 import { LookSkin } from './look';
 import { ReadingFontSync } from './readerFont';
 import { AutoSync } from './sync/AutoSyncMount';
+import { CrowdSyncHost } from './crowdSync';
 import { fullscreen, isDesktopApp } from './utils/desktop';
 import { libraryService } from './library/libraryService';
 import { Onboarding, shouldShowOnboarding } from './onboarding';
@@ -93,6 +94,7 @@ function App() {
       <LookSkin />
       <ReadingFontSync />
       <AutoSync />
+      <CrowdSyncHost />
       {firstRun ? (
         <Onboarding onDone={() => setFirstRun(false)} />
       ) : (

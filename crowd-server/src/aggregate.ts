@@ -218,6 +218,8 @@ export interface Manifest {
   expiresAt: string;
   enabled: boolean;
   minAppVersion: string;
+  /** Installs with a hold-out bucket below this always see dictionary order (section 8.2). */
+  holdoutPercent: number;
   thresholds: Thresholds;
   deny: ServiceConfig['deny'];
   packs: Record<string, string>;
@@ -235,6 +237,7 @@ export async function buildManifest(files: Record<string, string>, config: Servi
     expiresAt: new Date(now + LIMITS.manifestTtlDays * 86_400_000).toISOString(),
     enabled: config.enabled,
     minAppVersion: config.minAppVersion,
+    holdoutPercent: config.holdoutPercent,
     thresholds: config.thresholds,
     deny: config.deny,
     packs,

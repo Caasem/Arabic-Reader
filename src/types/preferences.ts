@@ -119,6 +119,8 @@ export interface ReaderPreferences {
   collapseManyArabicEntries: boolean;
   /** Entries the reader saved for a word in a book come first in their dictionary next time (src/sensePicks). No setting shows it yet. */
   savedEntriesFirst: boolean;
+  /** Share which entries I save, and use the rankings other readers' saves produce (src/crowdSync). Off by default. */
+  crowdSharing: boolean;
   /** The redesign (src/look): softer cards, serif headings, fuller colour scheme. */
   lookEnabled: boolean;
   /** Which preset palette the look starts from. */

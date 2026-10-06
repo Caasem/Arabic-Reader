@@ -45,6 +45,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   dictionaryPopupCleanLayout: true,
   collapseManyArabicEntries: true,
   savedEntriesFirst: true,
+  crowdSharing: false,
   lookEnabled: true,
   lookPalette: 'tan',
   lookCustom: {},

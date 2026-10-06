@@ -3,6 +3,8 @@ import { persistenceService } from '../persistence/db';
 import { bookKey, entryKey, lemmaKey, normalizeText, senseKey } from './keys';
 import { entryMatchingMeaning, senseContainingWords } from './matching';
 import { applyPicks } from './rank';
+import { crowdRank } from '../crowdSync/ranking';
+import { positionOf, shareSave, shareUnsave } from '../crowdSync/votes';
 
 /**
  * The reader's own saves, kept as picks (docs/specs/crowd-sense-ranking.md, section 10.5). Nothing here is
@@ -37,6 +39,7 @@ export function recordEntrySave(book: BookRef, word: string, result: DictionaryL
     const ctx = result && context(book, word, result);
     if (!ctx) return;
     await persistenceService.setSensePick({ ...ctx, providerId: entry.providerId, entryKey: entryKey(entry), source: 'entry', ...labels(word, entry) });
+    await shareSave(ctx, entry, entryKey(entry), 'entry', null, positionOf(result, entry));
   });
 }
 
@@ -60,6 +63,7 @@ export function recordSelectionSave(
       source: 'selection',
       ...labels(word, entry),
     });
+    await shareSave(ctx, entry, entryKey(entry), 'selection', sense ? senseKey(entry.providerId, entry.headword, sense) : null, positionOf(result, entry));
   });
 }
 
@@ -87,6 +91,7 @@ export function recordEditSave(
       source: 'edit',
       ...labels(word, match.entry),
     });
+    await shareSave(ctx, match.entry, entryKey(match.entry), 'edit', match.sense ? senseKey(match.entry.providerId, match.entry.headword, match.sense) : null, positionOf(result, match.entry));
   });
 }
 
@@ -94,7 +99,10 @@ export function recordEditSave(
 export function forgetWordPicks(book: BookRef, word: string, result: DictionaryLookupResult | null): Promise<void> {
   return guarded(async () => {
     const ctx = result && context(book, word, result);
-    if (ctx) await persistenceService.clearWordPicks(ctx.bookKey, ctx.lemmaKey);
+    if (!ctx) return;
+    const rows = await persistenceService.getSensePicks(ctx.bookKey, ctx.lemmaKey);
+    await persistenceService.clearWordPicks(ctx.bookKey, ctx.lemmaKey);
+    await shareUnsave(ctx, rows);
   });
 }
 
@@ -103,9 +111,11 @@ export async function rankByPicks(book: BookRef, word: string, result: Dictionar
   try {
     const ctx = context(book, word, result);
     if (!ctx) return result;
+    // What other readers saved first, then the reader's own saves on top: their own choice always wins (section 10).
+    const crowd = await crowdRank(ctx, result);
     const rows = await persistenceService.getSensePicks(ctx.bookKey, ctx.lemmaKey);
-    const ranked = applyPicks(result.entries, rows);
-    return ranked.entries === result.entries ? result : { ...result, entries: ranked.entries };
+    const ranked = applyPicks(crowd.entries, rows);
+    return ranked.entries === result.entries ? result : { ...crowd, entries: ranked.entries };
   } catch {
     return result;
   }
