@@ -260,6 +260,41 @@ export function useWordLookups({ book, trackerRef, savedWords, prefsRef, onLooku
       setEditing(null);
     },
 
+    /**
+     * Space with the popup (or bubble) open saves the word, like Save Vocabulary, but never un-saves.
+     * Returns true when it took the key, so the reader skips its own Space handling (page turn).
+     */
+    handleSpaceSave(e: KeyboardEvent): boolean {
+      if (!prefsRef.current.spaceSavesWord || e.code !== 'Space' || e.repeat) return false;
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return false;
+      // Typing, or a focused button (Space activates it as usual).
+      const target = e.target as Element | null;
+      if (target?.closest?.('input, textarea, select, button, [role="button"], [contenteditable="true"], [contenteditable=""]')) return false;
+      const current = popup ?? bubble;
+      if (!current || editing) return false;
+      e.preventDefault();
+      if (current.loading) {
+        touchToast.show({ message: `Still looking up "${current.word}"…` });
+        return true;
+      }
+      if (current.saved) {
+        touchToast.show({ message: `"${current.word}" is already in your vocabulary` });
+        return true;
+      }
+      if (!current.result?.entries.length) {
+        touchToast.show({ message: 'No dictionary entry to save for this word' });
+        return true;
+      }
+      void save(current).then(
+        (item) => {
+          markSaved(current.word, true);
+          if (item) touchToast.show({ message: `✓ Saved "${current.word}"`, undo: { itemId: item.id, word: current.word } });
+        },
+        () => touchToast.show({ message: `Could not save "${current.word}"` })
+      );
+      return true;
+    },
+
     /** Ctrl+Shift+A (opt-in): saves the most recently looked-up word. */
     async handleQuickAddKey(e: KeyboardEvent) {
       if (!prefsRef.current.quickAddShortcutEnabled || !(e.ctrlKey && e.shiftKey && e.code === 'KeyA')) return;

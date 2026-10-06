@@ -862,6 +862,8 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
         return;
       }
       if (isTyping(e.target) || lookupsRef.current.editing) return;
+      // Space with a word's dictionary open saves it instead of turning the page.
+      if (lookupsRef.current.handleSpaceSave(e)) return;
       const plain = !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey;
       if (plain && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
         e.preventDefault();

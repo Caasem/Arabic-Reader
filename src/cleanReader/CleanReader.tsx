@@ -211,6 +211,7 @@ export function CleanReader({
         if (focusRef.current && !l.popup && !l.bubble && !l.editing) setFocus(false);
         return;
       }
+      if (lookupsRef.current.handleSpaceSave(e)) return;
       void lookupsRef.current.handleQuickAddKey(e);
     };
     const record = () => trackerRef.current?.recordActivity();
