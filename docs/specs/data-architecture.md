@@ -171,7 +171,7 @@ The next schema version (v13: v11 and v12 are already used by sense picks and th
 
 ## 7. Cloud architecture (optional, not required to run)
 
-Provider: Cloudflare ([ADR 0005](../adr/0005-cloudflare-hosting.md), accepted). Pack hosting format: [ADR 0007](../adr/0007-static-pack-hosting.md) (proposed). Summary:
+Provider: Cloudflare ([ADR 0005](../adr/0005-cloudflare-hosting.md), accepted). Pack hosting format: [ADR 0007](../adr/0007-static-pack-hosting.md) (accepted). Summary:
 
 - **Static packs:** Cloudflare R2 behind its CDN, custom domain, CORS limited to the app's origins (`scripts/shamela-host/cors.json` is the start). Immutable, hash-named objects plus one signed `manifest.json` with a short cache time.
 - **Crowd service:** a Worker plus D1 for ingest and for building the signed ranking file on a schedule. Built after packs, on the same account.

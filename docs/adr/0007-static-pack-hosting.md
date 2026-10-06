@@ -1,6 +1,6 @@
 # ADR 0007: Static pack hosting on Cloudflare R2, signed manifest
 
-Status: proposed
+Status: accepted (maintainer, 2026-10-06)
 Date: 2026-10-06
 
 ## Context
