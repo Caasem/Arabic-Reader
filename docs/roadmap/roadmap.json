@@ -384,7 +384,7 @@
       "deps": [
         "governance"
       ],
-      "notes": "Draft written. Decided 2026-10-06: Cloudflare (ADR 0005); user files sync only through the reader's own folder. Open: ADR 0002 and 0003 (to discuss), OPFS vs IndexedDB on iOS (device probe).",
+      "notes": "Draft written. Accepted 2026-10-06: ADR 0002 (revised), 0003, 0005 (Cloudflare); user files only through the reader's own folder. Open: final BlobStore/PackManager interfaces, OPFS vs IndexedDB on iOS (device probe).",
       "spec": "specs/data-architecture.md",
       "brief": "features/data-arch-spec.md",
       "milestone": "M1"
@@ -426,7 +426,7 @@
       "deps": [
         "sync-v10"
       ],
-      "notes": "Kept in M1 (maintainer, 2026-10-06). Needs its own ADR first: it stores reading records on a third-party server with an email sign-in, which ADR 0002 as drafted does not allow. Settle together with ADR 0002.",
+      "notes": "Kept in M1. Allowed by ADR 0002 (revised): opt-in, off by default, provider named, data deletable. Needs its own ADR first (terms, pricing, region, sign-in, licence).",
       "brief": "features/dexie-cloud.md",
       "milestone": "M1"
     },

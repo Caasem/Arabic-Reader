@@ -1,6 +1,6 @@
 # Data architecture: local and cloud
 
-Status: draft (2026-10-06). Umbrella spec: it names the layers and the rules between them. Each layer gets its own detailed spec when built.
+Status: draft (2026-10-06); ADRs 0002 (revised), 0003 and 0005 accepted 2026-10-06. Umbrella spec: it names the layers and the rules between them. Each layer gets its own detailed spec when built.
 Roadmap nodes: data-arch-spec, blob-store, pack-manager, dexie-cloud, infra-cloud.
 Related: [storage-and-sync.md](storage-and-sync.md) (layer A, built), [crowd-sense-ranking.md](crowd-sense-ranking.md) (layer D), [ADR 0002](../adr/0002-local-first-backend-exception.md), [ADR 0003](../adr/0003-four-data-classes.md).
 

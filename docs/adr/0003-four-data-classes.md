@@ -1,6 +1,6 @@
 # ADR 0003: Four data classes with separate storage paths
 
-Status: proposed
+Status: accepted (maintainer, 2026-10-06)
 Date: 2026-10-06
 
 ## Context

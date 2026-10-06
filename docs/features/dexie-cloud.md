@@ -6,7 +6,7 @@ Roadmap id: `dexie-cloud` · Area: Foundation · Status: planned (decision neede
 
 Folder sync needs a cloud folder the reader already uses and works only where the app can reach a folder: desktop now, then Android, iOS later, and never in a plain browser. Some readers want "sign in and it syncs" across browser, phone and desktop. `docs/specs/storage-and-sync.md` section 6 plans Dexie Cloud (the hosted sync service for Dexie, the IndexedDB library the app already uses) as a second, independent sync path.
 
-**This item starts with a decision.** Dexie Cloud is a third-party service that stores the reader's records on its servers and needs an account (email one-time code by default). That conflicts with two current principles: "no accounts with passwords" (it has none, but it is an account) and ADR 0002's "the app works without servers; our backend holds no user content" (this is not our backend, but it is user content on a server). The maintainer must accept that in an ADR before any code.
+**Principle settled, details still need an ADR.** ADR 0002 (revised and accepted 2026-10-06) allows a third-party sync service to hold the reader's records, only when the reader picks it, off by default, with the provider named and data deletable. The item stays in M1 (maintainer, 2026-10-06). Before code, a Dexie Cloud ADR must record the provider's terms, pricing, data region, sign-in method and client licence.
 
 ## 2. Expected Behaviour
 

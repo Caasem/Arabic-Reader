@@ -13,7 +13,7 @@ There is no end-user feature. The outcome is an agreed design:
 - **Interfaces named:** `BlobStore`, `PackManager`, `SyncTransport` (exists), `CrowdClient` (exists as `src/crowdSync`).
 - **Table registry:** every Dexie table declares its class, synced or not, and merge rule, in one place (`syncedTables.ts` grows into this).
 - **Open questions answered** (spec section 8): OPFS vs IndexedDB for web blobs on iOS Safari (needs a device test), whether class B ever syncs through us (proposed: no), iOS quota policy, self-hosting of packs.
-- ADR 0002 (narrow backend exception) and ADR 0003 (four data classes) accepted by the maintainer, or revised.
+- Done 2026-10-06: ADR 0002 accepted in revised form (our servers never hold records or files; an opt-in third-party sync service may hold records), ADR 0003 accepted, ADR 0005 (Cloudflare) accepted, and user files sync only through the reader's own folder.
 
 ## 3. User Flows
 
