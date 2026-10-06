@@ -1,7 +1,7 @@
 {
   "name": "arabic-reader-app",
   "private": true,
-  "version": "0.36.0",
+  "version": "0.37.0",
   "license": "GPL-2.0",
   "type": "module",
   "main": "electron/main.cjs",
@@ -39,6 +39,7 @@
     "marked": "^18.1.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "sql.js": "^1.14.2",
     "ts-fsrs": "^5.4.1"
   },
   "devDependencies": {
@@ -47,6 +48,7 @@
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
+    "@types/sql.js": "^1.4.11",
     "@vitejs/plugin-react": "^6.1.0",
     "electron": "^44.0.0",
     "electron-builder": "^26.15.3",

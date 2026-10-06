@@ -4,6 +4,22 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.37.0 — 2026-10-06
+
+Anki, end to end. Settings → Vocabulary → **Anki**.
+
+- **Export Anki package (.apkg)** works on any device: open the file in Anki, AnkiDroid or
+  AnkiMobile. Exporting again later updates the same notes instead of adding copies.
+- **A proper note type.** Words go to Anki as "Arabic Reader" notes with the word, its vowels,
+  meaning, root, part of speech, the sentence (with the word in bold), the book and the dictionary,
+  laid out right to left.
+- **Sync keeps Anki up to date.** Sync now updates notes for words you edit here, re-sends notes
+  deleted in Anki, and finds notes sent by earlier versions (moving them to the new note type when
+  AnkiConnect allows) instead of adding them again.
+- **Options:** sync automatically every 15 minutes while Anki is open, and remove a word's note
+  from Anki when you remove the word here (off by default).
+- Choose the deck from Anki's own list with **Decks**.
+
 ## v0.36.0 — 2026-10-06
 
 More kinds of book files.

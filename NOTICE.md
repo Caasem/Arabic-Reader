@@ -24,15 +24,16 @@ licence could not be verified, this file says so rather than guessing.
 
 Regenerate the lexicon data with `python scripts/extract-lexicon-data.py path/to/db.sqlite`.
 
-## Code used to import other book formats
+## Code loaded on demand
 
-Loaded only when a TXT, Markdown, MOBI or AZW3 file is added (`src/importFormats`).
+Loaded only when a TXT, Markdown, MOBI or AZW3 file is added (`src/importFormats`) or an Anki package is exported (`src/anki`).
 
 | Library | Used for | Licence |
 | --- | --- | --- |
 | [marked](https://github.com/markedjs/marked) | Markdown to HTML | MIT |
 | [foliate-js](https://github.com/johnfactotum/foliate-js) (`mobi.js`) | Reading MOBI and AZW3 (KF8) files | MIT |
 | [fflate](https://github.com/101arrowz/fflate) | Decompressing fonts inside Kindle files | MIT |
+| [sql.js](https://github.com/sql-js/sql.js) | Writing Anki packages (.apkg), loaded only on export | MIT |
 
 ## Sample books
 

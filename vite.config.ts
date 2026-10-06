@@ -124,6 +124,12 @@ export default defineConfig({
         globIgnores: ['**/_virtual_alwasit-data-*.js', '**/_virtual_alsihah-data-*.js', '**/_virtual_almaqayis-data-*.js', '**/_virtual_baranov-data-*.js', '**/_virtual_vocab-list-data-*.js'],
         runtimeCaching: [
           {
+            // sql.js's WebAssembly, loaded only for an Anki package export; cached once used.
+            urlPattern: /\/assets\/sql-wasm-[\w-]+\.wasm$/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'anki-export', expiration: { maxEntries: 2 } },
+          },
+          {
             urlPattern: /\/assets\/_virtual_(?:alwasit|alsihah|almaqayis|baranov|vocab-list)-data-[\w-]+\.js$/,
             handler: 'CacheFirst',
             options: { cacheName: 'optional-datasets', expiration: { maxEntries: 7 } },

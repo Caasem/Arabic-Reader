@@ -1,4 +1,5 @@
 import { Rating } from 'ts-fsrs';
+import { rememberAnkiDeletes } from '../anki/deletions';
 import type { BackupData, BookMeta, DictionaryEntry, VocabularyItem, WordInstance } from '../types';
 import { persistenceService } from '../persistence';
 import { normalize } from '../reader/tokenizer/arabicTokenizer';
@@ -182,6 +183,7 @@ export class VocabularyService {
 
   async removeFromVocabulary(id: string): Promise<void> {
     const item = await persistenceService.getVocabularyItem(id);
+    rememberAnkiDeletes([item]);
     await persistenceService.deleteVocabularyItem(id);
     if (item) await this.syncSavedFlag(item.bookId, item.surfaceForm);
   }
@@ -230,6 +232,9 @@ export class VocabularyService {
         lastReviewedAt: undefined,
         fsrsLastReview: undefined,
         syncedToAnki: false,
+        ankiNoteId: undefined,
+        ankiHash: undefined,
+        ankiModel: undefined,
         ...freshFsrsFields(now),
       };
       await persistenceService.saveVocabularyItem(copy);
@@ -238,8 +243,9 @@ export class VocabularyService {
     return created;
   }
 
-  async markSyncedToAnki(item: VocabularyItem): Promise<VocabularyItem> {
-    const updated = { ...item, syncedToAnki: true };
+  /** Records which Anki note a card was sent as (src/anki/ankiSync.ts). */
+  async setAnkiLink(item: VocabularyItem, link: Pick<VocabularyItem, 'ankiNoteId' | 'ankiHash' | 'ankiModel' | 'syncedToAnki'>): Promise<VocabularyItem> {
+    const updated = { ...item, ...link };
     await persistenceService.saveVocabularyItem(updated);
     return updated;
   }
@@ -264,6 +270,7 @@ export class VocabularyService {
   /** Un-saves a word entirely: every card for it in this book. */
   async removeAllForWord(bookId: string, surfaceForm: string): Promise<void> {
     const items = await this.getForWord(bookId, surfaceForm);
+    rememberAnkiDeletes(items);
     await Promise.all(items.map((i) => persistenceService.deleteVocabularyItem(i.id)));
     await this.syncSavedFlag(bookId, surfaceForm);
   }

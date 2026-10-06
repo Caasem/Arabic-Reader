@@ -17,6 +17,8 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   quickAddShortcutEnabled: false,
   spaceSavesWord: true,
   ankiDeckName: 'Arabic Vocabulary',
+  ankiAutoSync: false,
+  ankiRemoveDeleted: false,
   speedReaderWpm: 300,
   speedReaderOrpEnabled: true,
   speedReaderContextEnabled: false,
