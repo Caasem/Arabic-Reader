@@ -14,6 +14,8 @@ import { CleanReaderSettings } from './settings/CleanReaderSettings';
 import { DictionarySearchSettings } from '../../dictionarySearch';
 import { BookSearchSettings } from '../../bookSearch';
 import { BookVocabSettings } from '../../bookVocab';
+import { NoteSettings } from '../../noteCard';
+import { FlashSettings } from '../../flashCard';
 import { VerbFormsSettings } from '../../verbForms';
 import { PopupCleanSettings } from '../../popupClean';
 import { LookSettings } from '../../look';
@@ -21,6 +23,7 @@ import { FontSettings } from '../../readerFont';
 import { WasitMatchSettings } from '../../wasitMatch';
 import { WasitStructureSettings } from '../../wasitStructure';
 import { ShamelaBetaSettings } from './settings/ShamelaBetaSettings';
+import { SyncSettings } from './settings/SyncSettings';
 import { QuietReaderSettings } from '../../quietReader/QuietReaderSettings';
 import './SettingsPanel.css';
 
@@ -64,7 +67,7 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
     id: 'dictionary',
     label: 'Dictionary',
     blurb: 'Which dictionaries answer, and how lookups appear.',
-    sections: [<DictionarySettings key="dictionaries" />, <DictionarySearchSettings key="dsearch" />, <BookSearchSettings key="bsearch" />, <BookVocabSettings key="bvocab" />, <VerbFormsSettings key="verbforms" />, <PopupCleanSettings key="popupclean" />, <WasitMatchSettings key="wasitmatch" />, <WasitStructureSettings key="wasitstructure" />],
+    sections: [<DictionarySettings key="dictionaries" />, <DictionarySearchSettings key="dsearch" />, <BookSearchSettings key="bsearch" />, <BookVocabSettings key="bvocab" />, <NoteSettings key="notecard" />, <FlashSettings key="flashcard" />, <VerbFormsSettings key="verbforms" />, <PopupCleanSettings key="popupclean" />, <WasitMatchSettings key="wasitmatch" />, <WasitStructureSettings key="wasitstructure" />],
   },
   {
     id: 'vocabulary',
@@ -76,7 +79,7 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
     id: 'library',
     label: 'Library & data',
     blurb: 'Where books come from and keeping your data safe.',
-    sections: [<ShamelaBetaSettings key="shamela" />, <BackupSettings key="backup" />],
+    sections: [<ShamelaBetaSettings key="shamela" />, <BackupSettings key="backup" />, <SyncSettings key="sync" />],
   },
   {
     id: 'advanced',

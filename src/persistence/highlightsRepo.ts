@@ -1,8 +1,9 @@
 import type { Highlight } from '../types';
 import { db } from './schema';
+import { deleteSynced, putSynced } from './writeLayer';
 
 export async function saveHighlight(h: Highlight): Promise<void> {
-  await db.highlights.put(h);
+  await putSynced('highlights', h);
 }
 export async function getHighlight(id: string): Promise<Highlight | undefined> {
   return db.highlights.get(id);
@@ -14,5 +15,5 @@ export async function getAllHighlights(): Promise<Highlight[]> {
   return db.highlights.orderBy('createdAt').reverse().toArray();
 }
 export async function deleteHighlight(id: string): Promise<void> {
-  await db.highlights.delete(id);
+  await deleteSynced('highlights', id);
 }

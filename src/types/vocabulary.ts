@@ -55,6 +55,8 @@ export interface VocabularyItem {
   location?: string;
 
   addedAt: number;
+  /** Last change to this row; set by the persistence write layer (schema v10). */
+  updatedAt?: number;
   firstLookupAt?: number;
   lastLookupAt?: number;
   lookupCount: number;
@@ -85,6 +87,9 @@ export interface VocabularyItem {
   syncedToAnki?: boolean;
 
   notes?: string;
+
+  /** Written by hand (Alt+F) rather than saved from a dictionary lookup: `meaning` is the back of the card and `entries` is empty. */
+  custom?: boolean;
 }
 
 /** Portable backup of what would otherwise be trapped in one browser's

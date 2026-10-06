@@ -6,9 +6,10 @@
 // which matters because IndexedDB/localStorage are scoped per origin: the
 // previous approach (a local HTTP server on a random port) produced a new
 // origin -- and therefore empty storage -- on every launch.
-const { app, BrowserWindow, protocol, session, shell } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, protocol, session, shell } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { createSyncFolder } = require('./syncFolder.cjs');
 
 const APP_SCHEME = 'app';
 const APP_HOST = 'bundle';
@@ -38,7 +39,7 @@ const MIME_TYPES = {
 // Book sections render in srcdoc iframes, which inherit this policy -- so
 // book styles/images (epub.js serves them as blob: URLs) must stay allowed,
 // while any script not shipped with the app is blocked. AnkiConnect runs on
-// localhost:8765.
+// localhost:8765; the Shamela beta reads from one named mirror (shamelaBooksProvider.ts).
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self'",
@@ -47,7 +48,7 @@ const CONTENT_SECURITY_POLICY = [
   "img-src 'self' data: blob:",
   "font-src 'self' data: blob:",
   "media-src 'self' data: blob:",
-  "connect-src 'self' blob: data: http://127.0.0.1:8765 http://localhost:8765",
+  "connect-src 'self' blob: data: http://127.0.0.1:8765 http://localhost:8765 https://winongkencono-shamelah.hf.space",
   "frame-src 'self' blob:",
   "object-src 'none'",
 ].join('; ');
@@ -118,7 +119,16 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      preload: path.join(__dirname, 'preload.cjs'),
     },
+  });
+  // F11 toggles real fullscreen anywhere in the app (the hidden menu bar's own
+  // accelerator is unreliable once autoHideMenuBar has hidden it).
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type === 'keyDown' && input.key === 'F11') {
+      event.preventDefault();
+      mainWindow.setFullScreen(!mainWindow.isFullScreen());
+    }
   });
   mainWindow.loadURL(`${APP_ORIGIN}/`);
 }
@@ -138,7 +148,66 @@ app.on('web-contents-created', (_event, contents) => {
   contents.on('will-attach-webview', (event) => event.preventDefault());
 });
 
-app.whenReady().then(() => {
+// --- Sync folder -------------------------------------------------------------
+// The folder is chosen through the system picker and remembered here, in the
+// main process. The renderer only ever passes `<deviceId>/<file>.json` names.
+const syncConfigPath = () => path.join(app.getPath('userData'), 'sync-folder.json');
+let syncRoot = null;
+
+async function loadSyncRoot() {
+  try {
+    syncRoot = JSON.parse(await fs.readFile(syncConfigPath(), 'utf8')).path || null;
+  } catch {
+    syncRoot = null;
+  }
+}
+
+async function saveSyncRoot(folder) {
+  syncRoot = folder;
+  await fs.writeFile(syncConfigPath(), JSON.stringify({ path: folder }), 'utf8');
+}
+
+const syncFolder = createSyncFolder({ getRoot: () => syncRoot });
+
+// Only the app's own window may use these; anything else (other frames) is refused.
+function fromAppWindow(event) {
+  return event.senderFrame && event.senderFrame.url.startsWith(`${APP_ORIGIN}/`);
+}
+
+function handleSync(channel, fn) {
+  ipcMain.handle(channel, (event, ...args) => {
+    if (!fromAppWindow(event)) throw new Error('Not allowed.');
+    return fn(event, ...args);
+  });
+}
+
+// --- Window ------------------------------------------------------------------
+const windowOf = (event) => BrowserWindow.fromWebContents(event.sender);
+handleSync('window:set-fullscreen', (event, on) => windowOf(event)?.setFullScreen(Boolean(on)));
+handleSync('window:toggle-fullscreen', (event) => {
+  const win = windowOf(event);
+  win?.setFullScreen(!win.isFullScreen());
+});
+
+handleSync('sync-folder:get', () => syncRoot);
+handleSync('sync-folder:choose', async (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  const result = await dialog.showOpenDialog(window, {
+    title: 'Choose a folder to sync through',
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  await saveSyncRoot(result.filePaths[0]);
+  return syncRoot;
+});
+handleSync('sync-folder:clear', () => saveSyncRoot(null));
+handleSync('sync-folder:list', () => syncFolder.list());
+handleSync('sync-folder:read', (_event, rel) => syncFolder.read(rel));
+handleSync('sync-folder:write', (_event, rel, text) => syncFolder.write(rel, text));
+handleSync('sync-folder:remove', (_event, rel) => syncFolder.remove(rel));
+
+app.whenReady().then(async () => {
+  await loadSyncRoot();
   protocol.handle(APP_SCHEME, serveAppRequest);
   // Only fullscreen (Speed Reader) is ever needed; deny everything else.
   session.defaultSession.setPermissionRequestHandler((_contents, permission, callback) => {

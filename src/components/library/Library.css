@@ -385,3 +385,17 @@
     align-items: flex-start;
   }
 }
+
+/* A book that arrived through sync without its file. */
+.book-card--missing .book-card__cover {
+  opacity: 0.5;
+}
+.book-card__missing {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--text-muted, #7a6f63);
+}
+.book-card__add-file {
+  margin-top: 0.4rem;
+  width: 100%;
+}

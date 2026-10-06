@@ -39,6 +39,9 @@ export interface PersistenceService {
   getBooks(): Promise<BookMeta[]>;
   getBook(id: string): Promise<BookMeta | undefined>;
   getBookFile(id: string): Promise<Blob | undefined>;
+  /** Ids of books whose file is on this device; synced books can arrive without one. */
+  getBookFileIds(): Promise<string[]>;
+  saveBookFile(id: string, file: Blob): Promise<void>;
   deleteBook(id: string): Promise<void>;
   updateBookMeta(id: string, patch: Partial<BookMeta>): Promise<void>;
 
