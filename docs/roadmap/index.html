@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arabic Reader roadmap</title>
+<style>
+  :root {
+    --bg:#f6f5f1; --panel:#fff; --ink:#1f2328; --muted:#6b7280; --line:#d9d6cc;
+    --done:#2f855a; --prog:#2b6cb0; --local:#b7791f; --plan:#6b46c1; --idea:#8a8f98;
+    --crit:#d6336c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#14161a; --panel:#1d2026; --ink:#e6e8eb; --muted:#99a1ad; --line:#333943;
+      --done:#48bb78; --prog:#63b3ed; --local:#ecc94b; --plan:#b794f4; --idea:#9aa0aa; --crit:#f06595; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui,sans-serif; }
+  header { padding:16px 20px 8px; display:flex; flex-wrap:wrap; gap:12px 24px; align-items:baseline; }
+  h1 { margin:0; font-size:20px; }
+  .sub { color:var(--muted); }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; padding:4px 20px 12px; align-items:center; }
+  .chip { border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:999px;
+    padding:4px 12px; cursor:pointer; font:inherit; }
+  .chip[aria-pressed="true"] { border-color:var(--ink); font-weight:600; }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; }
+  main { display:grid; grid-template-columns:1fr 340px; gap:16px; padding:0 20px 24px; align-items:start; }
+  @media (max-width:900px) { main { grid-template-columns:1fr; } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; }
+  #graphWrap { overflow:auto; padding:8px; }
+  svg { display:block; }
+  .edge { fill:none; stroke:var(--line); stroke-width:1.5; }
+  .edge.crit { stroke:var(--crit); stroke-width:2.5; }
+  .edge.dim, .node.dim { opacity:.15; }
+  .node { cursor:pointer; }
+  .node rect { fill:var(--panel); stroke-width:2; }
+  .node.sel rect { stroke-width:4; }
+  .node text { fill:var(--ink); font-size:12px; }
+  .node .st { fill:var(--muted); font-size:10.5px; }
+  .colhead { fill:var(--muted); font-size:11px; }
+  aside { position:sticky; top:12px; padding:14px; }
+  aside h2 { margin:0 0 4px; font-size:16px; }
+  aside dl { margin:10px 0 0; display:grid; grid-template-columns:90px 1fr; gap:4px 8px; }
+  aside dt { color:var(--muted); }
+  aside dd { margin:0; }
+  aside a { color:var(--prog); }
+  .pill { display:inline-block; padding:1px 8px; border-radius:999px; color:#fff; font-size:12px; }
+  .stats { display:flex; gap:20px; padding:12px 16px; flex-wrap:wrap; margin:0 20px 12px; }
+  .stats b { font-size:20px; display:block; }
+  .path { padding:12px 16px; margin:0 20px 12px; }
+  .path ol { margin:6px 0 0; padding-left:20px; }
+  .path a { color:var(--prog); }
+  .legend { color:var(--muted); font-size:12px; padding:0 20px 20px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Arabic Reader roadmap</h1>
+  <span class="sub" id="updated"></span>
+</header>
+<div class="stats card" id="stats"></div>
+<div class="path card" id="path"></div>
+<div class="bar" id="filters"></div>
+<main>
+  <div class="card" id="graphWrap"><svg id="graph"></svg></div>
+  <aside class="card" id="detail"><p class="sub">Click a node to see details, dependencies and what it unblocks.</p></aside>
+</main>
+<p class="legend">Edges point from a prerequisite to the work that needs it. Pink = critical path (longest remaining effort chain). Effort is a rough estimate in weeks; edit <code>docs/roadmap/roadmap.json</code> and reload.</p>
+
+<script>
+const COLORS = { 'done':'--done', 'in-progress':'--prog', 'built-local':'--local', 'planned':'--plan', 'idea':'--idea' };
+const LABEL = { 'done':'Done', 'in-progress':'In progress', 'built-local':'Built locally', 'planned':'Planned', 'idea':'Idea' };
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs = {}, parent) => {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+};
+
+let data, byId, children, depth, remaining, critical, selected = null, hideStatus = new Set(), areaFilter = null;
+
+fetch('roadmap.json', { cache: 'no-store' }).then(r => r.json()).then(init)
+  .catch(e => document.body.insertAdjacentHTML('beforeend', '<p style="padding:20px">Could not load roadmap.json. Start the site with <code>npm run roadmap</code>. ' + e + '</p>'));
+
+function init(d) {
+  data = d;
+  byId = Object.fromEntries(d.items.map(i => [i.id, i]));
+  children = Object.fromEntries(d.items.map(i => [i.id, []]));
+  d.items.forEach(i => i.deps.forEach(p => {
+    if (!byId[p]) throw new Error(i.id + ' depends on unknown ' + p);
+    children[p].push(i.id);
+  }));
+  document.getElementById('updated').textContent = 'Updated ' + d.updated;
+  compute();
+  renderStats();
+  renderPath();
+  renderFilters();
+  draw();
+}
+
+// Depth = longest chain of prerequisites. Remaining = effort of unfinished work only,
+// so the critical path is the longest chain still to do.
+function compute() {
+  depth = {}; remaining = {};
+  const dep = id => depth[id] ??= byId[id].deps.length ? 1 + Math.max(...byId[id].deps.map(dep)) : 0;
+  const rem = id => remaining[id] ??= (byId[id].status === 'done' ? 0 : byId[id].effort) +
+    (children[id].length ? Math.max(...children[id].map(rem)) : 0);
+  data.items.forEach(i => { dep(i.id); rem(i.id); });
+  // trace the chain from the root with the largest remaining total
+  const roots = data.items.filter(i => !i.deps.length);
+  let cur = roots.sort((a, b) => remaining[b.id] - remaining[a.id])[0];
+  critical = [];
+  while (cur) {
+    critical.push(cur.id);
+    const next = children[cur.id].map(c => byId[c]).sort((a, b) => remaining[b.id] - remaining[a.id])[0];
+    cur = next;
+  }
+}
+
+function renderStats() {
+  const open = data.items.filter(i => i.status !== 'done');
+  const total = open.reduce((s, i) => s + i.effort, 0);
+  const counts = Object.keys(LABEL).map(s => [s, data.items.filter(i => i.status === s).length]);
+  const crit = critical.reduce((s, id) => s + (byId[id].status === 'done' ? 0 : byId[id].effort), 0);
+  document.getElementById('stats').innerHTML =
+    `<div><b>${data.items.length}</b>items</div><div><b>${total}</b>weeks of work left (all items)</div>` +
+    `<div><b style="color:var(--crit)">${crit}</b>weeks on the critical path</div>` +
+    counts.map(([s, n]) => `<div><b style="color:var(${COLORS[s]})">${n}</b>${LABEL[s]}</div>`).join('');
+}
+
+function renderPath() {
+  document.getElementById('path').innerHTML = '<b>Critical path</b> <span class="sub">(the chain that sets the earliest possible finish; anything off it has slack)</span><ol>' +
+    critical.map(id => `<li><a href="#" data-id="${id}">${byId[id].title}</a> <span class="sub">${byId[id].effort} wk, ${LABEL[byId[id].status]}</span></li>`).join('') + '</ol>';
+  document.querySelectorAll('#path a').forEach(a => a.onclick = e => { e.preventDefault(); select(a.dataset.id); });
+}
+
+function renderFilters() {
+  const bar = document.getElementById('filters');
+  bar.innerHTML = '';
+  Object.keys(LABEL).forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.setAttribute('aria-pressed', 'true');
+    b.innerHTML = `<span class="dot" style="background:var(${COLORS[s]})"></span>${LABEL[s]}`;
+    b.onclick = () => {
+      hideStatus.has(s) ? hideStatus.delete(s) : hideStatus.add(s);
+      b.setAttribute('aria-pressed', String(!hideStatus.has(s)));
+      draw();
+    };
+    bar.appendChild(b);
+  });
+  const sep = document.createElement('span'); sep.className = 'sub'; sep.textContent = '|'; bar.appendChild(sep);
+  [[null, 'All areas'], ...Object.entries(data.areas)].forEach(([k, name]) => {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = name; b.setAttribute('aria-pressed', String(areaFilter === k));
+    b.onclick = () => { areaFilter = k; [...bar.querySelectorAll('.chip')].slice(5).forEach(x => x.setAttribute('aria-pressed', String(x === b))); draw(); };
+    bar.appendChild(b);
+  });
+}
+
+function draw() {
+  const W = 210, H = 58, GX = 80, GY = 22, PAD = 16, TOP = 28;
+  const visible = data.items.filter(i => !hideStatus.has(i.status) && (!areaFilter || i.area === areaFilter));
+  const cols = {};
+  visible.forEach(i => (cols[depth[i.id]] ??= []).push(i));
+  const pos = {};
+  Object.keys(cols).sort((a, b) => a - b).forEach(c => {
+    // order by the average row of already-placed parents to keep edges short
+    cols[c].sort((a, b) => avg(a) - avg(b));
+    cols[c].forEach((i, r) => pos[i.id] = { x: PAD + c * (W + GX), y: TOP + PAD + r * (H + GY) });
+    function avg(i) { const p = i.deps.map(d => pos[d]?.y).filter(v => v != null); return p.length ? p.reduce((s, v) => s + v, 0) / p.length : 0; }
+  });
+  const maxC = Math.max(0, ...Object.keys(cols).map(Number));
+  const maxR = Math.max(1, ...Object.values(cols).map(c => c.length));
+  const svg = document.getElementById('graph');
+  svg.innerHTML = '';
+  svg.setAttribute('width', PAD * 2 + (maxC + 1) * (W + GX) - GX);
+  svg.setAttribute('height', TOP + PAD * 2 + maxR * (H + GY));
+  const critEdge = (a, b) => critical.indexOf(a) >= 0 && critical.indexOf(b) === critical.indexOf(a) + 1;
+  const related = selected ? new Set([selected, ...upstream(selected), ...downstream(selected)]) : null;
+
+  for (let c = 0; c <= maxC; c++)
+    el('text', { x: PAD + c * (W + GX), y: 16, class: 'colhead' }, svg).textContent = c === 0 ? 'No prerequisites' : 'After ' + c + ' step' + (c > 1 ? 's' : '');
+
+  visible.forEach(i => i.deps.forEach(p => {
+    if (!pos[p] || !pos[i.id]) return;
+    const a = pos[p], b = pos[i.id], x1 = a.x + W, y1 = a.y + H / 2, x2 = b.x, y2 = b.y + H / 2, mx = (x1 + x2) / 2;
+    const cls = 'edge' + (critEdge(p, i.id) ? ' crit' : '') + (related && !(related.has(p) && related.has(i.id)) ? ' dim' : '');
+    el('path', { d: `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`, class: cls }, svg);
+  }));
+
+  visible.forEach(i => {
+    const p = pos[i.id];
+    const g = el('g', { class: 'node' + (i.id === selected ? ' sel' : '') + (related && !related.has(i.id) ? ' dim' : ''), transform: `translate(${p.x},${p.y})` }, svg);
+    const onCrit = critical.includes(i.id);
+    el('rect', { width: W, height: H, rx: 8, stroke: css(COLORS[i.status]), 'stroke-dasharray': i.status === 'idea' ? '5 4' : '' }, g);
+    if (onCrit) el('rect', { x: -5, y: 8, width: 4, height: H - 16, rx: 2, fill: css('--crit') }, g);
+    const t = el('text', { x: 10, y: 22 }, g); t.textContent = clip(i.title, 30);
+    const s = el('text', { x: 10, y: 42, class: 'st' }, g);
+    s.textContent = `${LABEL[i.status]} · ${i.effort} wk` + (i.branch ? ' · branch' : '');
+    g.onclick = () => select(i.id);
+  });
+}
+
+const clip = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;
+function upstream(id, seen = new Set()) { byId[id].deps.forEach(d => { if (!seen.has(d)) { seen.add(d); upstream(d, seen); } }); return seen; }
+function downstream(id, seen = new Set()) { children[id].forEach(d => { if (!seen.has(d)) { seen.add(d); downstream(d, seen); } }); return seen; }
+
+function select(id) {
+  selected = selected === id ? null : id;
+  draw();
+  const box = document.getElementById('detail');
+  if (!selected) { box.innerHTML = '<p class="sub">Click a node to see details, dependencies and what it unblocks.</p>'; return; }
+  const i = byId[id];
+  const list = ids => ids.length ? ids.map(x => `<a href="#" data-id="${x}">${byId[x].title}</a>`).join('<br>') : '—';
+  const blocked = i.deps.filter(d => byId[d].status !== 'done');
+  box.innerHTML = `<h2>${i.title}</h2>
+    <span class="pill" style="background:var(${COLORS[i.status]})">${LABEL[i.status]}</span>
+    ${critical.includes(id) ? '<span class="pill" style="background:var(--crit)">Critical path</span>' : ''}
+    <p>${i.notes || ''}</p>
+    <dl>
+      <dt>Area</dt><dd>${data.areas[i.area]}</dd>
+      <dt>Effort</dt><dd>${i.effort} wk (estimate)</dd>
+      <dt>Needs</dt><dd>${list(i.deps)}</dd>
+      <dt>Unblocks</dt><dd>${list(children[id])}</dd>
+      <dt>Blocked by</dt><dd>${blocked.length ? blocked.map(d => byId[d].title).join(', ') : 'Nothing unfinished'}</dd>
+      ${i.branch ? `<dt>Branch</dt><dd><code>${i.branch}</code></dd>` : ''}
+      ${i.brief ? `<dt>Spec</dt><dd><a href="../${i.brief}" target="_blank">${i.brief}</a></dd>` : ''}
+      ${i.spec ? `<dt>Design</dt><dd><a href="../${i.spec}" target="_blank">${i.spec}</a></dd>` : ''}
+    </dl>`;
+  box.querySelectorAll('a[data-id]').forEach(a => a.onclick = e => { e.preventDefault(); select(a.dataset.id); });
+}
+</script>
+</body>
+</html>
