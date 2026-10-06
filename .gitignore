@@ -14,3 +14,7 @@ android/.idea/
 
 # Personal dictionary files (never commit)
 personal-data/
+
+# Crowd server secrets (never commit)
+crowd-server/*.jwk.json
+crowd-server/.dev.vars

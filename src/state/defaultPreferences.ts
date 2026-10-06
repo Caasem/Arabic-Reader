@@ -46,6 +46,8 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   verbFormsEnabled: true,
   dictionaryPopupCleanLayout: true,
   collapseManyArabicEntries: true,
+  savedEntriesFirst: true,
+  crowdSharing: false,
   lookEnabled: true,
   lookPalette: 'tan',
   lookCustom: {},

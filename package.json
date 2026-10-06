@@ -1,7 +1,7 @@
 {
   "name": "arabic-reader-app",
   "private": true,
-  "version": "0.30.0",
+  "version": "0.33.0",
   "license": "GPL-2.0",
   "type": "module",
   "main": "electron/main.cjs",
@@ -12,6 +12,8 @@
     "preview": "vite preview",
     "test": "playwright test",
     "test:unit": "vitest run",
+    "crowd:typecheck": "tsc -p crowd-server/tsconfig.json",
+    "crowd:schema": "node crowd-server/scripts/write-schema.mjs",
     "test:ui": "playwright test --ui",
     "electron:dev": "electron .",
     "electron:build": "npm run build && electron-builder",

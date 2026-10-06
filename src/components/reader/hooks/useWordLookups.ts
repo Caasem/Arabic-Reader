@@ -2,6 +2,8 @@ import { useCallback, useRef, useState, type RefObject } from 'react';
 import type { BookMeta, DictionaryEntry, DictionaryLookupResult, ReaderPreferences, VocabularyItem, WordInstance } from '../../../types';
 import { lookupWord, saveLookup } from '../../../vocabulary/lookupWord';
 import { vocabularyService } from '../../../vocabulary';
+import { senseText } from '../../../dictionary/senseText';
+import { forgetWordPicks, rankByPicks, recordEditSave, recordEntrySave, recordSelectionSave } from '../../../sensePicks';
 import type { ReadingSessionTracker } from '../../../reader/session';
 import type { TouchWordAction, WordTarget } from '../../../reader/wordInteraction/sectionInteractions';
 import type { HostRect } from '../../../reader/wordInteraction/rectInHost';
@@ -80,7 +82,9 @@ export function useWordLookups({ book, trackerRef, savedWords, prefsRef, onLooku
 
   const resolve = async (target: WordTarget): Promise<LookupState> => {
     const lookup = await lookupWord(book.id, target.word, { chapterHref: target.sectionHref, sentence: target.sentence });
-    return { ...pendingState(target), result: lookup.result, instance: lookup.instance, saved: lookup.saved, loading: false };
+    // Entries the reader saved for this word in this book come first (src/sensePicks).
+    const result = prefsRef.current.savedEntriesFirst ? await rankByPicks(book, target.word, lookup.result) : lookup.result;
+    return { ...pendingState(target), result, instance: lookup.instance, saved: lookup.saved, loading: false };
   };
 
   /** Every entry by default; `entry` (optionally trimmed to `gloss`) saves just that one. */
@@ -177,6 +181,7 @@ export function useWordLookups({ book, trackerRef, savedWords, prefsRef, onLooku
       if (!current?.result) return;
       if (current.saved) {
         await vocabularyService.removeAllForWord(book.id, current.word);
+        void forgetWordPicks(book, current.word, current.result);
         markSaved(current.word, false);
       } else {
         await save(current);
@@ -187,6 +192,7 @@ export function useWordLookups({ book, trackerRef, savedWords, prefsRef, onLooku
     async savePopupEntry(entry: DictionaryEntry) {
       if (!popup) return;
       await save(popup, entry);
+      void recordEntrySave(book, popup.word, popup.result, entry);
       markSaved(popup.word, true);
     },
 
@@ -205,6 +211,7 @@ export function useWordLookups({ book, trackerRef, savedWords, prefsRef, onLooku
     async savePopupSelection(entry: DictionaryEntry, selectedText: string) {
       if (!popup) return;
       await save(popup, entry, selectedText);
+      void recordSelectionSave(book, popup.word, popup.result, entry, selectedText);
       markSaved(popup.word, true);
     },
 
@@ -235,13 +242,19 @@ export function useWordLookups({ book, trackerRef, savedWords, prefsRef, onLooku
       const target = editing;
       if (!target) return;
       let item: VocabularyItem | undefined;
+      // What the edit box started with: the card's own meaning, or the first meaning the app offered.
+      let prefilled = '';
       if (target.saved) {
         const existing = await vocabularyService.getForWord(book.id, target.word);
         item = existing.find((i) => i.selectedEntryIndex === undefined) ?? existing[0];
+        prefilled = item?.meaning ?? '';
       } else {
+        const first = target.result?.entries[0]?.senses[0];
+        prefilled = first ? senseText(first) : '';
         item = await save(target);
       }
       if (item) await vocabularyService.updateVocabularyItem(item, patch);
+      void recordEditSave(book, target.word, target.result, prefilled, patch.meaning);
       markSaved(target.word, await vocabularyService.isSaved(book.id, target.word));
       if (patch.surfaceForm !== target.word) savedWords.setSaved(patch.surfaceForm, true);
       setEditing(null);
