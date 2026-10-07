@@ -16,3 +16,10 @@ No egress fees at our scale and no servers to run. We depend on one vendor, miti
 
 ## Alternatives considered
 GitHub Pages or Releases: size and bandwidth limits and no control over caching. S3 plus CloudFront: egress cost and more setup. Bundling everything in the installer: bloats every download and blocks updates without a release. A custom server: operational burden that ADR 0002 says to avoid.
+
+## Update 2026-10-07: staging live, keys and spending decided
+- A staging bucket (`arabic-reader-packs-staging`, public r2.dev address) is live and serves a signed manifest and the Al-Ṣiḥāḥ pack. How it was set up and how to publish: `docs/ops/packs-hosting.md`.
+- Two signing keys exist (current and next); their public halves are compiled into the app, the private halves are held by the maintainer outside the repository.
+- Spending: the maintainer chose to stay inside the free tier with a $0 budget. Cloudflare offers no hard cap and no percentage-of-free-tier alert for R2, so this is watched by a dollar budget alert (threshold $1, created 2026-10-07) that emails when real spend begins; it does not stop anything.
+- The Al-Ṣiḥāḥ licence record (public-domain work, GPL-3.0 compilation) was confirmed by the maintainer.
+- Still open: a custom domain for production (r2.dev is not meant for it). The maintainer owns none and chose on 2026-10-07 to wait; release builds stay dormant until then.

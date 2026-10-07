@@ -1,18 +1,7 @@
-import Dexie, { type Table } from 'dexie';
 import { newId } from '../utils/id';
+import { createFaceStore, FontDB, type StoredFace } from './fontFaceStore';
 import { familyFromFileName, readFontFileInfo } from './fontFile';
 import { buildFontFaceCss, cleanFontName, uploadedCssFamily } from './fontStack';
-
-interface StoredFace {
-  id: string;
-  family: string;
-  subfamily: string;
-  weight: number;
-  italic: boolean;
-  fileName: string;
-  data: Blob;
-  addedAt: number;
-}
 
 /** A font the reader uploaded: one picker entry, however many weights. */
 export interface UploadedFont {
@@ -22,20 +11,10 @@ export interface UploadedFont {
   styles: string[];
 }
 
-/** Kept apart from the main database: uploaded fonts are often licensed to
- * one person, so they stay on the device and out of backups. */
-class FontDB extends Dexie {
-  faces!: Table<StoredFace, string>;
-  constructor() {
-    super('arabic-reader-fonts');
-    this.version(1).stores({ faces: 'id, family, addedAt' });
-  }
-}
-
 export const MAX_FONT_BYTES = 30 * 1024 * 1024;
 const STYLE_ID = 'ar-user-fonts';
 
-let db: FontDB | null = null;
+let store: ReturnType<typeof createFaceStore> | null = null;
 let faces: StoredFace[] = [];
 const urls = new Map<string, string>();
 let css = '';
@@ -44,9 +23,10 @@ let state: { loaded: boolean; fonts: UploadedFont[] } = { loaded: false, fonts: 
 let loading: Promise<void> | null = null;
 const listeners = new Set<() => void>();
 
-function database(): FontDB {
-  db ??= new FontDB();
-  return db;
+/** The font files live in the BlobStore; the database keeps their details (fontFaceStore.ts). */
+function faceStore() {
+  store ??= createFaceStore(new FontDB());
+  return store;
 }
 
 function rebuild(): void {
@@ -75,9 +55,8 @@ function rebuild(): void {
 
 /** Reads the stored fonts once; later calls share the same load. */
 export function loadUserFonts(): Promise<void> {
-  loading ??= database()
-    .faces.orderBy('addedAt')
-    .toArray()
+  loading ??= faceStore()
+    .load()
     .then((stored) => {
       faces = stored;
       rebuild();
@@ -142,12 +121,8 @@ export async function addUserFont(file: File): Promise<UploadedFont> {
     addedAt: Date.now(),
   };
   const replaced = faces.filter((f) => f.family === face.family && f.weight === face.weight && f.italic === face.italic);
-  const store = database().faces;
   try {
-    await database().transaction('rw', store, async () => {
-      await store.bulkDelete(replaced.map((f) => f.id));
-      await store.put(face);
-    });
+    await faceStore().add(face, replaced);
   } catch {
     throw new Error(`Couldn't save "${file.name}" on this device. Storage may be full or blocked.`);
   }
@@ -156,10 +131,18 @@ export async function addUserFont(file: File): Promise<UploadedFont> {
   return state.fonts.find((font) => font.family === face.family)!;
 }
 
+/** What each uploaded family takes on this device, for the storage screen. */
+export async function userFontSizes(): Promise<{ family: string; bytes: number }[]> {
+  await loadUserFonts();
+  const byFamily = new Map<string, number>();
+  for (const face of faces) byFamily.set(face.family, (byFamily.get(face.family) ?? 0) + face.data.size);
+  return Array.from(byFamily, ([family, bytes]) => ({ family, bytes }));
+}
+
 /** Deletes every stored weight of an uploaded family from this device. */
 export async function removeUserFont(family: string): Promise<void> {
   await loadUserFonts();
-  await database().faces.where('family').equals(family).delete();
+  await faceStore().removeFamily(family);
   faces = faces.filter((face) => face.family !== family);
   rebuild();
 }

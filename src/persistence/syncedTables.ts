@@ -4,6 +4,7 @@ import type { AppliedState, SeqMap, SyncEvent } from '../sync/types';
  * The user-data tables that take part in sync, with each one's primary-key
  * field. Everything else in the database (book files, locations index, word
  * instances, caches) is local or replaceable and never produces sync events.
+ * src/storage/registry.ts declares the same set (`syncs: true`); its test checks they agree.
  */
 export const SYNCED_TABLES = {
   books: 'id',
