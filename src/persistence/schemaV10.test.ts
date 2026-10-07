@@ -52,7 +52,7 @@ describe('schema v10 upgrade', () => {
     expect(await db.syncOutbox.count()).toBe(0);
     expect(await db.recordFrontier.count()).toBe(0);
     expect(await db.syncMeta.count()).toBe(0);
-    expect(db.verno).toBe(12);
+    expect(db.verno).toBe(13);
     expect(before).toBeLessThanOrEqual(Date.now());
     db.close();
   });

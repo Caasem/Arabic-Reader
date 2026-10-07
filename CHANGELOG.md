@@ -4,14 +4,7 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
-## Unreleased (developer-facing)
-
-- StorageRegistry (`src/storage/registry.ts`): every table and blob namespace declares its data
-  class, sync, backup, eviction and export rules; a test fails on an undeclared one (M1a).
-- BlobStore (`src/blobStore`): content-addressed file storage with IndexedDB and desktop-file
-  backends and one contract test suite. Not used by any feature yet (M1b).
-
-## v0.36.0 — 2026-10-06
+## v0.37.0 — 2026-10-07
 
 More kinds of book files.
 
@@ -26,6 +19,20 @@ More kinds of book files.
 - **Kindle files:** text, chapters, table of contents and cover come across. Books protected with
   DRM can't be opened, and the app says so.
 - A short note under the library says what was converted ("converted from TXT · 12 chapters").
+
+## v0.36.0 — 2026-10-07
+
+Book files move to a new store.
+
+- **Adding a book you already have says so.** An EPUB with the same contents as a book in your
+  library is not added a second time: you see "… is already in your library". If the book arrived
+  from another device without its file, adding the file attaches it to that book.
+- **Identical files are stored once.** Removing one of two identical books keeps the other's file.
+- **Existing books move in the background** after the update. Settings → Library & data shows
+  "Optimising storage…" while it runs, and a note if a file could not be moved (it keeps working
+  from where it was). Reading is not interrupted.
+- Developer-facing: the StorageRegistry (`src/storage/registry.ts`, M1a), the BlobStore
+  (`src/blobStore`, M1b), and schema v13 with `books.fileHash` (M1c).
 
 ## v0.35.0 — 2026-10-06
 

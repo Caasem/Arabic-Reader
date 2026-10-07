@@ -165,6 +165,13 @@ export class ArabicReaderDB extends Dexie {
       crowdQueue: 'key, rev',
       crowdPacks: 'path',
     });
+    // v13: `books.fileHash` (a reference to the book file in the BlobStore), indexed so an import can find the
+    // book that already has these bytes. No data changes here: files move out of `bookFiles` afterwards, one
+    // at a time, outside the upgrade transaction (src/persistence/bookFileMigration.ts). `bookFiles` stays
+    // declared, empty once migrated, for one release.
+    this.version(13).stores({
+      books: 'id, addedAt, title, fileHash',
+    });
   }
 }
 

@@ -25,6 +25,11 @@ function desktopBlobs(): BlobFilesBridge | undefined {
   return typeof window === 'undefined' ? undefined : window.arabicReaderDesktop?.blobs;
 }
 
+/** Tests swap in a store over their own databases; pass null to go back to the app's. */
+export function setBlobStoreForTests(replacement: BlobStore | null): void {
+  store = replacement;
+}
+
 /** The app's BlobStore: files on disk in the desktop app, IndexedDB everywhere else. Opened on first use. */
 export function getBlobStore(): BlobStore {
   if (!store) {

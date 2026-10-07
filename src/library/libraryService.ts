@@ -1,4 +1,5 @@
 import ePub from 'epubjs';
+import { sha256Hex } from '../blobStore';
 import { persistenceService } from '../persistence';
 import type { BookFormat, BookMeta } from '../types';
 import { newId } from '../utils/id';
@@ -7,6 +8,16 @@ export interface BookReadingInfo {
   percent: number;
   /** undefined for a book that has never been opened. */
   lastReadAt?: number;
+}
+
+/** The file is already a book in the library (same bytes, found by SHA-256). */
+export class DuplicateBookError extends Error {
+  readonly existing: BookMeta;
+  constructor(existing: BookMeta) {
+    super(`"${existing.title}" is already in your library.`);
+    this.name = 'DuplicateBookError';
+    this.existing = existing;
+  }
 }
 
 /**
@@ -30,6 +41,15 @@ export class LibraryService {
 
   /** `id` is only for books every install gets (the starter books), so devices that sync share one record. */
   async importEpub(file: File, options: { id?: string; format?: BookFormat; originalFileName?: string } = {}): Promise<BookMeta> {
+    if (!options.id) {
+      const existing = await persistenceService.getBookByFileHash(await sha256Hex(file));
+      if (existing) {
+        if (await persistenceService.getBookFile(existing.id)) throw new DuplicateBookError(existing);
+        // A book that arrived by sync without its file: these are its bytes, so attach them instead of adding a second book.
+        await persistenceService.saveBookFile(existing.id, file);
+        return existing;
+      }
+    }
     const buf = await file.arrayBuffer();
     const book = ePub(buf.slice(0)); // epub.js may detach the buffer
     let coverDataUrl: string | undefined;

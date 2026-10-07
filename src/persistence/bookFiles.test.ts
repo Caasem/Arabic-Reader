@@ -21,7 +21,8 @@ describe('books that arrive without their file', () => {
 
     await persistenceService.saveBookFile('synced', new Blob(['the file']));
     expect((await persistenceService.getBookFileIds()).sort()).toEqual(['mine', 'synced']);
-    expect((await persistenceService.getBook('synced'))?.updatedAt).toBe(5); // untouched
+    // The book's details are untouched; it now points at the file it was given (and that change is what syncs).
+    expect(await persistenceService.getBook('synced')).toMatchObject({ title: 'synced', sizeBytes: 1, fileHash: expect.stringMatching(/^[0-9a-f]{64}$/) });
     expect(await (await persistenceService.getBookFile('synced'))?.text()).toBe('the file');
   });
 });
