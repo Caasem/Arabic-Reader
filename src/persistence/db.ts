@@ -46,6 +46,8 @@ export interface PersistenceService {
   /** Ids of books whose file is on this device; synced books can arrive without one. */
   getBookFileIds(): Promise<string[]>;
   saveBookFile(id: string, file: Blob): Promise<void>;
+  /** Removes the file from this device but keeps the book (record, notes, progress). */
+  removeBookFile(id: string): Promise<void>;
   deleteBook(id: string): Promise<void>;
   updateBookMeta(id: string, patch: Partial<BookMeta>): Promise<void>;
 

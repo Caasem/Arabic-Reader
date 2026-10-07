@@ -4,16 +4,26 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
-## Unreleased (developer-facing)
+## v0.37.0 — 2026-10-07
 
-- PackManager (`src/packManager`, M1f): signed-manifest fetch, resumable verified downloads, atomic updates and
-  removal of data packs, with Al-Ṣiḥāḥ as the first pack (bundled copy kept as fallback). Dormant until a
-  host and a signing key are configured, so nothing changes on screen. Schema v14 adds three local tables.
-- Signed pack manifest and the tooling around it (`src/packManager/manifest.ts`, `scripts/packs`): ECDSA
-  P-256 signing and verification, a builder that refuses unlicensed packs and rewritten versions, and a
-  verifier. Nothing in the app fetches packs yet (M1e).
-- Uploaded fonts and the personal dictionary keep their files in the BlobStore (M1d). Nothing
-  changes on screen; existing ones move the first time they load.
+Storage screen and full export.
+
+- **Settings → Library & data → Storage** shows where the space goes: your files (books, fonts),
+  your records, downloaded dictionaries and caches, with the largest items first and the space your
+  browser says is available.
+- **Free space safely.** *Remove file only* keeps a book in your library with its notes, highlights
+  and progress; adding the same file back restores it. Also *Remove book*, *Remove* for a downloaded
+  dictionary, an uploaded font or your personal dictionary, and *Clear caches*. Each one says what
+  goes and what stays.
+- **Protect from automatic cleanup** asks the browser not to clear the app's data when the device
+  is short of space.
+- **Export everything** makes one .zip with your vocabulary, highlights, notes, bookmarks, history
+  and settings as JSON (`records.json`), your words as a spreadsheet (`vocabulary.csv`), your
+  highlights to read (`highlights.md`), and, if you tick it, the original books. **Import an export**
+  adds what is missing and never replaces anything newer. The quick backup is unchanged.
+- Developer-facing, not visible on screen: PackManager with Al-Ṣiḥāḥ as the first pack and schema v14
+  (M1f, dormant until a pack host and signing key exist); the signed pack manifest and `scripts/packs`
+  tooling (M1e); uploaded fonts and the personal dictionary keep their files in the BlobStore (M1d).
 
 ## v0.36.0 — 2026-10-07
 

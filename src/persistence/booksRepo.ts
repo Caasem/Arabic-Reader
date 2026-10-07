@@ -76,6 +76,16 @@ export async function saveBookFile(id: string, file: Blob): Promise<void> {
   }
   if (book.fileHash && book.fileHash !== hash) await blobs().unpin(book.fileHash, NS, book.id);
 }
+/**
+ * Drops a book's file from this device and keeps the book: its record, notes and progress stay, and the card
+ * offers "Add file". The record keeps its `fileHash`, so adding the same file back just works. If another book
+ * rests on identical bytes they stay (and this book still opens from them).
+ */
+export async function removeBookFile(id: string): Promise<void> {
+  const hash = (await db.books.get(id))?.fileHash;
+  await db.bookFiles.delete(id);
+  if (hash) await blobs().unpin(hash, NS, id);
+}
 export async function deleteBook(id: string): Promise<void> {
   const hash = (await db.books.get(id))?.fileHash;
   await db.transaction('rw', [db.bookFiles, ...syncScope('books', 'positions')], async () => {
