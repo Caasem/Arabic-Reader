@@ -76,7 +76,7 @@ export const STORAGE_REGISTRY: readonly StoreSpec[] = [
   table(MAIN_DB, 'speedReaderSessions', syncedRecords),
   table(MAIN_DB, 'readingSessions', syncedRecords),
   table(MAIN_DB, 'pomodoroSessions', syncedRecords),
-  table(MAIN_DB, 'bookFiles', { ...userFile, note: 'Moves to the BlobStore (namespace "book") in M1c.' }),
+  table(MAIN_DB, 'bookFiles', { ...userFile, note: 'Legacy: book files move to the BlobStore (namespace "book") after the v13 upgrade; kept declared, empty once migrated, for one release.' }),
   table(MAIN_DB, 'bookLocations', { ...cache, note: 'epub.js locations index, rebuilt on open.' }),
   table(MAIN_DB, 'wordInstances', {
     cls: 'L',
@@ -111,7 +111,7 @@ export const STORAGE_REGISTRY: readonly StoreSpec[] = [
   table(BLOBS_DB, 'blobIndex', { ...cache, evictable: false, note: 'BlobStore index: rebuildable by a scan, but it holds the owner references, so never evicted.' }),
 
   // --- BlobStore namespaces (src/blobStore) -----------------------------------
-  blobNamespace('book', { ...userFile, note: 'Imported book files (from M1c).' }),
+  blobNamespace('book', { ...userFile, note: 'Imported book files; owner = book id, referenced by books.fileHash.' }),
   blobNamespace('font', { ...userFile, note: 'Uploaded fonts (from M1d).' }),
   blobNamespace('dictionary', { ...userFile, note: 'Personal dictionaries (from M1d).' }),
   blobNamespace('pack', { cls: 'C', syncs: false, inBackup: false, evictable: true, merge: 'none', exportFormat: 'none', note: 'Reference pack files (PackManager, M1f); downloaded again when evicted.' }),

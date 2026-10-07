@@ -177,6 +177,8 @@ The next schema version (v13: v11 and v12 are already used by sense picks and th
 5. **Delete book:** unpin; the BlobStore frees the bytes when no other owner remains.
 6. Rollback: v13 keeps the `bookFiles` store declared (empty after migration) for one release so a downgrade does not corrupt; the pre-migration backup is the real safety net.
 
+**As built in M1c (2026-10-07):** schema v13 only adds a `fileHash` index on `books`; it moves nothing. `src/persistence/bookFileMigration.ts` runs after startup, one book at a time, under a Web Lock (put and pin, confirm `has` and size, set `books.fileHash` through the write layer, then delete the `bookFiles` row; a failure leaves the old row and reads fall back to it). The v10 pre-migration backup gate does not apply (v13 changes no data) and book files are still not in backups. Import hashes the file first and refuses a duplicate that is on this device, or attaches the file to a synced book that has the hash but no bytes. Deleting a book first pins every other book that names the same hash, so a synced book that rests on the same bytes keeps its file. Known gap: if two devices attach different files to the same book id, the record-level sync winner's hash may point at bytes this device does not have; the book then shows "File not on this device" until a file is added.
+
 ## 7. Cloud architecture (optional, not required to run)
 
 Provider: Cloudflare ([ADR 0005](../adr/0005-cloudflare-hosting.md), accepted). Pack hosting format: [ADR 0007](../adr/0007-static-pack-hosting.md) (accepted). Summary:
