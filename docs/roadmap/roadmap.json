@@ -384,7 +384,7 @@
       "deps": [
         "governance"
       ],
-      "notes": "Design (2026-10-06); ADR 0002 (revised), 0003, 0005, 0007 accepted. Building M1 in order: M1a StorageRegistry done; M1b BlobStore done; M1c done (schema v13, books.fileHash, background resumable book-file migration, duplicate import detection, v0.36.0). Next: M1d, fonts and personal dictionaries onto the BlobStore.",
+      "notes": "Design (2026-10-06); ADR 0002 (revised), 0003, 0005, 0007 accepted. Building M1 in order: M1a StorageRegistry, M1b BlobStore, M1c book files and schema v13 (v0.36.0), M1d fonts and personal dictionary onto the BlobStore: all done. Next: M1e (infrastructure ADR accepted, staging R2 bucket, signed-manifest tooling).",
       "spec": "specs/data-architecture.md",
       "brief": "features/data-arch-spec.md",
       "milestone": "M1"
@@ -399,7 +399,7 @@
         "data-arch-spec",
         "sync-v10"
       ],
-      "notes": "M1b and M1c built. src/blobStore: content-addressed by SHA-256 with (namespace, owner) references, IndexedDB and desktop file backends, repair scan, QuotaError, one contract suite. Book files now live in it: books.fileHash (synced, indexed), lazy resumable migration from bookFiles (src/persistence/bookFileMigration.ts), duplicate imports detected by hash, bookFiles kept declared and empty for one release. Next: M1d (fonts, personal dictionaries). OPFS and Capacitor backends later, after the iOS measurement.",
+      "notes": "M1b, M1c and M1d built. src/blobStore: content-addressed by SHA-256 with (namespace, owner) references, IndexedDB and desktop file backends, repair scan, QuotaError, one contract suite. In it now: book files (books.fileHash, resumable migration from bookFiles, duplicate imports detected), uploaded fonts (namespace font) and the personal dictionary (namespace dictionary), each moved lazily on first load with the old copy kept until the new one is confirmed. The legacy bookFiles table and the inline font/dictionary fields stay readable for one release. Next: nothing here until pack-manager (M1f). OPFS and Capacitor backends later, after the iOS measurement.",
       "brief": "features/blob-store.md",
       "milestone": "M1"
     },
