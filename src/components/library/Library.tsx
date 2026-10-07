@@ -1,6 +1,7 @@
 import { hiddenDuplicateIds } from '../../library/duplicates';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DuplicateBookError, libraryService, type BookReadingInfo } from '../../library/libraryService';
+import { onLibraryChanged } from '../../library/libraryChanged';
 import { LibraryHero } from '../../look';
 import { preloadStarterBooks } from '../../onboarding';
 import { invalidateBookVocabIndex } from '../../vocabRarity/bookVocabIndex';
@@ -109,6 +110,9 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
       cancelled = true;
     };
   }, []);
+
+  // The Storage screen (Settings) can remove a file or a book while this stays mounted underneath.
+  useEffect(() => onLibraryChanged(reloadLibrary), []);
 
   function handleShamelaBookAdded() {
     reloadLibrary();

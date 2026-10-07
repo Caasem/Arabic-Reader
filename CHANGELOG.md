@@ -4,12 +4,7 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
-## Unreleased (developer-facing)
-
-- Uploaded fonts and the personal dictionary keep their files in the BlobStore (M1d). Nothing
-  changes on screen; existing ones move the first time they load.
-
-## v0.37.0 — 2026-10-07
+## v0.38.0 — 2026-10-07
 
 More kinds of book files.
 
@@ -24,6 +19,27 @@ More kinds of book files.
 - **Kindle files:** text, chapters, table of contents and cover come across. Books protected with
   DRM can't be opened, and the app says so.
 - A short note under the library says what was converted ("converted from TXT · 12 chapters").
+
+## v0.37.0 — 2026-10-07
+
+Storage screen and full export.
+
+- **Settings → Library & data → Storage** shows where the space goes: your files (books, fonts),
+  your records, downloaded dictionaries and caches, with the largest items first and the space your
+  browser says is available.
+- **Free space safely.** *Remove file only* keeps a book in your library with its notes, highlights
+  and progress; adding the same file back restores it. Also *Remove book*, *Remove* for a downloaded
+  dictionary, an uploaded font or your personal dictionary, and *Clear caches*. Each one says what
+  goes and what stays.
+- **Protect from automatic cleanup** asks the browser not to clear the app's data when the device
+  is short of space.
+- **Export everything** makes one .zip with your vocabulary, highlights, notes, bookmarks, history
+  and settings as JSON (`records.json`), your words as a spreadsheet (`vocabulary.csv`), your
+  highlights to read (`highlights.md`), and, if you tick it, the original books. **Import an export**
+  adds what is missing and never replaces anything newer. The quick backup is unchanged.
+- Developer-facing, not visible on screen: PackManager with Al-Ṣiḥāḥ as the first pack and schema v14
+  (M1f, dormant until a pack host and signing key exist); the signed pack manifest and `scripts/packs`
+  tooling (M1e); uploaded fonts and the personal dictionary keep their files in the BlobStore (M1d).
 
 ## v0.36.0 — 2026-10-07
 

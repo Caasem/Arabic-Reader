@@ -34,8 +34,8 @@ test.describe('new reader', () => {
     await word.click();
     const popup = page.locator('.dict-popup');
     await expect(popup.locator('.dict-popup__save')).toHaveText('Save Vocabulary', { timeout: 10000 });
-    // The button shows while the lookup is still loading; Space then only says so. Wait for the entries.
-    await expect(popup.locator('.dict-popup__entry').first()).toBeVisible({ timeout: 10000 });
+    // The Save button shows while the lookup is still loading; Space only saves once it has finished.
+    await expect(popup.locator('.dict-popup__loading')).toHaveCount(0);
     await expect(popup.locator('.dict-popup__shortcut', { hasText: 'Space' })).toBeVisible();
 
     const before = await vocabCount(page);
@@ -57,8 +57,7 @@ test.describe('new reader', () => {
     const other = page.locator('.qr-text .ar-word', { hasText: 'الشَّمْسَ' }).first();
     await other.click();
     await expect(popup.locator('.dict-popup__save')).toHaveText('Save Vocabulary', { timeout: 10000 });
-    // The button shows while the lookup is still loading; Space then only says so. Wait for the entries.
-    await expect(popup.locator('.dict-popup__entry').first()).toBeVisible({ timeout: 10000 });
+    await expect(popup.locator('.dict-popup__loading')).toHaveCount(0);
     await page.keyboard.press('Space');
     await expect(page.locator('.reader__touch-toast-undo')).toBeVisible();
     await page.locator('.reader__touch-toast-undo').click();
@@ -87,7 +86,6 @@ test.describe('original reader', () => {
     const frame = page.frames().find((f) => f !== page.mainFrame())!;
     await frame.evaluate(() => document.querySelectorAll('p .ar-word')[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
     await expect(page.locator('.dict-popup__save')).toHaveText('Save Vocabulary', { timeout: 10000 });
-    await expect(page.locator('.dict-popup__entry').first()).toBeVisible({ timeout: 10000 });
 
     const before = await vocabCount(page);
     await page.keyboard.press('Space');
@@ -106,7 +104,6 @@ test.describe('original reader', () => {
     const frame = page.frames().find((f) => f !== page.mainFrame())!;
     await frame.evaluate(() => document.querySelectorAll('p .ar-word')[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
     await expect(page.locator('.dict-popup__save')).toHaveText('Save Vocabulary', { timeout: 10000 });
-    await expect(page.locator('.dict-popup__entry').first()).toBeVisible({ timeout: 10000 });
 
     const before = await vocabCount(page);
     await page.locator('.dict-popup__edit').click();

@@ -67,6 +67,11 @@ export class PersonalDictionaryProvider implements DictionaryProvider {
     this.reset();
   }
 
+  /** The stored dictionary changed behind the provider's back (an import): load it again next time. */
+  refresh(): void {
+    this.reset();
+  }
+
   private reset(): void {
     this.index = null;
     this.reverse = null;

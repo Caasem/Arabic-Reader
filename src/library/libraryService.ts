@@ -3,6 +3,7 @@ import { sha256Hex } from '../blobStore';
 import { persistenceService } from '../persistence';
 import type { BookFormat, BookMeta } from '../types';
 import { newId } from '../utils/id';
+import { notifyLibraryChanged } from './libraryChanged';
 
 export interface BookReadingInfo {
   percent: number;
@@ -101,8 +102,15 @@ export class LibraryService {
     await persistenceService.saveBookFile(id, file);
   }
 
+  /** Free the space a book's file takes, keeping the book. "Add file" brings it back. */
+  async removeBookFileOnly(id: string): Promise<void> {
+    await persistenceService.removeBookFile(id);
+    notifyLibraryChanged();
+  }
+
   async removeBook(id: string): Promise<void> {
     await persistenceService.deleteBook(id);
+    notifyLibraryChanged();
   }
 
   /** Progress and last-read time for many books in one read. */
