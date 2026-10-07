@@ -6,14 +6,17 @@
  * Touch points: `libraryService.importBook` (src/library/libraryService.ts), the Library's file
  * picker and drag-and-drop (src/components/library/Library.tsx), and the `BookFormat` type. To
  * remove: delete this folder, make importBook call importEpub only, and restore `.epub` as the
- * picker's only type. Third-party code: marked (MIT), foliate-js mobi.js (MIT), fflate (MIT).
+ * picker's only type. PDFs are converted too, by reading the text layer (pdf.js) and reflowing it; see pdf.ts.
+ * Third-party code: marked (MIT), foliate-js mobi.js (MIT), fflate (MIT), pdfjs-dist (Apache-2.0,
+ * loaded only when a PDF is added; see the Licence note in docs/features/formats-pdf.md).
  */
 import type { BookFormat } from '../types';
+import type { PdfDeps } from './pdf';
 import { writeEpub, type Chapter, type EpubImage } from './epubWriter';
 import { arabicShare, decodeText, textToChapters } from './text';
 
 /** Extensions the library accepts, for the file picker. */
-export const IMPORTABLE_EXTENSIONS = ['.epub', '.txt', '.md', '.markdown', '.mobi', '.azw3', '.azw', '.prc'];
+export const IMPORTABLE_EXTENSIONS = ['.epub', '.txt', '.md', '.markdown', '.mobi', '.azw3', '.azw', '.prc', '.pdf'];
 
 const MAX_TEXT_BYTES = 50 * 1024 * 1024;
 
@@ -33,6 +36,8 @@ export function formatOf(fileName: string): BookFormat | null {
     case '.azw3':
     case '.azw':
       return 'azw3';
+    case '.pdf':
+      return 'pdf';
     default:
       return null;
   }
@@ -42,13 +47,15 @@ export interface Converted {
   epub: File;
   format: BookFormat;
   chapters: number;
+  /** Pages of the source, for a PDF. */
+  pages?: number;
   warnings: string[];
 }
 
 const stripExt = (name: string) => name.replace(/\.[^.]+$/, '');
 
 /** Converts a non-EPUB book file to an EPUB. Throws with a reader-facing message when it can't. */
-export async function convertToEpub(file: File): Promise<Converted> {
+export async function convertToEpub(file: File, options: { loadPdfDeps?: () => Promise<PdfDeps> } = {}): Promise<Converted> {
   const format = formatOf(file.name);
   if (!format || format === 'epub') throw new Error(`"${file.name}" is not a book type Arabic Reader can convert.`);
   const fallbackTitle = stripExt(file.name);
@@ -59,6 +66,7 @@ export async function convertToEpub(file: File): Promise<Converted> {
   let chapters: Chapter[];
   let images: EpubImage[] | undefined;
   let cover: EpubImage | undefined;
+  let pages: number | undefined;
 
   if (format === 'txt' || format === 'md') {
     if (file.size > MAX_TEXT_BYTES) throw new Error('This file is too large to convert (limit 50 MB).');
@@ -73,6 +81,16 @@ export async function convertToEpub(file: File): Promise<Converted> {
       ({ title, author, chapters } = md);
       if (md.droppedImages) warnings.push(`${md.droppedImages} image${md.droppedImages === 1 ? '' : 's'} skipped`);
     }
+  } else if (format === 'pdf') {
+    const { convertPdf, PdfImportError, PDF_MESSAGES, MAX_PDF_BYTES } = await import('./pdf');
+    if (file.size > MAX_PDF_BYTES) throw new PdfImportError(PDF_MESSAGES.tooLarge);
+    const loadPdfDeps = options.loadPdfDeps ?? (async () => (await import('./pdfBrowser')).loadPdfDeps());
+    const book = await convertPdf(new Uint8Array(await file.arrayBuffer()), await loadPdfDeps(), fallbackTitle);
+    title = book.title ?? fallbackTitle;
+    author = book.author;
+    chapters = book.chapters;
+    pages = book.pages;
+    warnings.push(...book.warnings);
   } else {
     const { mobiToChapters } = await import('./mobi');
     const book = await mobiToChapters(file);
@@ -91,5 +109,5 @@ export async function convertToEpub(file: File): Promise<Converted> {
     .join(' ');
   const rtl = arabicShare(sample) > 0.5;
   const epub = await writeEpub({ title, author, language: rtl ? 'ar' : (language ?? 'en'), rtl, chapters, images, cover });
-  return { epub: new File([epub], `${fallbackTitle}.epub`, { type: 'application/epub+zip' }), format, chapters: chapters.length, warnings };
+  return { epub: new File([epub], `${fallbackTitle}.epub`, { type: 'application/epub+zip' }), format, chapters: chapters.length, pages, warnings };
 }

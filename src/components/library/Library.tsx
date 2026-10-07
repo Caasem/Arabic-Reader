@@ -141,8 +141,8 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
           setBooks((prev) => [meta, ...prev.filter((b) => b.id !== meta.id)]);
           setFileIds((prev) => (prev ? new Set(prev).add(meta.id) : prev));
           if (converted) {
-            const chapters = `${converted.chapters} chapter${converted.chapters === 1 ? '' : 's'}`;
-            reports.push(`"${meta.title}": converted from ${converted.format.toUpperCase()} · ${chapters}${converted.warnings.length ? ` (${converted.warnings.join('; ')})` : ''}`);
+            const size = converted.pages ? `${converted.pages} page${converted.pages === 1 ? '' : 's'}` : `${converted.chapters} chapter${converted.chapters === 1 ? '' : 's'}`;
+            reports.push(`"${meta.title}": converted from ${converted.format.toUpperCase()} · ${size}${converted.warnings.length ? ` (${converted.warnings.join('; ')})` : ''}`);
           }
         } catch (e) {
           failures.push(e instanceof Error ? e.message : `Could not add "${file.name}".`);
@@ -305,7 +305,7 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
             ref={fileInputRef}
             type="file"
             accept={IMPORTABLE_EXTENSIONS.join(',')}
-            aria-label="Add books (EPUB, TXT, Markdown, MOBI, AZW3)"
+            aria-label="Add books (EPUB, PDF, TXT, Markdown, MOBI, AZW3)"
             multiple
             hidden
             onChange={(e) => handleFiles(e.target.files)}
@@ -382,7 +382,7 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
         shelfBooks.length === 0 && !query.trim() ? (
           <div className="library__empty">
             <p>No books yet.</p>
-            <p className="library__empty-sub">Add a book (EPUB, TXT, Markdown, MOBI or AZW3) or drop one here, or try the sample book to see the reader in action.</p>
+            <p className="library__empty-sub">Add a book (EPUB, PDF, TXT, Markdown, MOBI or AZW3) or drop one here, or try the sample book to see the reader in action.</p>
           </div>
         ) : (
           <div className="library__empty">

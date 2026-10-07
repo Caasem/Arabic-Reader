@@ -27,17 +27,17 @@ export class DuplicateBookError extends Error {
  */
 export class LibraryService {
   /**
-   * Adds any supported book file: EPUB as is, TXT, Markdown, MOBI and AZW3 converted to EPUB first
+   * Adds any supported book file: EPUB as is, PDF, TXT, Markdown, MOBI and AZW3 converted to EPUB first
    * (src/importFormats). `warnings` lists anything the conversion had to leave out.
    */
-  async importBook(file: File): Promise<{ meta: BookMeta; converted?: { format: BookFormat; chapters: number; warnings: string[] } }> {
+  async importBook(file: File): Promise<{ meta: BookMeta; converted?: { format: BookFormat; chapters: number; pages?: number; warnings: string[] } }> {
     const { formatOf, convertToEpub } = await import('../importFormats');
     const format = formatOf(file.name);
-    if (!format) throw new Error(`"${file.name}" isn't a book type Arabic Reader can open. Add an EPUB, TXT, Markdown, MOBI or AZW3 file.`);
+    if (!format) throw new Error(`"${file.name}" isn't a book type Arabic Reader can open. Add an EPUB, PDF, TXT, Markdown, MOBI or AZW3 file.`);
     if (format === 'epub') return { meta: await this.importEpub(file) };
     const converted = await convertToEpub(file);
     const meta = await this.importEpub(converted.epub, { format, originalFileName: file.name });
-    return { meta, converted: { format, chapters: converted.chapters, warnings: converted.warnings } };
+    return { meta, converted: { format, chapters: converted.chapters, pages: converted.pages, warnings: converted.warnings } };
   }
 
   /** `id` is only for books every install gets (the starter books), so devices that sync share one record. */

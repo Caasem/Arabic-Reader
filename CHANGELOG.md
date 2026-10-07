@@ -4,6 +4,19 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.42.0 — 2026-10-07
+
+- **PDF books.** Add a PDF like any other book: if it has a text layer (not a scan) it is turned
+  into an ordinary reflowed book, with chapters taken from the headings, running headers and page
+  numbers removed, paragraphs joined across lines and pages, and verse kept line by line. Tap
+  words to look them up as usual. The library says how many pages it read.
+- **Checked before converting.** Arabic PDFs often store their text badly (shaped letter forms,
+  reversed lines, missing letters). The app reads the first pages and checks that the words are
+  real Arabic words; if not, it tells you the text could not be extracted cleanly instead of
+  adding a book you cannot read. Scanned PDFs, password-protected PDFs, unreadable files and files
+  over 500 MB are refused with a clear message.
+- Not yet: viewing the original PDF pages, and text recognition for scanned PDFs.
+
 ## v0.41.1 — 2026-10-07
 
 - **The reading font works offline.** Lala, the default Arabic font, is now saved with the rest of
