@@ -384,7 +384,7 @@
       "deps": [
         "governance"
       ],
-      "notes": "Design (2026-10-06); ADR 0002 (revised), 0003, 0005, 0007 accepted. Building M1 in order: M1a StorageRegistry, M1b BlobStore, M1c book files and schema v13 (v0.36.0), M1d fonts and personal dictionary onto the BlobStore: all done. M1e local part done: signed-manifest tooling (src/packManager/manifest.ts, scripts/packs). Still open in M1e: the staging R2 bucket and the first signing key (need the maintainer's Cloudflare account and an offline key), and the spending cap amount. M1f built (PackManager, Al-Sihah as the proof pack, dormant until a host and key exist). Next: M1g (Dexie Cloud ADR) and M1h (storage screen and full export); M1e's open items still block going live with packs.",
+      "notes": "Design (2026-10-06); ADR 0002 (revised), 0003, 0005, 0007 accepted. Building M1 in order: M1a StorageRegistry, M1b BlobStore, M1c book files and schema v13 (v0.36.0), M1d fonts and personal dictionary onto the BlobStore: all done. M1e local part done: signed-manifest tooling (src/packManager/manifest.ts, scripts/packs). Still open in M1e: the staging R2 bucket and the first signing key (need the maintainer's Cloudflare account and an offline key), and the spending cap amount. M1f built (PackManager, Al-Sihah as the proof pack, dormant until a host and key exist). M1h built (storage screen and full export, v0.37.0). Remaining in M1: M1g (Dexie Cloud, needs its own ADR and the maintainer's decisions) and M1e's open items (staging host, signing key, spending cap), which block going live with packs.",
       "spec": "specs/data-architecture.md",
       "brief": "features/data-arch-spec.md",
       "milestone": "M1"
@@ -434,12 +434,12 @@
       "id": "storage-ux",
       "title": "Storage usage screen and full export",
       "area": "reader",
-      "status": "planned",
+      "status": "done",
       "effort": 1,
       "deps": [
         "blob-store"
       ],
-      "notes": "Usage by class, per-class cleanup, export all your data in open formats.",
+      "notes": "Built (v0.37.0, M1h): Settings → Library & data → Storage shows space by type from the StorageRegistry (your files, your records, dictionaries and packs, caches) with the browser quota, per-item Remove file only / Remove book / Remove pack / Remove font, Clear caches and Protect from automatic cleanup; Export everything (records.json, vocabulary.csv, highlights.md, optional books) and Import, which adds what is missing and never replaces newer data. Format in specs/export-format.md. Not built: per-class size numbers within 10% of real use are estimates for records; Capacitor share-sheet and Electron save dialog use the existing saveFile path only.",
       "brief": "features/storage-ux.md",
       "milestone": "M1"
     },

@@ -101,11 +101,11 @@ export const STORAGE_REGISTRY: readonly StoreSpec[] = [
   table(MAIN_DB, 'crowdPacks', { ...cache, cls: 'D', note: 'Cached, verified ranking files; downloaded again when missing.' }),
 
   // --- Other IndexedDB databases ----------------------------------------------
-  table(FONTS_DB, 'faces', { ...userFile, note: 'Details of uploaded fonts; the files are in the BlobStore (namespace "font", owner = face id, fileHash). Rows from before M1d carry the file inline until loaded.' }),
+  table(FONTS_DB, 'faces', { ...userFile, exportFormat: 'none', note: 'Details of uploaded fonts; the files are in the BlobStore (namespace "font", owner = face id, fileHash). Rows from before M1d carry the file inline until loaded. Not exported: fonts are often licensed to one person (same reason they stay out of backups).' }),
   table(PERSONAL_DICTIONARY_DB, 'dictionaries', { ...userFile, exportFormat: 'json', note: 'Parsed rows of the reader\'s own dictionary; BlobStore in M1d.' }),
-  table(ARAMORPH_FILES_DB, 'files', { ...userFile, note: 'A custom AraMorph dataset the reader uploaded.' }),
+  table(ARAMORPH_FILES_DB, 'files', { ...userFile, exportFormat: 'none', note: 'A custom AraMorph dataset the reader uploaded; not exported, the reader still has the source files.' }),
   table(ARAMORPH_FILES_DB, 'parsedTables', { ...cache, note: 'Parsed AraMorph tables, rebuilt from the data files.' }),
-  table(FREQUENCY_DB, 'meta', { ...localRecords, note: 'The reader\'s opt-in to vocabulary rarity.' }),
+  table(FREQUENCY_DB, 'meta', { ...localRecords, exportFormat: 'none', note: 'One opt-in flag for vocabulary rarity, switched on again in Settings.' }),
   table(BLOBS_DB, 'blobs', {
     ...userFile,
     exportFormat: 'none',
@@ -115,8 +115,8 @@ export const STORAGE_REGISTRY: readonly StoreSpec[] = [
 
   // --- BlobStore namespaces (src/blobStore) -----------------------------------
   blobNamespace('book', { ...userFile, note: 'Imported book files; owner = book id, referenced by books.fileHash.' }),
-  blobNamespace('font', { ...userFile, note: 'Uploaded font files; owner = face id.' }),
-  blobNamespace('dictionary', { ...userFile, note: 'The personal dictionary parsed rows as JSON; owner "personal".' }),
+  blobNamespace('font', { ...userFile, exportFormat: 'none', note: 'Uploaded font files; owner = face id. Not exported (licensed to the reader).' }),
+  blobNamespace('dictionary', { ...userFile, exportFormat: 'none', note: 'The personal dictionary parsed rows as JSON; owner "personal". Exported through the personal dictionary table, not as a file.' }),
   blobNamespace('pack', { cls: 'C', syncs: false, inBackup: false, evictable: true, merge: 'none', exportFormat: 'none', note: 'Reference pack files (PackManager, M1f); downloaded again when evicted.' }),
 ];
 

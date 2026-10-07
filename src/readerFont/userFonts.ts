@@ -131,6 +131,14 @@ export async function addUserFont(file: File): Promise<UploadedFont> {
   return state.fonts.find((font) => font.family === face.family)!;
 }
 
+/** What each uploaded family takes on this device, for the storage screen. */
+export async function userFontSizes(): Promise<{ family: string; bytes: number }[]> {
+  await loadUserFonts();
+  const byFamily = new Map<string, number>();
+  for (const face of faces) byFamily.set(face.family, (byFamily.get(face.family) ?? 0) + face.data.size);
+  return Array.from(byFamily, ([family, bytes]) => ({ family, bytes }));
+}
+
 /** Deletes every stored weight of an uploaded family from this device. */
 export async function removeUserFont(family: string): Promise<void> {
   await loadUserFonts();

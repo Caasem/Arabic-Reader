@@ -1,0 +1,100 @@
+.storage-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--border);
+  margin: 4px 0 8px;
+}
+
+.storage-bar__seg {
+  min-width: 3px;
+}
+
+.storage-bar__seg--files {
+  background: var(--accent);
+}
+
+.storage-bar__seg--records {
+  background: #6f8f72;
+}
+
+.storage-bar__seg--packs {
+  background: #6b86a8;
+}
+
+.storage-bar__seg--caches {
+  background: var(--ink-faint);
+}
+
+.storage-group {
+  margin: 14px 0;
+}
+
+.storage-group__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.storage-group__size {
+  color: var(--ink-faint);
+  font-size: 12.5px;
+  margin-right: auto;
+}
+
+.storage-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.storage-items {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.storage-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.storage-item__label {
+  flex: 1 1 12rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.storage-item__size {
+  color: var(--ink-faint);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.storage-item .btn {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.storage-empty {
+  color: var(--ink-faint);
+  font-size: 12.5px;
+  margin: 6px 0 0;
+}
+
+.storage-export {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+
+.storage-export h4 {
+  margin: 0 0 6px;
+}
