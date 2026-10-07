@@ -1,3 +1,4 @@
+import type { BlobFilesBridge } from '../blobStore/fsBackend';
 import type { SyncTransport } from './transport';
 
 /**
@@ -25,6 +26,8 @@ export interface WindowBridge {
 export interface DesktopBridge {
   syncFolder: SyncFolderBridge;
   window: WindowBridge;
+  /** BlobStore files (src/blobStore/fsBackend.ts). Optional so a page never assumes it. */
+  blobs?: BlobFilesBridge;
 }
 
 declare global {

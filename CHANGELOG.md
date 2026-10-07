@@ -4,6 +4,13 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## Unreleased (developer-facing)
+
+- StorageRegistry (`src/storage/registry.ts`): every table and blob namespace declares its data
+  class, sync, backup, eviction and export rules; a test fails on an undeclared one (M1a).
+- BlobStore (`src/blobStore`): content-addressed file storage with IndexedDB and desktop-file
+  backends and one contract test suite. Not used by any feature yet (M1b).
+
 ## v0.36.0 — 2026-10-06
 
 More kinds of book files.
