@@ -211,10 +211,10 @@
       "id": "click-space-save",
       "title": "Click then Space saves a vocab card",
       "area": "reader",
-      "status": "planned",
+      "status": "done",
       "effort": 0.5,
       "deps": [],
-      "notes": "Shortcut to save the tapped word without opening the card. src/readerChords exists, so this is probably a new chord.",
+      "notes": "Done in v0.35.0: Space saves the open word in every reader; setting in Settings → Dictionary.",
       "brief": "features/click-space-save.md",
       "milestone": "M2"
     },

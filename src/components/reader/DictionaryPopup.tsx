@@ -22,6 +22,9 @@ const EXAMPLES_SHOWN = 3;
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
+
+/** A mouse or trackpad (so probably a keyboard): only then is a key hint worth showing. */
+const hasFinePointer = () => typeof window.matchMedia === 'function' && window.matchMedia('(pointer: fine)').matches;
 const WORD_GAP = 14;
 
 // Below this, there isn't room for a genuine two-column side-by-side split
@@ -952,6 +955,7 @@ export function DictionaryPopup({
             Edit
           </button>
         )}
+        {prefs.spaceSavesWord && !saved && hasFinePointer() && <span className="dict-popup__shortcut">Space</span>}
         {prefs.quickAddShortcutEnabled && <span className="dict-popup__shortcut">Ctrl Shift A</span>}
       </div>
     </>

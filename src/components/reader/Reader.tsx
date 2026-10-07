@@ -259,7 +259,7 @@ export function Reader({
     onKeyDown: (e) => {
       // Escape inside the book reaches overlays listening on the host window.
       if (e.key === 'Escape') window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-      else void lookups.handleQuickAddKey(e);
+      else if (!lookups.handleSpaceSave(e)) void lookups.handleQuickAddKey(e);
     },
     onPointer: { down: () => {}, move: () => {}, up: () => {} },
   };

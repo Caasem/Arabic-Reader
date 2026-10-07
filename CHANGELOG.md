@@ -4,6 +4,13 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.35.0 — 2026-10-06
+
+- **Space saves the word.** Click a word, then press Space to save it to your vocabulary, with
+  Undo in the toast. Space never removes a saved word, and with no dictionary open it still turns
+  the page. A small "Space" hint shows in the popup. Turn it off in Settings → Dictionary
+  ("Space saves the open word").
+
 ## v0.34.0 — 2026-10-06
 
 - **The + is there for one entry too.** When a word has a single dictionary entry, the round +

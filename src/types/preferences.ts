@@ -65,6 +65,8 @@ export interface ReaderPreferences {
   sentenceContextEnabled: boolean;
   /** Ctrl+Shift+A saves the most recently looked-up word. */
   quickAddShortcutEnabled: boolean;
+  /** With a word's dictionary open, Space saves it (never un-saves). */
+  spaceSavesWord: boolean;
   /** Last AnkiConnect deck name used. */
   ankiDeckName: string;
   /** Last Speed Reader words-per-minute. */

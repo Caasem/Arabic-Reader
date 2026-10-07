@@ -131,6 +131,14 @@ export function DictionarySettings() {
         opening the popup or clicking "+ Add."
       </ToggleRow>
 
+      <ToggleRow
+        label="Space saves the open word"
+        checked={prefs.spaceSavesWord}
+        onChange={(spaceSavesWord) => updatePrefs({ spaceSavesWord })}
+      >
+        With a word&apos;s dictionary open, press Space to save it. Space never removes a saved word.
+      </ToggleRow>
+
       <Note>The order below is the order dictionaries appear in the popup (and which one is first in Split). Use the arrows to change it.</Note>
       {providers.map((p, idx) => (
         <div className="settings-row settings-row--dict" key={p.id}>
