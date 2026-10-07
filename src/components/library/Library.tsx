@@ -268,7 +268,7 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
             Try the sample book
           </button>
           <button className="btn btn--primary" onClick={() => fileInputRef.current?.click()} disabled={importing}>
-            {importing ? 'Adding…' : '+ Add EPUB'}
+            {importing ? 'Adding…' : '+ Add Book'}
           </button>
           <input
             ref={fileInputRef}

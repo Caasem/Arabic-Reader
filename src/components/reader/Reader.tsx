@@ -524,7 +524,8 @@ export function Reader({
           sizePct={prefs.dictionaryPopupSizePct}
           onClose={lookups.closePopup}
           onSave={() => void lookups.togglePopupSave()}
-          onSaveEntry={(entry) => void lookups.savePopupEntry(entry)}
+          onSaveEntry={(entry) => lookups.savePopupEntry(entry)}
+          onUnsaveEntry={(id) => lookups.unsavePopupEntry(id)}
           onSaveSelection={(entry, text) => void lookups.savePopupSelection(entry, text)}
           onEdit={lookups.startEditing}
         />
