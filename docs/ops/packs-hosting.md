@@ -39,11 +39,11 @@ The app trusts two keys. Sign with the current one; to rotate, sign the next man
 
 ## Cost and limits (decision 2026-10-07)
 
-The maintainer chose to stay inside Cloudflare's free tier, with an alert at 80%, and a budget of $0.
+The maintainer chose to stay inside Cloudflare's free tier, with a warning as soon as any money is spent.
 
 - R2 free tier: 10 GB stored, 1 million class A (write) and 10 million class B (read) operations a month. The staging bucket holds about 7 MB.
-- **Cloudflare has no hard spending cap.** Beyond the free tier it bills. "A cap of $0" therefore means: stay small, and watch the alert. The alert is not set up yet: it needs the dashboard (Notifications → add an R2 usage alert at 80% of the free tier) because the `wrangler` login here has no notifications scope. **This one step is still the maintainer's.**
-- The r2.dev address is for staging and tests: Cloudflare rate-limits it and does not recommend it for production. The production host needs a custom domain (ADR 0007), which is a separate decision.
+- **Cloudflare has no hard spending cap, and no "80% of the free tier" alert for R2.** Beyond the free tier it bills. What exists is a dollar-based **budget alert** (Manage Account → Billing → Billable Usage → Create budget alert; Pay-as-you-go accounts only). It emails when account-wide usage-based spend passes an amount and is informational: it does not pause or cap anything. The maintainer created one on 2026-10-07 with a threshold of $1, so any real spend past the free tier is flagged within the month. "A budget of $0" therefore means: stay small, and act on the email.
+- The r2.dev address is for staging and tests: Cloudflare rate-limits it and does not recommend it for production. The production host needs a custom domain (ADR 0007). **Decision 2026-10-07: wait.** The maintainer owns no domain yet and chose not to buy one now. Until then release builds set no pack host and keep their built-in dictionaries; dev builds use staging. To go public later: get a domain, add it to Cloudflare, create a production bucket with the same layout, connect `packs.<domain>` to it (R2 → bucket → Settings → Custom Domains), set `VITE_PACKS_BASE_URL` for release builds, and publish with the commands above.
 - The privacy text must say that the host sees the requesting IP address and the file requested, once packs ship in a release build.
 
 ## Checked on 2026-10-07
