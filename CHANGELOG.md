@@ -6,6 +6,9 @@ release.
 
 ## Unreleased (developer-facing)
 
+- Signed pack manifest and the tooling around it (`src/packManager/manifest.ts`, `scripts/packs`): ECDSA
+  P-256 signing and verification, a builder that refuses unlicensed packs and rewritten versions, and a
+  verifier. Nothing in the app fetches packs yet (M1e).
 - Uploaded fonts and the personal dictionary keep their files in the BlobStore (M1d). Nothing
   changes on screen; existing ones move the first time they load.
 
