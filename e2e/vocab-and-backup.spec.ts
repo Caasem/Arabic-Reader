@@ -85,7 +85,7 @@ test('sentence context, quick-add shortcut, review grading, and backup export/im
   await page.click('text=Sync to Anki');
   await page.waitForTimeout(1500);
   const ankiStatus = await page
-    .locator('.settings-section', { hasText: 'Anki sync' })
+    .locator('.settings-section', { hasText: 'Export Anki package' })
     .locator('.settings-section__note')
     .last()
     .textContent();

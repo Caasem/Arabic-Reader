@@ -1,6 +1,11 @@
 # Anki integration, end to end
 
-Roadmap id: `anki-e2e` · Area: Formats and export · Status: planned · Depends on: nothing (uses `sentence-mining` fields when present) · Enables: `export-hub`
+Roadmap id: `anki-e2e` · Area: Formats and export · Status: done in part (v0.37.0; see "As built") · Depends on: nothing (uses `sentence-mining` fields when present) · Enables: `export-hub`
+
+> **As built (v0.37.0):**
+> - **Built:** the note type (`src/anki/noteType.ts`); sync that adds, updates, re-sends, relinks older notes and deletes (`ankiSync.ts`); `.apkg` export with sql.js (`apkg.ts`); automatic sync (`AnkiAutoSync.tsx`); and the settings screen.
+> - **Different from this spec:** a note is updated only when a hash of its fields changes. Timestamps can't be used, because every save (reviews included) bumps `updatedAt`. Pending deletions are kept per device in localStorage, not in a new table, to avoid a schema version.
+> - **Not built yet:** "Use Anki's schedule" mirroring; the AnkiDroid API, whose LGPL compatibility with GPL-2.0 is still to be checked; and the Cloze template, which waits for `sentence-mining`.
 
 ## 1. Purpose
 

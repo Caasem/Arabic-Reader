@@ -69,6 +69,10 @@ export interface ReaderPreferences {
   spaceSavesWord: boolean;
   /** Last AnkiConnect deck name used. */
   ankiDeckName: string;
+  /** Sync to Anki every 15 minutes while the app is open and Anki is reachable. */
+  ankiAutoSync: boolean;
+  /** Delete the Anki note when its card is removed in the app. */
+  ankiRemoveDeleted: boolean;
   /** Last Speed Reader words-per-minute. */
   speedReaderWpm: number;
   /** Align each word's recognition point to a fixed marker (RSVP). */

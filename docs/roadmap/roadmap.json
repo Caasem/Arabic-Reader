@@ -257,10 +257,10 @@
       "id": "anki-e2e",
       "title": "Anki integration end to end",
       "area": "interop",
-      "status": "planned",
+      "status": "done",
       "effort": 2,
       "deps": [],
-      "notes": "Basic AnkiConnect sync exists (src/anki). Audit gaps: note types, media, two-way review state, deck mapping, no-Anki-running fallback (.apkg export).",
+      "notes": "Done in v0.37.0: Arabic Reader note type, add/update/delete sync with legacy relinking, .apkg export, auto-sync. Not built: using Anki's schedule, AnkiDroid API (licence check pending).",
       "brief": "features/anki-e2e.md",
       "milestone": "M2"
     },

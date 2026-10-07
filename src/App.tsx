@@ -9,6 +9,7 @@ import { LookSkin } from './look';
 import { ReadingFontSync } from './readerFont';
 import { AutoSync } from './sync/AutoSyncMount';
 import { CrowdSyncHost } from './crowdSync';
+import { AnkiAutoSync } from './anki/AnkiAutoSync';
 import { fullscreen, isDesktopApp } from './utils/desktop';
 import { libraryService } from './library/libraryService';
 import { Onboarding, shouldShowOnboarding } from './onboarding';
@@ -95,6 +96,7 @@ function App() {
       <ReadingFontSync />
       <AutoSync />
       <CrowdSyncHost />
+      <AnkiAutoSync />
       {firstRun ? (
         <Onboarding onDone={() => setFirstRun(false)} />
       ) : (

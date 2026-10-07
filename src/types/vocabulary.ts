@@ -85,6 +85,12 @@ export interface VocabularyItem {
 
   /** Pushed to Anki via AnkiConnect, so repeat syncs don't duplicate notes. */
   syncedToAnki?: boolean;
+  /** The Anki note this card was sent as (src/anki). */
+  ankiNoteId?: number;
+  /** Fingerprint of the fields last sent, so a sync only updates notes that changed. */
+  ankiHash?: string;
+  /** Set when the note was sent by an older version as "Basic" and could not be converted. */
+  ankiModel?: 'Basic';
 
   notes?: string;
 
