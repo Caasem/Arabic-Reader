@@ -1,5 +1,5 @@
 // Preload for the main window (sandboxed). Exposes a small, fixed API: folder
-// access for sync, nothing else. All path checking happens in the main process.
+// access for sync, BlobStore files by hash, nothing else. All path checking happens in the main process.
 const { contextBridge, ipcRenderer } = require('electron');
 
 const call = (channel, ...args) => ipcRenderer.invoke(channel, ...args);
@@ -20,5 +20,13 @@ contextBridge.exposeInMainWorld('arabicReaderDesktop', {
     read: (rel) => call('sync-folder:read', rel),
     write: (rel, text) => call('sync-folder:write', rel, text),
     remove: (rel) => call('sync-folder:remove', rel),
+  },
+  /** BlobStore bytes as files under the app's user-data folder, named by SHA-256 only. */
+  blobs: {
+    write: (hash, bytes) => call('blobs:write', hash, bytes),
+    read: (hash) => call('blobs:read', hash),
+    has: (hash) => call('blobs:has', hash),
+    remove: (hash) => call('blobs:remove', hash),
+    list: () => call('blobs:list'),
   },
 });

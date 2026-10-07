@@ -44,6 +44,7 @@ export const FONTS_DB = 'arabic-reader-fonts';
 export const PERSONAL_DICTIONARY_DB = 'arabic-reader-personal-dictionary';
 export const ARAMORPH_FILES_DB = 'arabic-reader-aramorph-files';
 export const FREQUENCY_DB = 'arabic-reader-frequency';
+export const BLOBS_DB = 'arabic-reader-blobs';
 
 type TableSpec = Omit<StoreSpec, 'id' | 'kind' | 'db'>;
 
@@ -102,6 +103,12 @@ export const STORAGE_REGISTRY: readonly StoreSpec[] = [
   table(ARAMORPH_FILES_DB, 'files', { ...userFile, note: 'A custom AraMorph dataset the reader uploaded.' }),
   table(ARAMORPH_FILES_DB, 'parsedTables', { ...cache, note: 'Parsed AraMorph tables, rebuilt from the data files.' }),
   table(FREQUENCY_DB, 'meta', { ...localRecords, note: 'The reader\'s opt-in to vocabulary rarity.' }),
+  table(BLOBS_DB, 'blobs', {
+    ...userFile,
+    exportFormat: 'none',
+    note: 'BlobStore bytes (IndexedDB backend). Class, eviction and export are decided per namespace below.',
+  }),
+  table(BLOBS_DB, 'blobIndex', { ...cache, evictable: false, note: 'BlobStore index: rebuildable by a scan, but it holds the owner references, so never evicted.' }),
 
   // --- BlobStore namespaces (src/blobStore) -----------------------------------
   blobNamespace('book', { ...userFile, note: 'Imported book files (from M1c).' }),
