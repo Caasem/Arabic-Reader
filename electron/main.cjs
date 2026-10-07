@@ -10,6 +10,7 @@ const { app, BrowserWindow, dialog, ipcMain, protocol, session, shell } = requir
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { createSyncFolder } = require('./syncFolder.cjs');
+const { createBlobFiles } = require('./blobFiles.cjs');
 
 const APP_SCHEME = 'app';
 const APP_HOST = 'bundle';
@@ -205,6 +206,17 @@ handleSync('sync-folder:list', () => syncFolder.list());
 handleSync('sync-folder:read', (_event, rel) => syncFolder.read(rel));
 handleSync('sync-folder:write', (_event, rel, text) => syncFolder.write(rel, text));
 handleSync('sync-folder:remove', (_event, rel) => syncFolder.remove(rel));
+
+// --- BlobStore files -----------------------------------------------------------
+// Book files and other large bytes (src/blobStore), under a folder the app owns.
+// The renderer names a blob by its SHA-256 only; blobFiles.cjs refuses anything else.
+let blobFiles = null;
+const blobs = () => (blobFiles ??= createBlobFiles({ root: path.join(app.getPath('userData'), 'blobs') }));
+handleSync('blobs:write', (_event, hash, bytes) => blobs().write(hash, bytes));
+handleSync('blobs:read', (_event, hash) => blobs().read(hash));
+handleSync('blobs:has', (_event, hash) => blobs().has(hash));
+handleSync('blobs:remove', (_event, hash) => blobs().remove(hash));
+handleSync('blobs:list', () => blobs().list());
 
 app.whenReady().then(async () => {
   await loadSyncRoot();

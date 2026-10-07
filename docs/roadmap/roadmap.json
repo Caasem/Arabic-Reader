@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-06",
+  "updated": "2026-10-07",
   "note": "Effort is a rough estimate in working weeks of remaining work. Status: done | in-progress | built-local | planned | idea. Edit this file; the site reads it.",
   "areas": {
     "foundation": "Foundation",
@@ -384,7 +384,7 @@
       "deps": [
         "governance"
       ],
-      "notes": "Design ready for review (2026-10-06): classes, StorageRegistry, BlobStore and PackManager interfaces, book-file migration, decisions D1-D6, M1 build order (M1a-M1h). Accepted: ADR 0002 (revised), 0003, 0005. Accepted: ADR 0007 (pack hosting). Next after your review: build M1a (StorageRegistry).",
+      "notes": "Design (2026-10-06); ADR 0002 (revised), 0003, 0005, 0007 accepted. Building M1 in order: M1a StorageRegistry done (src/storage/registry.ts, every table and blob namespace declared, test fails on an undeclared one, checked against SYNCED_TABLES and the backup format). M1b BlobStore done (see blob-store). Next: M1c, schema v13 and book files onto the BlobStore.",
       "spec": "specs/data-architecture.md",
       "brief": "features/data-arch-spec.md",
       "milestone": "M1"
@@ -393,13 +393,13 @@
       "id": "blob-store",
       "title": "BlobStore: content-addressed file storage",
       "area": "foundation",
-      "status": "planned",
+      "status": "in-progress",
       "effort": 2,
       "deps": [
         "data-arch-spec",
         "sync-v10"
       ],
-      "notes": "One byte store for books, PDFs, audio and packs with web, Electron and mobile backends. Migrate existing book files; de-duplicates by hash. Test OPFS versus IndexedDB on iOS first.",
+      "notes": "M1b built (src/blobStore): content-addressed by SHA-256 with (namespace, owner) references, IndexedDB backend and desktop file backend (<userData>/blobs via blobs:* IPC), index in its own database 'arabic-reader-blobs', repair scan, QuotaError, one contract suite for every backend. Nothing uses it yet. Next: M1c (schema v13, books.fileHash, lazy resumable book-file migration, duplicate import detection), then M1d (fonts, personal dictionaries). OPFS and Capacitor backends later, after the iOS measurement.",
       "brief": "features/blob-store.md",
       "milestone": "M1"
     },
