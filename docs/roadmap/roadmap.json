@@ -384,7 +384,7 @@
       "deps": [
         "governance"
       ],
-      "notes": "Design (2026-10-06); ADR 0002 (revised), 0003, 0005, 0007 accepted. Building M1 in order: M1a StorageRegistry done (src/storage/registry.ts, every table and blob namespace declared, test fails on an undeclared one, checked against SYNCED_TABLES and the backup format). M1b BlobStore done (see blob-store). Next: M1c, schema v13 and book files onto the BlobStore.",
+      "notes": "Design (2026-10-06); ADR 0002 (revised), 0003, 0005, 0007 accepted. Building M1 in order: M1a StorageRegistry done; M1b BlobStore done; M1c done (schema v13, books.fileHash, background resumable book-file migration, duplicate import detection, v0.36.0). Next: M1d, fonts and personal dictionaries onto the BlobStore.",
       "spec": "specs/data-architecture.md",
       "brief": "features/data-arch-spec.md",
       "milestone": "M1"
@@ -399,7 +399,7 @@
         "data-arch-spec",
         "sync-v10"
       ],
-      "notes": "M1b built (src/blobStore): content-addressed by SHA-256 with (namespace, owner) references, IndexedDB backend and desktop file backend (<userData>/blobs via blobs:* IPC), index in its own database 'arabic-reader-blobs', repair scan, QuotaError, one contract suite for every backend. Nothing uses it yet. Next: M1c (schema v13, books.fileHash, lazy resumable book-file migration, duplicate import detection), then M1d (fonts, personal dictionaries). OPFS and Capacitor backends later, after the iOS measurement.",
+      "notes": "M1b and M1c built. src/blobStore: content-addressed by SHA-256 with (namespace, owner) references, IndexedDB and desktop file backends, repair scan, QuotaError, one contract suite. Book files now live in it: books.fileHash (synced, indexed), lazy resumable migration from bookFiles (src/persistence/bookFileMigration.ts), duplicate imports detected by hash, bookFiles kept declared and empty for one release. Next: M1d (fonts, personal dictionaries). OPFS and Capacitor backends later, after the iOS measurement.",
       "brief": "features/blob-store.md",
       "milestone": "M1"
     },

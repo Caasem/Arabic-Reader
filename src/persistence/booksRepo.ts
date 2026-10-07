@@ -1,12 +1,30 @@
+import { getBlobStore } from '../blobStore';
 import type { BookMeta, ReadingPosition } from '../types';
 import { db } from './schema';
 import { deleteSynced, putSynced, syncScope, updateSynced } from './writeLayer';
 
+/**
+ * Book files live in the BlobStore (namespace `book`, owner = book id) and the
+ * book's row names them by `fileHash`. A book whose file has not been moved yet
+ * (schema v13, bookFileMigration.ts) still has its file in `bookFiles`, so every
+ * read falls back to that table until the migration has run.
+ */
+const NS = 'book';
+const blobs = getBlobStore;
+
 export async function saveBook(meta: BookMeta, file: Blob): Promise<void> {
-  await db.transaction('rw', [db.bookFiles, ...syncScope('books')], async () => {
-    await putSynced('books', meta);
-    await db.bookFiles.put({ bookId: meta.id, data: file });
-  });
+  const previous = (await db.books.get(meta.id))?.fileHash;
+  const { hash } = await blobs().put(file, { ns: NS, owner: meta.id, type: file.type });
+  try {
+    await db.transaction('rw', [db.bookFiles, ...syncScope('books')], async () => {
+      await putSynced('books', { ...meta, fileHash: hash });
+      await db.bookFiles.delete(meta.id);
+    });
+  } catch (error) {
+    if (previous !== hash) await blobs().unpin(hash, NS, meta.id).catch(() => undefined);
+    throw error;
+  }
+  if (previous && previous !== hash) await blobs().unpin(previous, NS, meta.id);
 }
 export async function getBooks(): Promise<BookMeta[]> {
   return db.books.orderBy('addedAt').reverse().toArray();
@@ -14,23 +32,61 @@ export async function getBooks(): Promise<BookMeta[]> {
 export async function getBook(id: string): Promise<BookMeta | undefined> {
   return db.books.get(id);
 }
+/** The book that has this file, if any (the file's SHA-256, lowercase hex). */
+export async function getBookByFileHash(hash: string): Promise<BookMeta | undefined> {
+  return db.books.where('fileHash').equals(hash).first();
+}
 export async function getBookFile(id: string): Promise<Blob | undefined> {
-  return (await db.bookFiles.get(id))?.data;
+  const hash = (await db.books.get(id))?.fileHash;
+  const file = hash ? await blobs().get(hash) : undefined;
+  return file ?? (await db.bookFiles.get(id))?.data;
 }
 /** Ids of the books whose file is on this device (a synced book may arrive without one). */
 export async function getBookFileIds(): Promise<string[]> {
-  return (await db.bookFiles.toCollection().primaryKeys()) as string[];
+  const ids = new Set((await db.bookFiles.toCollection().primaryKeys()) as string[]);
+  const { hashed, hashes } = await db.transaction('r', db.books, async () => {
+    const query = () => db.books.where('fileHash').above('');
+    return { hashed: (await query().primaryKeys()) as string[], hashes: (await query().keys()) as string[] };
+  });
+  const present = new Map<string, boolean>();
+  for (const [i, id] of hashed.entries()) {
+    const hash = hashes[i];
+    if (!present.has(hash)) present.set(hash, await blobs().has(hash));
+    if (present.get(hash)) ids.add(id);
+  }
+  return [...ids];
 }
-/** Attach (or replace) a book's file without touching its metadata. */
+/** Attach (or replace) a book's file. The book's own details are kept. */
 export async function saveBookFile(id: string, file: Blob): Promise<void> {
-  await db.bookFiles.put({ bookId: id, data: file });
+  const book = await db.books.get(id);
+  if (!book) {
+    // No record to point at the file: keep it where it can still be found.
+    await db.bookFiles.put({ bookId: id, data: file });
+    return;
+  }
+  const { hash } = await blobs().put(file, { ns: NS, owner: id, type: file.type });
+  try {
+    await db.transaction('rw', [db.bookFiles, ...syncScope('books')], async () => {
+      if (book.fileHash !== hash) await updateSynced('books', id, { fileHash: hash });
+      await db.bookFiles.delete(id);
+    });
+  } catch (error) {
+    if (book.fileHash !== hash) await blobs().unpin(hash, NS, id).catch(() => undefined);
+    throw error;
+  }
+  if (book.fileHash && book.fileHash !== hash) await blobs().unpin(book.fileHash, NS, book.id);
 }
 export async function deleteBook(id: string): Promise<void> {
+  const hash = (await db.books.get(id))?.fileHash;
   await db.transaction('rw', [db.bookFiles, ...syncScope('books', 'positions')], async () => {
     await deleteSynced('books', id);
     await db.bookFiles.delete(id);
     await deleteSynced('positions', id);
   });
+  if (!hash) return;
+  // A book that arrived by sync, or an identical import, may rest on these bytes without a reference of its own yet.
+  for (const other of await db.books.where('fileHash').equals(hash).primaryKeys()) await blobs().pin(hash, NS, other as string);
+  await blobs().unpin(hash, NS, id);
 }
 export async function updateBookMeta(id: string, patch: Partial<BookMeta>): Promise<void> {
   await updateSynced('books', id, patch);
