@@ -6,6 +6,9 @@ release.
 
 ## Unreleased (developer-facing)
 
+- PackManager (`src/packManager`, M1f): signed-manifest fetch, resumable verified downloads, atomic updates and
+  removal of data packs, with Al-Ṣiḥāḥ as the first pack (bundled copy kept as fallback). Dormant until a
+  host and a signing key are configured, so nothing changes on screen. Schema v14 adds three local tables.
 - Signed pack manifest and the tooling around it (`src/packManager/manifest.ts`, `scripts/packs`): ECDSA
   P-256 signing and verification, a builder that refuses unlicensed packs and rewritten versions, and a
   verifier. Nothing in the app fetches packs yet (M1e).
