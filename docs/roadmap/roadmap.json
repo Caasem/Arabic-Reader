@@ -244,12 +244,12 @@
       "id": "formats-pdf",
       "title": "Import PDF",
       "area": "interop",
-      "status": "idea",
+      "status": "in-progress",
       "effort": 3,
       "deps": [
         "formats-simple"
       ],
-      "notes": "Hardest format: reflowing text, RTL order and diacritics. Scanned PDFs need OCR (separate idea).",
+      "notes": "Step 1 done in v0.42.0 (src/importFormats/pdf*.ts): text PDFs are quality-checked (presentation forms, AraMorph hit rate, reversed-order check) and reflowed into an EPUB; scanned, broken, encrypted, corrupt and over-500-MB files are refused with a message. Still to do: the Original-pages view and view switch, keeping the original PDF (BlobStore), 'Pages only' mode for broken text, OCR for scans (separate idea). OPEN: pdfjs-dist is Apache-2.0 and the project is GPL-2.0; the maintainer must decide before release (see the Licence section of the brief).",
       "brief": "features/formats-pdf.md",
       "milestone": "M3"
     },

@@ -1,5 +1,5 @@
 /** The format the book was added in; anything but EPUB is converted to EPUB on import (src/importFormats). */
-export type BookFormat = 'epub' | 'mobi' | 'azw3' | 'txt' | 'md';
+export type BookFormat = 'epub' | 'mobi' | 'azw3' | 'txt' | 'md' | 'pdf';
 
 export interface BookMeta {
   id: string;

@@ -61,7 +61,7 @@ const MOBI_HTML =
 
 describe('formatOf', () => {
   it('maps extensions to formats', () => {
-    expect(['a.EPUB', 'a.txt', 'a.md', 'a.markdown', 'a.mobi', 'a.prc', 'a.azw3', 'a.azw', 'a.pdf'].map(formatOf)).toEqual([
+    expect(['a.EPUB', 'a.txt', 'a.md', 'a.markdown', 'a.mobi', 'a.prc', 'a.azw3', 'a.azw', 'a.pdf', 'a.docx'].map(formatOf)).toEqual([
       'epub',
       'txt',
       'md',
@@ -70,6 +70,7 @@ describe('formatOf', () => {
       'mobi',
       'azw3',
       'azw3',
+      'pdf',
       null,
     ]);
   });
