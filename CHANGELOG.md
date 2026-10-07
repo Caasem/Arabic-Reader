@@ -4,6 +4,12 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.34.0 — 2026-10-06
+
+- **The + is there for one entry too.** When a word has a single dictionary entry, the round +
+  that saves just that entry now appears, as it does when a word has several. Saving with it also
+  records the entry as your pick, so it comes first the next time.
+
 ## v0.33.0 — 2026-10-06
 
 Shared meanings, built and switched off.
