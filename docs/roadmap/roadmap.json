@@ -222,10 +222,10 @@
       "id": "dict-fullpage",
       "title": "Full-page dictionary with dictionary switching",
       "area": "reader",
-      "status": "planned",
+      "status": "done",
       "effort": 2,
       "deps": [],
-      "notes": "Maximise the popup into a full page like a normal book dictionary, switch between dictionaries, and search it as a plain dictionary from the reader. src/dictionarySearch exists: audit.",
+      "notes": "Done in v0.38.0 (src/dictionaryPage). Design: https://claude.ai/artifact/JPqarguG4FJKAtchzz8zTD. Entries reuse the popup in a page mode instead of a separate renderer. Edit modal not on the page yet.",
       "brief": "features/dict-fullpage.md",
       "milestone": "M2"
     },

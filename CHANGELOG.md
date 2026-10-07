@@ -4,6 +4,20 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.41.0 — 2026-10-07
+
+A full-page dictionary.
+
+- **Dictionary** in the menu opens a page with room to read: type a word and press Enter.
+- **From the popup:** the new full-page button (or F) opens the word there; **Back to book** returns
+  to where you were reading. Alt+D search has a **Full page** button too.
+- **A tab per dictionary** with how many entries each has, plus **All**. Entries look and save
+  exactly as in the popup; words saved with no book open are filed under "Dictionary".
+- **Nearby headwords:** on Al-Wasīṭ, Al-Ṣiḥāḥ and Maqāyīs, the headwords before and after the
+  word, in the dictionary's own order, with Earlier and Later. Tap one to read it.
+- Alt+← and Alt+→ step through the words you looked at; Esc goes back. Turn it off in Settings →
+  Dictionary ("Full-page dictionary").
+
 ## v0.40.0 — 2026-10-07
 
 Anki, end to end. Settings → Vocabulary → **Anki**.

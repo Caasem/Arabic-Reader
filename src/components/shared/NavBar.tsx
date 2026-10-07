@@ -10,9 +10,9 @@ import {
   IconDashboard,
   IconSettings,
   IconChevronLeft,
-  IconChevronRight,
-} from './icons';
+  IconChevronRight, IconDictionary } from './icons';
 import { readString, STORAGE_KEYS, writeString } from '../../utils/storage';
+import { usePreferences } from '../../state/PreferencesContext';
 import './NavBar.css';
 
 export type ViewName =
@@ -20,6 +20,7 @@ export type ViewName =
   | 'read'
   | 'vocabLevels'
   | 'vocabulary'
+  | 'dictionary'
   | 'highlights'
   | 'review'
   | 'speedReader'
@@ -40,6 +41,7 @@ const ALL_ITEMS: { id: ViewName; label: string; Icon: (props: { size?: number })
   { id: 'speedReader', label: 'Speed Reader', Icon: IconSpeedReader },
   { id: 'vocabLevels', label: 'Vocab Levels', Icon: IconVocabLevels },
   { id: 'vocabulary', label: 'Vocabulary', Icon: IconVocabulary },
+  { id: 'dictionary', label: 'Dictionary', Icon: IconDictionary },
   { id: 'highlights', label: 'Highlights', Icon: IconHighlights },
   { id: 'review', label: 'Review', Icon: IconReview },
   { id: 'dashboard', label: 'Dashboard', Icon: IconDashboard },
@@ -69,6 +71,7 @@ export function NavBar({
 }) {
   // Collapsed = a 76px icon-only rail (mirrors the Smart Structure concept's
   // rail), persisted across sessions so the choice sticks.
+  const { prefs } = usePreferences();
   const [collapsed, setCollapsed] = useState(() => readString(STORAGE_KEYS.navbarCollapsed) === '1');
 
   useEffect(() => {
@@ -90,7 +93,7 @@ export function NavBar({
         )}
       </div>
       <ul className="navbar__list">
-        {ITEMS.map((item) => (
+        {ITEMS.filter((item) => item.id !== 'dictionary' || prefs.dictionaryFullPageEnabled).map((item) => (
           <li key={item.id}>
             <button
               className={

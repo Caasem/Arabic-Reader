@@ -1,0 +1,218 @@
+/* The full-page dictionary (src/dictionaryPage). Same tokens as the app; entries are the popup's own
+   markup in its page mode (.dict-popup--page), so they keep the popup's look. */
+.dpage {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+}
+
+.dpage__bar {
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+.dpage__bar-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px 32px 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.dpage__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+.dpage__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  border: none;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0;
+}
+.dpage__back:hover {
+  color: var(--ink);
+}
+.dpage__search {
+  flex: 1 1 320px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink-faint);
+}
+.dpage__search:focus-within {
+  border-color: var(--accent);
+}
+.dpage__input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-arabic);
+  font-size: 20px;
+  outline: none;
+}
+.dpage__hint {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+.dpage__tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  margin-bottom: -1px;
+  scrollbar-width: none;
+}
+.dpage__tab {
+  padding: 10px 14px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.dpage__tab[aria-current='page'] {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+.dpage__tab--empty {
+  color: var(--ink-faint);
+}
+.dpage__count {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.dpage__tab[aria-current='page'] .dpage__count {
+  color: var(--accent);
+}
+
+.dpage__main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 32px 48px;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+}
+.dpage__entries {
+  flex: 999 1 560px;
+  min-width: 0;
+}
+.dpage__empty {
+  margin: 0;
+  padding: 32px 0;
+  color: var(--ink-soft);
+  text-align: center;
+  font-size: 15px;
+}
+
+/* The popup, in the page's flow. */
+.dict-popup-page {
+  display: block;
+}
+.dict-popup.dict-popup--page {
+  position: static;
+  width: 100%;
+  max-width: none;
+}
+.dict-popup.dict-popup--page .dict-popup__scroll {
+  max-height: none;
+  overflow: visible;
+  padding: 28px 32px 24px;
+}
+.dict-popup.dict-popup--page .dict-popup__word {
+  font-size: 44px;
+}
+
+.dpage__nearby {
+  flex: 1 1 220px;
+  max-width: 300px;
+  box-sizing: border-box;
+  padding: 18px 16px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 15px;
+}
+.dpage__label {
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  text-align: right;
+  margin-bottom: 10px;
+}
+.dpage__page-btn {
+  width: 100%;
+  min-height: 40px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  margin: 6px 0;
+}
+.dpage__nearby-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dpage__nearby-word {
+  display: block;
+  width: 100%;
+  text-align: start;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-soft);
+  font-family: var(--font-arabic);
+  font-size: 20px;
+  cursor: pointer;
+}
+.dpage__nearby-word:hover {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+.dpage__nearby-word[aria-current='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+@media (max-width: 600px) {
+  .dpage__bar-inner,
+  .dpage__main {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .dpage__hint {
+    display: none;
+  }
+  .dpage__nearby {
+    max-width: none;
+  }
+}

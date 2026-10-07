@@ -3,7 +3,7 @@ import type { DictionaryEntry, DictionaryLookupResult, WordInstance, WordRarity 
 import { getWordRarity, isRarityDataReady, TIER_LABELS } from '../../vocabRarity/rarity';
 import { normalize } from '../../reader/tokenizer/arabicTokenizer';
 import { usePreferences } from '../../state/PreferencesContext';
-import { IconEdit, IconChevronLeft, IconChevronRight, IconBook } from '../shared/icons';
+import { IconEdit, IconChevronLeft, IconChevronRight, IconBook, IconMaximize } from '../shared/icons';
 import { buildEntryTokenSenses, buildExampleEntryTokens, reconstructSelection, type DefinitionToken, type ExampleEntryTokens } from './definitionTokens';
 import { isTokenizedProvider } from '../../dictionary/tokenizedProviders';
 import { findMatchedSenses, WASIT_MATCH_CLASS } from '../../wasitMatch';
@@ -142,6 +142,8 @@ export function DictionaryPopup({
   onSaveSelection,
   onEdit,
   onSaveEntries,
+  onMaximise,
+  page = false,
 }: {
   word: string;
   result: DictionaryLookupResult | null;
@@ -180,6 +182,10 @@ export function DictionaryPopup({
   onEdit?: () => void;
   /** Clean layout: a "+" on the Al-Wasit heading that saves all of its entries as one card. */
   onSaveEntries?: (entries: DictionaryEntry[]) => void;
+  /** Opens this word in the full-page dictionary (src/dictionaryPage); the header button and F. */
+  onMaximise?: () => void;
+  /** Drawn inside the full-page dictionary: in the page's flow, full width, no backdrop or close button. */
+  page?: boolean;
 }) {
   const { prefs, updatePrefs } = usePreferences();
 
@@ -193,11 +199,20 @@ export function DictionaryPopup({
     setRefreshed(null);
     setAddOpen(false);
   }, [word]);
+  const maximiseRef = useRef(onMaximise);
+  maximiseRef.current = onMaximise;
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key.toLowerCase() !== 'd' || e.ctrlKey || e.metaKey || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if ((key !== 'd' && key !== 'f') || e.ctrlKey || e.metaKey || e.altKey) return;
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+      if (key === 'f') {
+        if (!maximiseRef.current) return;
+        e.preventDefault();
+        maximiseRef.current();
+        return;
+      }
       e.preventDefault();
       setAddOpen((o) => !o);
     }
@@ -521,7 +536,7 @@ export function DictionaryPopup({
 
   const recalcPosition = useCallback(() => {
     const el = popupRef.current;
-    if (!el) return;
+    if (!el || page) return;
     const rect = el.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
@@ -982,16 +997,17 @@ export function DictionaryPopup({
   );
 
   return (
-    <div className="dict-popup-backdrop" onClick={handleBackdropClick}>
+    <div className={page ? 'dict-popup-page' : 'dict-popup-backdrop'} onClick={page ? undefined : handleBackdropClick}>
       <div
         ref={popupRef}
         className={
           'dict-popup' +
           (clean ? ' dict-popup--clean' : '') +
-          (effectiveLayout === 'split' && !isNarrow ? ' dict-popup--split' : '') +
-          (prefs.dictionaryPopupPinFooter ? ' dict-popup--pinned-footer' : '')
+          (page ? ' dict-popup--page' : '') +
+          (effectiveLayout === 'split' && !isNarrow && !page ? ' dict-popup--split' : '') +
+          (prefs.dictionaryPopupPinFooter && !page ? ' dict-popup--pinned-footer' : '')
         }
-        style={{ left: style.left, top: style.top, visibility: style.visibility, transform: `scale(${scale})`, transformOrigin: 'top left' }}
+        style={page ? undefined : { left: style.left, top: style.top, visibility: style.visibility, transform: `scale(${scale})`, transformOrigin: 'top left' }}
         onClick={(e) => e.stopPropagation()}
         onTransitionEnd={(e) => {
           if (e.propertyName === 'width') recalcPosition();
@@ -1014,7 +1030,7 @@ export function DictionaryPopup({
           />
         )}
 
-        {canSplit && effectiveLayout !== 'single' && (
+        {canSplit && effectiveLayout !== 'single' && !page && (
           <button
             className="dict-popup__chevron"
             onClick={toggleSplit}
@@ -1035,9 +1051,11 @@ export function DictionaryPopup({
       )}
 
       <div className="dict-popup__scroll">
-        <button className="dict-popup__close" onClick={onClose} aria-label="Close">
-          ×
-        </button>
+        {!page && (
+          <button className="dict-popup__close" onClick={onClose} aria-label="Close">
+            ×
+          </button>
+        )}
 
         {/* Quick-access header shortcuts, alongside the full "Save
             Vocabulary"/"Edit" buttons in the footer below -- these exist for
@@ -1066,6 +1084,11 @@ export function DictionaryPopup({
           >
             <IconBook size={12} />
           </button>
+          {onMaximise && (
+            <button className="dict-popup__header-btn" onClick={onMaximise} aria-label="Open in full page" title="Open in full page (F)">
+              <IconMaximize size={12} />
+            </button>
+          )}
         </div>
 
         <div className="dict-popup__word">

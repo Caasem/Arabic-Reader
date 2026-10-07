@@ -10,6 +10,7 @@ import { ReadingFontSync } from './readerFont';
 import { AutoSync } from './sync/AutoSyncMount';
 import { CrowdSyncHost } from './crowdSync';
 import { AnkiAutoSync } from './anki/AnkiAutoSync';
+import { onOpenDictionaryPage, type DictionaryPageRequest } from './dictionaryPage/events';
 import { fullscreen, isDesktopApp } from './utils/desktop';
 import { libraryService } from './library/libraryService';
 import { Onboarding, shouldShowOnboarding } from './onboarding';
@@ -22,6 +23,7 @@ const HighlightsList = lazy(() => import('./components/vocabulary/HighlightsList
 const Review = lazy(() => import('./components/review/Review').then((m) => ({ default: m.Review })));
 const Dashboard = lazy(() => import('./components/dashboard/Dashboard').then((m) => ({ default: m.Dashboard })));
 const SpeedReader = lazy(() => import('./components/speedReader/SpeedReader').then((m) => ({ default: m.SpeedReader })));
+const DictionaryPage = lazy(() => import('./dictionaryPage/DictionaryPage').then((m) => ({ default: m.DictionaryPage })));
 const SettingsPanel = lazy(() => import('./components/shared/SettingsPanel').then((m) => ({ default: m.SettingsPanel })));
 
 function App() {
@@ -54,6 +56,21 @@ function App() {
   // A library search result in another book opens at that location instead
   // of the book's saved reading position.
   const [pendingCfi, setPendingCfi] = useState<string | undefined>(undefined);
+  // The full-page dictionary (src/dictionaryPage): what to show, and where Back returns to.
+  const [dictRequest, setDictRequest] = useState<DictionaryPageRequest | null>(null);
+  const [dictReturn, setDictReturn] = useState<ViewName>('library');
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  useEffect(
+    () =>
+      onOpenDictionaryPage((request) => {
+        if (viewRef.current !== 'dictionary') setDictReturn(viewRef.current);
+        setChromeHidden(false);
+        setDictRequest(request);
+        setView('dictionary');
+      }),
+    []
+  );
 
   function openBook(book: BookMeta, cfi?: string) {
     setActiveBook(book);
@@ -85,6 +102,7 @@ function App() {
       return;
     }
     if (next === 'read') setVocabPanelOpen(false);
+    if (next === 'dictionary' && view !== 'dictionary') setDictReturn(view);
     setView(next);
   }
 
@@ -133,6 +151,13 @@ function App() {
               {view === 'review' && <Review />}
               {view === 'speedReader' && <SpeedReader />}
               {view === 'dashboard' && <Dashboard />}
+              {view === 'dictionary' && (
+                <DictionaryPage
+                  request={dictRequest}
+                  onBack={() => setView(dictReturn === 'read' && !activeBook ? 'library' : dictReturn)}
+                  backLabel={dictReturn === 'read' && activeBook ? 'Back to book' : 'Back'}
+                />
+              )}
             </Suspense>
           </main>
         </div>

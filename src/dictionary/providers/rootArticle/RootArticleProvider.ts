@@ -1,4 +1,5 @@
 import type { DictionaryEntry, DictionaryProvider } from '../../../types';
+import { headwordWindow } from '../../headwords';
 import { aramorphProvider } from '../aramorph/AramorphDictionaryProvider';
 import { buildLookupKeys } from '../alwasit/lookupKeys';
 import { findRows, parseRootArticleTsv, rowToEntry, type RootArticleData } from './rootArticleData';
@@ -29,6 +30,10 @@ export class RootArticleProvider implements DictionaryProvider {
   private getData(): Promise<RootArticleData> {
     if (!this.dataPromise) this.dataPromise = this.loadText().then(parseRootArticleTsv);
     return this.dataPromise;
+  }
+
+  async listHeadwords(around: string, before: number, after: number) {
+    return headwordWindow((await this.getData()).byKey, around, before, after);
   }
 
   async lookup(word: string): Promise<DictionaryEntry[]> {
