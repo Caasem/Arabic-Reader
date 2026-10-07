@@ -4,6 +4,11 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.41.1 — 2026-10-07
+
+- **The reading font works offline.** Lala, the default Arabic font, is now saved with the rest of
+  the app, so books keep their look without a connection.
+
 ## v0.41.0 — 2026-10-07
 
 A full-page dictionary.
