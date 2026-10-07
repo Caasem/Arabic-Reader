@@ -51,9 +51,14 @@ test('the per-entry "+" appears and saves when a word has only one entry', async
   const before = await count(page, 'vocabulary');
   await plus.click();
   await expect(plus).toHaveText('✓');
-  await expect(plus).toBeDisabled();
+  await expect(plus).toBeEnabled();
   await expect(page.locator('.dict-popup__save')).toHaveText('✓ Vocabulary');
 
   await expect.poll(() => count(page, 'vocabulary')).toBe(before + 1);
   await expect.poll(() => count(page, 'sensePicks')).toBe(1);
+
+  // Pressing it again removes that card.
+  await plus.click();
+  await expect(plus).toHaveText('+');
+  await expect.poll(() => count(page, 'vocabulary')).toBe(before);
 });

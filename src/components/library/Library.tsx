@@ -1,6 +1,7 @@
 import { hiddenDuplicateIds } from '../../library/duplicates';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { libraryService, type BookReadingInfo } from '../../library/libraryService';
+import { DuplicateBookError, libraryService, type BookReadingInfo } from '../../library/libraryService';
+import { onLibraryChanged } from '../../library/libraryChanged';
 import { LibraryHero } from '../../look';
 import { preloadStarterBooks } from '../../onboarding';
 import { invalidateBookVocabIndex } from '../../vocabRarity/bookVocabIndex';
@@ -110,6 +111,9 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
     };
   }, []);
 
+  // The Storage screen (Settings) can remove a file or a book while this stays mounted underneath.
+  useEffect(() => onLibraryChanged(reloadLibrary), []);
+
   function handleShamelaBookAdded() {
     reloadLibrary();
     setError(null);
@@ -133,7 +137,8 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
         setImportLabel(format && format !== 'epub' ? `Converting ${file.name}…` : null);
         try {
           const { meta, converted } = await libraryService.importBook(file);
-          setBooks((prev) => [meta, ...prev]);
+          // A file that completed a synced book keeps that book's id: replace it rather than list it twice.
+          setBooks((prev) => [meta, ...prev.filter((b) => b.id !== meta.id)]);
           setFileIds((prev) => (prev ? new Set(prev).add(meta.id) : prev));
           if (converted) {
             const chapters = `${converted.chapters} chapter${converted.chapters === 1 ? '' : 's'}`;
@@ -165,10 +170,10 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
       const blob = await res.blob();
       const file = new File([blob], 'قرية الفتى القوي.epub', { type: 'application/epub+zip' });
       const meta = await libraryService.importEpub(file);
-      setBooks((prev) => [meta, ...prev]);
+      setBooks((prev) => [meta, ...prev.filter((b) => b.id !== meta.id)]);
       setFileIds((prev) => (prev ? new Set(prev).add(meta.id) : prev));
-    } catch {
-      setError('Could not load the sample book.');
+    } catch (e) {
+      setError(e instanceof DuplicateBookError ? e.message : 'Could not load the sample book.');
     } finally {
       setImporting(false);
     }
@@ -294,7 +299,7 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
             Try the sample book
           </button>
           <button className="btn btn--primary" onClick={() => fileInputRef.current?.click()} disabled={importing}>
-            {importing ? 'Adding…' : '+ Add book'}
+            {importing ? 'Adding…' : '+ Add Book'}
           </button>
           <input
             ref={fileInputRef}
