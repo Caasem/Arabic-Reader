@@ -14,15 +14,44 @@ test('Alt+D opens and closes the dictionary search, in every style', async ({ pa
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
   await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
-  await page.waitForTimeout(2500);
 
-  const frame = page.frames().find((f) => f !== page.mainFrame())!;
-  const word = await frame.evaluate(() => (document.querySelector('p .ar-word') as HTMLElement).dataset.word!);
+  // epub.js may replace the book's iframe while it settles, so never hold on to one frame: run each
+  // step in whichever frame is live, retrying if it was detached mid-call.
+  const inBook = async <T>(fn: () => T): Promise<T> => {
+    let out: { value: T } | null = null;
+    await expect
+      .poll(
+        async () => {
+          const f = page.frames().find((fr) => fr !== page.mainFrame());
+          if (!f) return false;
+          try {
+            out = { value: await f.evaluate(fn) };
+            return true;
+          } catch {
+            return false;
+          }
+        },
+        { timeout: 20000 }
+      )
+      .toBe(true);
+    return out!.value;
+  };
+  await expect
+    .poll(() => inBook(() => document.querySelectorAll('p .ar-word').length), { timeout: 20000 })
+    .toBeGreaterThan(0);
+  const word = await inBook(() => (document.querySelector('p .ar-word') as HTMLElement).dataset.word!);
   const pressDInBook = () =>
-    frame.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', code: 'KeyD', altKey: true, bubbles: true })));
+    inBook(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', code: 'KeyD', altKey: true, bubbles: true })));
 
   // Floating is the default; Alt+D from inside the book opens it.
-  await pressDInBook();
+  // The app attaches its key listener to each section's document as epub.js swaps it in, so a press
+  // fired the instant the words appear can land before that; press until the search opens.
+  await expect
+    .poll(async () => {
+      if ((await page.locator('.dsearch').count()) === 0) await pressDInBook();
+      return page.locator('.dsearch--floating').count();
+    }, { intervals: [300], timeout: 15000 })
+    .toBe(1);
   await expect(page.locator('.dsearch--floating')).toBeVisible();
   await page.keyboard.type(word);
   await expect(page.locator('.dsearch__entry').first()).toBeVisible({ timeout: 8000 });
