@@ -102,8 +102,8 @@ describe('convertPdf', () => {
     const all = book.chapters.map(textOf).join('\n');
     expect(all).not.toContain('كتاب التجربة');
     expect(all).not.toMatch(/^[0-9]+$/m);
-    expect(book.quality).toMatchObject({ verdict: 'ok', presentationShare: 0 });
-    expect(book.quality.analysedShare).toBeGreaterThanOrEqual(0.7);
+    expect(book.quality!).toMatchObject({ verdict: 'ok', presentationShare: 0 });
+    expect(book.quality!.analysedShare).toBeGreaterThanOrEqual(0.7);
     // Page 3 has no heading of its own: it belongs to the second chapter.
     expect(two.html.match(/<p>/g)!.length).toBe(3);
   });
@@ -133,15 +133,16 @@ describe('convertPdf', () => {
     const shape = (s: string) => [...s].map((c) => isolated.get(c) ?? c).join('');
     const pages = bookPages().map((p) => ({ ...p, lines: p.lines?.map((l) => (l.rtl ? { ...l, text: shape(l.text) } : l)) }));
     const book = await convertPdf(makePdf(pages), deps, 'x');
-    expect(book.quality.presentationShare).toBeGreaterThan(0.8);
-    expect(book.quality.verdict).toBe('ok');
+    expect(book.quality!.presentationShare).toBeGreaterThan(0.8);
+    expect(book.quality!.verdict).toBe('ok');
     expect(book.chapters[0].html).toContain(PROSE_1);
     expect(book.chapters[0].html).not.toMatch(/[ﭐ-﷿ﹰ-﻿]/);
   });
 
-  it('refuses text stored in reversed order and says so in the quality report', async () => {
-    const pdf = makePdf(bookPages('logical'));
-    await expect(convertPdf(pdf, deps, 'x')).rejects.toThrow(PDF_MESSAGES.broken);
+  it('keeps text stored in reversed order as pages only, and says so in the quality report', async () => {
+    const book = await convertPdf(makePdf(bookPages('logical')), deps, 'x');
+    expect(book).toMatchObject({ reflow: 'broken', chapters: [], notice: PDF_MESSAGES.broken, pages: 3 });
+    expect(book.quality?.verdict).toBe('reversed');
 
     // The check itself: reversed words analyse as words once turned round.
     const reversed = [...PROSE_1].reverse().join('');
@@ -151,14 +152,17 @@ describe('convertPdf', () => {
     expect(report.reversedShare).toBeGreaterThan(0.9);
   });
 
-  it('refuses text whose words do not analyse', async () => {
+  it('keeps text whose words do not analyse as pages only', async () => {
     const gibberish = 'ثخذ ضظغ ظثخ غذض ثظخ ذغض خثظ ضغذ ظخث غضذ ثذخ ضظث ظغخ';
     const pages: PdfTestPage[] = [0, 1, 2].map(() => ({ lines: wrap(gibberish.repeat(3), 56).map((t, i) => rtl(t, 700 - i * 18)) }));
-    await expect(convertPdf(makePdf(pages), deps, 'x')).rejects.toThrow(PDF_MESSAGES.broken);
+    const book = await convertPdf(makePdf(pages), deps, 'x');
+    expect(book).toMatchObject({ reflow: 'broken', chapters: [] });
+    expect(book.quality?.verdict).toBe('broken');
   });
 
-  it('refuses a scanned PDF (images, no text layer)', async () => {
-    await expect(convertPdf(makePdf([{ image: true }, { image: true }, { image: true }]), deps, 'x')).rejects.toThrow(PDF_MESSAGES.scanned);
+  it('keeps a scanned PDF (images, no text layer) as pages only', async () => {
+    const book = await convertPdf(makePdf([{ image: true }, { image: true }, { image: true }]), deps, 'x');
+    expect(book).toMatchObject({ reflow: 'none', chapters: [], notice: PDF_MESSAGES.scanned, pages: 3 });
   });
 
   it('converts the text pages of a mixed PDF and reports the pages it left out', async () => {
@@ -197,12 +201,23 @@ describe('convertToEpub with a PDF', () => {
   it('builds an EPUB with a chapter per heading and records the page count', async () => {
     const file = new File([makePdf(bookPages()) as BlobPart], 'تجربة.pdf', { type: 'application/pdf' });
     const converted = await convertToEpub(file, { loadPdfDeps: async () => deps });
-    expect(converted).toMatchObject({ format: 'pdf', chapters: 2, pages: 3, warnings: [] });
+    expect(converted).toMatchObject({ format: 'pdf', chapters: 2, pages: 3, pdf: { pages: 3, reflow: 'ok' }, warnings: [] });
+    expect(converted.original).toBe(file);
     expect(converted.epub.name).toBe('تجربة.epub');
     const zip = await JSZip.loadAsync(await converted.epub.arrayBuffer());
     const opf = await zip.file('OEBPS/content.opf')!.async('string');
     expect(opf).toContain('<dc:language>ar</dc:language>');
     expect(await zip.file('OEBPS/chapter-0001.xhtml')!.async('string')).toContain(PROSE_1);
+  });
+});
+
+describe('convertToEpub with a pages-only PDF', () => {
+  it('builds a one-page stand-in book that carries the reason', async () => {
+    const file = new File([makePdf([{ image: true }, { image: true }]) as BlobPart], 'scan.pdf', { type: 'application/pdf' });
+    const converted = await convertToEpub(file, { loadPdfDeps: async () => deps });
+    expect(converted).toMatchObject({ chapters: 1, pages: 2, pdf: { pages: 2, reflow: 'none' }, warnings: [PDF_MESSAGES.scanned] });
+    const zip = await JSZip.loadAsync(await converted.epub.arrayBuffer());
+    expect(await zip.file('OEBPS/chapter-0001.xhtml')!.async('string')).toContain('scanned images');
   });
 });
 

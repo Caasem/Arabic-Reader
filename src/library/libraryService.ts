@@ -30,14 +30,19 @@ export class LibraryService {
    * Adds any supported book file: EPUB as is, PDF, TXT, Markdown, MOBI and AZW3 converted to EPUB first
    * (src/importFormats). `warnings` lists anything the conversion had to leave out.
    */
-  async importBook(file: File): Promise<{ meta: BookMeta; converted?: { format: BookFormat; chapters: number; pages?: number; warnings: string[] } }> {
+  async importBook(file: File): Promise<{ meta: BookMeta; converted?: { format: BookFormat; chapters: number; pages?: number; reflow?: 'ok' | 'broken' | 'none'; warnings: string[] } }> {
     const { formatOf, convertToEpub } = await import('../importFormats');
     const format = formatOf(file.name);
     if (!format) throw new Error(`"${file.name}" isn't a book type Arabic Reader can open. Add an EPUB, PDF, TXT, Markdown, MOBI or AZW3 file.`);
     if (format === 'epub') return { meta: await this.importEpub(file) };
     const converted = await convertToEpub(file);
-    const meta = await this.importEpub(converted.epub, { format, originalFileName: file.name });
-    return { meta, converted: { format, chapters: converted.chapters, pages: converted.pages, warnings: converted.warnings } };
+    let meta = await this.importEpub(converted.epub, { format, originalFileName: file.name });
+    if (converted.pdf && converted.original) {
+      // Keep the PDF itself for the Original pages view.
+      await persistenceService.savePdfOriginal(meta.id, converted.original, converted.pdf);
+      meta = (await persistenceService.getBook(meta.id)) ?? meta;
+    }
+    return { meta, converted: { format, chapters: converted.chapters, pages: converted.pages, reflow: converted.pdf?.reflow, warnings: converted.warnings } };
   }
 
   /** `id` is only for books every install gets (the starter books), so devices that sync share one record. */

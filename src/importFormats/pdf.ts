@@ -30,8 +30,8 @@ export const PDF_MESSAGES = {
   tooLarge: 'This PDF is too large to convert (limit 500 MB).',
   password: 'This PDF is password-protected. Remove the password and add it again.',
   corrupt: 'This PDF could not be read.',
-  scanned: 'This PDF is scanned images; text recognition is not available yet.',
-  broken: 'The text in this PDF could not be extracted cleanly.',
+  scanned: 'This PDF is scanned images. Word lookup needs text recognition (coming later).',
+  broken: 'The text in this PDF could not be extracted cleanly. You can read the pages; word lookup works where the text is usable.',
 } as const;
 
 export class PdfImportError extends Error {
@@ -41,13 +41,19 @@ export class PdfImportError extends Error {
   }
 }
 
+/** 'ok': reflowed text. 'broken': text layer unusable. 'none': no text layer (scanned). The last two have no chapters. */
+export type PdfReflow = 'ok' | 'broken' | 'none';
+
 export interface ConvertedPdf {
   title?: string;
   author?: string;
   rtl: boolean;
   chapters: Chapter[];
   pages: number;
-  quality: TextQuality;
+  reflow: PdfReflow;
+  /** Why the book is pages-only, for the import note. */
+  notice?: string;
+  quality?: TextQuality;
   warnings: string[];
 }
 
@@ -92,8 +98,9 @@ function readInfo(info: unknown): { title?: string; author?: string } {
 
 /**
  * Reads a text PDF into chapters (docs/features/formats-pdf.md). Throws a `PdfImportError` with a
- * reader-facing message for a PDF that is too big, password-protected, unreadable, scanned, or
- * whose text fails the quality test.
+ * reader-facing message for a PDF that is too big, password-protected or unreadable. A scanned PDF,
+ * or one whose text fails the quality test, comes back with no chapters and `reflow` 'none' or
+ * 'broken': it is read as pages.
  */
 export async function convertPdf(data: Uint8Array, deps: PdfDeps, fallbackTitle: string): Promise<ConvertedPdf> {
   if (data.length > MAX_PDF_BYTES) throw new PdfImportError(PDF_MESSAGES.tooLarge);
@@ -116,7 +123,18 @@ export async function convertPdf(data: Uint8Array, deps: PdfDeps, fallbackTitle:
     }
 
     const textPages = pages.filter((p) => chars(p) >= MIN_PAGE_CHARS);
-    if (textPages.length < pages.length / 2 || !textPages.length) throw new PdfImportError(PDF_MESSAGES.scanned);
+    const info = readInfo((await doc.getMetadata().catch(() => ({ info: undefined }))).info);
+    const pagesOnly = (reflow: PdfReflow, notice: string, quality?: TextQuality): ConvertedPdf => ({
+      ...info,
+      rtl: false,
+      chapters: [],
+      pages: doc.numPages,
+      reflow,
+      notice,
+      quality,
+      warnings: [notice],
+    });
+    if (textPages.length < pages.length / 2 || !textPages.length) return pagesOnly('none', PDF_MESSAGES.scanned);
 
     const allText = textPages.map((p) => p.runs.map((r) => r.str).join(' ')).join('\n');
     const rtl = arabicShare(allText) > 0.5;
@@ -124,17 +142,16 @@ export async function convertPdf(data: Uint8Array, deps: PdfDeps, fallbackTitle:
     // Quality: the first ten pages that have text, read as the lines the reader would see.
     const sampleRaw = textPages.slice(0, QUALITY_PAGES).map((p) => p.runs.map((r) => r.str).join(' ')).join('\n');
     const quality = await assessText(sampleRaw, deps.analyse);
-    if (quality.verdict !== 'ok') throw new PdfImportError(PDF_MESSAGES.broken);
+    if (quality.verdict !== 'ok') return pagesOnly('broken', PDF_MESSAGES.broken, quality);
 
-    const info = readInfo((await doc.getMetadata().catch(() => ({ info: undefined }))).info);
     const reflowed = reflowPages(textPages, rtl, info.title ?? fallbackTitle);
-    if (!reflowed.chapters.length) throw new PdfImportError(PDF_MESSAGES.scanned);
+    if (!reflowed.chapters.length) return pagesOnly('none', PDF_MESSAGES.scanned);
 
     const warnings: string[] = [];
     const skipped = pages.length - textPages.length;
     if (skipped) warnings.push(`${skipped} page${skipped === 1 ? '' : 's'} without text left out`);
 
-    return { ...info, rtl, chapters: reflowed.chapters, pages: doc.numPages, quality, warnings };
+    return { ...info, rtl, chapters: reflowed.chapters, pages: doc.numPages, reflow: 'ok', quality, warnings };
   } finally {
     await doc.destroy().catch(() => {});
   }

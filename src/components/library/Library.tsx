@@ -142,7 +142,8 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
           setFileIds((prev) => (prev ? new Set(prev).add(meta.id) : prev));
           if (converted) {
             const size = converted.pages ? `${converted.pages} page${converted.pages === 1 ? '' : 's'}` : `${converted.chapters} chapter${converted.chapters === 1 ? '' : 's'}`;
-            reports.push(`"${meta.title}": converted from ${converted.format.toUpperCase()} · ${size}${converted.warnings.length ? ` (${converted.warnings.join('; ')})` : ''}`);
+            const what = converted.reflow && converted.reflow !== 'ok' ? 'added as PDF pages' : `converted from ${converted.format.toUpperCase()}`;
+            reports.push(`"${meta.title}": ${what} · ${size}${converted.warnings.length ? ` (${converted.warnings.join('; ')})` : ''}`);
           }
         } catch (e) {
           failures.push(e instanceof Error ? e.message : `Could not add "${file.name}".`);

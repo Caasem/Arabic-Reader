@@ -49,6 +49,9 @@ export interface PersistenceService {
   /** Removes the file from this device but keeps the book (record, notes, progress). */
   removeBookFile(id: string): Promise<void>;
   deleteBook(id: string): Promise<void>;
+  /** The PDF a book was converted from (Original pages view), if this device has it. */
+  getPdfOriginal(id: string): Promise<Blob | undefined>;
+  savePdfOriginal(id: string, file: Blob, pdf: { pages: number; reflow: 'ok' | 'broken' | 'none' }): Promise<void>;
   updateBookMeta(id: string, patch: Partial<BookMeta>): Promise<void>;
 
   // Reading position

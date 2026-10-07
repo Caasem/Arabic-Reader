@@ -12,7 +12,7 @@
  */
 import type { BookFormat } from '../types';
 import type { PdfDeps } from './pdf';
-import { writeEpub, type Chapter, type EpubImage } from './epubWriter';
+import { escapeXml, writeEpub, type Chapter, type EpubImage } from './epubWriter';
 import { arabicShare, decodeText, textToChapters } from './text';
 
 /** Extensions the library accepts, for the file picker. */
@@ -49,6 +49,9 @@ export interface Converted {
   chapters: number;
   /** Pages of the source, for a PDF. */
   pages?: number;
+  /** For a PDF: how the text came out; the PDF itself is `original`. */
+  pdf?: { pages: number; reflow: 'ok' | 'broken' | 'none' };
+  original?: File;
   warnings: string[];
 }
 
@@ -67,6 +70,7 @@ export async function convertToEpub(file: File, options: { loadPdfDeps?: () => P
   let images: EpubImage[] | undefined;
   let cover: EpubImage | undefined;
   let pages: number | undefined;
+  let pdf: Converted['pdf'];
 
   if (format === 'txt' || format === 'md') {
     if (file.size > MAX_TEXT_BYTES) throw new Error('This file is too large to convert (limit 50 MB).');
@@ -88,9 +92,14 @@ export async function convertToEpub(file: File, options: { loadPdfDeps?: () => P
     const book = await convertPdf(new Uint8Array(await file.arrayBuffer()), await loadPdfDeps(), fallbackTitle);
     title = book.title ?? fallbackTitle;
     author = book.author;
-    chapters = book.chapters;
     pages = book.pages;
+    pdf = { pages: book.pages, reflow: book.reflow };
     warnings.push(...book.warnings);
+    // A pages-only PDF still needs a book file for the library, stats and sync: a one-page stand-in.
+    chapters = book.chapters.length
+      ? book.chapters
+      : [{ title: title, html: `<h2>${escapeXml(title)}</h2>
+<p>${escapeXml(book.notice ?? '')}</p>` }];
   } else {
     const { mobiToChapters } = await import('./mobi');
     const book = await mobiToChapters(file);
@@ -109,5 +118,5 @@ export async function convertToEpub(file: File, options: { loadPdfDeps?: () => P
     .join(' ');
   const rtl = arabicShare(sample) > 0.5;
   const epub = await writeEpub({ title, author, language: rtl ? 'ar' : (language ?? 'en'), rtl, chapters, images, cover });
-  return { epub: new File([epub], `${fallbackTitle}.epub`, { type: 'application/epub+zip' }), format, chapters: chapters.length, pages, warnings };
+  return { epub: new File([epub], `${fallbackTitle}.epub`, { type: 'application/epub+zip' }), format, chapters: chapters.length, pages, pdf, original: pdf ? file : undefined, warnings };
 }

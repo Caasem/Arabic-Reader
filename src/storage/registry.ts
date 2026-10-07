@@ -115,6 +115,7 @@ export const STORAGE_REGISTRY: readonly StoreSpec[] = [
 
   // --- BlobStore namespaces (src/blobStore) -----------------------------------
   blobNamespace('book', { ...userFile, note: 'Imported book files; owner = book id, referenced by books.fileHash.' }),
+  blobNamespace('pdf', { ...userFile, exportFormat: 'none', note: 'The original PDF of a book added as PDF (Original pages view); owner = book id, referenced by books.pdf.originalHash. Not in the full export yet.' }),
   blobNamespace('font', { ...userFile, exportFormat: 'none', note: 'Uploaded font files; owner = face id. Not exported (licensed to the reader).' }),
   blobNamespace('dictionary', { ...userFile, exportFormat: 'none', note: 'The personal dictionary parsed rows as JSON; owner "personal". Exported through the personal dictionary table, not as a file.' }),
   blobNamespace('pack', { cls: 'C', syncs: false, inBackup: false, evictable: true, merge: 'none', exportFormat: 'none', note: 'Reference pack files (PackManager, M1f); downloaded again when evicted.' }),
