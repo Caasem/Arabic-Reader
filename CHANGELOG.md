@@ -4,6 +4,11 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## Unreleased (developer-facing)
+
+- Uploaded fonts and the personal dictionary keep their files in the BlobStore (M1d). Nothing
+  changes on screen; existing ones move the first time they load.
+
 ## v0.36.0 — 2026-10-07
 
 Book files move to a new store.
