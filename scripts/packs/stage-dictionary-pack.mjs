@@ -3,8 +3,8 @@
 //   node scripts/packs/stage-dictionary-pack.mjs alsihah <packs-folder>
 //
 // Writes <packs-folder>/alsihah/{pack.json, alsihah.tsv, SOURCE-README.md}, copied from public/alsihah-data. The
-// licence block below is what that folder's SOURCE-README.md already records; the maintainer must confirm it is
-// right before the first public build (the builder only checks that one is written down).
+// licence block below is what that folder's SOURCE-README.md already records; the maintainer confirmed it is
+// right on 2026-10-07 (the builder itself only checks that one is written down).
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
