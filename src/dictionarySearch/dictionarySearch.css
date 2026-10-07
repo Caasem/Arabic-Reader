@@ -213,3 +213,19 @@
   min-height: 44px;
   border-radius: 12px;
 }
+
+/* Opens the query in the full-page dictionary (src/dictionaryPage). */
+.dsearch__fullpage {
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.dsearch__fullpage:hover {
+  background: var(--accent-soft);
+}

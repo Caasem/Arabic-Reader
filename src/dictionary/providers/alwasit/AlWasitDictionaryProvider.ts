@@ -1,4 +1,5 @@
 import type { DictionaryEntry, DictionaryProvider } from '../../../types';
+import { headwordWindow } from '../../headwords';
 import { foldAlefHamza, normalize } from '../../../reader/tokenizer/arabicTokenizer';
 import { aramorphProvider } from '../aramorph/AramorphDictionaryProvider';
 import { buildLookupKeys } from './lookupKeys';
@@ -52,6 +53,10 @@ export class AlWasitDictionaryProvider implements DictionaryProvider {
       this.dataPromise = import('virtual:alwasit-data').then((mod) => parseAlWasitTsv(mod.default));
     }
     return this.dataPromise;
+  }
+
+  async listHeadwords(around: string, before: number, after: number) {
+    return headwordWindow((await this.getData()).byKey, around, before, after);
   }
 
   async lookup(word: string): Promise<DictionaryEntry[]> {

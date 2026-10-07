@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { openDictionaryPage } from '../dictionaryPage/events';
 import { DictionaryBubble } from '../components/reader/DictionaryBubble';
 import { DictionaryPopup } from '../components/reader/DictionaryPopup';
 import { HoverPreview } from '../components/reader/HoverPreview';
@@ -401,6 +402,14 @@ export function CleanReader({
           onSaveEntry={(entry) => void lookups.savePopupEntry(entry)}
           onSaveSelection={(entry, text) => void lookups.savePopupSelection(entry, text)}
           onEdit={lookups.startEditing}
+          onMaximise={
+            prefs.dictionaryFullPageEnabled
+              ? () => {
+                  openDictionaryPage({ word: popup.word, book });
+                  lookups.closePopup();
+                }
+              : undefined
+          }
         />
       )}
 

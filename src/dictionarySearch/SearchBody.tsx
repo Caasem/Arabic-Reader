@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { openDictionaryPage } from '../dictionaryPage/events';
+import { usePreferences } from '../state/PreferencesContext';
 import { vocabularyService } from '../vocabulary';
 import type { BookMeta, DictionaryEntry } from '../types';
 import { isRussianQuery, useDictionarySearch } from './useDictionarySearch';
@@ -13,6 +15,7 @@ interface Props {
 /** The search box and results, shared by every layout. */
 export function SearchBody({ book, initialQuery, onClose }: Props) {
   const [query, setQuery] = useState(initialQuery);
+  const fullPage = usePreferences().prefs.dictionaryFullPageEnabled;
   // Selection and saved-state belong to one result word, so they reset by
   // comparison rather than by an effect.
   const [selection, setSelection] = useState({ word: '', index: 0 });
@@ -92,6 +95,19 @@ export function SearchBody({ book, initialQuery, onClose }: Props) {
           spellCheck={false}
           onChange={(e) => setQuery(e.target.value)}
         />
+        {fullPage && query.trim() && !isRussianQuery(query) && (
+          <button
+            type="button"
+            className="dsearch__fullpage"
+            title="Open in the full-page dictionary"
+            onClick={() => {
+              openDictionaryPage({ word: query.trim(), book });
+              onClose();
+            }}
+          >
+            Full page
+          </button>
+        )}
       </div>
 
       <div className="dsearch__results" role="listbox" aria-label="Results">

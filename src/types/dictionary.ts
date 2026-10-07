@@ -61,6 +61,9 @@ export interface DictionaryProvider {
   /** Notifies when the provider's underlying data changes (e.g. a custom
    * dataset upload), so cached lookups can be discarded. */
   onDataChanged?(listener: () => void): () => void;
+  /** Headwords around `around` in the dictionary's own order, for browsing it like a book
+   * (the full-page dictionary). Only dictionaries filed in a fixed order have it. */
+  listHeadwords?(around: string, before: number, after: number): Promise<{ words: string[]; index: number } | null>;
 }
 
 export interface MorphologyProvider {

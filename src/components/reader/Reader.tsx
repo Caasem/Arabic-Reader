@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { openDictionaryPage } from '../../dictionaryPage/events';
 import type { BookMeta, Highlight, HighlightColor } from '../../types';
 import { usePreferences } from '../../state/PreferencesContext';
 import { annotationService } from '../../reader/annotations';
@@ -527,6 +528,14 @@ export function Reader({
           onSaveEntry={(entry) => void lookups.savePopupEntry(entry)}
           onSaveSelection={(entry, text) => void lookups.savePopupSelection(entry, text)}
           onEdit={lookups.startEditing}
+          onMaximise={
+            prefs.dictionaryFullPageEnabled
+              ? () => {
+                  openDictionaryPage({ word: popup.word, book });
+                  lookups.closePopup();
+                }
+              : undefined
+          }
         />
       )}
 

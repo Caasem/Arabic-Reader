@@ -236,3 +236,25 @@ export function IconBook({ size = 16, ...rest }: IconProps) {
     </svg>
   );
 }
+
+/** Four outward arrows: open in full page. */
+export function IconMaximize({ size = 16, ...rest }: IconProps) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M15 3h6v6" />
+      <path d="M9 21H3v-6" />
+      <path d="M21 3l-7 7" />
+      <path d="M3 21l7-7" />
+    </svg>
+  );
+}
+
+/** An open book with a magnifier: the Dictionary screen. */
+export function IconDictionary({ size = 16, ...rest }: IconProps) {
+  return (
+    <svg {...base(size)} {...rest}>
+      <path d="M4 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H4Z" />
+      <path d="M20 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6Z" />
+    </svg>
+  );
+}

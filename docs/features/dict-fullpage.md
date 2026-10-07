@@ -1,6 +1,13 @@
 # Full-page dictionary with dictionary switching
 
-Roadmap id: `dict-fullpage` · Area: Reader experience · Status: planned · Depends on: nothing (enables `root-explorer`)
+Roadmap id: `dict-fullpage` · Area: Reader experience · Status: done (v0.38.0; see "As built") · Depends on: nothing (enables `root-explorer`)
+
+> **As built (v0.38.0):**
+> - The design is the [Full-page dictionary canvas](https://claude.ai/artifact/JPqarguG4FJKAtchzz8zTD).
+> - The entries are drawn by `DictionaryPopup` in a new `page` mode (in the page's flow, full width, no backdrop or close button). The spec's planned extraction into a shared renderer was not needed, so the popup is unchanged when used as a popup.
+> - The full page opens through a window event (`openDictionaryPage`), so readers and Alt+D don't import App.
+> - Nearby headwords use `listHeadwords` on the root-filed providers (`src/dictionary/headwords.ts`).
+> - **Not built yet:** the Edit button on the page, and personal or Baranov nearby lists.
 
 ## 1. Purpose
 

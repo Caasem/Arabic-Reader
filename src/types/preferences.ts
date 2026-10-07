@@ -67,6 +67,8 @@ export interface ReaderPreferences {
   quickAddShortcutEnabled: boolean;
   /** With a word's dictionary open, Space saves it (never un-saves). */
   spaceSavesWord: boolean;
+  /** The full-page dictionary: the popup's maximise button and F, Alt+D's Full page, the Dictionary nav item (src/dictionaryPage). */
+  dictionaryFullPageEnabled: boolean;
   /** Last AnkiConnect deck name used. */
   ankiDeckName: string;
   /** Sync to Anki every 15 minutes while the app is open and Anki is reachable. */

@@ -139,6 +139,15 @@ export function DictionarySettings() {
         With a word&apos;s dictionary open, press Space to save it. Space never removes a saved word.
       </ToggleRow>
 
+      <ToggleRow
+        label="Full-page dictionary"
+        checked={prefs.dictionaryFullPageEnabled}
+        onChange={(dictionaryFullPageEnabled) => updatePrefs({ dictionaryFullPageEnabled })}
+      >
+        A Dictionary screen in the menu, and a button (or F) in the popup that opens the word there, with a tab per
+        dictionary and the headwords around it.
+      </ToggleRow>
+
       <Note>The order below is the order dictionaries appear in the popup (and which one is first in Split). Use the arrows to change it.</Note>
       {providers.map((p, idx) => (
         <div className="settings-row settings-row--dict" key={p.id}>
