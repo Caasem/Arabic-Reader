@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/shared/ErrorBoundary.tsx'
 import { installGlobalErrorLogging } from './diagnostics/diagnosticsLog'
+import { startPackManager } from './packManager'
 import { migrateBookFiles } from './persistence/bookFileMigration'
 import { runMigrationGate } from './persistence/migrationGate'
 import { markDesktopApp } from './utils/desktop'
@@ -38,6 +39,7 @@ runMigrationGate()
     )
     // Book files move into the BlobStore in the background; reading works from either place meanwhile.
     void migrateBookFiles()
+    startPackManager()
   })
   .catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error)

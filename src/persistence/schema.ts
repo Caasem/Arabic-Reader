@@ -14,6 +14,7 @@ import type {
 } from '../types';
 import type { SensePickRow } from './sensePicksRepo';
 import type { CrowdStateRow, PackRow, QueueRow } from '../crowdSync/types';
+import type { InstalledPackRow, PackMetaRow, PackPartRow } from '../packManager/types';
 import { backfilledUpdatedAt, SYNCED_TABLES, type ActivityRow, type ConflictRow, type FrontierRow, type OutboxRow, type SyncMetaRow, type SyncedTableName } from './syncedTables';
 
 /**
@@ -54,6 +55,12 @@ export class ArabicReaderDB extends Dexie {
   crowdQueue!: Table<QueueRow, string>;
   /** Cached, verified ranking files. Local only. */
   crowdPacks!: Table<PackRow, string>;
+  /** Data packs installed on this device (src/packManager). Local only. */
+  packs!: Table<InstalledPackRow, string>;
+  /** The last verified pack manifest. Local only. */
+  packMeta!: Table<PackMetaRow, string>;
+  /** Downloaded ranges of pack files still being fetched. Local only. */
+  packParts!: Table<PackPartRow, string>;
 
   /** `name` is only ever overridden by tests that need two devices in one process. */
   constructor(name = 'arabic-reader') {
@@ -171,6 +178,13 @@ export class ArabicReaderDB extends Dexie {
     // declared, empty once migrated, for one release.
     this.version(13).stores({
       books: 'id, addedAt, title, fileHash',
+    });
+    // v14: data packs (src/packManager): what is installed, the last verified manifest, and the ranges of a file
+    // being downloaded. New, empty, local-only tables.
+    this.version(14).stores({
+      packs: 'id',
+      packMeta: 'id',
+      packParts: 'key, hash',
     });
   }
 }

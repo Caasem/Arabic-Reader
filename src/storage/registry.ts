@@ -95,6 +95,9 @@ export const STORAGE_REGISTRY: readonly StoreSpec[] = [
   table(MAIN_DB, 'syncConflicts', syncSupport),
   table(MAIN_DB, 'crowdState', { cls: 'D', syncs: false, inBackup: false, evictable: false, merge: 'none', exportFormat: 'none', note: 'Crowd identity and counters; never merged into class A.' }),
   table(MAIN_DB, 'crowdQueue', { cls: 'D', syncs: false, inBackup: false, evictable: false, merge: 'none', exportFormat: 'none', note: 'Votes waiting to be sent.' }),
+  table(MAIN_DB, 'packs', { cls: 'L', syncs: false, inBackup: false, evictable: false, merge: 'none', exportFormat: 'none', note: 'Installed data packs (src/packManager). Local only; each device downloads its own. Authoritative for what is installed, so never evicted: the bytes are class C and are removed through uninstall.' }),
+  table(MAIN_DB, 'packMeta', { cls: 'L', syncs: false, inBackup: false, evictable: false, merge: 'none', exportFormat: 'none', note: 'The last verified pack manifest; its sequence is what refuses a rollback.' }),
+  table(MAIN_DB, 'packParts', { ...cache, note: 'Ranges of a pack file mid-download, so an interrupted download resumes. Safe to clear.' }),
   table(MAIN_DB, 'crowdPacks', { ...cache, cls: 'D', note: 'Cached, verified ranking files; downloaded again when missing.' }),
 
   // --- Other IndexedDB databases ----------------------------------------------

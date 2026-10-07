@@ -285,7 +285,7 @@ describe('the v13 upgrade', () => {
     old.close();
 
     await db.open();
-    expect(db.verno).toBe(13);
+    expect(db.verno).toBe(14);
     expect((await db.books.orderBy('id').toArray())).toEqual([
       { ...meta('b1'), updatedAt: 7 },
       { ...meta('b2'), updatedAt: 8 },
