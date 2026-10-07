@@ -4,6 +4,12 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.38.0 — 2026-10-07
+
+- **Tap to save, tap to unsave.** The "+" beside each dictionary entry now removes that entry's card
+  when you press it again (it shows ✓ while saved). It used to stay greyed out once pressed.
+- **+ Add Book.** The library's "+ Add EPUB" button is now "+ Add Book", since it takes other formats too.
+
 ## v0.37.0 — 2026-10-07
 
 Storage screen and full export.
