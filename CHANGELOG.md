@@ -4,11 +4,11 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
-## v0.38.0 — 2026-10-07
+## v0.39.0 — 2026-10-07
 
 More kinds of book files.
 
-- **+ Add book** (was "+ Add EPUB") now takes **TXT, Markdown, MOBI and AZW3** as well as EPUB,
+- **+ Add Book** now takes **TXT, Markdown, MOBI and AZW3** as well as EPUB,
   and you can drop files straight onto the library. Each one is turned into an EPUB when it is
   added, so reading, lookups, highlights and sync work exactly as for any book.
 - **Text files:** UTF-8, UTF-16 and old Arabic Windows (1256) encodings are read. Lines like
@@ -19,6 +19,12 @@ More kinds of book files.
 - **Kindle files:** text, chapters, table of contents and cover come across. Books protected with
   DRM can't be opened, and the app says so.
 - A short note under the library says what was converted ("converted from TXT · 12 chapters").
+
+## v0.38.0 — 2026-10-07
+
+- **Tap to save, tap to unsave.** The "+" beside each dictionary entry now removes that entry's card
+  when you press it again (it shows ✓ while saved). It used to stay greyed out once pressed.
+- **+ Add Book.** The library's "+ Add EPUB" button is now "+ Add Book", since it takes other formats too.
 
 ## v0.37.0 — 2026-10-07
 

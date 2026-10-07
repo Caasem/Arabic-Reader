@@ -236,7 +236,7 @@
       "status": "done",
       "effort": 2,
       "deps": [],
-      "notes": "Done in v0.38.0 (src/importFormats). Converts on the main thread (the MOBI parser needs DOMParser, which workers lack). \"Keep original files\" waits for BlobStore.",
+      "notes": "Done in v0.39.0 (src/importFormats). Converts on the main thread (the MOBI parser needs DOMParser, which workers lack). \"Keep original files\" waits for BlobStore.",
       "brief": "features/formats-simple.md",
       "milestone": "M2"
     },

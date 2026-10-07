@@ -1139,7 +1139,8 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
           sizePct={prefs.dictionaryPopupSizePct}
           onClose={lookups.closePopup}
           onSave={() => void lookups.togglePopupSave().then(bumpSaved)}
-          onSaveEntry={(entry) => void lookups.savePopupEntry(entry).then(bumpSaved)}
+          onSaveEntry={(entry) => lookups.savePopupEntry(entry).then((id) => (bumpSaved(), id))}
+          onUnsaveEntry={(id) => lookups.unsavePopupEntry(id).then(bumpSaved)}
           onSaveSelection={(entry, text) => void lookups.savePopupSelection(entry, text).then(bumpSaved)}
           onSaveEntries={(entries) => void lookups.savePopupEntries(entries).then(bumpSaved)}
           onEdit={lookups.startEditing}
