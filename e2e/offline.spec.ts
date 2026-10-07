@@ -31,6 +31,17 @@ test('service worker precaches the app shell and dictionary; the app and diction
     )
     .toBe(true);
 
+  // The default reading font is precached too, so offline reading keeps its look.
+  expect(
+    await page.evaluate(async () => {
+      for (const name of await caches.keys()) {
+        if ((await (await caches.open(name)).keys()).some((r) => /\/fonts\/Lala\.ttf/.test(r.url))) return true;
+      }
+      return false;
+    }),
+    'expected fonts/Lala.ttf in the service worker precache'
+  ).toBe(true);
+
   // A controller can exist before the worker finishes activating; reloading then
   // can reach the network instead of the worker (flaky on CI). Wait for 'activated'.
   await page.evaluate(async () => {

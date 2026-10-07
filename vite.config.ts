@@ -117,7 +117,8 @@ export default defineConfig({
       workbox: {
         // The app shell, all view chunks, and the dictionary worker (which
         // carries the dictionary data) are precached for offline use.
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+        // Lala.ttf is the default reading font (138 KB), so it is precached too.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,ttf}'],
         // The optional datasets aren't precached -- most users never enable
         // them -- but are cached on first use so an enabled feature keeps
         // working offline.
