@@ -138,6 +138,7 @@ export function DictionaryPopup({
   onClose,
   onSave,
   onSaveEntry,
+  onUnsaveEntry,
   onSaveSelection,
   onEdit,
   onSaveEntries,
@@ -167,7 +168,9 @@ export function DictionaryPopup({
   /** Per-entry "+" — saves just that one entry as its own card, for when a
    * word has more than one genuinely distinct meaning and the reader only
    * wants the one they're looking at. */
-  onSaveEntry?: (entry: DictionaryEntry) => void;
+  onSaveEntry?: (entry: DictionaryEntry) => void | Promise<string | null | void>;
+  /** Pressing a saved entry's "+" again: removes the card that save made (the id `onSaveEntry` resolved with). */
+  onUnsaveEntry?: (itemId: string) => void | Promise<void>;
   /** For a long entry (Al-Wasit's paragraphs commonly run several
    * sub-senses together) where only part of it is relevant -- saves just
    * the text the reader selected, instead of the whole entry. */
@@ -219,6 +222,8 @@ export function DictionaryPopup({
   // from vocabularyService for the word as a whole), just enough feedback
   // that tapping a per-entry "+" visibly did something.
   const [savedEntryKeys, setSavedEntryKeys] = useState<Set<number>>(new Set());
+  // The card each per-entry "+" made, so pressing it again can remove just that one.
+  const entryItemIds = useRef<Map<number, string>>(new Map());
   // Clean layout (src/popupClean): which verb entries have their other forms open.
   const clean = prefs.dictionaryPopupCleanLayout;
   const [openForms, setOpenForms] = useState<Set<number>>(new Set());
@@ -233,6 +238,7 @@ export function DictionaryPopup({
   useEffect(() => {
     setExpandedExamples(new Set());
     setSavedEntryKeys(new Set());
+    entryItemIds.current.clear();
     setSavedGroups(new Set());
     setFoldedEntries(new Set());
   }, [word]);
@@ -706,12 +712,26 @@ export function DictionaryPopup({
                     saveThisSelection();
                     return;
                   }
-                  onSaveEntry(entry);
+                  if (savedEntryKeys.has(i)) {
+                    const itemId = entryItemIds.current.get(i);
+                    if (!itemId || !onUnsaveEntry) return;
+                    entryItemIds.current.delete(i);
+                    setSavedEntryKeys((prev) => {
+                      const next = new Set(prev);
+                      next.delete(i);
+                      return next;
+                    });
+                    void onUnsaveEntry(itemId);
+                    return;
+                  }
                   setSavedEntryKeys((prev) => new Set(prev).add(i));
+                  void Promise.resolve(onSaveEntry(entry)).then((itemId) => {
+                    if (itemId) entryItemIds.current.set(i, itemId);
+                  });
                 }}
-                disabled={!hasSelection && savedEntryKeys.has(i)}
+                disabled={!hasSelection && savedEntryKeys.has(i) && !onUnsaveEntry}
                 aria-label={hasSelection ? `Save just the ${sel!.size} selected words for "${entry.headword}"` : `Add just "${entry.headword}" to vocabulary`}
-                title={hasSelection ? 'Will save only the selected words, not the full definition' : 'Add just this definition'}
+                title={hasSelection ? 'Will save only the selected words, not the full definition' : savedEntryKeys.has(i) && onUnsaveEntry ? 'Remove this definition' : 'Add just this definition'}
               >
                 {hasSelection ? '✓ sel' : savedEntryKeys.has(i) ? '✓' : '+'}
               </button>

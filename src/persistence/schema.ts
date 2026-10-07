@@ -14,6 +14,7 @@ import type {
 } from '../types';
 import type { SensePickRow } from './sensePicksRepo';
 import type { CrowdStateRow, PackRow, QueueRow } from '../crowdSync/types';
+import type { InstalledPackRow, PackMetaRow, PackPartRow } from '../packManager/types';
 import { backfilledUpdatedAt, SYNCED_TABLES, type ActivityRow, type ConflictRow, type FrontierRow, type OutboxRow, type SyncMetaRow, type SyncedTableName } from './syncedTables';
 
 /**
@@ -54,6 +55,12 @@ export class ArabicReaderDB extends Dexie {
   crowdQueue!: Table<QueueRow, string>;
   /** Cached, verified ranking files. Local only. */
   crowdPacks!: Table<PackRow, string>;
+  /** Data packs installed on this device (src/packManager). Local only. */
+  packs!: Table<InstalledPackRow, string>;
+  /** The last verified pack manifest. Local only. */
+  packMeta!: Table<PackMetaRow, string>;
+  /** Downloaded ranges of pack files still being fetched. Local only. */
+  packParts!: Table<PackPartRow, string>;
 
   /** `name` is only ever overridden by tests that need two devices in one process. */
   constructor(name = 'arabic-reader') {
@@ -164,6 +171,20 @@ export class ArabicReaderDB extends Dexie {
       crowdState: 'id',
       crowdQueue: 'key, rev',
       crowdPacks: 'path',
+    });
+    // v13: `books.fileHash` (a reference to the book file in the BlobStore), indexed so an import can find the
+    // book that already has these bytes. No data changes here: files move out of `bookFiles` afterwards, one
+    // at a time, outside the upgrade transaction (src/persistence/bookFileMigration.ts). `bookFiles` stays
+    // declared, empty once migrated, for one release.
+    this.version(13).stores({
+      books: 'id, addedAt, title, fileHash',
+    });
+    // v14: data packs (src/packManager): what is installed, the last verified manifest, and the ranges of a file
+    // being downloaded. New, empty, local-only tables.
+    this.version(14).stores({
+      packs: 'id',
+      packMeta: 'id',
+      packParts: 'key, hash',
     });
   }
 }

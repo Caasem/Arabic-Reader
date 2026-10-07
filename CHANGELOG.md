@@ -4,7 +4,7 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
-## v0.37.0 — 2026-10-06
+## v0.40.0 — 2026-10-07
 
 Anki, end to end. Settings → Vocabulary → **Anki**.
 
@@ -20,11 +20,11 @@ Anki, end to end. Settings → Vocabulary → **Anki**.
   from Anki when you remove the word here (off by default).
 - Choose the deck from Anki's own list with **Decks**.
 
-## v0.36.0 — 2026-10-06
+## v0.39.0 — 2026-10-07
 
 More kinds of book files.
 
-- **+ Add book** (was "+ Add EPUB") now takes **TXT, Markdown, MOBI and AZW3** as well as EPUB,
+- **+ Add Book** now takes **TXT, Markdown, MOBI and AZW3** as well as EPUB,
   and you can drop files straight onto the library. Each one is turned into an EPUB when it is
   added, so reading, lookups, highlights and sync work exactly as for any book.
 - **Text files:** UTF-8, UTF-16 and old Arabic Windows (1256) encodings are read. Lines like
@@ -35,6 +35,47 @@ More kinds of book files.
 - **Kindle files:** text, chapters, table of contents and cover come across. Books protected with
   DRM can't be opened, and the app says so.
 - A short note under the library says what was converted ("converted from TXT · 12 chapters").
+
+## v0.38.0 — 2026-10-07
+
+- **Tap to save, tap to unsave.** The "+" beside each dictionary entry now removes that entry's card
+  when you press it again (it shows ✓ while saved). It used to stay greyed out once pressed.
+- **+ Add Book.** The library's "+ Add EPUB" button is now "+ Add Book", since it takes other formats too.
+
+## v0.37.0 — 2026-10-07
+
+Storage screen and full export.
+
+- **Settings → Library & data → Storage** shows where the space goes: your files (books, fonts),
+  your records, downloaded dictionaries and caches, with the largest items first and the space your
+  browser says is available.
+- **Free space safely.** *Remove file only* keeps a book in your library with its notes, highlights
+  and progress; adding the same file back restores it. Also *Remove book*, *Remove* for a downloaded
+  dictionary, an uploaded font or your personal dictionary, and *Clear caches*. Each one says what
+  goes and what stays.
+- **Protect from automatic cleanup** asks the browser not to clear the app's data when the device
+  is short of space.
+- **Export everything** makes one .zip with your vocabulary, highlights, notes, bookmarks, history
+  and settings as JSON (`records.json`), your words as a spreadsheet (`vocabulary.csv`), your
+  highlights to read (`highlights.md`), and, if you tick it, the original books. **Import an export**
+  adds what is missing and never replaces anything newer. The quick backup is unchanged.
+- Developer-facing, not visible on screen: PackManager with Al-Ṣiḥāḥ as the first pack and schema v14
+  (M1f, dormant until a pack host and signing key exist); the signed pack manifest and `scripts/packs`
+  tooling (M1e); uploaded fonts and the personal dictionary keep their files in the BlobStore (M1d).
+
+## v0.36.0 — 2026-10-07
+
+Book files move to a new store.
+
+- **Adding a book you already have says so.** An EPUB with the same contents as a book in your
+  library is not added a second time: you see "… is already in your library". If the book arrived
+  from another device without its file, adding the file attaches it to that book.
+- **Identical files are stored once.** Removing one of two identical books keeps the other's file.
+- **Existing books move in the background** after the update. Settings → Library & data shows
+  "Optimising storage…" while it runs, and a note if a file could not be moved (it keeps working
+  from where it was). Reading is not interrupted.
+- Developer-facing: the StorageRegistry (`src/storage/registry.ts`, M1a), the BlobStore
+  (`src/blobStore`, M1b), and schema v13 with `books.fileHash` (M1c).
 
 ## v0.35.0 — 2026-10-06
 

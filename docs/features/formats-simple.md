@@ -1,8 +1,8 @@
 # Import TXT, Markdown and MOBI/AZW3
 
-Roadmap id: `formats-simple` · Area: Formats and export · Status: done (v0.36.0; see "As built" below) · Depends on: nothing (works better after `blob-store`) · Enables: `formats-pdf`, `watch-folder`, `device-scan`
+Roadmap id: `formats-simple` · Area: Formats and export · Status: done (v0.39.0; see "As built" below) · Depends on: nothing (works better after `blob-store`) · Enables: `formats-pdf`, `watch-folder`, `device-scan`
 
-> **As built (v0.36.0):** `src/importFormats/` with its own EPUB 3 writer (`epubWriter.ts`) rather than the Shamela page builder. Conversion runs on the main thread, not in a worker: foliate-js needs `DOMParser`, which workers lack; a 50 MB limit applies to text files. "Keep original files" is not built yet; it waits for BlobStore. MOBI is tested with a generated file (`convert.test.ts`), not a committed book.
+> **As built (v0.39.0):** `src/importFormats/` with its own EPUB 3 writer (`epubWriter.ts`) rather than the Shamela page builder. Conversion runs on the main thread, not in a worker: foliate-js needs `DOMParser`, which workers lack; a 50 MB limit applies to text files. "Keep original files" is not built yet; it waits for BlobStore. MOBI is tested with a generated file (`convert.test.ts`), not a committed book.
 
 ## 1. Purpose
 
@@ -10,7 +10,7 @@ The library accepts only `.epub` (`Library.tsx` rejects anything else with "Only
 
 ## 2. Expected Behaviour
 
-- **+ Add EPUB** becomes **+ Add book** and accepts `.epub, .txt, .md, .markdown, .mobi, .azw3, .azw` (and `.prc` as MOBI). Drag-and-drop onto the library accepts the same.
+- **+ Add EPUB** becomes **+ Add Book** and accepts `.epub, .txt, .md, .markdown, .mobi, .azw3, .azw` (and `.prc` as MOBI). Drag-and-drop onto the library accepts the same.
 - Each non-EPUB file is converted to an EPUB **on import**, stored as the book's file, and opened like any EPUB. The book's `format` records the original format (`'txt' | 'md' | 'mobi' | 'azw3'`) for display and later re-conversion. The original file is not kept by default (setting "Keep original files", off), because the EPUB is what the app reads.
 - **TXT:** encoding detected (UTF-8 with or without BOM, UTF-16 LE/BE by BOM, Windows-1256 by heuristics when UTF-8 decoding produces replacement characters). Title = first non-empty line if it is shorter than 120 characters, else the file name. Chapters: lines matching a heading pattern (`^(الباب|الفصل|باب|فصل|كتاب|المقدمة|الخاتمة|chapter)\b` or a line of ≤ 60 characters surrounded by blank lines and followed by text) start a chapter; if fewer than 2 headings are found, split every 5,000 words into "Part 1, Part 2…". Paragraphs: blank-line separated; single line breaks inside a paragraph are kept as line breaks (poetry and hadith chains rely on them).
 - **Markdown:** CommonMark. `#` and `##` headings become chapters and the table of contents; emphasis, lists, block quotes, tables and links are kept; images that are local relative paths are dropped with a note in the import result; remote images are not fetched (privacy). Front matter `title:` and `author:` are used when present.

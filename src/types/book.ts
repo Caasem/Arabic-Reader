@@ -17,6 +17,12 @@ export interface BookMeta {
   totalLocations?: number;
   /** Last change to this row; set by the persistence write layer (schema v10). */
   updatedAt?: number;
+  /**
+   * SHA-256 (hex) of the book file, which lives in the BlobStore (namespace `book`). A reference, not
+   * content: it syncs, so another device can tell a file it already has is this book's. Absent on books
+   * whose file is still in the legacy `bookFiles` table (schema v13 migration, src/persistence/bookFileMigration.ts).
+   */
+  fileHash?: string;
 }
 
 /** The one automatic "where I left off" per book. */

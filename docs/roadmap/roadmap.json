@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-06",
+  "updated": "2026-10-07",
   "note": "Effort is a rough estimate in working weeks of remaining work. Status: done | in-progress | built-local | planned | idea. Edit this file; the site reads it.",
   "areas": {
     "foundation": "Foundation",
@@ -236,7 +236,7 @@
       "status": "done",
       "effort": 2,
       "deps": [],
-      "notes": "Done in v0.36.0 (src/importFormats). Converts on the main thread (the MOBI parser needs DOMParser, which workers lack). \"Keep original files\" waits for BlobStore.",
+      "notes": "Done in v0.39.0 (src/importFormats). Converts on the main thread (the MOBI parser needs DOMParser, which workers lack). \"Keep original files\" waits for BlobStore.",
       "brief": "features/formats-simple.md",
       "milestone": "M2"
     },
@@ -384,7 +384,7 @@
       "deps": [
         "governance"
       ],
-      "notes": "Design ready for review (2026-10-06): classes, StorageRegistry, BlobStore and PackManager interfaces, book-file migration, decisions D1-D6, M1 build order (M1a-M1h). Accepted: ADR 0002 (revised), 0003, 0005. Accepted: ADR 0007 (pack hosting). Next after your review: build M1a (StorageRegistry).",
+      "notes": "Design (2026-10-06); ADR 0002 (revised), 0003, 0005, 0007 accepted. Building M1 in order: M1a StorageRegistry, M1b BlobStore, M1c book files and schema v13 (v0.36.0), M1d fonts and personal dictionary onto the BlobStore: all done. M1e local part done: signed-manifest tooling (src/packManager/manifest.ts, scripts/packs). Still open in M1e: the staging R2 bucket and the first signing key (need the maintainer's Cloudflare account and an offline key), and the spending cap amount. M1f built (PackManager, Al-Sihah as the proof pack, dormant until a host and key exist). M1h built (storage screen and full export, v0.37.0). M1e done for staging: bucket live, two signing keys made, spending decided (free tier, alert at 80%), Al-Sihah licence confirmed (docs/ops/packs-hosting.md). Remaining in M1: M1g (Dexie Cloud, needs its own ADR and the maintainer's decisions); for production packs, a custom domain and the dashboard usage alert.",
       "spec": "specs/data-architecture.md",
       "brief": "features/data-arch-spec.md",
       "milestone": "M1"
@@ -393,13 +393,13 @@
       "id": "blob-store",
       "title": "BlobStore: content-addressed file storage",
       "area": "foundation",
-      "status": "planned",
+      "status": "in-progress",
       "effort": 2,
       "deps": [
         "data-arch-spec",
         "sync-v10"
       ],
-      "notes": "One byte store for books, PDFs, audio and packs with web, Electron and mobile backends. Migrate existing book files; de-duplicates by hash. Test OPFS versus IndexedDB on iOS first.",
+      "notes": "M1b, M1c and M1d built. src/blobStore: content-addressed by SHA-256 with (namespace, owner) references, IndexedDB and desktop file backends, repair scan, QuotaError, one contract suite. In it now: book files (books.fileHash, resumable migration from bookFiles, duplicate imports detected), uploaded fonts (namespace font) and the personal dictionary (namespace dictionary), each moved lazily on first load with the old copy kept until the new one is confirmed. The legacy bookFiles table and the inline font/dictionary fields stay readable for one release. Next: nothing here until pack-manager (M1f). OPFS and Capacitor backends later, after the iOS measurement.",
       "brief": "features/blob-store.md",
       "milestone": "M1"
     },
@@ -407,13 +407,13 @@
       "id": "pack-manager",
       "title": "PackManager: versioned data packs",
       "area": "foundation",
-      "status": "planned",
+      "status": "in-progress",
       "effort": 2,
       "deps": [
         "blob-store",
         "infra-cloud"
       ],
-      "notes": "Signed manifest, resumable download, hash verification, eviction, offline from cache. Proof: move one dictionary onto it.",
+      "notes": "M1f built, dormant: src/packManager (manifest fetch and signature check with rollback refusal, ranged resumable downloads with hash verification, atomic version switch, uninstall, repair, kill flag, minAppVersion) over the BlobStore, local tables packs/packMeta/packParts (schema v14), PackRow in Settings → Dictionaries, and Al-Sihah reading its data from the pack when installed (bundled copy kept as the fallback). Tested against a local HTTP host with tampered, truncated, interrupted, rolled-back and badly signed responses. Runs against the live staging host in dev builds (.env.development): manifest verified, ranged download, install and offline use checked in a real browser. Release builds stay dormant until a production host and VITE_PACKS_BASE_URL exist (custom domain needed). Not built: auto-update on Wi-Fi, base-URL override screen in Advanced, brotli/gzip files, e2e against a served pack.",
       "brief": "features/pack-manager.md",
       "milestone": "M1"
     },
@@ -434,12 +434,12 @@
       "id": "storage-ux",
       "title": "Storage usage screen and full export",
       "area": "reader",
-      "status": "planned",
+      "status": "done",
       "effort": 1,
       "deps": [
         "blob-store"
       ],
-      "notes": "Usage by class, per-class cleanup, export all your data in open formats.",
+      "notes": "Built (v0.37.0, M1h): Settings → Library & data → Storage shows space by type from the StorageRegistry (your files, your records, dictionaries and packs, caches) with the browser quota, per-item Remove file only / Remove book / Remove pack / Remove font, Clear caches and Protect from automatic cleanup; Export everything (records.json, vocabulary.csv, highlights.md, optional books) and Import, which adds what is missing and never replaces newer data. Format in specs/export-format.md. Not built: per-class size numbers within 10% of real use are estimates for records; Capacitor share-sheet and Electron save dialog use the existing saveFile path only.",
       "brief": "features/storage-ux.md",
       "milestone": "M1"
     },

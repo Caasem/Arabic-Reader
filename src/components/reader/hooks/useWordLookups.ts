@@ -189,11 +189,20 @@ export function useWordLookups({ book, trackerRef, savedWords, prefsRef, onLooku
       }
     },
 
-    async savePopupEntry(entry: DictionaryEntry) {
-      if (!popup) return;
-      await save(popup, entry);
+    /** Saves one entry as its own card; returns the card's id so the popup's "+" can undo it. */
+    async savePopupEntry(entry: DictionaryEntry): Promise<string | null> {
+      if (!popup) return null;
+      const item = await save(popup, entry);
       void recordEntrySave(book, popup.word, popup.result, entry);
       markSaved(popup.word, true);
+      return item?.id ?? null;
+    },
+
+    /** The popup's "+" pressed again: removes just that entry's card. */
+    async unsavePopupEntry(itemId: string) {
+      const word = popup?.word;
+      await vocabularyService.removeFromVocabulary(itemId);
+      if (word) markSaved(word, await vocabularyService.isSaved(book.id, word));
     },
 
     /** Saves several entries (e.g. one dictionary's whole section) as one card. */
