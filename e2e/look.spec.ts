@@ -35,7 +35,10 @@ test('look is on by default, takes a picked accent, and switches off cleanly', a
   await expect(page.locator('#look-tokens')).toHaveCount(0);
   await expect.poll(accent).toBe('#9c7a4f');
 
-  // The choice survives a reload.
+  // The choice survives a reload. The page is restyled before the preference is stored, so wait for the stored copy.
+  await expect
+    .poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('arabic-reader:preferences') ?? '{}').lookEnabled))
+    .toBe(false);
   await page.reload({ waitUntil: 'networkidle' });
   await expect.poll(dataLook).toBe(null);
 });
