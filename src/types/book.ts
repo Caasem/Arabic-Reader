@@ -1,4 +1,5 @@
-export type BookFormat = 'epub' | 'mobi';
+/** The format the book was added in; anything but EPUB is converted to EPUB on import (src/importFormats). */
+export type BookFormat = 'epub' | 'mobi' | 'azw3' | 'txt' | 'md';
 
 export interface BookMeta {
   id: string;
@@ -6,6 +7,8 @@ export interface BookMeta {
   author?: string;
   language?: string;
   format: BookFormat;
+  /** The added file's name, when it was converted from another format. */
+  originalFileName?: string;
   coverDataUrl?: string;
   addedAt: number;
   /** Bytes of the (already-normalized-to-epub) source file, stored separately in blob storage. */

@@ -12,6 +12,7 @@ import { readString, STORAGE_KEYS, writeString } from '../../utils/storage';
 import { useEscapeKey } from '../shared/useEscapeKey';
 import { usePreferences } from '../../state/PreferencesContext';
 import { ShamelaResultCard } from './ShamelaResultCard';
+import { formatOf, IMPORTABLE_EXTENSIONS } from '../../importFormats';
 import './Library.css';
 
 type SortOrder = 'added' | 'lastRead' | 'title' | 'progress';
@@ -58,6 +59,15 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // "Converting <name>…" while a non-EPUB file is turned into an EPUB, then a short report.
+  const [importLabel, setImportLabel] = useState<string | null>(null);
+  const [importReport, setImportReport] = useState<string | null>(null);
+  const [dropping, setDropping] = useState(false);
+  useEffect(() => {
+    if (!importReport) return;
+    const t = window.setTimeout(() => setImportReport(null), 10000);
+    return () => window.clearTimeout(t);
+  }, [importReport]);
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState<SortOrder>('added');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -120,24 +130,29 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
     setError(null);
     setImporting(true);
     try {
+      const reports: string[] = [];
+      const failures: string[] = [];
       for (const file of Array.from(files)) {
-        if (!file.name.toLowerCase().endsWith('.epub')) {
-          setError('Only .epub files are supported right now — MOBI files are normalized to EPUB in a later phase.');
-          continue;
-        }
+        const format = formatOf(file.name);
+        setImportLabel(format && format !== 'epub' ? `Converting ${file.name}…` : null);
         try {
-          const meta = await libraryService.importEpub(file);
+          const { meta, converted } = await libraryService.importBook(file);
+          // A file that completed a synced book keeps that book's id: replace it rather than list it twice.
           setBooks((prev) => [meta, ...prev.filter((b) => b.id !== meta.id)]);
           setFileIds((prev) => (prev ? new Set(prev).add(meta.id) : prev));
+          if (converted) {
+            const chapters = `${converted.chapters} chapter${converted.chapters === 1 ? '' : 's'}`;
+            reports.push(`"${meta.title}": converted from ${converted.format.toUpperCase()} · ${chapters}${converted.warnings.length ? ` (${converted.warnings.join('; ')})` : ''}`);
+          }
         } catch (e) {
-          if (!(e instanceof DuplicateBookError)) throw e;
-          setError(e.message);
+          failures.push(e instanceof Error ? e.message : `Could not add "${file.name}".`);
         }
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not import that file.');
+      if (reports.length) setImportReport(reports.join(' · '));
+      if (failures.length) setError(failures.join(' '));
     } finally {
       setImporting(false);
+      setImportLabel(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }
@@ -247,7 +262,23 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
   }, [shelfBooks, readingInfo, query, statusFilter, sortBy]);
 
   return (
-    <div className="library">
+    <div
+      className={'library' + (dropping ? ' library--drop' : '')}
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes('Files')) return;
+        e.preventDefault();
+        setDropping(true);
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node | null)) setDropping(false);
+      }}
+      onDrop={(e) => {
+        if (!e.dataTransfer.files.length) return;
+        e.preventDefault();
+        setDropping(false);
+        void handleFiles(e.dataTransfer.files);
+      }}
+    >
       {/* "Add file" for a book whose file is on another device. Kept out of the header's
           actions so that row has a single file input (the import). */}
       <input
@@ -273,7 +304,8 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
           <input
             ref={fileInputRef}
             type="file"
-            accept=".epub"
+            accept={IMPORTABLE_EXTENSIONS.join(',')}
+            aria-label="Add books (EPUB, TXT, Markdown, MOBI, AZW3)"
             multiple
             hidden
             onChange={(e) => handleFiles(e.target.files)}
@@ -296,6 +328,16 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
         </div>
       )}
 
+      {importLabel && (
+        <div className="library__notice" role="status">
+          {importLabel}
+        </div>
+      )}
+      {importReport && (
+        <div className="library__notice" role="status">
+          {importReport}
+        </div>
+      )}
       {error && <div className="library__error">{error}</div>}
 
       {!loading && (books.length > 0 || prefs.shamelaEnabled) && (
@@ -340,7 +382,7 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
         shelfBooks.length === 0 && !query.trim() ? (
           <div className="library__empty">
             <p>No books yet.</p>
-            <p className="library__empty-sub">Add an EPUB, or try the sample book to see the reader in action.</p>
+            <p className="library__empty-sub">Add a book (EPUB, TXT, Markdown, MOBI or AZW3) or drop one here, or try the sample book to see the reader in action.</p>
           </div>
         ) : (
           <div className="library__empty">

@@ -1,6 +1,8 @@
 # Import TXT, Markdown and MOBI/AZW3
 
-Roadmap id: `formats-simple` · Area: Formats and export · Status: planned · Depends on: nothing (works better after `blob-store`) · Enables: `formats-pdf`, `watch-folder`, `device-scan`
+Roadmap id: `formats-simple` · Area: Formats and export · Status: done (v0.39.0; see "As built" below) · Depends on: nothing (works better after `blob-store`) · Enables: `formats-pdf`, `watch-folder`, `device-scan`
+
+> **As built (v0.39.0):** `src/importFormats/` with its own EPUB 3 writer (`epubWriter.ts`) rather than the Shamela page builder. Conversion runs on the main thread, not in a worker: foliate-js needs `DOMParser`, which workers lack; a 50 MB limit applies to text files. "Keep original files" is not built yet; it waits for BlobStore. MOBI is tested with a generated file (`convert.test.ts`), not a committed book.
 
 ## 1. Purpose
 

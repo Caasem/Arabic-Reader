@@ -4,6 +4,22 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.39.0 — 2026-10-07
+
+More kinds of book files.
+
+- **+ Add Book** now takes **TXT, Markdown, MOBI and AZW3** as well as EPUB,
+  and you can drop files straight onto the library. Each one is turned into an EPUB when it is
+  added, so reading, lookups, highlights and sync work exactly as for any book.
+- **Text files:** UTF-8, UTF-16 and old Arabic Windows (1256) encodings are read. Lines like
+  الباب / الفصل / باب / فصل start chapters; otherwise the book is split into parts. Line breaks
+  inside a paragraph are kept, so poetry stays as it was.
+- **Markdown:** headings become chapters; bold, lists, quotes and tables are kept. Images are left
+  out, and the app says how many.
+- **Kindle files:** text, chapters, table of contents and cover come across. Books protected with
+  DRM can't be opened, and the app says so.
+- A short note under the library says what was converted ("converted from TXT · 12 chapters").
+
 ## v0.38.0 — 2026-10-07
 
 - **Tap to save, tap to unsave.** The "+" beside each dictionary entry now removes that entry's card
