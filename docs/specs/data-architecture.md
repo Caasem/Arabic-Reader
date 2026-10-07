@@ -113,6 +113,14 @@ interface BlobRef { hash: string; size: number; type: string; ns: string; addedA
 - **Backends behind one interface:** `IdbBlobStore` (all platforms, M1 baseline), `OpfsBlobStore` (web, after the iOS device test), `FsBlobStore` (Electron, under the user-data folder in a two-level hash directory), `CapacitorBlobStore` (mobile documents directory, not WebView storage). The metadata index (ref, size, owners) is a Dexie table `blobIndex` on every backend, class L (rebuildable by scanning the backend).
 - **Streaming:** `put` accepts a Blob so the browser can stream; the hashing runs in a worker for files over 8 MB so the reader UI is not blocked.
 
+**As built in M1b (2026-10-07)** (`src/blobStore/types.ts` is the authority now):
+- A reference is an owner inside a namespace, so the calls carry both: `put(data, { ns, owner, type? })`, `pin(hash, ns, owner): Promise<boolean>` (false when the blob is not stored), `unpin(hash, ns, owner)`, `delete(hash, ns)` (drops every reference in `ns`). Bytes go when no reference remains. `BlobRef` adds `owners`.
+- Added `url(hash)` (object URL, caller revokes), `verify(hash)` and `repair()` (the scan: removes unindexed bytes, drops index rows whose bytes are gone, and reports both).
+- `blobIndex` lives in the BlobStore's own database `arabic-reader-blobs` (with the IndexedDB backend's `blobs` table), not in the main database, so M1b needed no main schema version and the main database stays small for backups. It holds the owner references, so it is not freely rebuildable: only the bytes are.
+- `put` refuses a namespace the StorageRegistry does not declare (declared: `book`, `font`, `dictionary`, `pack`).
+- Index changes are serialised with the Web Locks API (a queue in the page where it is missing).
+- Backends: `IdbBlobStore` and `FsBlobStore` (desktop, `<userData>/blobs/<first two hex>/<hash>`, `blobs:*` IPC that accepts SHA-256 names only and refuses bytes that do not hash to their name). OPFS and Capacitor later.
+
 ### 5.3 PackManager
 
 ```ts
