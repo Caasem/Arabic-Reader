@@ -3,6 +3,7 @@ import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta } from '../types';
 import { createOwnDesk, ensureBookDesk, getDesk, renameDesk, saveDeskHtml, updateItem } from './deskStore';
 import './deskDocument.css';
+import { ItemPicker } from './ItemPicker';
 import { IconCapture, IconChevron, IconDown, IconEye, IconEyeOff, IconInbox, IconPull, IconUp } from './icons';
 import { fillEmbed, type EmbedAct } from './docEmbeds';
 import { EMBED_CLASS, embedHtml, EMPTY_DOC, outline, sanitizeDocHtml } from './docHtml';
@@ -175,6 +176,9 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
       if (!h.textContent) h.innerHTML = '<br>';
       ed.replaceChild(h, node);
       caretEnd(h);
+    } else if (node && node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === 'P' && (node.textContent ?? '') === '/') {
+      // "/" alone on a line: choose an item to put there.
+      setPicker({ line: node as HTMLElement, anchor: (node as HTMLElement).getBoundingClientRect() });
     } else if (node && node.nodeType === Node.TEXT_NODE) {
       const p = document.createElement('p');
       ed.replaceChild(p, node);
@@ -224,6 +228,69 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     placeBefore(el, heading === null ? (heads[0] ?? null) : (heads[heading + 1] ?? null));
   }
   const dragId = useRef<string | null>(null);
+
+  // --- putting an item where you are writing: "/" on an empty line, or a row dragged from the side panel ---
+  const [picker, setPicker] = useState<{ line: HTMLElement; anchor: DOMRect } | null>(null);
+  /** Puts an item's embed at `ref` (replacing it, or before or after it), moving it if it is already in the text. */
+  function putItem(id: string, ref: Element, how: 'replace' | 'before' | 'after') {
+    const ed = edRef.current;
+    if (!ed) return;
+    let el = embedEl(id);
+    if (el === ref) return;
+    if (!el) {
+      const holder = document.createElement('div');
+      holder.innerHTML = embedHtml(id);
+      el = holder.firstElementChild!;
+    }
+    if (how === 'replace') ref.replaceWith(el);
+    else if (how === 'before') ed.insertBefore(el, ref);
+    else ed.insertBefore(el, ref.nextSibling);
+    known.current.add(id);
+    // Somewhere to keep typing after it.
+    let next = el.nextElementSibling;
+    if (!next || next.tagName !== 'P') {
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      ed.insertBefore(p, el.nextSibling);
+      next = p;
+    }
+    if (how === 'replace') caretEnd(next as HTMLElement);
+    fillAll();
+    scheduleSave();
+    bump();
+  }
+  function pick(item: DeskItem) {
+    if (!picker) return;
+    const line = picker.line;
+    setPicker(null);
+    if (line.isConnected) putItem(item.id, line, 'replace');
+  }
+  function cancelPick() {
+    if (!picker) return;
+    const line = picker.line;
+    setPicker(null);
+    if (line.isConnected && line.textContent === '/') {
+      line.innerHTML = '<br>';
+      caretEnd(line);
+      scheduleSave();
+    }
+  }
+  /** A side-panel row dropped on the text: before or after the line under the pointer. */
+  function onEditorDrop(e: React.DragEvent<HTMLDivElement>) {
+    const id = dragId.current;
+    const ed = edRef.current;
+    dragId.current = null;
+    if (!id || !ed) return;
+    e.preventDefault();
+    const blocks = Array.from(ed.children);
+    let best: { el: Element; d: number; after: boolean } | null = null;
+    for (const b of blocks) {
+      const r = b.getBoundingClientRect();
+      const d = e.clientY < r.top ? r.top - e.clientY : e.clientY > r.bottom ? e.clientY - r.bottom : 0;
+      if (!best || d < best.d) best = { el: b, d, after: e.clientY > r.top + r.height / 2 };
+    }
+    if (best) putItem(id, best.el, best.after ? 'after' : 'before');
+  }
   /** A screenshot shown at full size. */
   const [zoom, setZoom] = useState<DeskItem | null>(null);
 
@@ -345,8 +412,23 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
           >
             {desk?.title}
           </h2>
-          <div ref={edRef} className="sd-editor" role="textbox" contentEditable suppressContentEditableWarning spellCheck aria-label="Document text" aria-multiline="true" onInput={onInput} onBlur={save} onClick={onEditorClick} />
-          <p className="sd-doc__hint">Type anywhere. # and a space starts a heading. New captures for this desk appear at the end.</p>
+          <div ref={edRef} className="sd-editor" role="textbox" contentEditable suppressContentEditableWarning spellCheck aria-label="Document text" aria-multiline="true" onInput={onInput}
+            onBlur={save}
+            onClick={onEditorClick}
+            onDragOver={(e) => dragId.current && (e.preventDefault(), (e.dataTransfer.dropEffect = 'move'))}
+            onDrop={onEditorDrop}
+          />
+          <p className="sd-doc__hint">Type anywhere. # and a space starts a heading. / on an empty line puts an item there; rows of the side panel can be dragged into the text. New captures appear at the end.</p>
+          {picker && (
+            <ItemPicker
+              items={deskItems}
+              onPage={new Set(itemEntries.map((e) => e.id))}
+              anchor={picker.anchor}
+              onPick={pick}
+              onPullIn={onPullIn && (() => (cancelPick(), onPullIn()))}
+              onCancel={cancelPick}
+            />
+          )}
         </div>
       </div>
       <aside className={'sd-side' + (min ? ' sd-side--min' : '')} aria-label="Inbox for this desk">

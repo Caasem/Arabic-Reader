@@ -513,6 +513,41 @@ test.describe('desk document', () => {
     await expect(doc).toBeVisible();
   });
 
+  test('"/" on an empty line puts an item there; a side-panel row can be dragged into the text', async ({ page }) => {
+    const doc = await docWithItems(page);
+    const editor = doc.getByRole('textbox', { name: 'Document text' });
+    // Write a first line above the items, then put the concept right after it.
+    await editor.locator('.desk-embed').first().evaluate((el) => {
+      const p = document.createElement('p');
+      p.textContent = 'Opening thoughts';
+      el.parentElement!.insertBefore(p, el);
+    });
+    await editor.locator('p', { hasText: 'Opening thoughts' }).click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('/');
+    const picker = page.getByRole('dialog', { name: 'Put an item here' });
+    await expect(picker).toBeVisible();
+    await expect(picker.getByRole('option', { name: /Group feeling/ })).toContainText('Move here');
+    await picker.getByRole('textbox').fill('group');
+    await page.keyboard.press('Enter');
+    await expect(picker).toHaveCount(0);
+    const order = await editor.evaluate((ed) => Array.from(ed.children).map((c) => (c.classList.contains('desk-embed') ? 'embed:' + c.textContent!.slice(0, 13) : c.textContent)));
+    expect(order.slice(0, 2)).toEqual(['Opening thoughts', 'embed:Group feeling']);
+
+    // Esc in the picker leaves an empty line.
+    await page.keyboard.type('/');
+    await expect(picker).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(picker).toHaveCount(0);
+    await expect(doc).toBeVisible();
+
+    // Drag the quote's row to the top of the text.
+    const row = doc.locator('.sd-order__i', { hasText: 'Quote' });
+    await row.dragTo(editor.locator('p', { hasText: 'Opening thoughts' }), { targetPosition: { x: 20, y: 2 } });
+    await expect(editor.locator(':scope > *').first()).toHaveClass(/sd-emb--quote/);
+  });
+
   test('Arabic lines run right to left and source lines keep their parts in order', async ({ page }) => {
     const doc = await docWithItems(page);
     const editor = doc.getByRole('textbox', { name: 'Document text' });
