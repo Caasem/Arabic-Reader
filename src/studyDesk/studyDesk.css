@@ -293,3 +293,47 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* A capture trip in another book (TripBar). Hidden while a region is being captured. */
+.sd-trip {
+  position: fixed;
+  z-index: 74;
+  left: 50%;
+  top: calc(60px + env(safe-area-inset-top, 0px));
+  transform: translateX(-50%);
+  width: min(720px, calc(100vw - 24px));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 12px 10px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--accent);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+  font: 13px/1.4 var(--font-ui);
+  color: var(--ink-soft);
+}
+.sd-trip__text {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.sd-trip__text b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.sd-trip__acts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sd-trip kbd {
+  margin-left: 6px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+.sd-pull__books .dsearch__headword {
+  font-size: 15px;
+}

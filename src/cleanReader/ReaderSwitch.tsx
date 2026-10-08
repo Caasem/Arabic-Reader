@@ -45,7 +45,7 @@ export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: 
       <NoteHost />
       <FlashHost book={props.book} />
       <PicksExportHost book={props.book} />
-      <DeskHost book={props.book} />
+      <DeskHost book={props.book} onOpenBook={props.onOpenBookAt} />
     </>
   );
 

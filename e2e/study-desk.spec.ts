@@ -358,3 +358,63 @@ test.describe('margin beside PDF pages', () => {
     await expect(page.locator('.sd-pdfmargin .sd-gloss .sd-frame img')).toHaveCount(1);
   });
 });
+
+test.describe('capture trip', () => {
+  /** The sample book and a scanned PDF in the library; the sample open. */
+  async function twoBooks(page: Page) {
+    await page.goto('/');
+    await page.waitForSelector('.navbar__settings', { timeout: 15000 });
+    await page.locator('.navbar__item', { hasText: 'Library' }).click();
+    await page.setInputFiles('.library__actions input[type=file]', { name: 'scan.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf([{ image: true }, { image: true }])) });
+    await expect(page.locator('.book-card')).toHaveCount(1, { timeout: 30000 });
+    await page.click('text=Try the sample book');
+    await expect(page.locator('.book-card')).toHaveCount(2, { timeout: 15000 });
+    await page.locator('.book-card').filter({ hasNotText: 'scan' }).locator('.book-card__open').click();
+    await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
+    await expect(page.locator('.sd-margins__area').last()).toBeVisible();
+  }
+
+  async function goToScan(page: Page) {
+    await page.keyboard.press('Alt+u');
+    const pull = page.getByRole('dialog', { name: 'Pull in' }).or(page.getByRole('complementary', { name: 'Pull in' }));
+    await expect(pull.getByRole('button', { name: 'Right margin' })).toHaveAttribute('aria-pressed', 'true');
+    await pull.getByText('Go to another book…').click();
+    await pull.locator('.dsearch__entry', { hasText: 'scan' }).click();
+    await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+    const bar = page.getByRole('region', { name: 'Capture trip' });
+    await expect(bar).toBeVisible();
+    return bar;
+  }
+
+  test('captures in another book and comes back with it in the margin', async ({ page }) => {
+    await twoBooks(page);
+    const bar = await goToScan(page);
+    await bar.getByRole('button', { name: /^Capture/ }).click();
+    await expect(bar).toHaveCount(0);
+    const r = (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!;
+    await page.mouse.move(r.x + r.width * 0.2, r.y + 60);
+    await page.mouse.down();
+    await page.mouse.move(r.x + r.width * 0.6, r.y + 160, { steps: 6 });
+    await page.mouse.up();
+    await page.getByRole('dialog', { name: 'Capture' }).getByRole('button', { name: /^Send to/ }).click();
+
+    // Back in the sample, with the region beside the page it was left on.
+    await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
+    await expect(page.locator('.sd-toast')).toContainText('filed in the right margin');
+    const gloss = page.locator('.sd-margins .sd-gloss', { hasText: 'Page 1' });
+    await expect(gloss).toHaveCount(1);
+    await expect(gloss.locator('.sd-frame img')).toHaveCount(1);
+    await expect(page.getByRole('region', { name: 'Capture trip' })).toHaveCount(0);
+  });
+
+  test('Esc goes back without capturing', async ({ page }) => {
+    await twoBooks(page);
+    await goToScan(page);
+    await page.keyboard.press('Escape');
+    await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
+    await expect(page.locator('.sd-toast')).toContainText('nothing captured');
+    await expect(page.locator('.sd-gloss')).toHaveCount(0);
+    await page.keyboard.press('Alt+i');
+    await expect(page.locator('.dsearch__hint', { hasText: 'Nothing here yet' })).toBeVisible();
+  });
+});

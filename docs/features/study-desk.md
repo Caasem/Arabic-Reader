@@ -39,6 +39,10 @@ Everything a reader notices while reading becomes an item: a concept they type, 
 - Search saved highlights, words and desk items from other books, or pick an image file, and place it in a margin or the inbox. Alt+P stays the saved-entries export.
 - A margin placement sits at the middle of the visible page; the new item's source points to where it came from. Pull in is also a button in the inbox and the document's side panel.
 
+**Capture trip (Go to another book)**
+- From Pull in, Go to another book… opens a book with a bar across the top saying what is happening. Margin or inbox is chosen before leaving.
+- Capture (Alt+X or the bar's button) files the capture on the desk the trip started from, pinned to the place on the page left behind, and goes straight back there. Cancel and return, or Esc, goes back without capturing.
+
 **Images in the margins**
 - Paste an image into a margin note to make it a screenshot; drop an image file on a margin for a new screenshot note at that height, or on a note to add it there.
 

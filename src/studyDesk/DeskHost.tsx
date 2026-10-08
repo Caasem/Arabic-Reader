@@ -13,21 +13,25 @@ import { cleanLocationNearCentre, pdfLocationNearCentre } from './pageGeometry';
 import { publishPdfDeskItems } from './pdfDesk';
 import { PdfDeskLayer } from './PdfDeskLayer';
 import { PdfMargin } from './PdfMargin';
-import type { PullSpot } from './pullIn';
+import type { PullSpot, PullTarget } from './pullIn';
 import { PullInBody } from './PullInBody';
 import { RegionCapture } from './RegionCapture';
-import { useDeskData } from './useDesk';
+import { endTrip, startTrip, takeTripNote, tripFiledMessage, tripPlacement, useDeskTrip } from './trip';
+import { TripBar } from './TripBar';
+import { resolveDesk, useDeskData } from './useDesk';
 import './studyDesk.css';
 
 const NARROW_QUERY = '(max-width: 600px)';
 
-/** Mounted once beside the active reader; renders nothing when switched off. */
-export function DeskHost({ book }: { book: BookMeta }) {
+type OpenBook = (book: BookMeta, location?: string) => void;
+
+/** Mounted once beside the active reader; renders nothing when switched off. `onOpenBook` switches books (capture trips). */
+export function DeskHost({ book, onOpenBook }: { book: BookMeta; onOpenBook?: OpenBook }) {
   const { prefs } = usePreferences();
-  return prefs.studyDeskEnabled ? <Active book={book} style={prefs.dictionarySearchStyle} /> : null;
+  return prefs.studyDeskEnabled ? <Active book={book} style={prefs.dictionarySearchStyle} onOpenBook={onOpenBook} /> : null;
 }
 
-function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dictionarySearchStyle'] }) {
+function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPreferences['dictionarySearchStyle']; onOpenBook?: OpenBook }) {
   const data = useDeskData(book);
   const { prefs, updatePrefs } = usePreferences();
   const [inbox, setInbox] = useState(false);
@@ -50,8 +54,43 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
   }, []);
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
 
-  const desk = data.desks.find((d) => d.id === data.deskId);
-  const deskName = !desk || (desk.kind === 'book' && desk.bookId === book.id) ? 'this book’s desk' : desk.title;
+  // --- capture trips (trip.ts): away in another book to capture one thing for the book left behind ---
+  const trip = useDeskTrip();
+  const away = trip && trip.from.id !== book.id ? trip : null;
+  const lastBook = useRef(book.id);
+  useEffect(() => {
+    const came = lastBook.current !== book.id;
+    lastBook.current = book.id;
+    // Back in the book the trip started from some other way (the library): the trip is over.
+    if (came && trip && trip.from.id === book.id) endTrip();
+    const n = takeTripNote();
+    if (n) say(n);
+    // On arriving in a book only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [book.id]);
+  const returnHome = useCallback(
+    (message: string) => {
+      const t = endTrip(message);
+      setRegion(false);
+      if (t && onOpenBook) onOpenBook(t.from);
+    },
+    [onOpenBook]
+  );
+  const goToBook = useCallback(
+    async (to: BookMeta, target: PullTarget) => {
+      if (!pull || !onOpenBook) return;
+      // The desk the capture comes back to must exist before leaving: a capture otherwise falls back to the visited book's own desk.
+      const home = await resolveDesk(book, pull.deskId);
+      startTrip({ from: book, deskId: home.id, target, spot: pull.spot, to });
+      setPull(null);
+      setDoc(null);
+      onOpenBook(to);
+    },
+    [pull, onOpenBook, book]
+  );
+
+  const desk = data.desks.find((d) => d.id === (away ? away.deskId : data.deskId));
+  const deskName = away ? (desk?.kind === 'own' ? desk.title : `${away.from.title}’s desk`) : !desk || (desk.kind === 'book' && desk.bookId === book.id) ? 'this book’s desk' : desk.title;
 
   useChordHotkey('KeyI', true, () => {
     if (doc) return;
@@ -101,6 +140,21 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
     setRegion((v) => !v);
   });
 
+  // On a trip, Esc with nothing else open goes back without capturing. Read before the reader's own Esc
+  // handlers (capture phase), so closing a dictionary popup does not also end the trip.
+  useEffect(() => {
+    if (!away || inbox || doc || pull || region || concept) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      if (document.querySelector('.dict-popup, [role="dialog"]')) return;
+      const typing = (e.target as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]');
+      if (typing) return;
+      returnHome('Back where you were, nothing captured');
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [away, inbox, doc, pull, region, concept, returnHome]);
+
   // Escape from inside the book reaches the host window.
   useEffect(() => {
     if (!inbox && !doc && !pull) return;
@@ -145,14 +199,25 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
       {pull && (
         <div className="sd-pull-layer">
           <Shell style={narrow ? 'sheet' : style} onClose={() => setPull(null)} title="Pull in" keyHint="Alt U" label="Pull in" posKey="studyDesk.pullPos">
-            <PullInBody book={book} deskId={pull.deskId} spot={pull.spot} margins={pull.spot?.location.startsWith('pdf:') && prefs.studyDeskMargins !== 'off' ? 'right' : prefs.studyDeskMargins} onClose={() => setPull(null)} onToast={say} />
+            <PullInBody book={book} deskId={pull.deskId} spot={pull.spot} margins={pull.spot?.location.startsWith('pdf:') && prefs.studyDeskMargins !== 'off' ? 'right' : prefs.studyDeskMargins} onClose={() => setPull(null)} onToast={say} onGoToBook={onOpenBook && !away ? (to, target) => void goToBook(to, target) : undefined} />
           </Shell>
         </div>
       )}
       {book.pdf && <PdfMargin book={book} data={data} onToast={say} onOpenDocument={openDocument} />}
       {!doc && <MarginLayer book={book} data={data} onToast={say} onOpenDocument={openDocument} />}
       {concept && <ConceptStrip book={book} deskId={data.deskId} deskName={deskName} onClose={() => setConcept(false)} onToast={say} />}
-      {region && <RegionCapture book={book} deskId={data.deskId} deskName={deskName} onClose={closeRegion} onToast={say} />}
+      {away && !region && <TripBar trip={away} onCapture={() => (setConcept(false), setInbox(false), setRegion(true))} onCancel={() => returnHome('Back where you were, nothing captured')} />}
+      {region && (
+        <RegionCapture
+          book={book}
+          deskId={away ? away.deskId : data.deskId}
+          deskName={deskName}
+          extra={away ? tripPlacement(away) : undefined}
+          onSent={away ? () => returnHome(tripFiledMessage(away)) : undefined}
+          onClose={closeRegion}
+          onToast={say}
+        />
+      )}
       {doc && (
         <DeskDocument
           book={book}

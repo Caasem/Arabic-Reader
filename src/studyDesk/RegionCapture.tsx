@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getReaderMarks } from '../readerChords';
 import type { BookMeta } from '../types';
 import { pdfRegionInBox, textInBox, type Box, type PdfRegion, type TextRegion } from './pageGeometry';
+import type { NewDeskItem } from './types';
 import { capture, looksArabic } from './useDesk';
 
 type Found = { kind: 'text'; region: TextRegion } | { kind: 'pdf'; region: PdfRegion; preview: string | null };
@@ -10,7 +11,25 @@ type Found = { kind: 'text'; region: TextRegion } | { kind: 'pdf'; region: PdfRe
  * Alt+X: drag a box over the page. On text pages the words inside become a quote (and can be highlighted);
  * on PDF pages the region is cut out of the page image, with any text-layer words as its text.
  */
-export function RegionCapture({ book, deskId, deskName, onClose, onToast }: { book: BookMeta; deskId: string; deskName: string; onClose(): void; onToast(m: string): void }) {
+export function RegionCapture({
+  book,
+  deskId,
+  deskName,
+  extra,
+  onClose,
+  onSent,
+  onToast,
+}: {
+  book: BookMeta;
+  deskId: string;
+  deskName: string;
+  /** Added to the captured item (a capture trip files it in a margin of the page the reader came from). */
+  extra?: Partial<NewDeskItem>;
+  onClose(): void;
+  /** After a capture was saved, instead of onClose. */
+  onSent?(): void;
+  onToast(m: string): void;
+}) {
   const [start, setStart] = useState<{ x: number; y: number } | null>(null);
   const [box, setBox] = useState<Box | null>(null);
   const [found, setFound] = useState<Found | null>(null);
@@ -62,7 +81,7 @@ export function RegionCapture({ book, deskId, deskName, onClose, onToast }: { bo
     try {
       if (found.kind === 'text') {
         const r = found.region;
-        await capture(book, deskId, { type: 'quote', text: r.text, ar: looksArabic(r.text), source: { bookId: book.id, bookTitle: book.title, location: r.location, chapterLabel: getReaderMarks()?.capturePage()?.chapterLabel } });
+        await capture(book, deskId, { type: 'quote', text: r.text, ar: looksArabic(r.text), source: { bookId: book.id, bookTitle: book.title, location: r.location, chapterLabel: getReaderMarks()?.capturePage()?.chapterLabel }, ...extra });
         if (highlight) {
           const marks = getReaderMarks();
           if (marks && !marks.existing({ text: r.text, location: r.location, chapterHref: `clean:${r.chapter}`, chapterLabel: '' }))
@@ -70,8 +89,9 @@ export function RegionCapture({ book, deskId, deskName, onClose, onToast }: { bo
         }
       } else {
         const r = found.region;
-        await capture(book, deskId, { type: 'capture', text: r.text || `Region of page ${r.page}`, ar: looksArabic(r.text), source: { bookId: book.id, bookTitle: book.title, location: r.location, chapterLabel: `Page ${r.page}` } }, r.image ?? undefined);
+        await capture(book, deskId, { type: 'capture', text: r.text || `Region of page ${r.page}`, ar: looksArabic(r.text), source: { bookId: book.id, bookTitle: book.title, location: r.location, chapterLabel: `Page ${r.page}` }, ...extra }, r.image ?? undefined);
       }
+      if (onSent) return onSent();
       onToast(`Captured to ${deskName}${found.kind === 'text' && highlight ? ' and highlighted' : ''}`);
       onClose();
     } finally {

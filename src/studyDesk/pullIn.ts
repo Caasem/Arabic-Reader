@@ -106,7 +106,8 @@ export interface PullSpot {
   location: string;
 }
 
-function placement(target: PullTarget, spot: PullSpot | null): Pick<NewDeskItem, 'pin' | 'inInbox'> {
+/** Where a new item goes: pinned in a margin of the page `spot` names, or into the inbox. */
+export function placement(target: PullTarget, spot: PullSpot | null): Pick<NewDeskItem, 'pin' | 'inInbox'> {
   if (target === 'inbox' || !spot) return { inInbox: true };
   return { inInbox: false, pin: { bookId: spot.bookId, location: spot.location, side: target } };
 }
