@@ -6,12 +6,12 @@
  * Touch points: `libraryService.importBook` (src/library/libraryService.ts), the Library's file
  * picker and drag-and-drop (src/components/library/Library.tsx), and the `BookFormat` type. To
  * remove: delete this folder, make importBook call importEpub only, and restore `.epub` as the
- * picker's only type. PDFs are converted too, by reading the text layer (pdf.js) and reflowing it; see pdf.ts.
+ * picker's only type. PDFs are converted too, by reading the text layer (pdf.js) and reflowing it; all of that lives in src/pdf.
  * Third-party code: marked (MIT), foliate-js mobi.js (MIT), fflate (MIT), pdfjs-dist (Apache-2.0,
  * loaded only when a PDF is added; see the Licence note in docs/features/formats-pdf.md).
  */
 import type { BookFormat } from '../types';
-import type { PdfDeps } from './pdf';
+import type { PdfDeps } from '../pdf/import/convert';
 import { escapeXml, writeEpub, type Chapter, type EpubImage } from './epubWriter';
 import { arabicShare, decodeText, textToChapters } from './text';
 
@@ -86,9 +86,9 @@ export async function convertToEpub(file: File, options: { loadPdfDeps?: () => P
       if (md.droppedImages) warnings.push(`${md.droppedImages} image${md.droppedImages === 1 ? '' : 's'} skipped`);
     }
   } else if (format === 'pdf') {
-    const { convertPdf, PdfImportError, PDF_MESSAGES, MAX_PDF_BYTES } = await import('./pdf');
+    const { convertPdf, PdfImportError, PDF_MESSAGES, MAX_PDF_BYTES } = await import('../pdf/import/convert');
     if (file.size > MAX_PDF_BYTES) throw new PdfImportError(PDF_MESSAGES.tooLarge);
-    const loadPdfDeps = options.loadPdfDeps ?? (async () => (await import('./pdfBrowser')).loadPdfDeps());
+    const loadPdfDeps = options.loadPdfDeps ?? (async () => (await import('../pdf/import/browser')).loadPdfDeps());
     const book = await convertPdf(new Uint8Array(await file.arrayBuffer()), await loadPdfDeps(), fallbackTitle);
     title = book.title ?? fallbackTitle;
     author = book.author;

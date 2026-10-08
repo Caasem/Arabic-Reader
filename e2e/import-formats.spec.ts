@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { useOriginalReader } from './originalReader';
-import { makePdf, sampleArabicBookPdf } from '../src/importFormats/testPdf';
+import { makePdf, sampleArabicBookPdf } from '../src/pdf/testPdf';
 
 test.beforeEach(async ({ page }) => useOriginalReader(page));
 

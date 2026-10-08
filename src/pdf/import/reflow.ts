@@ -1,4 +1,5 @@
-import { escapeXml, type Chapter } from './epubWriter';
+import { escapeXml, type Chapter } from '../../importFormats/epubWriter';
+import { normalizeArabic } from '../arabic';
 
 /** One piece of text as the PDF draws it. Coordinates are PDF points; y grows upward. */
 export interface TextRun {
@@ -34,15 +35,8 @@ type Block =
   | { kind: 'h'; text: string; size: number }
   | { kind: 'note'; lines: Line[] };
 
-const PRESENTATION_FORMS = /[ﭐ-﷿ﹰ-﻿]+/g;
-const INVISIBLE = /[‎‏‪-‮⁦-⁩­﻿]/g;
 const TERMINAL = /[.!?؟۔…:»"”)\]]\s*$/;
 const WIDE_GAP = '  ';
-
-/** Presentation forms (the shaped glyph codes some PDFs hold) back to plain letters; tatweel and bidi marks dropped. */
-export function normalizeArabic(text: string): string {
-  return text.replace(PRESENTATION_FORMS, (m) => m.normalize('NFKC')).replace(INVISIBLE, '').replace(/ـ/g, '');
-}
 
 const median = (values: number[]): number => {
   if (!values.length) return 0;

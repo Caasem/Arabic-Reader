@@ -1,4 +1,4 @@
-import { normalizeArabic } from '../importFormats/pdfReflow';
+import { normalizeArabic } from '../arabic';
 
 /** Arabic letters, vowel marks and tatweel, including the shaped presentation forms some PDFs hold. */
 const WORD_CHAR = /[ء-يً-ٰٟٱ-ۓۺ-ۿݐ-ݿـﭐ-﷿ﹰ-﻿]/;

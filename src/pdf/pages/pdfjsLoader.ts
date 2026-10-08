@@ -1,13 +1,12 @@
 /**
  * pdf.js for the pages view: the document with page rendering and the text layer. Loaded only when
- * a PDF book is opened as pages (the worker is bundled by Vite like the import's; see
- * src/importFormats/pdfBrowser.ts).
+ * a PDF book is opened as pages (see ../pdfjs.ts).
  */
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
-import type * as Pdfjs from 'pdfjs-dist';
+import { loadPdfjs, type PdfjsModule } from '../pdfjs';
 
 export type { PDFDocumentProxy, PDFPageProxy };
-export type PdfjsModule = typeof Pdfjs;
+export type { PdfjsModule };
 
 export interface OpenedPdf {
   pdfjs: PdfjsModule;
@@ -16,9 +15,8 @@ export interface OpenedPdf {
 }
 
 export async function openPdfPages(data: Uint8Array): Promise<OpenedPdf> {
-  const pdfjs = await import('pdfjs-dist');
-  const port = new Worker(new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url), { type: 'module' }) as unknown as null;
-  const worker = new pdfjs.PDFWorker({ port });
+  const { pdfjs, createWorker } = await loadPdfjs();
+  const worker = createWorker();
   try {
     const task = pdfjs.getDocument({ data, worker, disableFontFace: false, useSystemFonts: false, verbosity: 0 });
     const doc = await task.promise;

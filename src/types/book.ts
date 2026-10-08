@@ -24,7 +24,7 @@ export interface BookMeta {
    */
   fileHash?: string;
   /**
-   * A book added from a PDF (src/pdfPages). The converted EPUB is the book file; the PDF itself is in the
+   * A book added from a PDF (src/pdf). The converted EPUB is the book file; the PDF itself is in the
    * BlobStore (namespace `pdf`, owner = book id) under `originalHash`, for the Original pages view.
    * `reflow` says how the EPUB came out: 'ok' (reflowed text), 'broken' (the text layer was unusable) or
    * 'none' (no text layer: scanned). Anything but 'ok' opens in the pages view only.

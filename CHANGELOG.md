@@ -4,6 +4,12 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.43.2 — 2026-10-08
+
+- No visible change. All the PDF code now lives in one module (`src/pdf`), with a single place
+  where later PDF features (text recognition, highlights, search hits) can plug into the pages
+  view.
+
 ## v0.43.1 — 2026-10-08
 
 - **Any readable PDF is accepted.** If a page can't be read, or the text check can't run, the PDF

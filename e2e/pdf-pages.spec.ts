@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
-import { makePdf, sampleArabicBookPdf } from '../src/importFormats/testPdf';
+import { makePdf, sampleArabicBookPdf } from '../src/pdf/testPdf';
 
-/** Books added from a PDF: the Original pages view (src/pdfPages) and the switch from the reflowed text. */
+/** Books added from a PDF: the Original pages view (src/pdf/pages) and the switch from the reflowed text. */
 test.use({ viewport: { width: 1440, height: 900 } });
 
 async function addPdf(page: Page, name: string, data: Uint8Array) {
