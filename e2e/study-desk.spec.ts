@@ -609,6 +609,33 @@ test.describe('desk document', () => {
     expect(bytes.subarray(0, 2).toString()).toBe('PK');
   });
 
+  test('All desks finds, makes, opens and deletes desks', async ({ page }) => {
+    const doc = await docWithItems(page);
+    await doc.getByRole('button', { name: /^All desks/ }).click();
+    const list = page.getByRole('dialog', { name: 'All desks' });
+    await expect(list.locator('.sd-dl__row')).toHaveCount(1);
+    await expect(list).toContainText('2 items');
+    await list.getByRole('textbox', { name: 'Find a desk' }).fill('Essay on rule');
+    await list.getByRole('button', { name: /New desk/ }).click();
+    await expect(list).toHaveCount(0);
+    await expect(doc.locator('.sd-doc__title')).toHaveText('Essay on rule');
+    await expect(doc.getByRole('tab', { name: 'Essay on rule' })).toHaveAttribute('aria-selected', 'true');
+
+    // Search reaches what a desk says, not only its title.
+    await doc.getByRole('button', { name: /^All desks/ }).click();
+    await list.getByRole('textbox', { name: 'Find a desk' }).fill('Group feeling');
+    await expect(list.locator('.sd-dl__row')).toHaveCount(0);
+    await list.getByRole('textbox', { name: 'Find a desk' }).fill('');
+    const essay = list.locator('.sd-dl__row', { hasText: 'Essay on rule' });
+    await essay.hover();
+    await essay.getByRole('button', { name: 'Delete Essay on rule' }).click();
+    await essay.getByRole('button', { name: /Delete it/ }).click();
+    await expect(list.locator('.sd-dl__row', { hasText: 'Essay on rule' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(list).toHaveCount(0);
+    await expect(doc).toBeVisible();
+  });
+
   test('Arabic lines run right to left and source lines keep their parts in order', async ({ page }) => {
     const doc = await docWithItems(page);
     const editor = doc.getByRole('textbox', { name: 'Document text' });

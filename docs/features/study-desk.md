@@ -28,7 +28,12 @@ Everything a reader notices while reading becomes an item: a concept they type, 
 - A full-page notepad: type anywhere, Enter for new lines, "# " and a space at the start of a line for a heading.
 - Inbox items sit in the text as blocks that cannot be typed into. Deleting one from the text keeps it in the inbox, under "Taken off the page", with Put back.
 - A collapsible side panel holds the inbox in page order: search or write a concept, Capture, Pull in, drag or arrows to reorder, a menu to file under a heading, an eye to hide.
-- Desk tabs switch between desks; "+ Desk" makes one.
+- Items in the text: on hover, Go to source (this book or another, PDF places included), Add or Edit note in place, Remove from page. Each kind looks like what it is (quotes as quotations, concepts as a compact line, questions marked, flashcards front and back, screenshots wide; a click shows one at full size).
+- "/" alone on a line puts an item there (or moves it); side-panel rows can be dragged into the text.
+- Writing: "# " heading, "- " list, "1. " numbered list, "> " quotation at the start of a line; a toolbar with bold, italic, heading, lists and quotation. Each line takes its direction from its own letters.
+- The side panel is an outline: headings with how many items each holds, click to scroll there. A word count and Saved show above the title.
+- Export: copy as text, save as Markdown or Word, quotes and screenshots cited by book and chapter or page.
+- Desk tabs show this book's desk and your recent desks; "+ Desk" makes one; All desks finds any desk by title or content, opens it, or deletes one of your own.
 
 **Margins (Alt+M)**
 - In the quiet reader, the desk spreads into the page margins. Items whose source is on the page sit beside their words, joined by a thin line.

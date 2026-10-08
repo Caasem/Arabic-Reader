@@ -5,6 +5,7 @@ import { createOwnDesk, ensureBookDesk, getDesk, renameDesk, saveDeskHtml, updat
 import './deskDocument.css';
 import { applyLineStart, lineStart, runFormat, type FormatCommand } from './docFormat';
 import { documentBlocks } from './docExport';
+import { DeskList } from './DeskList';
 import { ExportMenu } from './ExportMenu';
 import { ItemPicker } from './ItemPicker';
 import { IconCapture, IconChevron, IconDown, IconEye, IconEyeOff, IconInbox, IconPull, IconUp } from './icons';
@@ -406,6 +407,12 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     }
   }
 
+  // Tabs: this book's desk, your most recent own desks and the open one; every desk is under All desks.
+  const [listOpen, setListOpen] = useState(false);
+  const tabDesks = useMemo(() => {
+    const own = data.desks.filter((d) => d.kind === 'own').sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4);
+    return data.desks.filter((d) => (d.kind === 'book' && d.bookId === book.id) || own.includes(d) || d.id === deskId);
+  }, [data.desks, book.id, deskId]);
   const deskLabel = (d: Desk) => (d.kind === 'book' && d.bookId === book.id ? 'This book' : d.title);
   let n = 0;
 
@@ -421,13 +428,16 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
               Back to the page
             </button>
             <div className="sd-desks" role="tablist" aria-label="Desks">
-              {data.desks.map((d) => (
+              {tabDesks.map((d) => (
                 <button key={d.id} type="button" role="tab" aria-selected={d.id === deskId} onClick={() => onSwitchDesk(d.id)}>
                   {deskLabel(d)}
                 </button>
               ))}
               <button type="button" className="sd-desks__new" onClick={() => void createOwnDesk().then((d) => onSwitchDesk(d.id))}>
                 + Desk
+              </button>
+              <button type="button" className="sd-desks__all" aria-haspopup="dialog" aria-expanded={listOpen} onClick={() => setListOpen((v) => !v)}>
+                All desks <span>{data.desks.length}</span>
               </button>
             </div>
             <ExportMenu
@@ -476,6 +486,21 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
             onDrop={onEditorDrop}
           />
           <p className="sd-doc__hint">Type anywhere. At the start of a line: # heading, - list, 1. numbered list, &gt; quotation. Ctrl+B bold, Ctrl+I italic. / on an empty line puts an item there; rows of the side panel can be dragged into the text. New captures appear at the end.</p>
+          {listOpen && (
+            <DeskList
+              desks={data.desks}
+              items={data.items}
+              current={deskId}
+              bookId={book.id}
+              onOpen={(id) => {
+                setListOpen(false);
+                if (id !== deskId) onSwitchDesk(id);
+              }}
+              onDeleted={(id) => id === deskId && onSwitchDesk(`book:${book.id}`)}
+              onClose={() => setListOpen(false)}
+              onToast={onToast}
+            />
+          )}
           {picker && (
             <ItemPicker
               items={deskItems}
