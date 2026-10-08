@@ -990,3 +990,45 @@
   font-size: 13px;
   color: var(--ink-faint);
 }
+
+/* Room between items (docSpacing.ts): a "+" line in the gap under the pointer, and a selected item. */
+.sd-gap {
+  position: fixed;
+  z-index: 3;
+  height: 18px;
+  transform: translateY(-50%);
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: text;
+  display: grid;
+  place-items: center;
+}
+.sd-gap::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1.5px dashed var(--accent);
+  opacity: 0.7;
+}
+.sd-gap span {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--bg-elevated);
+  font: 600 15px/20px var(--font-ui);
+  text-align: center;
+  box-shadow: 0 0 0 3px var(--bg);
+}
+.sd-gap:focus-visible span {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.desk-embed.sd-emb--sel {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

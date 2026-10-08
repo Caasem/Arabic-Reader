@@ -660,6 +660,42 @@ test.describe('desk document', () => {
     await expect(doc).toBeVisible();
   });
 
+  test('room between items: the + line, Enter on a selected item, arrows stop on items', async ({ page }) => {
+    const doc = await docWithItems(page);
+    const editor = doc.getByRole('textbox', { name: 'Document text' });
+    const kinds = () => editor.evaluate((ed) => Array.from(ed.children).map((c) => (c.classList.contains('desk-embed') ? 'item' : c.tagName === 'P' && !c.textContent?.trim() ? 'empty' : c.tagName.toLowerCase() + ':' + c.textContent)));
+    // Packed: the two items touch.
+    expect((await kinds()).slice(0, 2)).toEqual(['item', 'item']);
+
+    // Hover the gap between them: a + line; clicking it opens a line there to type on.
+    const [a, b] = [(await editor.locator('.desk-embed').nth(0).boundingBox())!, (await editor.locator('.desk-embed').nth(1).boundingBox())!];
+    await page.mouse.move(a.x + a.width / 2, (a.y + a.height + b.y) / 2);
+    const plus = doc.getByRole('button', { name: 'Add a line here' });
+    await expect(plus).toBeVisible();
+    await plus.click();
+    await page.keyboard.type('Between the two');
+    expect((await kinds()).slice(0, 3)).toEqual(['item', 'p:Between the two', 'item']);
+
+    // Click an item, Shift+Enter: a line above it.
+    await editor.locator('.desk-embed').first().locator('.sd-emb__head').click();
+    await expect(editor.locator('.desk-embed').first()).toHaveClass(/sd-emb--sel/);
+    await page.keyboard.press('Shift+Enter');
+    await page.keyboard.type('Before everything');
+    expect((await kinds()).slice(0, 2)).toEqual(['p:Before everything', 'item']);
+
+    // Down from that line stops on the item; Enter opens a line under it.
+    await page.keyboard.press('ArrowDown');
+    await expect(editor.locator('.desk-embed').first()).toHaveClass(/sd-emb--sel/);
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('Right after the quote');
+    expect((await kinds()).slice(0, 4)).toEqual(['p:Before everything', 'item', 'p:Right after the quote', 'p:Between the two']);
+
+    // Kept after closing.
+    await doc.getByRole('button', { name: 'Back to the page' }).click();
+    await page.keyboard.press('d');
+    expect((await kinds()).slice(0, 4)).toEqual(['p:Before everything', 'item', 'p:Right after the quote', 'p:Between the two']);
+  });
+
   test('Arabic lines run right to left and source lines keep their parts in order', async ({ page }) => {
     const doc = await docWithItems(page);
     const editor = doc.getByRole('textbox', { name: 'Document text' });

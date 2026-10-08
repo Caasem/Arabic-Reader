@@ -30,6 +30,7 @@ Everything a reader notices while reading becomes an item: a concept they type, 
 - A collapsible side panel holds the inbox in page order: search or write a concept, Capture, Pull in, drag or arrows to reorder, a menu to file under a heading, an eye to hide.
 - Items in the text: on hover, Go to source (this book or another, PDF places included), Add or Edit note in place, Remove from page. Each kind looks like what it is (quotes as quotations, concepts as a compact line, questions marked, flashcards front and back, screenshots wide; a click shows one at full size).
 - "/" alone on a line puts an item there (or moves it); side-panel rows can be dragged into the text.
+- Items stay packed, with room on demand: the + line in the gap between items opens a line there; a clicked item takes Enter (line below), Shift+Enter (line above), and typing; Up and Down stop on items.
 - Writing: "# " heading, "- " list, "1. " numbered list, "> " quotation at the start of a line; a toolbar with bold, italic, heading, lists and quotation. Each line takes its direction from its own letters.
 - The side panel is an outline: headings with how many items each holds, click to scroll there. A word count and Saved show above the title.
 - Export: copy as text, save as Markdown or Word, quotes and screenshots cited by book and chapter or page.
