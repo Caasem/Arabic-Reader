@@ -108,18 +108,22 @@ export async function convertPdf(data: Uint8Array, deps: PdfDeps, fallbackTitle:
   try {
     const pages: PageText[] = [];
     let textless = 0;
-    try {
-      for (let n = 1; n <= doc.numPages; n++) {
-        const page = await doc.getPage(n);
-        const { width, height } = page.getViewport({ scale: 1 });
-        const text: PageText = { width, height, runs: toRuns((await page.getTextContent()).items) };
-        page.cleanup();
-        pages.push(text);
-        if (chars(text) >= MIN_PAGE_CHARS) textless = -Infinity;
-        else if (++textless >= SCAN_GIVE_UP) break;
-      }
-    } catch {
-      throw new PdfImportError(PDF_MESSAGES.corrupt);
+    for (let n = 1; n <= doc.numPages; n++) {
+      // A page pdf.js can't read counts as a page without text; the PDF is still accepted.
+      const text: PageText = await (async () => {
+        try {
+          const page = await doc.getPage(n);
+          const { width, height } = page.getViewport({ scale: 1 });
+          const read = { width, height, runs: toRuns((await page.getTextContent()).items) };
+          page.cleanup();
+          return read;
+        } catch {
+          return { width: 0, height: 0, runs: [] };
+        }
+      })();
+      pages.push(text);
+      if (chars(text) >= MIN_PAGE_CHARS) textless = -Infinity;
+      else if (++textless >= SCAN_GIVE_UP) break;
     }
 
     const textPages = pages.filter((p) => chars(p) >= MIN_PAGE_CHARS);
@@ -136,16 +140,25 @@ export async function convertPdf(data: Uint8Array, deps: PdfDeps, fallbackTitle:
     });
     if (textPages.length < pages.length / 2 || !textPages.length) return pagesOnly('none', PDF_MESSAGES.scanned);
 
-    const allText = textPages.map((p) => p.runs.map((r) => r.str).join(' ')).join('\n');
-    const rtl = arabicShare(allText) > 0.5;
+    // Whatever goes wrong while checking or reflowing the text, the PDF is still kept and read as pages.
+    let quality: TextQuality;
+    let reflowed: ReturnType<typeof reflowPages>;
+    let rtl: boolean;
+    try {
+      const allText = textPages.map((p) => p.runs.map((r) => r.str).join(' ')).join('\n');
+      rtl = arabicShare(allText) > 0.5;
 
-    // Quality: the first ten pages that have text, read as the lines the reader would see.
-    const sampleRaw = textPages.slice(0, QUALITY_PAGES).map((p) => p.runs.map((r) => r.str).join(' ')).join('\n');
-    const quality = await assessText(sampleRaw, deps.analyse);
-    if (quality.verdict !== 'ok') return pagesOnly('broken', PDF_MESSAGES.broken, quality);
+      // Quality: the first ten pages that have text, read as the lines the reader would see.
+      const sampleRaw = textPages.slice(0, QUALITY_PAGES).map((p) => p.runs.map((r) => r.str).join(' ')).join('\n');
+      quality = await assessText(sampleRaw, deps.analyse);
+      if (quality.verdict !== 'ok') return pagesOnly('broken', PDF_MESSAGES.broken, quality);
 
-    const reflowed = reflowPages(textPages, rtl, info.title ?? fallbackTitle);
-    if (!reflowed.chapters.length) return pagesOnly('none', PDF_MESSAGES.scanned);
+      reflowed = reflowPages(textPages, rtl, info.title ?? fallbackTitle);
+      if (!reflowed.chapters.length) return pagesOnly('none', PDF_MESSAGES.scanned);
+
+    } catch {
+      return pagesOnly('broken', PDF_MESSAGES.broken);
+    }
 
     const warnings: string[] = [];
     const skipped = pages.length - textPages.length;
