@@ -62,6 +62,12 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   wasitMatchHighlight: true,
   wasitStructureEnabled: true,
   wasitStructureExamples: 'dim',
+  libraryShelves: [],
+  libraryView: 'grid',
+  librarySort: 'lastRead',
+  dailyGoalMinutes: 20,
+  libraryShowQuote: true,
+  libraryShowHabits: true,
 };
 
 /** A comfortable line length depends on screen width, so a device with no

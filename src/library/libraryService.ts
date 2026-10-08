@@ -9,6 +9,8 @@ export interface BookReadingInfo {
   percent: number;
   /** undefined for a book that has never been opened. */
   lastReadAt?: number;
+  /** The chapter the reader was last in, when the reader recorded one. */
+  chapterLabel?: string;
 }
 
 /** The file is already a book in the library (same bytes, found by SHA-256). */
@@ -124,7 +126,7 @@ export class LibraryService {
     return Object.fromEntries(
       bookIds.map((id) => {
         const pos = positions.get(id);
-        return [id, { percent: pos?.percent ?? 0, lastReadAt: pos?.updatedAt }];
+        return [id, { percent: pos?.percent ?? 0, lastReadAt: pos?.updatedAt, chapterLabel: pos?.chapterLabel }];
       })
     );
   }

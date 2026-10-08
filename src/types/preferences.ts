@@ -32,6 +32,17 @@ export type TouchDictionaryAction = 'bubble' | 'quickSave' | 'openDictionary' | 
  * and runs in addition to the first tap's action. Hold is off by default
  * because a long-press also starts text selection (for highlighting).
  */
+/** A shelf the reader made in the Library ("Hadith", "Grammar"…). A book can sit on several. */
+export interface LibraryShelf {
+  id: string;
+  name: string;
+  /** A swatch colour (hex) for the shelf's dot. */
+  color: string;
+  bookIds: string[];
+}
+
+export type LibrarySort = 'lastRead' | 'added' | 'title' | 'progress';
+
 export interface TouchGestureBindings {
   singleTap: TouchDictionaryAction;
   doubleTap: TouchDictionaryAction;
@@ -152,4 +163,14 @@ export interface ReaderPreferences {
   /** Prototype: draw Al-Wasit's internal structure in the popup. */
   wasitStructureEnabled: boolean;
   wasitStructureExamples: 'dim' | 'normal';
+  /** The reader's own shelves in the Library. */
+  libraryShelves: LibraryShelf[];
+  libraryView: 'grid' | 'list';
+  librarySort: LibrarySort;
+  /** Minutes of reading a day the Library's "Today" ring counts towards. */
+  dailyGoalMinutes: number;
+  /** Show one of your highlights at the top of the Library. */
+  libraryShowQuote: boolean;
+  /** Show streak, today's minutes, words saved and cards due in the Library. */
+  libraryShowHabits: boolean;
 }
