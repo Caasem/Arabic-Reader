@@ -95,7 +95,7 @@ export function InboxBody({ book, data, onClose, onOpenDocument, onPullIn, onToa
           className="dsearch__input sd-inbox__input"
           dir="auto"
           value={query}
-          placeholder="Search the inbox, or write a concept"
+          placeholder="Search, or write a concept"
           aria-label="Search the inbox, or write a concept"
           autoComplete="off"
           spellCheck={false}
@@ -109,7 +109,7 @@ export function InboxBody({ book, data, onClose, onOpenDocument, onPullIn, onToa
             Pull in
           </button>
         )}
-        <button type="button" className="dsearch__fullpage" onClick={() => onOpenDocument()} title="Open the desk document">
+        <button type="button" className="dsearch__fullpage" onClick={() => onOpenDocument()} title="Open the desk document" aria-label="Open the desk document">
           Document
         </button>
       </div>

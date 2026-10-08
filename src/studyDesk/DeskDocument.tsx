@@ -157,13 +157,19 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deskItems, fillAll, deskId, desk]);
 
+  /** The editor's latest HTML and whether it has unsaved changes; kept so a save still works after the editor is gone (closing). */
+  const latest = useRef<{ deskId: string; html: string; dirty: boolean } | null>(null);
   const save = useCallback(() => {
     const ed = edRef.current;
-    if (!ed || loadedFor.current !== deskId) return;
-    void saveDeskHtml(deskId, ed.innerHTML, { quiet: true });
+    if (ed && loadedFor.current === deskId) latest.current = { deskId, html: ed.innerHTML, dirty: latest.current?.dirty ?? false };
+    const l = latest.current;
+    if (!l || !l.dirty || l.deskId !== deskId) return;
+    l.dirty = false;
+    void saveDeskHtml(l.deskId, l.html, { quiet: true });
   }, [deskId]);
 
   function scheduleSave() {
+    if (edRef.current && loadedFor.current === deskId) latest.current = { deskId, html: edRef.current.innerHTML, dirty: true };
     window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(save, SAVE_MS);
   }
@@ -283,7 +289,7 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
       <div className="sd-doc__main">
         <div className="sd-doc__paper">
           <div className="sd-doc__top">
-            <button type="button" className="sd-pill" onClick={onClose}>
+            <button type="button" className="sd-pill" onClick={() => (save(), onClose())}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M15 18l-6-6 6-6" />
               </svg>
@@ -317,7 +323,7 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
           >
             {desk?.title}
           </h2>
-          <div ref={edRef} className="sd-editor" contentEditable suppressContentEditableWarning spellCheck aria-label="Desk document" aria-multiline="true" onInput={onInput} onBlur={save} />
+          <div ref={edRef} className="sd-editor" role="textbox" contentEditable suppressContentEditableWarning spellCheck aria-label="Document text" aria-multiline="true" onInput={onInput} onBlur={save} />
           <p className="sd-doc__hint">Type anywhere. # and a space starts a heading. New captures for this desk appear at the end.</p>
         </div>
       </div>
