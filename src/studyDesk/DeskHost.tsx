@@ -16,6 +16,7 @@ import { cleanLocationNearCentre, goToPdfPlace, parsePdfLocation, pdfLocationNea
 import { publishPdfDeskItems } from './pdfDesk';
 import { PdfDeskLayer } from './PdfDeskLayer';
 import { PdfMargin } from './PdfMargin';
+import { PdfSelect } from './PdfSelect';
 import type { PullSpot, PullTarget } from './pullIn';
 import { PullInBody } from './PullInBody';
 import { RegionCapture } from './RegionCapture';
@@ -263,6 +264,7 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
         </div>
       )}
       {book.pdf && <PdfMargin book={book} data={data} onToast={say} onOpenDocument={openDocument} />}
+      {book.pdf && !doc && <PdfSelect book={book} data={data} active={!region && !pull} onToast={say} />}
       {!doc && <MarginLayer book={book} data={data} onToast={say} onOpenDocument={openDocument} />}
       {concept && <ConceptStrip book={book} deskId={data.deskId} deskName={deskName} onClose={() => setConcept(false)} onToast={say} />}
       {away && !region && <TripBar trip={away} onCapture={() => (setConcept(false), setInbox(false), setRegion(true))} onCancel={() => returnHome('Back where you were, nothing captured')} />}

@@ -338,7 +338,8 @@ test.describe('margin beside PDF pages', () => {
     await page.keyboard.type('Why the spheres? See page two');
     await page.locator('.sd-gloss--m').getByRole('button', { name: 'Question', exact: true }).click();
     await expect(page.locator('.sd-gloss--question')).toHaveCount(1);
-    await expect(page.getByRole('button', { name: 'Tie to words' })).toHaveCount(0);
+    // Tie to words works here too: by dragging over the words next (see the highlighting tests).
+    await expect(page.getByRole('button', { name: 'Tie to words' })).toHaveCount(1);
     // No box on the page for a note, and it stays after leaving it.
     await page.keyboard.press('Escape');
     await expect(page.locator('.sd-pdfbox')).toHaveCount(0);
@@ -644,5 +645,81 @@ test.describe('desk document', () => {
     const p = editor.locator('p', { hasText: 'العصبية' });
     expect(await p.evaluate((el) => getComputedStyle(el).unicodeBidi)).toBe('plaintext');
     await expect(doc.locator('.desk-embed').first().locator('.sd-emb__meta bdi')).toHaveCount(2);
+  });
+});
+
+test.describe('highlighting on scanned PDF pages', () => {
+  const ENGINE_URL = 'http://ocr.test/ocr';
+  /** A test engine: two words side by side in the middle of whatever crop it is sent. */
+  async function twoWordEngine(page: Page) {
+    await page.route(`${ENGINE_URL}**`, async (route) => {
+      const png = route.request().postDataBuffer();
+      const [w, h] = png && png.length > 24 ? [png.readUInt32BE(16), png.readUInt32BE(20)] : [400, 200];
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' },
+        body: JSON.stringify({ words: [{ text: 'المدرسة', x: w * 0.55, y: h * 0.4, w: w * 0.3, h: h * 0.2 }, { text: 'الكبيرة', x: w * 0.15, y: h * 0.4, w: w * 0.3, h: h * 0.2 }] }),
+      });
+    });
+    await page.addInitScript((url) => {
+      localStorage.setItem('arabic-reader:pdfOcr', JSON.stringify({ engineId: 'custom:t', custom: [{ id: 'custom:t', name: 'Test engine', url }] }));
+    }, ENGINE_URL);
+  }
+
+  async function dragOnPage(page: Page, from: [number, number], to: [number, number]) {
+    const r = (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!;
+    await page.mouse.move(r.x + r.width * from[0], r.y + r.height * from[1]);
+    await page.mouse.down();
+    await page.mouse.move(r.x + r.width * ((from[0] + to[0]) / 2), r.y + r.height * ((from[1] + to[1]) / 2), { steps: 4 });
+    await page.mouse.move(r.x + r.width * to[0], r.y + r.height * to[1], { steps: 4 });
+    await page.mouse.up();
+  }
+
+  test('a drag snaps to the words read there and starts a gloss', async ({ page }) => {
+    await twoWordEngine(page);
+    await openScan(page);
+    await dragOnPage(page, [0.2, 0.1], [0.7, 0.2]);
+    const bar = page.getByRole('dialog', { name: 'Highlight on the page' });
+    await expect(bar).toContainText('المدرسة الكبيرة');
+    await expect(bar.getByRole('button', { name: /Snap to words/ })).toHaveAttribute('aria-pressed', 'true');
+    await bar.getByRole('button', { name: 'Gloss in the margin' }).click();
+    await expect(bar).toHaveCount(0);
+    await expect(page.locator('.pdfp-page[data-page="1"] .sd-pdfbox')).toHaveCount(1);
+    const gloss = page.locator('.sd-pdfmargin .sd-gloss', { hasText: 'المدرسة الكبيرة' });
+    await expect(gloss.getByRole('textbox', { name: 'Gloss' })).toBeFocused();
+    await page.keyboard.type('the big school');
+    // No dictionary popup from the drag's closing click.
+    await expect(page.locator('.dict-popup')).toHaveCount(0);
+  });
+
+  test('with snapping off the drag stays an image region', async ({ page }) => {
+    await twoWordEngine(page);
+    await openScan(page);
+    await dragOnPage(page, [0.2, 0.3], [0.6, 0.4]);
+    const bar = page.getByRole('dialog', { name: 'Highlight on the page' });
+    await bar.getByRole('button', { name: /Snap to words/ }).click();
+    await expect(bar.getByRole('button', { name: 'Gloss this region' })).toBeVisible();
+    await bar.getByRole('button', { name: 'Send to inbox' }).click();
+    await page.keyboard.press('Alt+i');
+    await expect(page.locator('.dsearch__entry', { hasText: 'Region of page 1' })).toHaveCount(1);
+  });
+
+  test('a margin note ties to words dragged over next', async ({ page }) => {
+    await twoWordEngine(page);
+    await openScan(page);
+    const area = page.locator('.sd-pdfmargin__area');
+    const a = (await area.boundingBox())!;
+    const frame = (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!;
+    await page.mouse.dblclick(a.x + a.width / 2, frame.y + 300);
+    await expect(page.getByRole('textbox', { name: 'Margin note' })).toBeFocused();
+    await page.keyboard.type('Compare with page 40');
+    await page.locator('.sd-gloss--m').getByRole('button', { name: 'Tie to words' }).click();
+    await expect(page.locator('.sd-pdfsel__tie')).toBeVisible();
+    await dragOnPage(page, [0.2, 0.5], [0.7, 0.6]);
+    await page.getByRole('dialog', { name: 'Highlight on the page' }).getByRole('button', { name: /Tie the note/ }).click();
+    await expect(page.locator('.sd-toast')).toContainText('Tied to the words');
+    await expect(page.locator('.pdfp-page[data-page="1"] .sd-pdfbox')).toHaveCount(1);
+    await expect(page.locator('.sd-gloss--m')).toContainText('المدرسة الكبيرة');
   });
 });

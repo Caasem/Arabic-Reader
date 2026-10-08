@@ -370,12 +370,14 @@ interface GlossProps {
   onHover(on: boolean): void;
   onToast(m: string): void;
   onOpenDocument(itemId?: string): void;
-  /** Offer Tie to words (the quiet reader's text; not on PDF pages). */
+  /** Offer Tie to words. */
   canTie?: boolean;
+  /** Tie to words another way (PDF pages: drag over the words next); the quiet reader uses the text selection. */
+  onTie?(): void;
 }
 
 /** One card in a margin; also used beside PDF pages (PdfMargin). */
-export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFocus, onFocused, onHover, onToast, onOpenDocument, canTie = true }: GlossProps) {
+export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFocus, onFocused, onHover, onToast, onOpenDocument, canTie = true, onTie }: GlossProps) {
   const [body, setBody] = useState(item.body ?? '');
   const [focused, setFocused] = useState(false);
   const [preview, setPreview] = useState<'hover' | 'pinned' | null>(null);
@@ -391,7 +393,11 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
   }, [item.body, focused]);
 
   useEffect(() => {
-    if (autoFocus) ref.current?.focus();
+    if (autoFocus) {
+      // An empty gloss is hidden until its card is focused: show it first, then focus it.
+      setFocused(true);
+      requestAnimationFrame(() => ref.current?.focus());
+    }
     // An empty note left behind (the page was closed before typing) is cleared the next time it shows.
     else if (item.fromMargin && !item.body && !item.text && !item.imageHash && Date.now() - item.createdAt > 5000) void deleteItem(item.id);
     // Once, when the card appears.
@@ -473,6 +479,7 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
   }
 
   function tie() {
+    if (onTie) return onTie();
     const sel = getReaderMarks()?.captureSelection();
     if (!sel || !isCleanLocation(sel.location)) return onToast('Select the words on the page first, then press Tie to words');
     void updateItem(item.id, { text: sel.text, pin: { bookId: book.id, location: sel.location, side } });
