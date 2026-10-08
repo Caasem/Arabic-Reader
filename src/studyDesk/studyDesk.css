@@ -1,0 +1,397 @@
+/* Study desk (src/studyDesk). Colours come from the app's variables so every theme and look applies. */
+
+/* --- Inbox: extends the dictionary search's rows (dictionarySearch.css) --- */
+.sd-inbox__desk {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--ink-faint);
+  flex-shrink: 0;
+}
+.sd-inbox__desk select {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 3px 8px;
+  max-width: 60%;
+}
+.sd-inbox__count {
+  margin-left: auto;
+}
+.sd-inbox__input {
+  font-family: var(--font-ui);
+  font-size: 16px;
+}
+.sd-inbox__new {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sd-inbox__new b {
+  font-weight: 500;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.sd-inbox__enter {
+  text-align: right;
+}
+.sd-latin {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.sd-entry--hidden {
+  opacity: 0.5;
+}
+.sd-thumb {
+  display: block;
+  max-width: 100%;
+  max-height: 110px;
+  object-fit: cover;
+  object-position: top;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  margin-top: 6px;
+}
+.sd-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  align-items: center;
+}
+.sd-acts .dsearch__add {
+  margin-top: 0;
+}
+.sd-ghost {
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.sd-ghost:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+/* --- Concept strip (Alt+C) --- */
+.sd-strip {
+  position: fixed;
+  z-index: 70;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 24px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  font-family: var(--font-ui);
+}
+.sd-strip__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  flex: none;
+}
+.sd-strip input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  padding: 6px 2px;
+}
+.sd-strip kbd,
+.sd-capbar kbd {
+  font: 600 11px var(--font-ui);
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  color: var(--ink-soft);
+}
+
+/* --- Region capture (Alt+X) --- */
+.sd-region {
+  position: fixed;
+  inset: 0;
+  z-index: 75;
+  cursor: crosshair;
+  touch-action: none;
+}
+.sd-region__hint {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font: 500 12.5px var(--font-ui);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.sd-region__box {
+  position: fixed;
+  z-index: 76;
+  border: 2px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 45%, transparent);
+  border-radius: 6px;
+  pointer-events: none;
+}
+.sd-picked {
+  background: var(--accent-soft);
+  border-radius: 3px;
+}
+.sd-capbar {
+  position: fixed;
+  z-index: 77;
+  left: 50%;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: min(640px, calc(100vw - 24px));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  font-family: var(--font-ui);
+}
+.sd-capbar__thumb {
+  flex: none;
+  width: 128px;
+  height: 64px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 4px 8px;
+}
+.sd-capbar__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+.sd-capbar__thumb span {
+  font-family: var(--font-arabic);
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: center;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.sd-capbar__mid {
+  flex: 1;
+  min-width: 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+.sd-capbar__chk {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.sd-capbar__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sd-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font: 500 13px var(--font-ui);
+  cursor: pointer;
+}
+.sd-btn:hover {
+  border-color: var(--accent);
+}
+.sd-btn--pri {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg-elevated);
+}
+.sd-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sd-toast {
+  position: fixed;
+  z-index: 90;
+  left: 50%;
+  top: calc(72px + env(safe-area-inset-top, 0px));
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  font: 500 13px var(--font-ui);
+  box-shadow: var(--shadow);
+  max-width: calc(100vw - 24px);
+}
+
+/* Pull in (Alt+U). Above the desk document when opened from it. */
+.sd-pull-layer {
+  position: relative;
+  z-index: 68;
+}
+.sd-pull__bar {
+  flex-wrap: wrap;
+}
+.sd-pull__kinds {
+  margin-left: auto;
+}
+.sd-pull__note {
+  margin: 6px 14px 0;
+}
+.sd-pull__detail {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A capture trip in another book (TripBar). Hidden while a region is being captured. */
+.sd-trip {
+  position: fixed;
+  z-index: 74;
+  left: 50%;
+  top: calc(60px + env(safe-area-inset-top, 0px));
+  transform: translateX(-50%);
+  width: min(720px, calc(100vw - 24px));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 12px 10px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--accent);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+  font: 13px/1.4 var(--font-ui);
+  color: var(--ink-soft);
+}
+.sd-trip__text {
+  flex: 1 1 260px;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.sd-trip__text b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.sd-trip__acts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sd-trip kbd {
+  margin-left: 6px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+/*
+ * One type scale for the desk palettes (inbox, Pull in), which borrow the dictionary search's rows. The
+ * dictionary's own sizes (24px Arabic headwords, 22px palette input) stay as they are there.
+ *   title  Arabic 19px · Latin 15px  (Arabic letters read smaller at the same size)
+ *   detail 13.5px · meta and labels 12px / 11px, one line each · bars and hints 12.5px
+ */
+.sd-inbox .sd-inbox__input,
+.dsearch--palette .sd-inbox .sd-inbox__input {
+  font-family: var(--font-ui);
+  font-size: 16px;
+}
+.sd-inbox .dsearch__entry-head {
+  /* The title takes the first line; where it is from and its label sit on the line below. */
+  flex-wrap: wrap;
+  align-items: baseline;
+  row-gap: 2px;
+  min-width: 0;
+}
+.sd-inbox .dsearch__headword {
+  flex: 1 1 100%;
+  min-width: 0;
+  font-size: 19px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.sd-inbox .dsearch__headword.sd-latin {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.sd-inbox .dsearch__meta {
+  flex: 1 1 60px;
+  min-width: 0;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sd-inbox .dsearch__provider {
+  flex: none;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.sd-inbox .sd-inbox__new b {
+  font-size: 15px;
+}
+.sd-inbox .dsearch__hint,
+.sd-inbox .sd-inbox__desk {
+  font-size: 12.5px;
+}
+.sd-inbox .sd-pull__detail {
+  font-size: 13.5px;
+  line-height: 1.45;
+  margin-top: 1px;
+}

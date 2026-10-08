@@ -454,6 +454,18 @@
       "spec": "specs/poetry-web.md",
       "notes": "Parked. Branch feat/poetry-web (local only, 8 commits on top of the sync work). Developed in its own folder; may be integrated later as a plug-in. No feature spec in docs/features.",
       "milestone": "later"
+    },
+    {
+      "id": "study-desk",
+      "title": "Study desk: inbox, desk documents, margins",
+      "area": "reader",
+      "status": "in-progress",
+      "effort": 4,
+      "deps": [],
+      "branch": "feat/study-desk",
+      "notes": "Built in phases on feat/study-desk; every phase is one commit with its own off-switch. Revert matrix: docs/study-desk-changes.md. Concept: https://claude.ai/artifact/FjdxN1wKtaYzSTRLTvtKx4",
+      "brief": "features/study-desk.md",
+      "milestone": "M2"
     }
   ],
   "milestones": [
