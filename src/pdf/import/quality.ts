@@ -4,7 +4,7 @@
  * map to Unicode at all; converting those would give a book nobody can look words up in. The test
  * reads the first pages and asks the dictionary's morphology whether the words are words.
  */
-import { normalizeArabic } from './pdfReflow';
+import { normalizeArabic } from '../arabic';
 
 export type TextVerdict =
   /** Text analyses well, or is not Arabic (nothing to test against). */

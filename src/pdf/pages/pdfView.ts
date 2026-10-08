@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
-import type { BookMeta } from '../types';
-import { readString, writeString } from '../utils/storage';
+import type { BookMeta } from '../../types';
+import { readString, writeString } from '../../utils/storage';
 
 /** How a book added from a PDF is shown: the reflowed text, or the PDF's own pages. */
 export type PdfView = 'text' | 'pages';

@@ -9,10 +9,10 @@ import { FlashHost } from '../flashCard';
 import { PicksExportHost } from '../picksExport';
 import { useReaderView } from '../quietReader/readerView';
 import { saveCleanFocus } from './cleanFocus';
-import { usePdfView } from '../pdfPages/pdfView';
+import { usePdfView } from '../pdf/pages/pdfView';
 
 const CleanReader = lazy(() => import('./CleanReader').then((m) => ({ default: m.CleanReader })));
-const PdfPagesReader = lazy(() => import('../pdfPages/PdfPagesReader').then((m) => ({ default: m.PdfPagesReader })));
+const PdfPagesReader = lazy(() => import('../pdf/pages/PdfPagesReader').then((m) => ({ default: m.PdfPagesReader })));
 const QuietReader = lazy(() => import('../quietReader/QuietReader').then((m) => ({ default: m.QuietReader })));
 
 type ReaderSwitchProps = ComponentProps<typeof Reader> & {

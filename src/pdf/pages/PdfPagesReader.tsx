@@ -1,19 +1,20 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { DictionaryBubble } from '../components/reader/DictionaryBubble';
-import { DictionaryPopup } from '../components/reader/DictionaryPopup';
-import { ReaderFooter } from '../components/reader/ReaderFooter';
-import { VocabularyEditModal } from '../components/reader/VocabularyEditModal';
-import { useWordLookups } from '../components/reader/hooks/useWordLookups';
-import type { SavedWords } from '../components/reader/hooks/useSavedWords';
-import { IconBack } from '../components/shared/icons';
-import { openDictionaryPage } from '../dictionaryPage/events';
-import { senseText } from '../dictionary/senseText';
-import { logDiagnostic } from '../diagnostics/diagnosticsLog';
-import { persistenceService } from '../persistence';
-import { ReadingSessionTracker } from '../reader/session';
-import { usePreferences } from '../state/PreferencesContext';
-import type { BookMeta } from '../types';
+import { DictionaryBubble } from '../../components/reader/DictionaryBubble';
+import { DictionaryPopup } from '../../components/reader/DictionaryPopup';
+import { ReaderFooter } from '../../components/reader/ReaderFooter';
+import { VocabularyEditModal } from '../../components/reader/VocabularyEditModal';
+import { useWordLookups } from '../../components/reader/hooks/useWordLookups';
+import type { SavedWords } from '../../components/reader/hooks/useSavedWords';
+import { IconBack } from '../../components/shared/icons';
+import { openDictionaryPage } from '../../dictionaryPage/events';
+import { senseText } from '../../dictionary/senseText';
+import { logDiagnostic } from '../../diagnostics/diagnosticsLog';
+import { persistenceService } from '../../persistence';
+import { ReadingSessionTracker } from '../../reader/session';
+import { usePreferences } from '../../state/PreferencesContext';
+import type { BookMeta } from '../../types';
 import { openPdfPages, type OpenedPdf, type PDFPageProxy } from './pdfjsLoader';
+import { pdfPageExtensions, type PdfWordTap } from './extensions';
 import { loadPdfPage, savePdfPage } from './pdfView';
 import { wordAtPoint } from './wordAtPoint';
 import './pdfPages.css';
@@ -27,16 +28,17 @@ const AHEAD = 2;
 const noSavedWords: SavedWords = { applyTo() {}, setSaved() {} };
 
 interface PageProps {
+  book: BookMeta;
   opened: OpenedPdf;
   number: number;
   width: number;
   /** Near the page being read: draw it. Otherwise only the empty frame is kept. */
   active: boolean;
-  onWord(layer: HTMLElement, x: number, y: number, page: number): void;
+  onWord(layer: HTMLElement, x: number, y: number, page: number): void | Promise<void>;
 }
 
 /** One page: a canvas with the picture and a transparent text layer over it for word taps. */
-const PdfPage = memo(function PdfPage({ opened, number, width, active, onWord }: PageProps) {
+const PdfPage = memo(function PdfPage({ book, opened, number, width, active, onWord }: PageProps) {
   const frame = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const textLayer = useRef<HTMLDivElement>(null);
@@ -105,9 +107,12 @@ const PdfPage = memo(function PdfPage({ opened, number, width, active, onWord }:
         className="pdfp-text textLayer"
         onClick={(e) => {
           if (e.detail > 1) return;
-          onWord(e.currentTarget, e.clientX, e.clientY, number);
+          void onWord(e.currentTarget, e.clientX, e.clientY, number);
         }}
       />
+      {active &&
+        ratio !== null &&
+        pdfPageExtensions().map((ext) => ext.Layer && <ext.Layer key={ext.id} book={book} opened={opened} page={number} width={width} height={width * ratio} />)}
     </div>
   );
 });
@@ -253,8 +258,17 @@ export function PdfPagesReader({ book, onBack, onShowText }: { book: BookMeta; o
   }
 
   const onWord = useCallback(
-    (layer: HTMLElement, x: number, y: number, n: number) => {
-      const hit = wordAtPoint(layer, x, y);
+    async (layer: HTMLElement, x: number, y: number, n: number) => {
+      let hit = wordAtPoint(layer, x, y);
+      if (!hit && opened) {
+        // Nothing in the text layer here: ask the extensions (OCR of the tapped region, for example).
+        const frame = layer.parentElement ?? layer;
+        const tap: PdfWordTap = { book, opened, page: n, width: frame.clientWidth, height: frame.clientHeight, frame, clientX: x, clientY: y };
+        for (const ext of pdfPageExtensions()) {
+          hit = (await ext.wordAt?.(tap).catch(() => null)) ?? null;
+          if (hit) break;
+        }
+      }
       if (!hit) {
         lookups.closeAll();
         return;
@@ -272,7 +286,7 @@ export function PdfPagesReader({ book, onBack, onShowText }: { book: BookMeta; o
       void lookups.openPopup(target);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [lookups.openPopup]
+    [lookups.openPopup, opened, book]
   );
 
   const percent = total ? (page - 1) / total : 0;
@@ -296,6 +310,7 @@ export function PdfPagesReader({ book, onBack, onShowText }: { book: BookMeta; o
           <button className="reader__toc-toggle" onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + 0.2))} aria-label="Zoom in" title="Zoom in">
             +
           </button>
+          {pdfPageExtensions().map((ext) => ext.Toolbar && <ext.Toolbar key={ext.id} book={book} page={page} total={total} />)}
           {onShowText && (
             <button className="reader__toc-toggle" onClick={onShowText} title="Read the reflowed text">
               Reflowed text
@@ -311,7 +326,7 @@ export function PdfPagesReader({ book, onBack, onShowText }: { book: BookMeta; o
           {opened && pageWidth > 0 && (
             <div className="pdfp__column" style={{ gap: PAGE_GAP_PX, padding: `${PAGE_GAP_PX}px ${SIDE_PX}px 96px` }}>
               {Array.from({ length: opened.doc.numPages }, (_, i) => i + 1).map((n) => (
-                <PdfPage key={n} opened={opened} number={n} width={pageWidth} active={Math.abs(n - page) <= AHEAD} onWord={onWord} />
+                <PdfPage key={n} book={book} opened={opened} number={n} width={pageWidth} active={Math.abs(n - page) <= AHEAD} onWord={onWord} />
               ))}
             </div>
           )}

@@ -4,10 +4,10 @@ import JSZip from 'jszip';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { convertToEpub } from './index';
-import { convertPdf, MAX_PDF_BYTES, PDF_MESSAGES, PdfImportError, type PdfDeps } from './pdf';
-import { arabicTokens, assessText } from './pdfQuality';
-import { lineWidth, makePdf, PAGE_HEIGHT, PAGE_WIDTH, type PdfTestLine, type PdfTestPage } from './testPdf';
+import { convertToEpub } from '../../importFormats';
+import { convertPdf, MAX_PDF_BYTES, PDF_MESSAGES, PdfImportError, type PdfDeps } from './convert';
+import { arabicTokens, assessText } from './quality';
+import { lineWidth, makePdf, PAGE_HEIGHT, PAGE_WIDTH, type PdfTestLine, type PdfTestPage } from '../testPdf';
 
 // pdf.js runs in its fake-worker mode under Node.
 pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(createRequire(import.meta.url).resolve('pdfjs-dist/legacy/build/pdf.worker.mjs')).href;

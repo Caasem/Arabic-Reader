@@ -1,7 +1,7 @@
-import type { Chapter } from './epubWriter';
-import { assessText, type TextQuality, type WordAnalyser } from './pdfQuality';
-import { reflowPages, type PageText } from './pdfReflow';
-import { arabicShare } from './text';
+import type { Chapter } from '../../importFormats/epubWriter';
+import { assessText, type TextQuality, type WordAnalyser } from './quality';
+import { reflowPages, type PageText } from './reflow';
+import { arabicShare } from '../../importFormats/text';
 
 /** The slice of pdf.js this converter uses, so tests and the app can each bring their own build. */
 export interface PdfPage {
