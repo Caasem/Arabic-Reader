@@ -257,14 +257,21 @@ test.describe('margin images', () => {
   });
 });
 
-test('a region captured on a scanned PDF page is boxed on the page with a card beside it', async ({ page }) => {
+async function openScan(page: Page) {
   await page.goto('/');
   await page.waitForSelector('.navbar__settings', { timeout: 15000 });
   await page.setInputFiles('.library__actions input[type=file]', { name: 'scan.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf([{ image: true }, { image: true }])) });
   await expect(page.locator('.book-card')).toHaveCount(1, { timeout: 30000 });
   await page.locator('.book-card__open').first().click();
   await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+  // The margin beside the pages is there from the start; the pages fit beside it.
+  await expect(page.locator('.sd-pdfmargin__area')).toBeVisible();
+  // Page 1 drawn at its new width.
+  await expect.poll(() => page.evaluate(() => (document.querySelector('.pdfp-page[data-page="1"] canvas') as HTMLCanvasElement | null)?.width ?? 0)).toBeGreaterThan(0);
+}
 
+test('a region captured on a scanned PDF page is boxed on the page with a card beside it', async ({ page }) => {
+  await openScan(page);
   const frame = page.locator('.pdfp-page[data-page="1"]');
   const r = (await frame.boundingBox())!;
   await page.keyboard.press('Alt+x');
@@ -278,20 +285,55 @@ test('a region captured on a scanned PDF page is boxed on the page with a card b
   await bar.getByRole('button', { name: /^Send to/ }).click();
   await expect(bar).toHaveCount(0);
 
-  // The pages fit beside a margin now; the box keeps its place on the page.
   const box = frame.locator('.sd-pdfbox');
   await expect(box).toHaveCount(1);
-  const card = page.locator('.sd-pdfmargin .sd-pdfcard');
+  const card = page.locator('.sd-pdfmargin .sd-gloss');
   await expect(card).toHaveCount(1);
   await expect(card).toContainText('Page 1');
   const f = (await frame.boundingBox())!;
   const b = (await box.boundingBox())!;
-  expect(f.width).toBeLessThan(r.width);
-  expect(Math.abs((b.x - f.x) / f.width - 0.2)).toBeLessThan(0.01);
-  expect(Math.abs((b.y - f.y) / f.width - 60 / r.width)).toBeLessThan(0.01);
+  expect(Math.abs(b.x - (r.x + r.width * 0.2))).toBeLessThan(4);
+  expect(Math.abs(b.y - (r.y + 60))).toBeLessThan(4);
   expect((await card.boundingBox())!.x).toBeGreaterThan(f.x + f.width);
+  // An empty gloss shows on hover, as in the quiet reader's margins.
+  await card.hover();
   await card.getByRole('textbox', { name: 'Gloss' }).fill('The diagram of the spheres');
   await card.getByRole('button', { name: 'Show in document' }).click();
   const doc = page.getByRole('dialog', { name: 'Desk document' });
   await expect(doc.locator('.desk-embed', { hasText: 'The diagram of the spheres' })).toHaveCount(1);
+});
+
+test.describe('margin beside PDF pages', () => {
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVR42mP8z8Dwn4GBgYGJAQoAADUBAf8Ik8gAAAAASUVORK5CYII=', 'base64');
+
+  test('double-tap writes a note tied to that height of the page', async ({ page }) => {
+    await openScan(page);
+    const area = page.locator('.sd-pdfmargin__area');
+    const a = (await area.boundingBox())!;
+    const frame = (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!;
+    await page.mouse.dblclick(a.x + a.width / 2, frame.y + 200);
+    const note = page.getByRole('textbox', { name: 'Margin note' });
+    await expect(note).toBeFocused();
+    await page.keyboard.type('Why the spheres? See page two');
+    await page.locator('.sd-gloss--m').getByRole('button', { name: 'Question', exact: true }).click();
+    await expect(page.locator('.sd-gloss--question')).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Tie to words' })).toHaveCount(0);
+    // No box on the page for a note, and it stays after leaving it.
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.sd-pdfbox')).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: 'Margin note' })).toHaveValue('Why the spheres? See page two');
+    // Its place is the page and the height tapped.
+    const top = (await page.locator('.sd-gloss--question').boundingBox())!.y;
+    expect(Math.abs(top + 16 - (frame.y + 200))).toBeLessThan(24);
+  });
+
+  test('Alt+U places an image in the margin beside the pages', async ({ page }) => {
+    await openScan(page);
+    await page.keyboard.press('Alt+u');
+    const pull = page.getByRole('dialog', { name: 'Pull in' }).or(page.getByRole('complementary', { name: 'Pull in' }));
+    await expect(pull.getByRole('button', { name: 'Right margin' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(pull.getByRole('button', { name: 'Left margin' })).toHaveCount(0);
+    await page.getByLabel('Image file').setInputFiles({ name: 'figure.png', mimeType: 'image/png', buffer: png });
+    await expect(page.locator('.sd-pdfmargin .sd-gloss .sd-frame img')).toHaveCount(1);
+  });
 });

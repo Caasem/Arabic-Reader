@@ -42,14 +42,15 @@ export interface PdfMark {
   h: number;
 }
 
-/** The items with a region on a page of this book (one page, or all when `page` is omitted), in reading order. */
+/** The items with a region or a level on a page of this book (one page, or all when `page` is omitted), in reading order. */
 export function pdfMarks(items: DeskItem[], bookId: string, page?: number): PdfMark[] {
   const out: PdfMark[] = [];
   for (const item of items) {
     if (item.hidden && !item.pin) continue;
     const location = item.pin?.bookId === bookId ? item.pin.location : item.source?.bookId === bookId ? item.source.location : undefined;
     const at = parsePdfLocation(location);
-    if (!at || (page !== undefined && at.page !== page) || at.w <= 0 || at.h <= 0) continue;
+    // A captured region has a box; a margin note's place is a level (height 0).
+    if (!at || (page !== undefined && at.page !== page) || at.w <= 0 || at.h < 0) continue;
     out.push({ item, ...at });
   }
   return out.sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x);

@@ -9,7 +9,8 @@ import './pdfDesk.css';
  */
 export function PdfDeskLayer({ book, page, width, height }: PdfPageContext) {
   const { items, hover } = usePdfDesk();
-  const marks = pdfMarks(items, book.id, page);
+  // Margin notes sit at a level (no height) and get no box.
+  const marks = pdfMarks(items, book.id, page).filter((m) => m.h > 0);
   if (!marks.length) return null;
   return (
     <div className="sd-pdfdesk" aria-hidden="true">

@@ -380,9 +380,12 @@ interface GlossProps {
   onHover(on: boolean): void;
   onToast(m: string): void;
   onOpenDocument(itemId?: string): void;
+  /** Offer Tie to words (the quiet reader's text; not on PDF pages). */
+  canTie?: boolean;
 }
 
-function Gloss({ item, side, left, width, book, docMode, toInbox, autoFocus, onFocused, onHover, onToast, onOpenDocument }: GlossProps) {
+/** One card in a margin; also used beside PDF pages (PdfMargin). */
+export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFocus, onFocused, onHover, onToast, onOpenDocument, canTie = true }: GlossProps) {
   const [body, setBody] = useState(item.body ?? '');
   const [focused, setFocused] = useState(false);
   const [preview, setPreview] = useState<'hover' | 'pinned' | null>(null);
@@ -612,9 +615,11 @@ function Gloss({ item, side, left, width, book, docMode, toInbox, autoFocus, onF
                 {t.label}
               </button>
             ))}
-            <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={tie}>
-              Tie to words
-            </button>
+            {canTie && (
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={tie}>
+                Tie to words
+              </button>
+            )}
             <i />
             {docMode !== 'none' && (
               <button type="button" aria-pressed={shownInDoc} onMouseDown={(e) => e.preventDefault()} onClick={() => void updateItem(item.id, { inDocument: !shownInDoc })}>
@@ -653,7 +658,8 @@ function QuickLook({ src, side, anchor, pinned, caption, onClose }: { src: strin
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
   }, [pinned, onClose]);
-  const column = document.querySelector('.qr-column')?.getBoundingClientRect();
+  // The text column, or the PDF pages beside their margin.
+  const column = document.querySelector('.qr-column, .pdfp__stage')?.getBoundingClientRect();
   const a = anchor?.getBoundingClientRect();
   if (!column || !a) return null;
   const room = side === 'right' ? window.innerWidth - column.right - 24 : column.left - 24;

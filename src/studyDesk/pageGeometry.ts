@@ -154,3 +154,28 @@ export function cleanLocationAt(x: number, y: number): string | null {
   const at = offsetWithin(section, pos.node, pos.offset);
   return formatCleanLocation({ chapter: Number(section.dataset.chapter), start: at, end: at });
 }
+
+/**
+ * A level on a PDF page under a screen height: `pdf:<page>:0:<y>:1:0`, a whole-width line of no height (a
+ * margin note's place, where a captured region has a real box). The nearest page when y falls between pages.
+ */
+export function pdfLevelAt(y: number): string | null {
+  let best: { page: HTMLElement; r: DOMRect; d: number } | null = null;
+  for (const page of Array.from(document.querySelectorAll<HTMLElement>('.pdfp-page[data-page]'))) {
+    const r = page.getBoundingClientRect();
+    if (!r.height) continue;
+    const d = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
+    if (!best || d < best.d) best = { page, r, d };
+    if (!d) break;
+  }
+  if (!best || best.d > 80) return null;
+  const n = Number(best.page.dataset.page) || 1;
+  return formatPdfLocation(n, 0, (y - best.r.top) / best.r.height, 1, 0);
+}
+
+/** A level near the middle of the PDF pages on screen, for things placed on "this page" (Pull in). */
+export function pdfLocationNearCentre(): string | null {
+  const stage = document.querySelector<HTMLElement>('.pdfp__stage')?.getBoundingClientRect();
+  if (!stage || stage.height < 10) return null;
+  return pdfLevelAt(stage.top + stage.height / 2);
+}

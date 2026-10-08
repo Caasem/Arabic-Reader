@@ -9,7 +9,7 @@ import { DeskDocument } from './DeskDocument';
 import { InboxBody } from './InboxBody';
 import { MarginLayer } from './MarginLayer';
 import { registerPdfPageExtension } from '../pdf/pages/extensions';
-import { cleanLocationNearCentre } from './pageGeometry';
+import { cleanLocationNearCentre, pdfLocationNearCentre } from './pageGeometry';
 import { publishPdfDeskItems } from './pdfDesk';
 import { PdfDeskLayer } from './PdfDeskLayer';
 import { PdfMargin } from './PdfMargin';
@@ -88,7 +88,7 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
     setConcept(false);
     setRegion(false);
     // The place is read before the palette covers the page; from the document there is no page to place on.
-    const location = doc ? null : cleanLocationNearCentre();
+    const location = doc ? null : (cleanLocationNearCentre() ?? pdfLocationNearCentre());
     setPull({ deskId: doc?.deskId ?? data.deskId, spot: location ? { bookId: book.id, location } : null });
   }, [doc, data.deskId, book.id]);
   useChordHotkey('KeyU', true, () => {
@@ -145,11 +145,11 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
       {pull && (
         <div className="sd-pull-layer">
           <Shell style={narrow ? 'sheet' : style} onClose={() => setPull(null)} title="Pull in" keyHint="Alt U" label="Pull in" posKey="studyDesk.pullPos">
-            <PullInBody book={book} deskId={pull.deskId} spot={pull.spot} margins={prefs.studyDeskMargins} onClose={() => setPull(null)} onToast={say} />
+            <PullInBody book={book} deskId={pull.deskId} spot={pull.spot} margins={pull.spot?.location.startsWith('pdf:') && prefs.studyDeskMargins !== 'off' ? 'right' : prefs.studyDeskMargins} onClose={() => setPull(null)} onToast={say} />
           </Shell>
         </div>
       )}
-      {book.pdf && <PdfMargin book={book} onOpenDocument={openDocument} />}
+      {book.pdf && <PdfMargin book={book} data={data} onToast={say} onOpenDocument={openDocument} />}
       {!doc && <MarginLayer book={book} data={data} onToast={say} onOpenDocument={openDocument} />}
       {concept && <ConceptStrip book={book} deskId={data.deskId} deskName={deskName} onClose={() => setConcept(false)} onToast={say} />}
       {region && <RegionCapture book={book} deskId={data.deskId} deskName={deskName} onClose={closeRegion} onToast={say} />}

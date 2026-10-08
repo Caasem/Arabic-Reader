@@ -43,7 +43,9 @@ Everything a reader notices while reading becomes an item: a concept they type, 
 - Paste an image into a margin note to make it a screenshot; drop an image file on a margin for a new screenshot note at that height, or on a note to add it there.
 
 **PDF pages**
-- Regions captured on PDF pages (scanned or not) show as boxes on the page, with a card each in a margin to the right of the pages, where a gloss can be written. The pages fit beside that margin while the book has regions; Margins: Hidden frees the space.
+- A margin to the right of the pages, whenever margins are on; the pages fit beside it. Margins: Hidden frees the space.
+- Regions captured on PDF pages (scanned or not) show as boxes on the page, with a card each in that margin, where a gloss can be written.
+- Double-tap the margin to write a note tied to that height of the page, with the same options as the quiet reader's margin notes (except Tie to words). Drop an image file on it for a screenshot note. Pull in places items there.
 
 ## 3. Data
 
@@ -58,4 +60,4 @@ Everything a reader notices while reading becomes an item: a concept they type, 
 
 ## 5. Not yet
 
-- Sync of desk tables; graph and canvas views; root and lemma links; margins in the epub (iframe) reader; margin notes written straight onto PDF pages (only captured regions show there).
+- Sync of desk tables; graph and canvas views; root and lemma links; margins in the epub (iframe) reader; a left-hand margin beside PDF pages.

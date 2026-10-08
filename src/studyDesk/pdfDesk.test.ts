@@ -14,10 +14,11 @@ describe('PDF page marks', () => {
       item('e', { source: { bookId: 'b', location: 'clean:2:1:5' } }),
       item('f', { pin: { bookId: 'b', location: 'pdf:2:0.4:0.7:0.1:0.1', side: 'right' } }),
       item('g', { hidden: true, source: { bookId: 'b', location: 'pdf:2:0.1:0.9:0.2:0.05' } }),
+      item('h', { fromMargin: true, pin: { bookId: 'b', location: 'pdf:2:0:0.95:1:0', side: 'right' } }),
     ];
-    expect(pdfMarks(items, 'b', 2).map((m) => m.item.id)).toEqual(['b', 'a', 'f']);
+    expect(pdfMarks(items, 'b', 2).map((m) => m.item.id)).toEqual(['b', 'a', 'f', 'h']);
     expect(pdfMarks(items, 'b', 2)[0]).toMatchObject({ page: 2, x: 0.1, y: 0.2, w: 0.2, h: 0.1 });
-    expect(pdfMarks(items, 'b').map((m) => m.item.id)).toEqual(['b', 'a', 'f', 'c']);
+    expect(pdfMarks(items, 'b').map((m) => m.item.id)).toEqual(['b', 'a', 'f', 'h', 'c']);
   });
 
   it('stacks cards level with their regions without overlapping', () => {

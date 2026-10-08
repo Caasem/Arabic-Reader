@@ -161,7 +161,7 @@ export function PullInBody({ book, deskId, spot, margins, onClose, onToast }: Pr
           ))}
         </span>
       </div>
-      {!spot && <p className="dsearch__hint sd-pull__note">Margins take things only while a page of the quiet reader is showing; this goes to the inbox.</p>}
+      {!spot && <p className="dsearch__hint sd-pull__note">Margins take things only while a page is showing; this goes to the inbox.</p>}
       <div className="dsearch__results" role="listbox" aria-label="Pull in">
         <div role="option" aria-selected={active === IMAGE} className={'dsearch__entry' + (active === IMAGE ? ' dsearch__entry--active' : '')} onClick={() => fileRef.current?.click()}>
           <div className="sd-inbox__new">
