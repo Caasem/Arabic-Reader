@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BookMeta } from '../types';
-import { currentTrip, endTrip, startTrip, takeTripNote, tripFiledMessage, tripPlacement } from './trip';
+import { currentTrip, endTrip, startTrip, takeTripNote, takeTripReopen, tripFiledMessage, tripPlacement } from './trip';
 
 const from = { id: 'a', title: 'Muqaddima' } as BookMeta;
 const to = { id: 'b', title: 'Tahafut' } as BookMeta;
@@ -25,5 +25,14 @@ describe('capture trips', () => {
     expect(currentTrip()).toBeNull();
     expect(takeTripNote()).toBe('Back');
     expect(takeTripNote()).toBeNull();
+    expect(takeTripReopen('a')).toBeNull();
+  });
+
+  it('opens the desk document again on return when the trip started there, at the item captured', () => {
+    startTrip({ from, to, deskId: 'own:1', target: 'inbox', spot: null, fromDocument: 'own:1' });
+    endTrip('Captured', 'di_9');
+    expect(takeTripReopen('b')).toBeNull();
+    expect(takeTripReopen('a')).toEqual({ deskId: 'own:1', itemId: 'di_9' });
+    expect(takeTripReopen('a')).toBeNull();
   });
 });
