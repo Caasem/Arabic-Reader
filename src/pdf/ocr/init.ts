@@ -1,3 +1,4 @@
+import { createClaudeEngine } from './aiEngine';
 import { createEndpointEngine, loadDesktopEngines } from './engines';
 import { registerOcrEngine, ocrEngines, unregisterOcrEngine } from './registry';
 import { getOcrSettings, subscribeOcrSettings } from './settings';
@@ -21,6 +22,8 @@ export function initOcr(): void {
   started = true;
   syncCustomEngines();
   subscribeOcrSettings(syncCustomEngines);
+  // Always listed, so the reader can see it exists; it is unavailable until they add their own key.
+  registerOcrEngine(createClaudeEngine());
   void loadDesktopEngines().then((engines) => {
     // The OS's engines go ahead of the reader's own so the default stays the built-in one.
     const custom = ocrEngines().filter((e) => e.kind === 'custom');

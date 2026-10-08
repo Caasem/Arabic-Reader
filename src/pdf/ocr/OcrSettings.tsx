@@ -1,5 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Note, SelectRow, SettingsSection } from '../../components/shared/settings/controls';
+import { CLAUDE_ENGINE_ID, CLAUDE_MODELS } from './aiEngine';
 import { createEndpointEngine, isLocalAddress } from './engines';
 import { initOcr } from './init';
 import { chosenOcrEngine, ocrEngines, subscribeOcrEngines } from './registry';
@@ -119,6 +120,49 @@ function AddEngine({ onAdded, onCancel }: { onAdded(id: string): void; onCancel(
   );
 }
 
+/** The reader's own Anthropic key, which turns on the Claude engine above. Kept on this device. */
+function ClaudeKey({ claudeKey, claudeModel }: { claudeKey?: string; claudeModel?: string }) {
+  const [draft, setDraft] = useState('');
+  return (
+    <div className="ocr-add">
+      <strong>Claude (AI vision)</strong>
+      <p className="ocr-engine__desc ocr-engine__desc--flush">
+        Uses your own Anthropic key. Each lookup sends an image of the line you tapped to Anthropic, so it is only used when you choose it or set it as the second opinion. The key stays on this device.
+      </p>
+      {claudeKey ? (
+        <div className="ocr-engine__acts ocr-engine__acts--flush">
+          <span className="ocr-pill ocr-pill--ok">Key saved · …{claudeKey.slice(-4)}</span>
+          <button type="button" className="ocr-btn ocr-btn--quiet" onClick={() => updateOcrSettings({ claudeKey: undefined, engineId: getOcrSettings().engineId === CLAUDE_ENGINE_ID ? undefined : getOcrSettings().engineId, fallbackId: getOcrSettings().fallbackId === CLAUDE_ENGINE_ID ? undefined : getOcrSettings().fallbackId })}>
+            Remove key
+          </button>
+        </div>
+      ) : (
+        <div className="ocr-engine__acts ocr-engine__acts--flush">
+          <input
+            className="ocr-key"
+            type="password"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="sk-ant-…"
+            aria-label="Anthropic API key"
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <button type="button" className="ocr-btn ocr-btn--primary" disabled={draft.trim().length < 20} onClick={() => updateOcrSettings({ claudeKey: draft.trim() })}>
+            Save key
+          </button>
+        </div>
+      )}
+      <SelectRow
+        label="Model"
+        options={CLAUDE_MODELS.map((m) => ({ id: m.id, label: m.label }))}
+        value={claudeModel && CLAUDE_MODELS.some((m) => m.id === claudeModel) ? claudeModel : CLAUDE_MODELS[0].id}
+        onChange={(m) => updateOcrSettings({ claudeModel: m })}
+      />
+    </div>
+  );
+}
+
 const ENHANCE_OPTIONS: { id: Enhance; label: string }[] = [
   { id: 'none', label: 'None' },
   { id: 'contrast', label: 'Contrast' },
@@ -193,6 +237,16 @@ export function PdfOcrSettings() {
           </button>
         </div>
       )}
+      <ClaudeKey claudeKey={settings.claudeKey} claudeModel={settings.claudeModel} />
+      <SelectRow
+        label="If the first read is not a word, ask"
+        options={[{ id: 'none', label: 'Nobody else' }, ...engines.filter((e) => e.id !== chosen?.id && statuses[e.id]?.available).map((e) => ({ id: e.id, label: e.name }))]}
+        value={settings.fallbackId && settings.fallbackId !== chosen?.id && statuses[settings.fallbackId]?.available ? settings.fallbackId : 'none'}
+        onChange={(id) => updateOcrSettings({ fallbackId: id === 'none' ? undefined : id })}
+      />
+      <Note>
+        A second opinion is only asked when the dictionary does not recognise the first read, and the dictionary then decides between the two. An engine that sends images out is marked above.
+      </Note>
       <details className="ocr-tuning">
         <summary>Tuning</summary>
         <SelectRow

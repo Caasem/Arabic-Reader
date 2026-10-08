@@ -20,6 +20,11 @@ export interface OcrSettings {
   /** Height of the strip read around a tap, in PDF points. */
   stripPt: number;
   enhance: Enhance;
+  /** When the first read is not a word, ask this engine too; the dictionary decides between the answers. */
+  fallbackId?: string;
+  /** The reader's own Anthropic key, kept on this device only, and the model to use. */
+  claudeKey?: string;
+  claudeModel?: string;
 }
 
 export const DEFAULT_OCR_SETTINGS: OcrSettings = { custom: [], scale: 4, pad: 0.15, stripPt: 44, enhance: 'contrast' };
@@ -48,6 +53,9 @@ export function parseOcrSettings(raw: string | null): OcrSettings {
     pad: num(stored.pad, DEFAULT_OCR_SETTINGS.pad, 0, 1),
     stripPt: num(stored.stripPt, DEFAULT_OCR_SETTINGS.stripPt, 10, 400),
     enhance: stored.enhance === 'none' || stored.enhance === 'binarize' ? stored.enhance : 'contrast',
+    fallbackId: typeof stored.fallbackId === 'string' ? stored.fallbackId : undefined,
+    claudeKey: typeof stored.claudeKey === 'string' && stored.claudeKey.trim() ? stored.claudeKey.trim() : undefined,
+    claudeModel: typeof stored.claudeModel === 'string' ? stored.claudeModel : undefined,
   };
 }
 

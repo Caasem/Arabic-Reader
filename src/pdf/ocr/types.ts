@@ -14,6 +14,8 @@ export interface OcrRequest {
   height: number;
   /** A language code such as `ar`; an engine maps it to what it calls Arabic. */
   language: string;
+  /** Where the reader tapped, in image pixels. Engines that return every word can ignore it; engines that read one word use it. */
+  point?: { x: number; y: number };
 }
 
 export interface OcrEngineStatus {
@@ -33,7 +35,7 @@ export interface OcrEngine {
   id: string;
   name: string;
   description: string;
-  kind: 'app' | 'desktop' | 'custom';
+  kind: 'app' | 'desktop' | 'custom' | 'ai';
   /** True when a crop of the page leaves this device (an address that is not this computer). */
   sendsImagesOffDevice?: boolean;
   status(): Promise<OcrEngineStatus>;

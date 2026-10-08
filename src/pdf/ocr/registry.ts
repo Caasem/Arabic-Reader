@@ -31,8 +31,8 @@ export function subscribeOcrEngines(listener: () => void): () => void {
   return () => void listeners.delete(listener);
 }
 
-/** The engine the reader chose, or else the first one that is not an address they added. */
+/** The engine the reader chose, or else the first the app or the OS provides. An AI engine or an address the reader added is never the default: those are only used once chosen. */
 export function chosenOcrEngine(): OcrEngine | undefined {
   const { engineId } = getOcrSettings();
-  return (engineId ? engines.get(engineId) : undefined) ?? snapshot.find((e) => e.kind !== 'custom') ?? snapshot[0];
+  return (engineId ? engines.get(engineId) : undefined) ?? snapshot.find((e) => e.kind === 'app' || e.kind === 'desktop') ?? snapshot.find((e) => e.kind === 'custom');
 }

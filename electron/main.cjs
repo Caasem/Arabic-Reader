@@ -41,7 +41,8 @@ const MIME_TYPES = {
 // Book sections render in srcdoc iframes, which inherit this policy -- so
 // book styles/images (epub.js serves them as blob: URLs) must stay allowed,
 // while any script not shipped with the app is blocked. AnkiConnect runs on
-// localhost:8765; the Shamela beta reads from one named mirror (shamelaBooksProvider.ts).
+// localhost:8765; the Shamela beta reads from one named mirror (shamelaBooksProvider.ts); the
+// optional Claude vision engine for scanned pages (src/pdf/ocr/aiEngine.ts) calls api.anthropic.com.
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self'",
@@ -50,7 +51,7 @@ const CONTENT_SECURITY_POLICY = [
   "img-src 'self' data: blob:",
   "font-src 'self' data: blob:",
   "media-src 'self' data: blob:",
-  "connect-src 'self' blob: data: http://127.0.0.1:8765 http://localhost:8765 https://winongkencono-shamelah.hf.space",
+  "connect-src 'self' blob: data: http://127.0.0.1:8765 http://localhost:8765 https://winongkencono-shamelah.hf.space https://api.anthropic.com",
   "frame-src 'self' blob:",
   "object-src 'none'",
 ].join('; ');

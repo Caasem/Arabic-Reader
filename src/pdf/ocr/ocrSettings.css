@@ -185,3 +185,20 @@
 .ocr-tuning {
   margin-top: 8px;
 }
+
+.ocr-engine__desc--flush,
+.ocr-engine__acts--flush {
+  margin-left: 0;
+}
+
+.ocr-key {
+  flex: 1;
+  min-width: 12ch;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+}

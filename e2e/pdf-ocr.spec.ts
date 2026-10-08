@@ -67,16 +67,18 @@ test('with no engine the chip says so, and Settings can add one of your own', as
   await page.getByRole('button', { name: 'Library' }).first().click();
   await page.click('.navbar__settings');
   const section = page.locator('.settings-section', { hasText: 'Text recognition' });
-  await expect(section).toContainText('no built-in text recognition');
+  // Only the optional Claude engine is listed, and it is off until a key is added.
+  await expect(section.locator('.ocr-engine')).toHaveCount(1);
+  await expect(section.locator('.ocr-engine')).toContainText('Claude (AI vision)');
   await section.getByRole('button', { name: '+ Add your own engine' }).click();
   await section.getByPlaceholder('My Tesseract server').fill('Local test');
   await section.getByPlaceholder('http://localhost:8080/ocr').fill('https://ocr.test/ocr');
   await expect(section).toContainText('on the internet');
   await section.getByRole('button', { name: 'Add engine' }).click();
   await expect(section.locator('.ocr-engine--on')).toContainText('Local test');
-  await expect(section.locator('.ocr-pill')).toContainText('Sends images out');
-  await section.getByRole('button', { name: 'Remove' }).click();
-  await expect(section).toContainText('no built-in text recognition');
+  await expect(section.locator('.ocr-engine--on .ocr-pill')).toContainText('Sends images out');
+  await section.getByRole('button', { name: 'Remove', exact: true }).click();
+  await expect(section.locator('.ocr-engine')).toHaveCount(1);
 });
 
 test('a read that is not a word is flagged, offers corrections, and a pick looks the word up', async ({ page }) => {
@@ -115,4 +117,41 @@ test('a read that is not a word is flagged, offers corrections, and a pick looks
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 3);
   await expect(popup).toContainText('Remembered from your earlier correction', { timeout: 30000 });
   await expect(popup.locator('.dict-popup__word-text')).toHaveText('المدرسة');
+});
+
+test('a second opinion is asked only when the first read is not a word, and the dictionary decides', async ({ page }) => {
+  const answer = (text: string) => async (route: import('@playwright/test').Route) => {
+    const png = route.request().postDataBuffer();
+    const [width, height] = png && png.length > 24 ? [png.readUInt32BE(16), png.readUInt32BE(20)] : [400, 200];
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' },
+      body: JSON.stringify({ words: [{ text, x: width / 2 - 100, y: height / 2 - 30, w: 200, h: 60 }] }),
+    });
+  };
+  await page.route('http://ocr.test/first**', answer('المدرسه'));
+  await page.route('http://ocr.test/second**', answer('المدرسة'));
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'arabic-reader:pdfOcr',
+      JSON.stringify({
+        engineId: 'custom:a',
+        fallbackId: 'custom:b',
+        custom: [
+          { id: 'custom:a', name: 'First engine', url: 'http://ocr.test/first' },
+          { id: 'custom:b', name: 'Second engine', url: 'http://ocr.test/second' },
+        ],
+      })
+    );
+  });
+  await addScan(page);
+  await page.locator('.book-card__open').first().click();
+  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+  const box = (await page.locator('.pdfp-page[data-page="1"] .pdfp-text').boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 3);
+  const popup = page.locator('.dict-popup');
+  await expect(popup.locator('.dict-popup__word-text')).toHaveText('المدرسة', { timeout: 30000 });
+  await expect(popup).toContainText('by Second engine');
+  await expect(popup).not.toContainText('Not a known word');
 });

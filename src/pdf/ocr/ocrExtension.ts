@@ -11,6 +11,7 @@ import { pageHasText } from './pageText';
 import { lineOf, pickWord } from './pick';
 import { refineRead, type Attempt } from './refine';
 import { chosenOcrEngine } from './registry';
+import { getOcrEngine } from './registry';
 import { getOcrSettings, type Enhance } from './settings';
 import { setOcrState } from './state';
 import type { OcrEngine, OcrWord } from './types';
@@ -36,8 +37,8 @@ function wordOf(token: string): string | null {
 /** Reads `region` of a page with an engine and returns the word nearest its centre. */
 async function readNearCentre(engine: OcrEngine, page: PDFPageProxy, region: Region, scale: number, enhance: Enhance): Promise<string | null> {
   const crop = await cropPage(page, region, { scale, pad: 0.25, enhance });
-  const words = await engine.recognize({ image: crop.image, width: crop.width, height: crop.height, language: LANGUAGE });
   const middle = { x: crop.width / 2, y: crop.height / 2 };
+  const words = await engine.recognize({ image: crop.image, width: crop.width, height: crop.height, language: LANGUAGE, point: middle });
   const word = pickWord(words, middle);
   return word ? wordOf(word.text) : null;
 }
@@ -61,15 +62,14 @@ export async function wordAtTap(tap: PdfWordTap): Promise<PointedWord | null> {
     const point = { x: (tap.clientX - frame.left) / d, y: (tap.clientY - frame.top) / d };
     const stripW = Math.min(base.width, Math.max(settings.stripPt * 14, 300));
     const crop = await cropPage(page, { x: point.x - stripW / 2, y: point.y - settings.stripPt / 2, w: stripW, h: settings.stripPt }, settings);
-    const started = performance.now();
-    const words = await engine.recognize({ image: crop.image, width: crop.width, height: crop.height, language: LANGUAGE });
-    if (mine !== latest) return null;
-
     const tapPx = { x: (point.x - crop.region.x) * crop.scale + crop.margin, y: (point.y - crop.region.y) * crop.scale + crop.margin };
+    const started = performance.now();
+    const words = await engine.recognize({ image: crop.image, width: crop.width, height: crop.height, language: LANGUAGE, point: tapPx });
+    if (mine !== latest) return null;
     const picked = pickWord(words, tapPx, settings.stripPt * crop.scale * MAX_TAP_DISTANCE_LINES);
     const first = picked ? wordOf(picked.text) : null;
     if (!picked || !first) {
-      setOcrState({ phase: 'none', engine: engine.name, message: 'No word found there. Tap the word again, or try another engine.' });
+      setOcrState({ phase: 'none', engine: engine.name, message: 'No word found there. Tap the word again, try another engine, or look it up with Alt+D.' });
       return null;
     }
 
@@ -98,6 +98,11 @@ export async function wordAtTap(tap: PdfWordTap): Promise<PointedWord | null> {
       label: 'a closer look',
       run: () => readNearCentre(engine, page, closer, scale, enhance),
     }));
+    // A second opinion, only if the reader chose one: the dictionary decides between the answers.
+    const second = settings.fallbackId && settings.fallbackId !== engine.id ? getOcrEngine(settings.fallbackId) : undefined;
+    if (second && (await second.status()).available) {
+      attempts.push({ label: second.name, run: () => readNearCentre(second, page, closer, 4, 'none') });
+    }
     const refined = await refineRead(first, attempts, knownWords, wordRanks);
     if (mine !== latest) return null;
 
