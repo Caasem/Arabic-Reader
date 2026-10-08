@@ -26,6 +26,8 @@ export interface BrowseBook {
   volumes: number;
   /** One per volume, relative to the dataset root (no leading `./`). */
   txtPaths: string[];
+  /** The scanned original, one per volume; empty when the collection has none for this book. */
+  pdfPaths: string[];
   /** Title, author and category folded for matching. */
   haystack: string;
 }
@@ -59,7 +61,7 @@ export function parseIndex(tsv: string, sourceId: string): BrowseBook[] {
   const lines = tsv.split('\n');
   const header = (lines[0] ?? '').replace(/^﻿/, '').replace(/\r$/, '').split('\t');
   const col = (name: string) => header.indexOf(name);
-  const [iCat, iAuthor, iTitle, iPages, iVols, iTxt] = ['category', 'author', 'title', 'pages', 'volumes', 'txt_paths'].map(col);
+  const [iCat, iAuthor, iTitle, iPages, iVols, iTxt, iPdf] = ['category', 'author', 'title', 'pages', 'volumes', 'txt_paths', 'pdf_paths'].map(col);
   if ([iCat, iAuthor, iTitle, iTxt].some((i) => i < 0)) throw new Error('The catalogue is not in the expected format.');
   for (let i = 1; i < lines.length; i++) {
     const cells = lines[i].replace(/\r$/, '').split('\t');
@@ -77,6 +79,7 @@ export function parseIndex(tsv: string, sourceId: string): BrowseBook[] {
       pages: Number(cells[iPages]) || 0,
       volumes: Number(cells[iVols]) || txtPaths.length,
       txtPaths,
+      pdfPaths: iPdf >= 0 ? parsePathList(cells[iPdf] ?? '') : [],
       haystack: foldForSearch(`${title} ${author} ${category}`),
     });
   }
