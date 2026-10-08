@@ -4,6 +4,12 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.43.1 — 2026-10-08
+
+- **Any readable PDF is accepted.** If a page can't be read, or the text check can't run, the PDF
+  is now added anyway and opens as its original pages instead of being turned away. Only
+  password-protected, damaged and over-500-MB files are still refused.
+
 ## v0.43.0 — 2026-10-08
 
 - **Original pages for PDFs.** A book added from a PDF keeps the PDF. In the reader, Display →

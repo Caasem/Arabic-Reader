@@ -172,6 +172,24 @@ describe('convertPdf', () => {
     expect(book.pages).toBe(4);
   });
 
+  it('still accepts the PDF when a page cannot be read or the dictionary check fails', async () => {
+    const pdf = makePdf(bookPages());
+    const flaky: PdfDeps = {
+      ...deps,
+      openDocument: async (data) => {
+        const doc = await openDocument(data);
+        return { ...doc, getPage: (n: number) => (n === 2 ? Promise.reject(new Error('bad page')) : doc.getPage(n)) };
+      },
+    };
+    const partial = await convertPdf(pdf, flaky, 'x');
+    expect(partial.pages).toBe(3);
+    expect(partial.reflow).toBe('ok');
+    expect(partial.warnings).toEqual(['1 page without text left out']);
+
+    const noDictionary = await convertPdf(pdf, { ...deps, analyse: () => Promise.reject(new Error('no dictionary')) }, 'x');
+    expect(noDictionary).toMatchObject({ reflow: 'broken', chapters: [], pages: 3 });
+  });
+
   it('explains an encrypted, a corrupt and a too-large PDF', async () => {
     const encrypted = makePdf([{ lines: [rtl(PROSE_1, 700)] }], { encrypted: true });
     await expect(convertPdf(encrypted, deps, 'x')).rejects.toThrow(PDF_MESSAGES.password);
