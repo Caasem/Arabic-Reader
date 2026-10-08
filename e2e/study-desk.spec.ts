@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { makePdf } from '../src/pdf/testPdf';
 
 /**
  * The study desk (src/studyDesk): Alt+C concept, Alt+X region capture, the Alt+I inbox and the desk document.
@@ -254,4 +255,43 @@ test.describe('margin images', () => {
     await expect(page.locator('.sd-gloss--m .sd-frame img')).toHaveCount(1);
     await expect(page.locator('.sd-toast')).toContainText('Image placed');
   });
+});
+
+test('a region captured on a scanned PDF page is boxed on the page with a card beside it', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('.navbar__settings', { timeout: 15000 });
+  await page.setInputFiles('.library__actions input[type=file]', { name: 'scan.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf([{ image: true }, { image: true }])) });
+  await expect(page.locator('.book-card')).toHaveCount(1, { timeout: 30000 });
+  await page.locator('.book-card__open').first().click();
+  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+
+  const frame = page.locator('.pdfp-page[data-page="1"]');
+  const r = (await frame.boundingBox())!;
+  await page.keyboard.press('Alt+x');
+  await expect(page.locator('.sd-region')).toBeVisible();
+  await page.mouse.move(r.x + r.width * 0.2, r.y + 60);
+  await page.mouse.down();
+  await page.mouse.move(r.x + r.width * 0.6, r.y + 160, { steps: 6 });
+  await page.mouse.up();
+  const bar = page.getByRole('dialog', { name: 'Capture' });
+  await expect(bar).toContainText('Region of page 1');
+  await bar.getByRole('button', { name: /^Send to/ }).click();
+  await expect(bar).toHaveCount(0);
+
+  // The pages fit beside a margin now; the box keeps its place on the page.
+  const box = frame.locator('.sd-pdfbox');
+  await expect(box).toHaveCount(1);
+  const card = page.locator('.sd-pdfmargin .sd-pdfcard');
+  await expect(card).toHaveCount(1);
+  await expect(card).toContainText('Page 1');
+  const f = (await frame.boundingBox())!;
+  const b = (await box.boundingBox())!;
+  expect(f.width).toBeLessThan(r.width);
+  expect(Math.abs((b.x - f.x) / f.width - 0.2)).toBeLessThan(0.01);
+  expect(Math.abs((b.y - f.y) / f.width - 60 / r.width)).toBeLessThan(0.01);
+  expect((await card.boundingBox())!.x).toBeGreaterThan(f.x + f.width);
+  await card.getByRole('textbox', { name: 'Gloss' }).fill('The diagram of the spheres');
+  await card.getByRole('button', { name: 'Show in document' }).click();
+  const doc = page.getByRole('dialog', { name: 'Desk document' });
+  await expect(doc.locator('.desk-embed', { hasText: 'The diagram of the spheres' })).toHaveCount(1);
 });

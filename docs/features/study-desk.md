@@ -37,6 +37,13 @@ Everything a reader notices while reading becomes an item: a concept they type, 
 
 **Pull in (Alt+U)**
 - Search saved highlights, words and desk items from other books, or pick an image file, and place it in a margin or the inbox. Alt+P stays the saved-entries export.
+- A margin placement sits at the middle of the visible page; the new item's source points to where it came from. Pull in is also a button in the inbox and the document's side panel.
+
+**Images in the margins**
+- Paste an image into a margin note to make it a screenshot; drop an image file on a margin for a new screenshot note at that height, or on a note to add it there.
+
+**PDF pages**
+- Regions captured on PDF pages (scanned or not) show as boxes on the page, with a card each in a margin to the right of the pages, where a gloss can be written. The pages fit beside that margin while the book has regions; Margins: Hidden frees the space.
 
 ## 3. Data
 
@@ -51,4 +58,4 @@ Everything a reader notices while reading becomes an item: a concept they type, 
 
 ## 5. Not yet
 
-- Sync of desk tables; graph and canvas views; root and lemma links; margins in the epub (iframe) reader and on PDF pages.
+- Sync of desk tables; graph and canvas views; root and lemma links; margins in the epub (iframe) reader; margin notes written straight onto PDF pages (only captured regions show there).

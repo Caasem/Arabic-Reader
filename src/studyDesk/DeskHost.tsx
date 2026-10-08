@@ -8,7 +8,11 @@ import { ConceptStrip } from './ConceptStrip';
 import { DeskDocument } from './DeskDocument';
 import { InboxBody } from './InboxBody';
 import { MarginLayer } from './MarginLayer';
+import { registerPdfPageExtension } from '../pdf/pages/extensions';
 import { cleanLocationNearCentre } from './pageGeometry';
+import { publishPdfDeskItems } from './pdfDesk';
+import { PdfDeskLayer } from './PdfDeskLayer';
+import { PdfMargin } from './PdfMargin';
 import type { PullSpot } from './pullIn';
 import { PullInBody } from './PullInBody';
 import { RegionCapture } from './RegionCapture';
@@ -118,6 +122,10 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
     },
     [data.items, data.deskId]
   );
+  // Desk regions on PDF pages: a layer the pages view draws in each page (src/pdf/pages/extensions.ts).
+  useEffect(() => registerPdfPageExtension({ id: 'study-desk', Layer: PdfDeskLayer }), []);
+  useEffect(() => publishPdfDeskItems(data.items), [data.items]);
+
   const closeRegion = useCallback(() => {
     setRegion(false);
     if (backToDoc.current) {
@@ -141,6 +149,7 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
           </Shell>
         </div>
       )}
+      {book.pdf && <PdfMargin book={book} onOpenDocument={openDocument} />}
       {!doc && <MarginLayer book={book} data={data} onToast={say} onOpenDocument={openDocument} />}
       {concept && <ConceptStrip book={book} deskId={data.deskId} deskName={deskName} onClose={() => setConcept(false)} onToast={say} />}
       {region && <RegionCapture book={book} deskId={data.deskId} deskName={deskName} onClose={closeRegion} onToast={say} />}

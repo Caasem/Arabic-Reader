@@ -1,0 +1,66 @@
+import { useSyncExternalStore } from 'react';
+import { parsePdfLocation } from './pageGeometry';
+import type { DeskItem } from './types';
+
+/**
+ * Shared between the boxes drawn inside each PDF page (PdfDeskLayer, a pages-view extension that the pages
+ * view renders itself, so it cannot take props) and the margin beside the pages (PdfMargin, mounted by the
+ * desk host): the desk items and which one the pointer is on.
+ */
+interface PdfDeskState {
+  items: DeskItem[];
+  hover: string | null;
+}
+
+let state: PdfDeskState = { items: [], hover: null };
+const listeners = new Set<() => void>();
+
+function set(patch: Partial<PdfDeskState>): void {
+  state = { ...state, ...patch };
+  listeners.forEach((l) => l());
+}
+
+export const publishPdfDeskItems = (items: DeskItem[]): void => set({ items });
+export const setPdfDeskHover = (hover: string | null): void => {
+  if (state.hover !== hover) set({ hover });
+};
+
+const subscribe = (l: () => void) => {
+  listeners.add(l);
+  return () => void listeners.delete(l);
+};
+
+export const usePdfDesk = (): PdfDeskState => useSyncExternalStore(subscribe, () => state);
+
+export interface PdfMark {
+  item: DeskItem;
+  page: number;
+  /** Fractions of the page. */
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** The items with a region on a page of this book (one page, or all when `page` is omitted), in reading order. */
+export function pdfMarks(items: DeskItem[], bookId: string, page?: number): PdfMark[] {
+  const out: PdfMark[] = [];
+  for (const item of items) {
+    if (item.hidden && !item.pin) continue;
+    const location = item.pin?.bookId === bookId ? item.pin.location : item.source?.bookId === bookId ? item.source.location : undefined;
+    const at = parsePdfLocation(location);
+    if (!at || (page !== undefined && at.page !== page) || at.w <= 0 || at.h <= 0) continue;
+    out.push({ item, ...at });
+  }
+  return out.sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x);
+}
+
+/** Card tops (px), each level with its region where room allows, never overlapping. */
+export function stackTops(wanted: number[], heights: number[], gap = 8): number[] {
+  let bottom = -Infinity;
+  return wanted.map((y, i) => {
+    const top = Math.max(y, bottom);
+    bottom = top + heights[i] + gap;
+    return top;
+  });
+}

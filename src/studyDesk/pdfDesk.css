@@ -1,0 +1,87 @@
+/* Desk regions on PDF pages (PdfDeskLayer): boxes over the page, cards in a margin beside it. */
+.sd-pdfdesk {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.sd-pdfbox {
+  position: absolute;
+  border-radius: 3px;
+  background: rgb(250 204 21 / 0.22);
+  box-shadow: inset 0 0 0 1.5px rgb(202 138 4 / 0.55);
+  mix-blend-mode: multiply;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.sd-pdfbox--on {
+  background: rgb(250 204 21 / 0.34);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+/* The margin beside the pages: a strip kept free to the right of the stage; the pages fit the rest. */
+body.sd-pdf-margin .pdfp .reader__body {
+  padding-right: 300px;
+}
+.sd-pdfmargin {
+  position: fixed;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
+}
+.sd-pdfdesk__lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.sd-pdfdesk__lines path {
+  fill: none;
+  stroke: var(--ink-faint);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+.sd-pdfdesk__lines circle {
+  fill: rgb(202 138 4 / 0.8);
+}
+.sd-pdfdesk__lines .on path {
+  stroke: var(--accent);
+  stroke-dasharray: none;
+  stroke-width: 1.4;
+}
+.sd-pdfdesk__lines .on circle {
+  fill: var(--accent);
+}
+.sd-pdfcard {
+  position: absolute;
+  pointer-events: auto;
+  padding: 8px 10px 8px 12px;
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--bg-elevated);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+  font-family: var(--font-ui);
+  transition: top 0.2s ease, box-shadow 0.15s;
+}
+.sd-pdfcard--on {
+  box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px rgb(0 0 0 / 0.12);
+}
+.sd-pdfcard__tools {
+  display: none;
+  gap: 4px;
+  margin-top: 4px;
+}
+.sd-pdfcard--on .sd-pdfcard__tools {
+  display: flex;
+}
+.sd-pdfcard__tools button {
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--ink-soft);
+  font: 500 11.5px var(--font-ui);
+  padding: 3px 10px;
+  cursor: pointer;
+}
+.sd-pdfcard__tools button:hover {
+  color: var(--ink);
+}
