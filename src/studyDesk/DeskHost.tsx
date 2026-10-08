@@ -5,6 +5,7 @@ import { useChordHotkey } from '../readerChords';
 import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta, ReaderPreferences } from '../types';
 import { ConceptStrip } from './ConceptStrip';
+import { DeskDocument } from './DeskDocument';
 import { InboxBody } from './InboxBody';
 import { RegionCapture } from './RegionCapture';
 import { useDeskData } from './useDesk';
@@ -23,6 +24,10 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
   const [inbox, setInbox] = useState(false);
   const [concept, setConcept] = useState(false);
   const [region, setRegion] = useState(false);
+  /** The desk document, open on a desk (and maybe an item to show). */
+  const [doc, setDoc] = useState<{ deskId: string; itemId?: string } | null>(null);
+  /** A capture started from the document goes back to it. */
+  const backToDoc = useRef<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<number>(0);
   const narrow = useNarrow();
@@ -37,7 +42,10 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
   const desk = data.desks.find((d) => d.id === data.deskId);
   const deskName = !desk || (desk.kind === 'book' && desk.bookId === book.id) ? 'this book’s desk' : desk.title;
 
-  useChordHotkey('KeyI', true, () => setInbox((v) => !v));
+  useChordHotkey('KeyI', true, () => {
+    if (doc) return;
+    setInbox((v) => !v);
+  });
   useChordHotkey('KeyC', true, () => {
     setRegion(false);
     setConcept((v) => !v);
@@ -50,13 +58,32 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
 
   // Escape from inside the book reaches the host window.
   useEffect(() => {
-    if (!inbox) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setInbox(false);
+    if (!inbox && !doc) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (inbox) setInbox(false);
+      else setDoc(null);
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [inbox]);
+  }, [inbox, doc]);
 
-  const openDocument = useCallback(() => say('The desk document arrives in the next step'), [say]);
+  const openDocument = useCallback(
+    (itemId?: string) => {
+      const item = itemId ? data.items.find((i) => i.id === itemId) : undefined;
+      setInbox(false);
+      setDoc({ deskId: item?.deskId ?? data.deskId, itemId });
+    },
+    [data.items, data.deskId]
+  );
+  const closeRegion = useCallback(() => {
+    setRegion(false);
+    if (backToDoc.current) {
+      const deskId = backToDoc.current;
+      backToDoc.current = null;
+      setDoc({ deskId });
+    }
+  }, []);
 
   return (
     <>
@@ -66,7 +93,27 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
         </Shell>
       )}
       {concept && <ConceptStrip book={book} deskId={data.deskId} deskName={deskName} onClose={() => setConcept(false)} onToast={say} />}
-      {region && <RegionCapture book={book} deskId={data.deskId} deskName={deskName} onClose={() => setRegion(false)} onToast={say} />}
+      {region && <RegionCapture book={book} deskId={data.deskId} deskName={deskName} onClose={closeRegion} onToast={say} />}
+      {doc && (
+        <DeskDocument
+          book={book}
+          data={data}
+          deskId={doc.deskId}
+          focusItem={doc.itemId}
+          onClose={() => setDoc(null)}
+          onSwitchDesk={(id) => {
+            data.setDeskId(id);
+            setDoc({ deskId: id });
+          }}
+          onCapture={() => {
+            backToDoc.current = doc.deskId;
+            data.setDeskId(doc.deskId);
+            setDoc(null);
+            setRegion(true);
+          }}
+          onToast={say}
+        />
+      )}
       {toast && (
         <div className="sd-toast" role="status">
           {toast}
