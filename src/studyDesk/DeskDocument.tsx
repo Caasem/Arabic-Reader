@@ -3,6 +3,7 @@ import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta } from '../types';
 import { createOwnDesk, ensureBookDesk, getDesk, renameDesk, saveDeskHtml, updateItem } from './deskStore';
 import './deskDocument.css';
+import { applyLineStart, lineStart, runFormat, type FormatCommand } from './docFormat';
 import { ItemPicker } from './ItemPicker';
 import { IconCapture, IconChevron, IconDown, IconEye, IconEyeOff, IconInbox, IconPull, IconUp } from './icons';
 import { fillEmbed, type EmbedAct } from './docEmbeds';
@@ -28,6 +29,15 @@ interface Props {
 }
 
 const MIN_KEY = 'studyDesk.docPanelMin';
+
+const FORMATS: { cmd: FormatCommand; label: string; title: string; icon: React.ReactNode }[] = [
+  { cmd: 'bold', label: 'Bold', title: 'Bold (Ctrl+B)', icon: <b>B</b> },
+  { cmd: 'italic', label: 'Italic', title: 'Italic (Ctrl+I)', icon: <i>I</i> },
+  { cmd: 'heading', label: 'Heading', title: 'Heading (# at the start of a line)', icon: <span className="sd-fmt__h">H</span> },
+  { cmd: 'bullets', label: 'Bulleted list', title: 'Bulleted list (- at the start of a line)', icon: <span>•≡</span> },
+  { cmd: 'numbers', label: 'Numbered list', title: 'Numbered list (1. at the start of a line)', icon: <span>1.</span> },
+  { cmd: 'quote', label: 'Quotation', title: 'Quotation (> at the start of a line)', icon: <span className="sd-fmt__q">“</span> },
+];
 const SAVE_MS = 400;
 
 /** Whether an item shows in the document text (margin notes follow the margin setting). */
@@ -72,6 +82,21 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
       alive = false;
     };
   }, [deskId, book]);
+
+  // New lines are paragraphs (the browser's default is a div), so Enter after a heading or list gives a plain line.
+  useEffect(() => {
+    try {
+      document.execCommand('defaultParagraphSeparator', false, 'p');
+    } catch {
+      // Divs then; the document turns them into paragraphs when it saves.
+    }
+  }, []);
+  function format(cmd: FormatCommand) {
+    if (!edRef.current?.contains(window.getSelection()?.anchorNode ?? null)) edRef.current?.focus();
+    runFormat(cmd);
+    scheduleSave();
+    bump();
+  }
 
   /** The item whose note is being edited in place (docEmbeds.ts). */
   const editing = useRef<string | null>(null);
@@ -166,16 +191,12 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
       ed.innerHTML = EMPTY_DOC;
       caretEnd(ed.querySelector('p'));
     }
-    // "# " at the start of a line makes it a heading.
+    // A line that starts "# ", "- ", "1. " or "> " becomes a heading, a list or a quotation (docFormat.ts).
     const sel = window.getSelection();
     let node: Node | null = sel?.anchorNode ?? null;
     while (node && node.parentNode !== ed) node = node.parentNode;
-    if (node && node.nodeType === Node.ELEMENT_NODE && /^(P|DIV)$/.test((node as Element).tagName) && /^#[\s ]/.test(node.textContent ?? '')) {
-      const h = document.createElement('h3');
-      h.textContent = (node.textContent ?? '').replace(/^#[\s ]+/, '');
-      if (!h.textContent) h.innerHTML = '<br>';
-      ed.replaceChild(h, node);
-      caretEnd(h);
+    if (node && node.nodeType === Node.ELEMENT_NODE && /^(P|DIV)$/.test((node as Element).tagName) && lineStart(node.textContent ?? '')) {
+      caretEnd(applyLineStart(node as HTMLElement));
     } else if (node && node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === 'P' && (node.textContent ?? '') === '/') {
       // "/" alone on a line: choose an item to put there.
       setPicker({ line: node as HTMLElement, anchor: (node as HTMLElement).getBoundingClientRect() });
@@ -412,13 +433,20 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
           >
             {desk?.title}
           </h2>
+          <div className="sd-fmt" role="toolbar" aria-label="Formatting">
+            {FORMATS.map((f) => (
+              <button key={f.cmd} type="button" title={f.title} aria-label={f.label} onMouseDown={(e) => e.preventDefault()} onClick={() => format(f.cmd)}>
+                {f.icon}
+              </button>
+            ))}
+          </div>
           <div ref={edRef} className="sd-editor" role="textbox" contentEditable suppressContentEditableWarning spellCheck aria-label="Document text" aria-multiline="true" onInput={onInput}
             onBlur={save}
             onClick={onEditorClick}
             onDragOver={(e) => dragId.current && (e.preventDefault(), (e.dataTransfer.dropEffect = 'move'))}
             onDrop={onEditorDrop}
           />
-          <p className="sd-doc__hint">Type anywhere. # and a space starts a heading. / on an empty line puts an item there; rows of the side panel can be dragged into the text. New captures appear at the end.</p>
+          <p className="sd-doc__hint">Type anywhere. At the start of a line: # heading, - list, 1. numbered list, &gt; quotation. Ctrl+B bold, Ctrl+I italic. / on an empty line puts an item there; rows of the side panel can be dragged into the text. New captures appear at the end.</p>
           {picker && (
             <ItemPicker
               items={deskItems}

@@ -548,6 +548,34 @@ test.describe('desk document', () => {
     await expect(editor.locator(':scope > *').first()).toHaveClass(/sd-emb--quote/);
   });
 
+  test('lists, quotations, bold and the toolbar; kept after closing', async ({ page }) => {
+    await openSample(page);
+    await page.keyboard.press('d');
+    const doc = page.getByRole('dialog', { name: 'Desk document' });
+    const editor = doc.getByRole('textbox', { name: 'Document text' });
+    await editor.locator('p').last().click();
+    await page.keyboard.type('- first point');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('second point');
+    await expect(editor.locator('ul li')).toHaveCount(2);
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('> a saying');
+    await expect(editor.locator('blockquote')).toHaveText('a saying');
+    await page.keyboard.press('Enter');
+    await doc.getByRole('button', { name: 'Paragraph' }).or(doc.getByRole('button', { name: 'Quotation' })).first().click();
+    await page.keyboard.type('plain ');
+    await doc.getByRole('button', { name: 'Bold' }).click();
+    await page.keyboard.type('strong');
+    await expect(editor.locator('b, strong')).toContainText('strong');
+
+    await doc.getByRole('button', { name: 'Back to the page' }).click();
+    await page.keyboard.press('d');
+    await expect(editor.locator('ul li')).toHaveCount(2);
+    await expect(editor.locator('blockquote')).toHaveText('a saying');
+    await expect(editor.locator('b, strong')).toContainText('strong');
+  });
+
   test('Arabic lines run right to left and source lines keep their parts in order', async ({ page }) => {
     const doc = await docWithItems(page);
     const editor = doc.getByRole('textbox', { name: 'Document text' });

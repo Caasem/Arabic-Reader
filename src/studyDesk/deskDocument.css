@@ -667,3 +667,54 @@
   font-size: 11px;
   opacity: 0.7;
 }
+
+/* Formatting: the toolbar above the text, and the lists and quotations it makes. */
+.sd-fmt {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  gap: 2px;
+  margin: 0 0 10px;
+  padding: 4px 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.sd-fmt button {
+  min-width: 32px;
+  height: 30px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--ink-soft);
+  font: 500 14px var(--font-ui);
+  cursor: pointer;
+}
+.sd-fmt button:hover,
+.sd-fmt button:focus-visible {
+  background: var(--accent-soft);
+  color: var(--ink);
+  outline: none;
+}
+.sd-fmt__h {
+  font-family: var(--look-display, Georgia, serif);
+  font-weight: 600;
+}
+.sd-fmt__q {
+  font: 600 20px/1 Georgia, serif;
+}
+.sd-editor ul,
+.sd-editor ol {
+  margin: 0 0 10px;
+  padding-inline-start: 26px;
+}
+.sd-editor li {
+  margin: 2px 0;
+}
+.sd-editor blockquote {
+  margin: 0 0 10px;
+  padding: 2px 0;
+  padding-inline-start: 14px;
+  border-inline-start: 3px solid var(--border);
+  color: var(--ink-soft);
+}
