@@ -69,15 +69,25 @@ function useGeometry(): [Geo | null, number, () => void] {
     measureRef.current = measure;
     let observed: Element | null = null;
     const mo = new MutationObserver(measure);
+    // The page also moves without any change inside the reader: the app sidebar folding away (Focus), panels
+    // opening beside it. Size changes of the stage and column, and the end of any transition, catch those.
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
     const attach = () => {
       const root = document.querySelector('.qr');
       if (root && root !== observed) {
         mo.disconnect();
+        ro?.disconnect();
         mo.observe(root, { attributes: true, attributeFilter: ['style', 'class'], childList: true, subtree: true });
+        ro?.observe(root);
+        const stage = root.querySelector('.qr-stage');
+        const column = root.querySelector('.qr-column');
+        if (stage) ro?.observe(stage);
+        if (column) ro?.observe(column);
         observed = root;
         measure();
       }
     };
+    document.addEventListener('transitionend', measure, true);
     attach();
     const poll = window.setInterval(attach, 800);
     window.addEventListener('resize', measure);
@@ -86,6 +96,8 @@ function useGeometry(): [Geo | null, number, () => void] {
       cancelAnimationFrame(raf);
       window.clearInterval(poll);
       mo.disconnect();
+      ro?.disconnect();
+      document.removeEventListener('transitionend', measure, true);
       window.removeEventListener('resize', measure);
       document.removeEventListener('scroll', measure, true);
     };
@@ -112,15 +124,17 @@ export function MarginLayer({ book, data, onToast, onOpenDocument }: Props) {
   const chosen = prefs.studyDeskMargins;
   const [geo, tick, remeasure] = useGeometry();
   // "Both sides" on a window too narrow for two margins: move the page over and use one wide margin.
-  const [fallback, setFallback] = useState(false);
+  // Decided per window width only: the reader's own panels (Focus hiding the sidebar, the drawer) come and go,
+  // and re-deciding on each would move the page under the reader's pointer.
+  const [fallback, setFallback] = useState<{ width: number; on: boolean } | null>(null);
   useEffect(() => {
-    if (chosen !== 'both' || !geo) return setFallback(false);
+    if (chosen !== 'both' || !geo) return;
+    if (fallback && fallback.width === window.innerWidth) return;
     const free = geo.stage.width - geo.column.width;
     const each = free / 2 - EDGE - GUTTER;
-    if (!fallback && each < MIN_SIDE && free - SHIFT - EDGE - GUTTER >= MIN_SIDE) setFallback(true);
-    else if (fallback && each >= MIN_SIDE + 20) setFallback(false);
+    setFallback({ width: window.innerWidth, on: each < MIN_SIDE && free - SHIFT - EDGE - GUTTER >= MIN_SIDE });
   }, [chosen, geo, fallback]);
-  const mode = chosen === 'both' && fallback ? 'right' : chosen;
+  const mode = chosen === 'both' && fallback?.on ? 'right' : chosen;
   const [focusId, setFocusId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
