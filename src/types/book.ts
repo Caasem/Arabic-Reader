@@ -23,6 +23,13 @@ export interface BookMeta {
    * whose file is still in the legacy `bookFiles` table (schema v13 migration, src/persistence/bookFileMigration.ts).
    */
   fileHash?: string;
+  /**
+   * A book added from a PDF (src/pdfPages). The converted EPUB is the book file; the PDF itself is in the
+   * BlobStore (namespace `pdf`, owner = book id) under `originalHash`, for the Original pages view.
+   * `reflow` says how the EPUB came out: 'ok' (reflowed text), 'broken' (the text layer was unusable) or
+   * 'none' (no text layer: scanned). Anything but 'ok' opens in the pages view only.
+   */
+  pdf?: { pages: number; reflow: 'ok' | 'broken' | 'none'; originalHash: string };
 }
 
 /** The one automatic "where I left off" per book. */

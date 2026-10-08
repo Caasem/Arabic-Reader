@@ -4,6 +4,17 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.43.0 — 2026-10-08
+
+- **Original pages for PDFs.** A book added from a PDF keeps the PDF. In the reader, Display →
+  PDF → **Original pages** shows its real pages, fit to the width, with Ctrl+wheel or the − / +
+  buttons to zoom and "Page N of M" at the bottom. Tap a word on a page that has text to look it up
+  as usual. **Reflowed text** in the top bar goes back; each view remembers its own place.
+- **PDFs that can't be reflowed are no longer refused.** A scanned PDF, or one whose text can't be
+  read cleanly, is added as pages only, with a note saying why. (Looking up words on a scan needs
+  text recognition, which is still to come.)
+- The PDF's size counts with the book in Settings → Storage.
+
 ## v0.42.0 — 2026-10-07
 
 - **PDF books.** Add a PDF like any other book: if it has a text layer (not a scan) it is turned

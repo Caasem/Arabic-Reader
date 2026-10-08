@@ -9,8 +9,10 @@ import { FlashHost } from '../flashCard';
 import { PicksExportHost } from '../picksExport';
 import { useReaderView } from '../quietReader/readerView';
 import { saveCleanFocus } from './cleanFocus';
+import { usePdfView } from '../pdfPages/pdfView';
 
 const CleanReader = lazy(() => import('./CleanReader').then((m) => ({ default: m.CleanReader })));
+const PdfPagesReader = lazy(() => import('../pdfPages/PdfPagesReader').then((m) => ({ default: m.PdfPagesReader })));
 const QuietReader = lazy(() => import('../quietReader/QuietReader').then((m) => ({ default: m.QuietReader })));
 
 type ReaderSwitchProps = ComponentProps<typeof Reader> & {
@@ -31,6 +33,7 @@ type ReaderSwitchProps = ComponentProps<typeof Reader> & {
 export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: ReaderSwitchProps) {
   const { prefs } = usePreferences();
   const [view, setView] = useReaderView(props.book.id);
+  const [pdfView, setPdfView] = usePdfView(props.book);
 
   // Alt+D, Alt+S, Alt+V, Alt+N, Alt+F and Alt+P open their palettes and cards over whichever reader is showing.
   const hosts = (
@@ -43,6 +46,20 @@ export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: 
       <PicksExportHost book={props.book} />
     </>
   );
+
+  // A book added from a PDF can be read as its own pages (the only way when its text could not be reflowed).
+  if (props.book.pdf && pdfView === 'pages') {
+    return (
+      <>
+        <PdfPagesReader
+          book={props.book}
+          onBack={props.onBack}
+          onShowText={props.book.pdf.reflow === 'ok' ? () => setPdfView('text') : undefined}
+        />
+        {hosts}
+      </>
+    );
+  }
 
   if (prefs.quietReaderEnabled && view === 'clean') {
     return (
@@ -57,6 +74,7 @@ export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: 
           onLevelsOpenChange={props.onVocabPanelOpenChange}
           onOpenSettings={onOpenSettings}
           onShowOriginal={() => setView('original')}
+          onShowPages={props.book.pdf ? () => setPdfView('pages') : undefined}
         />
         {hosts}
       </>

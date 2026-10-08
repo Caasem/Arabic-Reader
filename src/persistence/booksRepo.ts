@@ -10,6 +10,7 @@ import { deleteSynced, putSynced, syncScope, updateSynced } from './writeLayer';
  * read falls back to that table until the migration has run.
  */
 const NS = 'book';
+const PDF_NS = 'pdf';
 const blobs = getBlobStore;
 
 export async function saveBook(meta: BookMeta, file: Blob): Promise<void> {
@@ -86,8 +87,25 @@ export async function removeBookFile(id: string): Promise<void> {
   await db.bookFiles.delete(id);
   if (hash) await blobs().unpin(hash, NS, id);
 }
+/** The PDF a book was converted from, when this device has it. */
+export async function getPdfOriginal(id: string): Promise<Blob | undefined> {
+  const hash = (await db.books.get(id))?.pdf?.originalHash;
+  return hash ? blobs().get(hash) : undefined;
+}
+/** Keeps the PDF a book came from and records it on the book (`pdf.originalHash`). */
+export async function savePdfOriginal(id: string, file: Blob, pdf: { pages: number; reflow: 'ok' | 'broken' | 'none' }): Promise<void> {
+  const { hash } = await blobs().put(file, { ns: PDF_NS, owner: id, type: 'application/pdf' });
+  try {
+    await updateSynced('books', id, { pdf: { ...pdf, originalHash: hash } });
+  } catch (error) {
+    await blobs().unpin(hash, PDF_NS, id).catch(() => undefined);
+    throw error;
+  }
+}
 export async function deleteBook(id: string): Promise<void> {
-  const hash = (await db.books.get(id))?.fileHash;
+  const book = await db.books.get(id);
+  const hash = book?.fileHash;
+  if (book?.pdf) await blobs().unpin(book.pdf.originalHash, PDF_NS, id).catch(() => undefined);
   await db.transaction('rw', [db.bookFiles, ...syncScope('books', 'positions')], async () => {
     await deleteSynced('books', id);
     await db.bookFiles.delete(id);

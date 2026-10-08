@@ -110,6 +110,14 @@ export async function measureStorage(deps: MeasureDeps = {}): Promise<StorageRep
       fileItems.set(owner, { id: owner, kind: 'book', label: titles.get(owner) ?? owner, bytes: ref.size, hasFile: true });
     }
   }
+  // A book added from a PDF also keeps the PDF (namespace `pdf`): its bytes count with the book.
+  for await (const ref of blobs.list('pdf')) {
+    for (const owner of ref.owners) {
+      const item = fileItems.get(owner);
+      if (item) item.bytes += ref.size;
+      else fileItems.set(owner, { id: owner, kind: 'book', label: titles.get(owner) ?? owner, bytes: ref.size, hasFile: false });
+    }
+  }
   let legacyBytes = 0;
   for (const row of await db.bookFiles.toArray()) {
     if (fileItems.has(row.bookId)) continue;
@@ -130,7 +138,7 @@ export async function measureStorage(deps: MeasureDeps = {}): Promise<StorageRep
   }
   const files = group('files', items);
   // Identical books share one blob: the group total is what is stored, not the sum of the rows.
-  files.bytes = (usage.book?.bytes ?? 0) + legacyBytes + fontBytes + dictionaryBytes;
+  files.bytes = (usage.book?.bytes ?? 0) + (usage.pdf?.bytes ?? 0) + legacyBytes + fontBytes + dictionaryBytes;
 
   // -- Your records ---------------------------------------------------------------------------------------------
   const recordItems: UsageItem[] = [];
