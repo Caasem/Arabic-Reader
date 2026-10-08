@@ -12,9 +12,9 @@ interface Pos {
   y: number;
 }
 
-function loadPos(): Pos | null {
+function loadPos(key: string): Pos | null {
   try {
-    const raw = localStorage.getItem(POS_KEY);
+    const raw = localStorage.getItem(key);
     return raw ? (JSON.parse(raw) as Pos) : null;
   } catch {
     return null;
@@ -28,16 +28,28 @@ function clamp(pos: Pos, height: number): Pos {
   };
 }
 
+/** What the frame says about itself. Defaults are the dictionary search's; the study desk inbox passes its own. */
+export interface ShellLabels {
+  /** Drawer header title. */
+  title?: string;
+  /** The shortcut shown in the header. */
+  keyHint?: string;
+  /** Accessible name of the dialog. */
+  label?: string;
+  /** Where the floating position is remembered. */
+  posKey?: string;
+}
+
 /** Frames the search in one of the four layouts. */
-export function Shell({ style, onClose, children }: { style: Style; onClose(): void; children: ReactNode }) {
-  if (style === 'floating') return <Floating onClose={onClose}>{children}</Floating>;
+export function Shell({ style, onClose, children, title = 'Dictionary', keyHint = 'Alt D', label = 'Dictionary search', posKey = POS_KEY }: { style: Style; onClose(): void; children: ReactNode } & ShellLabels) {
+  if (style === 'floating') return <Floating onClose={onClose} keyHint={keyHint} label={label} posKey={posKey}>{children}</Floating>;
   if (style === 'drawer') {
     return (
-      <aside className="dsearch dsearch--drawer" aria-label="Dictionary search">
+      <aside className="dsearch dsearch--drawer" aria-label={label}>
         <div className="dsearch__header">
-          <span className="dsearch__title">Dictionary</span>
-          <kbd className="dsearch__key">Alt D</kbd>
-          <CloseButton onClose={onClose} />
+          <span className="dsearch__title">{title}</span>
+          <kbd className="dsearch__key">{keyHint}</kbd>
+          <CloseButton onClose={onClose} label={label} />
         </div>
         {children}
       </aside>
@@ -46,7 +58,7 @@ export function Shell({ style, onClose, children }: { style: Style; onClose(): v
   return (
     <>
       <div className="dsearch-backdrop" onClick={onClose} />
-      <div className={'dsearch dsearch--' + style} role="dialog" aria-label="Dictionary search">
+      <div className={'dsearch dsearch--' + style} role="dialog" aria-label={label}>
         {style === 'sheet' && <div className="dsearch__handle" aria-hidden="true" />}
         {children}
       </div>
@@ -54,17 +66,17 @@ export function Shell({ style, onClose, children }: { style: Style; onClose(): v
   );
 }
 
-function CloseButton({ onClose }: { onClose(): void }) {
+function CloseButton({ onClose, label = 'Dictionary search' }: { onClose(): void; label?: string }) {
   return (
-    <button type="button" className="dsearch__close" aria-label="Close dictionary search" onClick={onClose}>
+    <button type="button" className="dsearch__close" aria-label={'Close ' + label.toLowerCase()} onClick={onClose}>
       ×
     </button>
   );
 }
 
-function Floating({ onClose, children }: { onClose(): void; children: ReactNode }) {
+function Floating({ onClose, children, keyHint, label, posKey }: { onClose(): void; children: ReactNode; keyHint: string; label: string; posKey: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<Pos>(() => loadPos() ?? { x: window.innerWidth - FLOAT_WIDTH - 24, y: 96 });
+  const [pos, setPos] = useState<Pos>(() => loadPos(posKey) ?? { x: window.innerWidth - FLOAT_WIDTH - 24, y: 96 });
   const drag = useRef<{ dx: number; dy: number } | null>(null);
 
   useEffect(() => {
@@ -87,7 +99,7 @@ function Floating({ onClose, children }: { onClose(): void; children: ReactNode 
     if (!drag.current) return;
     drag.current = null;
     try {
-      localStorage.setItem(POS_KEY, JSON.stringify(pos));
+      localStorage.setItem(posKey, JSON.stringify(pos));
     } catch {
       // Position just won't be remembered.
     }
@@ -99,7 +111,7 @@ function Floating({ onClose, children }: { onClose(): void; children: ReactNode 
       className="dsearch dsearch--floating"
       style={{ left: pos.x, top: pos.y, width: FLOAT_WIDTH }}
       role="dialog"
-      aria-label="Dictionary search"
+      aria-label={label}
     >
       <div
         className="dsearch__header dsearch__header--grip"
@@ -116,8 +128,8 @@ function Floating({ onClose, children }: { onClose(): void; children: ReactNode 
           <circle cx="16" cy="17" r="1.6" />
         </svg>
         <span className="dsearch__title">Drag to move</span>
-        <kbd className="dsearch__key">Alt D</kbd>
-        <CloseButton onClose={onClose} />
+        <kbd className="dsearch__key">{keyHint}</kbd>
+        <CloseButton onClose={onClose} label={label} />
       </div>
       {children}
     </div>
