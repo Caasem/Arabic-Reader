@@ -42,16 +42,16 @@ const MIME_TYPES = {
 // book styles/images (epub.js serves them as blob: URLs) must stay allowed,
 // while any script not shipped with the app is blocked. AnkiConnect runs on
 // localhost:8765; the Shamela beta reads from one named mirror (shamelaBooksProvider.ts); the
-// optional Claude vision engine for scanned pages (src/pdf/ocr/aiEngine.ts) calls api.anthropic.com.
+// optional Claude vision engine for scanned pages (src/pdf/ocr/aiEngine.ts) calls api.anthropic.com, and the offline reading model (src/pdf/ocr/paddle) is downloaded once from huggingface.co and run as WebAssembly.
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
-  "script-src 'self'",
+  "script-src 'self' 'wasm-unsafe-eval'",
   "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline' blob:",
   "img-src 'self' data: blob:",
   "font-src 'self' data: blob:",
   "media-src 'self' data: blob:",
-  "connect-src 'self' blob: data: http://127.0.0.1:8765 http://localhost:8765 https://winongkencono-shamelah.hf.space https://api.anthropic.com",
+  "connect-src 'self' blob: data: http://127.0.0.1:8765 http://localhost:8765 https://winongkencono-shamelah.hf.space https://api.anthropic.com https://huggingface.co https://*.huggingface.co https://*.hf.co",
   "frame-src 'self' blob:",
   "object-src 'none'",
 ].join('; ');

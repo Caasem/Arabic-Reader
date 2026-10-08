@@ -1,7 +1,14 @@
 /**
  * Tap a word on a scanned PDF page: the line around the tap is cropped at print resolution, handed to
  * a text-recognition engine, and the word nearest the tap opens in the dictionary popup. Which engine
- * reads is the reader's choice, and engines are pluggable.
+ * reads is the reader's choice, and engines are pluggable. The dictionary judges every read (refine.ts):
+ * a word it does not know is looked at again more closely, put to a second engine if the reader set one,
+ * and otherwise flagged with ranked corrections (repair.ts, the popup's "Did you mean"); a correction the
+ * reader makes is remembered per book (corrections.ts).
+ *
+ * Engines that ship: the OS's own in the desktop app (Windows), Offline reading (paddle/: PaddleOCR's Arabic
+ * model in onnxruntime-web, downloaded on request, runs in any browser), Claude vision (aiEngine.ts, the
+ * reader's own key) and addresses the reader adds.
  *
  * Adding an engine (all of them are `OcrEngine`s, see types.ts):
  *   - in code: `registerOcrEngine({ id, name, description, kind, status, recognize })`; it appears in

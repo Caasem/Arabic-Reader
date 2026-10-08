@@ -34,6 +34,8 @@ Loaded only when a PDF, TXT, Markdown, MOBI or AZW3 file is added (`src/importFo
 | [foliate-js](https://github.com/johnfactotum/foliate-js) (`mobi.js`) | Reading MOBI and AZW3 (KF8) files | MIT |
 | [fflate](https://github.com/101arrowz/fflate) | Decompressing fonts inside Kindle files | MIT |
 | [pdfjs-dist](https://github.com/mozilla/pdf.js) (pdf.js) | Reading the text of PDF files (its worker is bundled, nothing is fetched). **Apache-2.0, which is not compatible with GPL-2.0-only: see the Licence section of `docs/features/formats-pdf.md`.** | Apache-2.0 |
+| [onnxruntime-web](https://github.com/microsoft/onnxruntime) | Running the offline reading model for scanned PDF pages (`src/pdf/ocr/paddle`) | MIT |
+| PaddleOCR Arabic recognizer (ONNX export, [mirror](https://huggingface.co/mxaln/docscanner-ocr)) | The offline reading model, downloaded by the reader on request and kept in the browser; not bundled | Apache-2.0 |
 | [sql.js](https://github.com/sql-js/sql.js) | Writing Anki packages (.apkg), loaded only on export | MIT |
 
 ## Sample books

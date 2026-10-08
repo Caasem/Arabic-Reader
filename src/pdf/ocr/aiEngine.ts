@@ -48,7 +48,7 @@ export function createClaudeEngine(deps: { fetchImpl?: typeof fetch; mark?: (req
     kind: 'ai',
     sendsImagesOffDevice: true,
     async status() {
-      return getOcrSettings().claudeKey ? { available: true } : { available: false, reason: 'Add your Anthropic API key below to use this.' };
+      return getOcrSettings().claudeKey ? { available: true } : { available: false, reason: 'Add your Anthropic API key in Settings → Reading → Text recognition.' };
     },
     async recognize(request, signal): Promise<OcrWord[]> {
       const { claudeKey, claudeModel } = getOcrSettings();

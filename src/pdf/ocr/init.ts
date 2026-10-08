@@ -1,4 +1,5 @@
 import { createClaudeEngine } from './aiEngine';
+import { createPaddleEngine } from './paddle/paddleEngine';
 import { createEndpointEngine, loadDesktopEngines } from './engines';
 import { registerOcrEngine, ocrEngines, unregisterOcrEngine } from './registry';
 import { getOcrSettings, subscribeOcrSettings } from './settings';
@@ -29,6 +30,8 @@ export function initOcr(): void {
     const custom = ocrEngines().filter((e) => e.kind === 'custom');
     for (const engine of custom) unregisterOcrEngine(engine.id);
     for (const engine of engines) registerOcrEngine(engine);
+    // Offline reading runs anywhere, so it comes after the OS's own engine, which stays the default where there is one.
+    registerOcrEngine(createPaddleEngine());
     for (const engine of custom) registerOcrEngine(engine);
   });
 }

@@ -14,9 +14,17 @@ release.
   button, and lets you add your own by address (for example a local Tesseract or PaddleOCR
   server). An address that is not on your computer is marked, because it receives an image of the
   line you tap.
+- **Works in the browser too.** *Offline reading (beta)* runs PaddleOCR's Arabic reader on your
+  device after a one-time 8 MB download from Settings. No key, no account, nothing sent anywhere.
+  *Claude (AI vision)* reads the word you tap with your own Anthropic key; it is off until you add
+  one, and each use sends an image of that line to Anthropic.
+- **Misreads are caught.** Every word read from a scan is checked against the dictionary. If it is
+  not a word, the app looks at it again more closely, and can ask a second engine you choose (the
+  dictionary decides between the answers). If it is still wrong, the popup marks it, and offers
+  ranked "Did you mean" corrections (press 1-3).
 - **Correct a word in the popup.** Click the word at the top of the dictionary popup to edit it
-  in place; Enter looks up the corrected word, Esc cancels. Handy when a scan is misread, and for
-  trying another form of any word.
+  in place; Enter looks up the corrected word, Esc cancels. Corrections to scanned words are
+  remembered for that book, so the same misread comes up right next time.
 
 ## v0.43.2 — 2026-10-08
 

@@ -52,6 +52,11 @@ export async function wordAtTap(tap: PdfWordTap): Promise<PointedWord | null> {
     setOcrState({ phase: 'error', message: 'No text recognition is set up for this device. Add one in Settings → Reading.' });
     return null;
   }
+  const status = await engine.status();
+  if (!status.available) {
+    setOcrState({ phase: 'error', engine: engine.name, message: status.reason ?? `${engine.name} is not available.` });
+    return null;
+  }
   setOcrState({ phase: 'reading', engine: engine.name });
   try {
     const settings = getOcrSettings();

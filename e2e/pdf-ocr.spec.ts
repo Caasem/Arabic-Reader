@@ -62,14 +62,16 @@ test('with no engine the chip says so, and Settings can add one of your own', as
   const layer = page.locator('.pdfp-page[data-page="1"] .pdfp-text');
   const box = (await layer.boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 3);
-  await expect(page.locator('.pdfp-chip--warn')).toContainText('No text recognition is set up');
+  // In a browser the offline reading engine is the default, and it needs its one-time download first.
+  await expect(page.locator('.pdfp-chip--warn')).toContainText('Download the reading model');
 
   await page.getByRole('button', { name: 'Library' }).first().click();
   await page.click('.navbar__settings');
   const section = page.locator('.settings-section', { hasText: 'Text recognition' });
-  // Only the optional Claude engine is listed, and it is off until a key is added.
-  await expect(section.locator('.ocr-engine')).toHaveCount(1);
-  await expect(section.locator('.ocr-engine')).toContainText('Claude (AI vision)');
+  // Offline reading (needs its download) and Claude (needs a key) are listed; neither is ready yet.
+  await expect(section.locator('.ocr-engine')).toHaveCount(2);
+  await expect(section.locator('.ocr-engine').nth(0)).toContainText('Claude (AI vision)');
+  await expect(section.locator('.ocr-engine').nth(1)).toContainText('Offline reading');
   await section.getByRole('button', { name: '+ Add your own engine' }).click();
   await section.getByPlaceholder('My Tesseract server').fill('Local test');
   await section.getByPlaceholder('http://localhost:8080/ocr').fill('https://ocr.test/ocr');
@@ -78,7 +80,7 @@ test('with no engine the chip says so, and Settings can add one of your own', as
   await expect(section.locator('.ocr-engine--on')).toContainText('Local test');
   await expect(section.locator('.ocr-engine--on .ocr-pill')).toContainText('Sends images out');
   await section.getByRole('button', { name: 'Remove', exact: true }).click();
-  await expect(section.locator('.ocr-engine')).toHaveCount(1);
+  await expect(section.locator('.ocr-engine')).toHaveCount(2);
 });
 
 test('a read that is not a word is flagged, offers corrections, and a pick looks the word up', async ({ page }) => {
@@ -154,4 +156,21 @@ test('a second opinion is asked only when the first read is not a word, and the 
   await expect(popup.locator('.dict-popup__word-text')).toHaveText('المدرسة', { timeout: 30000 });
   await expect(popup).toContainText('by Second engine');
   await expect(popup).not.toContainText('Not a known word');
+});
+
+test('the offline reading model downloads once from Settings and the engine becomes ready', async ({ page }) => {
+  // A stand-in for the model files: this checks the download, keeping and status, not the reading itself.
+  await page.route('**/arabic/rec_model.onnx', (route) => route.fulfill({ status: 200, contentType: 'application/octet-stream', headers: { 'access-control-allow-origin': '*' }, body: Buffer.alloc(4096, 1) }));
+  await page.route('**/arabic/charset.json', (route) => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: '["ا","ب"]' }));
+  await page.goto('/');
+  await page.waitForSelector('.navbar__settings', { timeout: 15000 });
+  await page.click('.navbar__settings');
+  const section = page.locator('.settings-section', { hasText: 'Text recognition' });
+  const engine = section.locator('.ocr-engine', { hasText: 'Offline reading' });
+  await expect(engine).toContainText('Not available');
+  await section.getByRole('button', { name: /^Download/ }).click();
+  await expect(section.locator('.ocr-pill--ok', { hasText: 'Downloaded' })).toBeVisible({ timeout: 15000 });
+  await expect(engine).toContainText('Ready');
+  await section.getByRole('button', { name: 'Remove', exact: true }).click();
+  await expect(engine).toContainText('Not available');
 });

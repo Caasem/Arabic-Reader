@@ -3,6 +3,7 @@ import { Note, SelectRow, SettingsSection } from '../../components/shared/settin
 import { CLAUDE_ENGINE_ID, CLAUDE_MODELS } from './aiEngine';
 import { createEndpointEngine, isLocalAddress } from './engines';
 import { initOcr } from './init';
+import { downloadPaddleModel, paddleModelReady, PADDLE_MODEL_MB, removePaddleModel, subscribePaddleModel } from './paddle/model';
 import { chosenOcrEngine, ocrEngines, subscribeOcrEngines } from './registry';
 import { getOcrSettings, subscribeOcrSettings, updateOcrSettings, type Enhance } from './settings';
 import type { OcrEngine, OcrEngineStatus } from './types';
@@ -120,6 +121,57 @@ function AddEngine({ onAdded, onCancel }: { onAdded(id: string): void; onCancel(
   );
 }
 
+/** The one-time download behind Offline reading: the model is kept in the browser and works offline after. */
+function OfflineModel() {
+  const [ready, setReady] = useState<boolean | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const check = () => void paddleModelReady().then((r) => !cancelled && setReady(r));
+    check();
+    const unsubscribe = subscribePaddleModel(() => void paddleModelReady().then((r) => !cancelled && setReady(r)));
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+  async function download() {
+    setError(null);
+    setProgress(0);
+    try {
+      await downloadPaddleModel(setProgress);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'The download failed.');
+    } finally {
+      setProgress(null);
+    }
+  }
+  return (
+    <div className="ocr-add">
+      <strong>Offline reading model</strong>
+      <p className="ocr-engine__desc ocr-engine__desc--flush">
+        PaddleOCR’s Arabic reader ({PADDLE_MODEL_MB} MB, Apache-2.0). Downloaded once from a public mirror, kept in this browser, and used offline. Nothing about you or your books is sent.
+      </p>
+      <div className="ocr-engine__acts ocr-engine__acts--flush">
+        {ready ? (
+          <>
+            <span className="ocr-pill ocr-pill--ok">Downloaded</span>
+            <button type="button" className="ocr-btn ocr-btn--quiet" onClick={() => void removePaddleModel()}>
+              Remove
+            </button>
+          </>
+        ) : (
+          <button type="button" className="ocr-btn ocr-btn--primary" disabled={progress !== null} onClick={() => void download()}>
+            {progress === null ? `Download (${PADDLE_MODEL_MB} MB)` : `Downloading… ${Math.round(progress * 100)}%`}
+          </button>
+        )}
+      </div>
+      {error && <p className="ocr-warn">{error}</p>}
+    </div>
+  );
+}
+
 /** The reader's own Anthropic key, which turns on the Claude engine above. Kept on this device. */
 function ClaudeKey({ claudeKey, claudeModel }: { claudeKey?: string; claudeModel?: string }) {
   const [draft, setDraft] = useState('');
@@ -179,6 +231,8 @@ export function PdfOcrSettings() {
   const [tests, setTests] = useState<Record<string, TestResult>>({});
   const [adding, setAdding] = useState(false);
 
+  const [modelChanges, setModelChanges] = useState(0);
+  useEffect(() => subscribePaddleModel(() => setModelChanges((n) => n + 1)), []);
   useEffect(() => {
     let cancelled = false;
     for (const engine of engines) {
@@ -187,7 +241,7 @@ export function PdfOcrSettings() {
     return () => {
       cancelled = true;
     };
-  }, [engines]);
+  }, [engines, modelChanges, settings.claudeKey]);
 
   async function runTest(engine: OcrEngine) {
     setTests((t) => ({ ...t, [engine.id]: 'running' }));
@@ -237,6 +291,7 @@ export function PdfOcrSettings() {
           </button>
         </div>
       )}
+      <OfflineModel />
       <ClaudeKey claudeKey={settings.claudeKey} claudeModel={settings.claudeModel} />
       <SelectRow
         label="If the first read is not a word, ask"
