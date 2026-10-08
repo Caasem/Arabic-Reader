@@ -6,6 +6,7 @@ import './deskDocument.css';
 import { applyLineStart, lineStart, runFormat, type FormatCommand } from './docFormat';
 import { documentBlocks } from './docExport';
 import { DeskList } from './DeskList';
+import { blockOf, caretInto, caretOnFirstLine, caretOnLastLine, gapAt, isEmbed, openLine, type Gap } from './docSpacing';
 import { ExportMenu } from './ExportMenu';
 import { ItemPicker } from './ItemPicker';
 import { IconCapture, IconChevron, IconDown, IconEye, IconEyeOff, IconInbox, IconPull, IconUp } from './icons';
@@ -266,6 +267,93 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
   }
   const dragId = useRef<string | null>(null);
 
+  // --- room between items (docSpacing.ts): the "+" line in a gap, a selected item, and the keys ---
+  const [gap, setGap] = useState<(Gap & { left: number; width: number }) | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+  const selectedEl = () => (selected ? (embedEl(selected) as HTMLElement | null) : null);
+  function selectItem(host: HTMLElement) {
+    setSelected(host.dataset.item ?? null);
+    window.getSelection()?.removeAllRanges();
+    edRef.current?.focus({ preventScroll: true });
+  }
+  useEffect(() => {
+    if (!gap) return;
+    const clear = () => setGap(null);
+    document.addEventListener('scroll', clear, true);
+    return () => document.removeEventListener('scroll', clear, true);
+  }, [gap]);
+  // fillEmbed rewrites an item's classes, so the mark is put back after every render.
+  useEffect(() => {
+    edRef.current?.querySelectorAll('.sd-emb--sel').forEach((el) => el.classList.remove('sd-emb--sel'));
+    selectedEl()?.classList.add('sd-emb--sel');
+  });
+  function lineAt(before: Element | null) {
+    const ed = edRef.current;
+    if (!ed) return;
+    const p = openLine(ed, before);
+    setSelected(null);
+    setGap(null);
+    ed.focus({ preventScroll: true });
+    caretInto(p, 'start');
+    p.scrollIntoView?.({ block: 'nearest' });
+    scheduleSave();
+    bump();
+  }
+  function onEditorMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const ed = edRef.current;
+    if (!ed || dragId.current) return;
+    const found = gapAt(ed, e.clientY);
+    const r = ed.getBoundingClientRect();
+    setGap((g) => (found ? (g && g.before === found.before && Math.abs(g.y - found.y) < 1 ? g : { ...found, left: r.left, width: r.width }) : null));
+  }
+  function onEditorKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    const ed = edRef.current;
+    if (!ed || e.target !== ed || e.nativeEvent.isComposing) return;
+    const sel = selectedEl();
+    if (sel) {
+      const plain = !e.ctrlKey && !e.metaKey && !e.altKey;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        lineAt(e.shiftKey ? sel : sel.nextElementSibling);
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const next = e.key === 'ArrowDown' ? sel.nextElementSibling : sel.previousElementSibling;
+        if (isEmbed(next)) selectItem(next);
+        else if (next) {
+          setSelected(null);
+          caretInto(next, e.key === 'ArrowDown' ? 'start' : 'end');
+        } else lineAt(e.key === 'ArrowDown' ? null : sel);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        setSelected(null);
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        sel.remove();
+        setSelected(null);
+        scheduleSave();
+        bump();
+        onToast('Taken off the page. Put it back from the side panel.');
+      } else if (plain && e.key.length === 1) {
+        // Typing with an item selected starts a line below it, with what was typed.
+        const p = openLine(ed, sel.nextElementSibling);
+        setSelected(null);
+        caretInto(p, 'start');
+      }
+      return;
+    }
+    // The arrow keys stop on an item instead of jumping over it.
+    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const block = blockOf(ed, window.getSelection()?.anchorNode ?? null);
+      if (!block) return;
+      const next = e.key === 'ArrowDown' ? block.nextElementSibling : block.previousElementSibling;
+      if (isEmbed(next) && (e.key === 'ArrowDown' ? caretOnLastLine(block) : caretOnFirstLine(block))) {
+        e.preventDefault();
+        selectItem(next);
+      }
+    }
+  }
+
   // --- putting an item where you are writing: "/" on an empty line, or a row dragged from the side panel ---
   const [picker, setPicker] = useState<{ line: HTMLElement; anchor: DOMRect } | null>(null);
   /** Puts an item's embed at `ref` (replacing it, or before or after it), moving it if it is already in the text. */
@@ -344,10 +432,17 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     const target = e.target as HTMLElement;
     const btn = target.closest<HTMLElement>('[data-act]');
     const host = target.closest<HTMLElement>(`.${EMBED_CLASS}`);
+    // A click on an item (not on its buttons or its note) selects it: Enter then opens a line below it.
+    if (!btn && host && !target.closest('textarea')) {
+      selectItem(host);
+      return;
+    }
+    if (!host) setSelected(null);
     if (!btn || !host) return;
     const id = host.dataset.item ?? '';
     const item = itemsById.get(id);
     const act = btn.dataset.act as EmbedAct;
+    setSelected(null);
     e.preventDefault();
     if (!item) return;
     if (act === 'remove') {
@@ -482,10 +577,27 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
           <div ref={edRef} className="sd-editor" role="textbox" contentEditable suppressContentEditableWarning spellCheck aria-label="Document text" aria-multiline="true" onInput={onInput}
             onBlur={save}
             onClick={onEditorClick}
+            onKeyDown={onEditorKeyDown}
+            onMouseMove={onEditorMouseMove}
+            onMouseLeave={(e) => !(e.relatedTarget instanceof Element && e.relatedTarget.closest('.sd-gap')) && setGap(null)}
             onDragOver={(e) => dragId.current && (e.preventDefault(), (e.dataTransfer.dropEffect = 'move'))}
             onDrop={onEditorDrop}
           />
-          <p className="sd-doc__hint">Type anywhere. At the start of a line: # heading, - list, 1. numbered list, &gt; quotation. Ctrl+B bold, Ctrl+I italic. / on an empty line puts an item there; rows of the side panel can be dragged into the text. New captures appear at the end.</p>
+          <p className="sd-doc__hint">Type anywhere. Between items: click the + line, or click an item and press Enter (Shift+Enter above it). At the start of a line: # heading, - list, 1. numbered list, &gt; quotation. Ctrl+B bold, Ctrl+I italic. / on an empty line puts an item there; rows of the side panel can be dragged into the text. New captures appear at the end.</p>
+          {gap && (
+            <button
+              type="button"
+              className="sd-gap"
+              style={{ top: gap.y, left: gap.left, width: gap.width }}
+              aria-label="Add a line here"
+              title="Add a line here"
+              onMouseDown={(e) => e.preventDefault()}
+              onMouseLeave={(e) => !(e.relatedTarget instanceof Element && edRef.current?.contains(e.relatedTarget)) && setGap(null)}
+              onClick={() => lineAt(gap.before)}
+            >
+              <span>+</span>
+            </button>
+          )}
           {listOpen && (
             <DeskList
               desks={data.desks}
