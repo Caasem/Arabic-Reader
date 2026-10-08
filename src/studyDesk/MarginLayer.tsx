@@ -5,7 +5,7 @@ import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta, ReaderPreferences } from '../types';
 import { vocabularyService } from '../vocabulary';
 import { deleteItem, turnItemIntoHeading, updateItem } from './deskStore';
-import { cleanLocationAt, rectsOfCleanLocation } from './pageGeometry';
+import { cleanLocationNearY, rectsOfCleanLocation } from './pageGeometry';
 import { capture, TYPE_LABEL, useDeskImage, type DeskData } from './useDesk';
 import { shownInDocument } from './DeskDocument';
 import { attachImage, carriesFiles, imageIn } from './marginImages';
@@ -205,18 +205,8 @@ export function MarginLayer({ book, data, onToast, onOpenDocument }: Props) {
 
   // --- double-tap to write ---
   const lastTap = useRef<{ t: number; y: number; side: Side } | null>(null);
-  const lineBeside = useCallback(
-    (side: Side, y: number): string | null => {
-      if (!geo) return null;
-      const tries = side === 'right' ? [geo.column.right - 8, geo.column.left + geo.column.width / 2, geo.column.left + 8] : [geo.column.left + 8, geo.column.left + geo.column.width / 2, geo.column.right - 8];
-      for (const tx of tries) {
-        const location = cleanLocationAt(tx, y);
-        if (location) return location;
-      }
-      return null;
-    },
-    [geo]
-  );
+  // The line beside a tap or a drop: the nearest visible line, if one is that close (pageGeometry.ts).
+  const lineBeside = useCallback((_side: Side, y: number): string | null => (geo ? cleanLocationNearY(y, 36) : null), [geo]);
   const startNote = useCallback(
     async (side: Side, y: number) => {
       const location = lineBeside(side, y);

@@ -120,30 +120,52 @@ export function rectsOfCleanLocation(location: string): DOMRect[] {
   return range ? Array.from(range.getClientRects()) : [];
 }
 
-/**
- * A clean-text place near the middle of the quiet reader's visible column, for things placed on "this page"
- * (Pull in). Tries the centre first, then lines above and below it. Null when no quiet-reader text is on screen.
- */
-export function cleanLocationNearCentre(): string | null {
+/** The quiet reader's visible column: the text column cut to the stage and the window. */
+function visibleColumn(): { left: number; right: number; top: number; bottom: number } | null {
   const column = document.querySelector<HTMLElement>('.qr-column')?.getBoundingClientRect();
   const stage = document.querySelector<HTMLElement>('.qr-stage')?.getBoundingClientRect() ?? column;
   if (!column || !stage) return null;
   const top = Math.max(column.top, stage.top, 0);
   const bottom = Math.min(column.bottom, stage.bottom, window.innerHeight);
-  if (bottom - top < 10) return null;
-  const mid = (top + bottom) / 2;
-  const xs = [column.left + column.width / 2, column.right - 12, column.left + 12];
-  for (let step = 0; step < 12; step++) {
-    for (const sign of step ? [-1, 1] : [1]) {
-      const y = mid + sign * step * 18;
-      if (y < top || y > bottom) continue;
-      for (const x of xs) {
-        const at = cleanLocationAt(x, y);
-        if (at) return at;
-      }
-    }
+  return bottom - top < 10 ? null : { left: Math.max(column.left, stage.left), right: Math.min(column.right, stage.right), top, bottom };
+}
+
+/**
+ * A clean-text place on the visible line nearest a screen height (a zero-length place at the start of a word
+ * on that line), or null when no line is within `reach` px. Measured from the words on screen rather than
+ * the caret under a point: below the last line the caret lands at the end of the chapter, which has no line.
+ */
+export function cleanLocationNearY(y: number, reach = Infinity): string | null {
+  const col = visibleColumn();
+  if (!col) return null;
+  let best: { word: HTMLElement; d: number; x: number } | null = null;
+  for (const word of Array.from(document.querySelectorAll<HTMLElement>('.qr-chapter .ar-word'))) {
+    const r = word.getBoundingClientRect();
+    if (!r.width || r.bottom < col.top || r.top > col.bottom || r.right < col.left || r.left > col.right) continue;
+    const d = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
+    // Same line: keep the rightmost word (the line's start in Arabic).
+    if (!best || d < best.d - 1 || (Math.abs(d - best.d) <= 1 && r.right > best.x)) best = { word, d, x: r.right };
+  }
+  if (best) {
+    if (best.d > reach) return null;
+    const section = best.word.closest<HTMLElement>('.qr-chapter');
+    if (!section) return null;
+    const at = offsetWithin(section, best.word, 0);
+    return formatCleanLocation({ chapter: Number(section.dataset.chapter), start: at, end: at });
+  }
+  // No Arabic words on screen (a Latin passage): the caret at that height, kept only if it is on a visible line.
+  for (const x of [col.left + (col.right - col.left) / 2, col.right - 12, col.left + 12]) {
+    const at = cleanLocationAt(x, y);
+    const r = at ? rectsOfCleanLocation(at)[0] : undefined;
+    if (at && r && r.bottom >= col.top && r.top <= col.bottom && Math.abs(r.top + r.height / 2 - y) <= Math.min(reach, 60)) return at;
   }
   return null;
+}
+
+/** A clean-text place on the visible line nearest the middle of the column, for things placed on "this page" (Pull in). */
+export function cleanLocationNearCentre(): string | null {
+  const col = visibleColumn();
+  return col ? cleanLocationNearY((col.top + col.bottom) / 2) : null;
 }
 
 /** The clean-text place under a point (a zero-length place), or null. */

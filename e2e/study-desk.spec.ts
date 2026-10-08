@@ -16,6 +16,15 @@ async function openSample(page: Page) {
   await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
 }
 
+/** The height of a paragraph's first line (the sample chapter is short: tap beside text, not empty page). */
+async function lineY(page: Page, paragraph: number) {
+  return page.evaluate((n) => {
+    const ps = Array.from(document.querySelectorAll('.qr-chapter p')).filter((p) => p.querySelector('.ar-word'));
+    const r = ps[Math.min(n, ps.length - 1)].querySelector('.ar-word')!.getBoundingClientRect();
+    return r.top + r.height / 2;
+  }, paragraph);
+}
+
 /** A box around the first line of the first paragraph, in page coordinates. */
 async function firstLineBox(page: Page) {
   return page.evaluate(() => {
@@ -124,7 +133,7 @@ test.describe('margins', () => {
 
     const area = page.locator('.sd-margins__area').last();
     const box = (await area.boundingBox())!;
-    await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height * 0.6);
+    await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 2));
     const note = page.getByRole('textbox', { name: 'Margin note' });
     await expect(note).toBeFocused();
     await page.keyboard.type('Why does he go home?');
@@ -141,7 +150,7 @@ test.describe('margins', () => {
     const area = page.locator('.sd-margins__area').last();
     await expect(area).toBeVisible();
     const box = (await area.boundingBox())!;
-    await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height * 0.3);
+    await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 1));
     await expect(page.getByRole('textbox', { name: 'Margin note' })).toBeFocused();
     await page.keyboard.type('عصبية = group feeling');
     await page.locator('.sd-gloss--m').getByRole('button', { name: 'Flashcard', exact: true }).click();
@@ -155,11 +164,22 @@ test.describe('margins', () => {
     await expect(page.locator('.sd-gloss--card')).toHaveCount(1);
   });
 
+  test('a double-tap far below the last line makes no note', async ({ page }) => {
+    await openSample(page);
+    const area = page.locator('.sd-margins__area').last();
+    const box = (await area.boundingBox())!;
+    const last = await lineY(page, 99);
+    test.skip(last + 120 > box.y + box.height - 20, 'the chapter fills the page here');
+    await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height - 20);
+    await expect(page.locator('.sd-toast')).toContainText('Tap beside a line of text');
+    await expect(page.locator('.sd-gloss--m')).toHaveCount(0);
+  });
+
   test('an empty note disappears when left', async ({ page }) => {
     await openSample(page);
     const area = page.locator('.sd-margins__area').last();
     const box = (await area.boundingBox())!;
-    await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height * 0.5);
+    await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 2));
     await expect(page.getByRole('textbox', { name: 'Margin note' })).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(page.locator('.sd-gloss--m')).toHaveCount(0);
@@ -225,7 +245,7 @@ test.describe('margin images', () => {
     await openSample(page);
     const area = page.locator('.sd-margins__area').last();
     const box = (await area.boundingBox())!;
-    await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height * 0.4);
+    await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 1));
     const note = page.getByRole('textbox', { name: 'Margin note' });
     await expect(note).toBeFocused();
     await page.keyboard.type('Figure');
@@ -243,15 +263,16 @@ test.describe('margin images', () => {
     await openSample(page);
     const area = page.locator('.sd-margins__area').last();
     await expect(area).toBeVisible();
-    await area.evaluate((el, b64) => {
+    const y = await lineY(page, 2);
+    await area.evaluate((el, [b64, y]) => {
       const r = el.getBoundingClientRect();
       const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
       const dt = new DataTransfer();
       dt.items.add(new File([bytes], 'figure.png', { type: 'image/png' }));
-      const at = { clientX: r.left + r.width / 2, clientY: r.top + r.height * 0.5, dataTransfer: dt, bubbles: true, cancelable: true };
+      const at = { clientX: r.left + r.width / 2, clientY: y as number, dataTransfer: dt, bubbles: true, cancelable: true };
       el.dispatchEvent(new DragEvent('dragover', at));
       el.dispatchEvent(new DragEvent('drop', at));
-    }, png);
+    }, [png, y] as const);
     await expect(page.locator('.sd-gloss--m .sd-frame img')).toHaveCount(1);
     await expect(page.locator('.sd-toast')).toContainText('Image placed');
   });
