@@ -780,9 +780,10 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
       {browsing && (
         <BrowseLibraryPanel
           onClose={() => setBrowsing(false)}
-          onBookAdded={(meta) => {
-            setBooks((prev) => [meta, ...prev.filter((b) => b.id !== meta.id)]);
-            setFileIds((prev) => (prev ? new Set(prev).add(meta.id) : prev));
+          onBooksAdded={(added) => {
+            const ids = new Set(added.map((b) => b.id));
+            setBooks((prev) => [...added, ...prev.filter((b) => !ids.has(b.id))]);
+            setFileIds((prev) => (prev ? new Set([...prev, ...ids]) : prev));
           }}
           ownedIds={new Set(books.map((b) => b.id))}
         />

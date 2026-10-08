@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseIndex, parsePathList, searchCatalog, datasetUrl } from './catalog';
-import { splitPages, volumesToChapters } from './download';
+import { addedKey, formatBytes, splitPages, volumeTitle, volumesToChapters } from './download';
+import { putBooksOnShelf } from '../components/library/shelves';
 
 const TSV = [
   'category\tauthor\ttitle\tpages\tvolumes\tpdf_paths\ttxt_paths\tdocx_paths',
@@ -45,5 +46,40 @@ describe('browse library conversion', () => {
   it('labels volumes when there are several', () => {
     const chapters = volumesToChapters([['a'], ['b']], 'T');
     expect(chapters[1].html).toContain('المجلد 2');
+  });
+});
+
+describe('browse library formats and volumes', () => {
+  it('keeps the PDF paths of each volume', () => {
+    const books = parseIndex(TSV, 'waqfeya');
+    expect(books[0].pdfPaths).toEqual(['pdf/a.pdf']);
+    expect(books[1].pdfPaths).toEqual([]);
+  });
+
+  it('titles volumes of a multi-volume book, and a single volume plainly', () => {
+    expect(volumeTitle('رياض الصالحين', 1, 3)).toBe('رياض الصالحين — المجلد 2');
+    expect(volumeTitle('رياض الصالحين', 0, 1)).toBe('رياض الصالحين');
+  });
+
+  it('numbers a combined book by the volumes chosen, not by position', () => {
+    const chapters = volumesToChapters([['a'], ['b']], 'T', [1, 3]);
+    expect(chapters[0].html).toContain('المجلد 2');
+    expect(chapters[1].html).toContain('المجلد 4');
+  });
+
+  it('keys one added file by book, format and volume', () => {
+    const [book] = parseIndex(TSV, 'waqfeya');
+    expect(addedKey(book, 'pdf', 2)).toBe(`${book.key}#pdf#2`);
+  });
+
+  it('formats sizes for the volume list', () => {
+    expect(formatBytes(49537)).toBe('48 KB');
+    expect(formatBytes(5 * 1048576)).toBe('5.0 MB');
+    expect(formatBytes(300 * 1048576)).toBe('300 MB');
+  });
+
+  it('puts books on a shelf once', () => {
+    const shelves = [{ id: 's', name: 'S', color: '#000', bookIds: ['a'] }];
+    expect(putBooksOnShelf(shelves, 's', ['a', 'b', 'b'])[0].bookIds).toEqual(['a', 'b']);
   });
 });

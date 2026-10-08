@@ -1,6 +1,6 @@
 # Browse library
 
-Roadmap id: `browse-library` · Area: Content · Status: built (v0.61.0)
+Roadmap id: `browse-library` · Area: Content · Status: built (v0.63.0)
 
 ## Purpose
 

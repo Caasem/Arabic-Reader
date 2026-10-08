@@ -36,3 +36,8 @@ export function forgetBook(shelves: LibraryShelf[], bookId: string): LibraryShel
   if (!shelves.some((s) => s.bookIds.includes(bookId))) return shelves;
   return shelves.map((s) => (s.bookIds.includes(bookId) ? { ...s, bookIds: s.bookIds.filter((b) => b !== bookId) } : s));
 }
+
+/** Puts the books on the shelf (those already there stay once). */
+export function putBooksOnShelf(shelves: readonly LibraryShelf[], shelfId: string, bookIds: readonly string[]): LibraryShelf[] {
+  return shelves.map((s) => (s.id === shelfId ? { ...s, bookIds: [...new Set([...s.bookIds, ...bookIds])] } : s));
+}
