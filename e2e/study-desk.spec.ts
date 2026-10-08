@@ -445,3 +445,204 @@ test.describe('D opens the desk document', () => {
     await expect(page.getByRole('dialog', { name: 'Desk document' })).toBeVisible();
   });
 });
+
+test.describe('desk document', () => {
+  /** A quote (region capture of the first line) and a concept, then the document open. */
+  async function docWithItems(page: Page) {
+    await openSample(page);
+    const box = await firstLineBox(page);
+    await page.keyboard.press('Alt+x');
+    await page.mouse.move(box.right, box.top);
+    await page.mouse.down();
+    await page.mouse.move(box.left, box.bottom, { steps: 6 });
+    await page.mouse.up();
+    await page.getByRole('dialog', { name: 'Capture' }).getByRole('button', { name: /^Send to/ }).click();
+    await page.keyboard.press('Alt+c');
+    await page.getByRole('textbox', { name: 'Concept' }).fill('Group feeling');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Write a concept' })).toHaveCount(0);
+    await page.keyboard.press('d');
+    const doc = page.getByRole('dialog', { name: 'Desk document' });
+    await expect(doc.locator('.desk-embed')).toHaveCount(2);
+    return doc;
+  }
+
+  test('items have a note, Remove from page and Go to source', async ({ page }) => {
+    const doc = await docWithItems(page);
+    const concept = doc.locator('.desk-embed', { hasText: 'Group feeling' });
+    await concept.hover();
+    await concept.getByRole('button', { name: 'Add note' }).click();
+    const note = concept.getByRole('textbox', { name: 'Note on this item' });
+    await expect(note).toBeFocused();
+    await page.keyboard.type('The bond that founds dynasties');
+    await doc.locator('.sd-doc__title').click();
+    await expect(concept.locator('.sd-emb__body')).toHaveText('The bond that founds dynasties');
+    await expect(concept.getByRole('button', { name: 'Edit note' })).toHaveCount(1);
+
+    await concept.hover();
+    await concept.getByRole('button', { name: 'Remove from page' }).click();
+    await expect(doc.locator('.desk-embed', { hasText: 'Group feeling' })).toHaveCount(0);
+    await expect(doc.locator('.sd-side').getByRole('button', { name: 'Put back' })).toHaveCount(1);
+
+    const quote = doc.locator('.desk-embed').first();
+    await quote.hover();
+    await quote.getByRole('button', { name: 'Go to source' }).click();
+    await expect(doc).toHaveCount(0);
+    await expect(page.locator('.qr-chapter .ar-word').first()).toBeVisible();
+  });
+
+  test('each kind of item has its own look; a screenshot opens at full size', async ({ page }) => {
+    await openSample(page);
+    await page.keyboard.press('Alt+u');
+    await page.getByRole('button', { name: 'Inbox', exact: true }).click();
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVR42mP8z8Dwn4GBgYGJAQoAADUBAf8Ik8gAAAAASUVORK5CYII=', 'base64');
+    await page.getByLabel('Image file').setInputFiles({ name: 'figure.png', mimeType: 'image/png', buffer: png });
+    await page.keyboard.press('Alt+c');
+    await page.getByRole('textbox', { name: 'Concept' }).fill('Group feeling');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Write a concept' })).toHaveCount(0);
+    await page.keyboard.press('d');
+    const doc = page.getByRole('dialog', { name: 'Desk document' });
+    await expect(doc.locator('.desk-embed.sd-emb--capture')).toHaveCount(1);
+    await expect(doc.locator('.desk-embed.sd-emb--concept')).toHaveCount(1);
+    await doc.locator('.sd-emb__img').click();
+    const zoom = page.getByRole('dialog', { name: 'Image at full size' });
+    await expect(zoom.locator('img')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(zoom).toHaveCount(0);
+    await expect(doc).toBeVisible();
+  });
+
+  test('"/" on an empty line puts an item there; a side-panel row can be dragged into the text', async ({ page }) => {
+    const doc = await docWithItems(page);
+    const editor = doc.getByRole('textbox', { name: 'Document text' });
+    // Write a first line above the items, then put the concept right after it.
+    await editor.locator('.desk-embed').first().evaluate((el) => {
+      const p = document.createElement('p');
+      p.textContent = 'Opening thoughts';
+      el.parentElement!.insertBefore(p, el);
+    });
+    await editor.locator('p', { hasText: 'Opening thoughts' }).click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('/');
+    const picker = page.getByRole('dialog', { name: 'Put an item here' });
+    await expect(picker).toBeVisible();
+    await expect(picker.getByRole('option', { name: /Group feeling/ })).toContainText('Move here');
+    await picker.getByRole('textbox').fill('group');
+    await page.keyboard.press('Enter');
+    await expect(picker).toHaveCount(0);
+    const order = await editor.evaluate((ed) => Array.from(ed.children).map((c) => (c.classList.contains('desk-embed') ? 'embed:' + c.textContent!.slice(0, 13) : c.textContent)));
+    expect(order.slice(0, 2)).toEqual(['Opening thoughts', 'embed:Group feeling']);
+
+    // Esc in the picker leaves an empty line.
+    await page.keyboard.type('/');
+    await expect(picker).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(picker).toHaveCount(0);
+    await expect(doc).toBeVisible();
+
+    // Drag the quote's row to the top of the text.
+    const row = doc.locator('.sd-order__i', { hasText: 'Quote' });
+    await row.dragTo(editor.locator('p', { hasText: 'Opening thoughts' }), { targetPosition: { x: 20, y: 2 } });
+    await expect(editor.locator(':scope > *').first()).toHaveClass(/sd-emb--quote/);
+  });
+
+  test('lists, quotations, bold and the toolbar; kept after closing', async ({ page }) => {
+    await openSample(page);
+    await page.keyboard.press('d');
+    const doc = page.getByRole('dialog', { name: 'Desk document' });
+    const editor = doc.getByRole('textbox', { name: 'Document text' });
+    await editor.locator('p').last().click();
+    await page.keyboard.type('- first point');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('second point');
+    await expect(editor.locator('ul li')).toHaveCount(2);
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('> a saying');
+    await expect(editor.locator('blockquote')).toHaveText('a saying');
+    await page.keyboard.press('Enter');
+    await doc.getByRole('button', { name: 'Paragraph' }).or(doc.getByRole('button', { name: 'Quotation' })).first().click();
+    await page.keyboard.type('plain ');
+    await doc.getByRole('button', { name: 'Bold' }).click();
+    await page.keyboard.type('strong');
+    await expect(editor.locator('b, strong')).toContainText('strong');
+
+    await doc.getByRole('button', { name: 'Back to the page' }).click();
+    await page.keyboard.press('d');
+    await expect(editor.locator('ul li')).toHaveCount(2);
+    await expect(editor.locator('blockquote')).toHaveText('a saying');
+    await expect(editor.locator('b, strong')).toContainText('strong');
+  });
+
+  test('the side panel outlines the headings; word count and Saved', async ({ page }) => {
+    const doc = await docWithItems(page);
+    const editor = doc.getByRole('textbox', { name: 'Document text' });
+    await editor.locator('p').last().click();
+    await page.keyboard.type('# Village');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('three more words');
+    await expect(doc.locator('.sd-doc__count')).toHaveText('4 words');
+    await expect(doc.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
+    // File the concept under the heading: the heading shows one item.
+    const row = doc.locator('.sd-order__i', { hasText: 'Group feeling' });
+    await row.hover();
+    await row.getByRole('combobox', { name: 'File under a heading' }).selectOption({ label: 'Village' });
+    await expect(doc.locator('.sd-order__h', { hasText: 'Village' }).locator('.sd-order__hn')).toHaveText('1');
+    await doc.locator('.sd-order__hbtn', { hasText: 'Village' }).click();
+    await expect(editor.locator('h3')).toBeInViewport();
+  });
+
+  test('Export saves Markdown with citations and a Word file', async ({ page }) => {
+    const doc = await docWithItems(page);
+    await doc.getByRole('button', { name: 'Export' }).click();
+    const [md] = await Promise.all([page.waitForEvent('download'), page.getByRole('menuitem', { name: /Save as Markdown/ }).click()]);
+    expect(md.suggestedFilename()).toMatch(/\.md$/);
+    const text = await (await md.createReadStream()).toArray().then((c) => Buffer.concat(c).toString('utf8'));
+    expect(text).toContain('**Group feeling**');
+    expect(text).toMatch(/^> .+\n>\n> — /m);
+    await doc.getByRole('button', { name: 'Export' }).click();
+    const [docx] = await Promise.all([page.waitForEvent('download'), page.getByRole('menuitem', { name: /Save as Word/ }).click()]);
+    expect(docx.suggestedFilename()).toMatch(/\.docx$/);
+    const bytes = await (await docx.createReadStream()).toArray().then((c) => Buffer.concat(c));
+    expect(bytes.subarray(0, 2).toString()).toBe('PK');
+  });
+
+  test('All desks finds, makes, opens and deletes desks', async ({ page }) => {
+    const doc = await docWithItems(page);
+    await doc.getByRole('button', { name: /^All desks/ }).click();
+    const list = page.getByRole('dialog', { name: 'All desks' });
+    await expect(list.locator('.sd-dl__row')).toHaveCount(1);
+    await expect(list).toContainText('2 items');
+    await list.getByRole('textbox', { name: 'Find a desk' }).fill('Essay on rule');
+    await list.getByRole('button', { name: /New desk/ }).click();
+    await expect(list).toHaveCount(0);
+    await expect(doc.locator('.sd-doc__title')).toHaveText('Essay on rule');
+    await expect(doc.getByRole('tab', { name: 'Essay on rule' })).toHaveAttribute('aria-selected', 'true');
+
+    // Search reaches what a desk says, not only its title.
+    await doc.getByRole('button', { name: /^All desks/ }).click();
+    await list.getByRole('textbox', { name: 'Find a desk' }).fill('Group feeling');
+    await expect(list.locator('.sd-dl__row')).toHaveCount(0);
+    await list.getByRole('textbox', { name: 'Find a desk' }).fill('');
+    const essay = list.locator('.sd-dl__row', { hasText: 'Essay on rule' });
+    await essay.hover();
+    await essay.getByRole('button', { name: 'Delete Essay on rule' }).click();
+    await essay.getByRole('button', { name: /Delete it/ }).click();
+    await expect(list.locator('.sd-dl__row', { hasText: 'Essay on rule' })).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(list).toHaveCount(0);
+    await expect(doc).toBeVisible();
+  });
+
+  test('Arabic lines run right to left and source lines keep their parts in order', async ({ page }) => {
+    const doc = await docWithItems(page);
+    const editor = doc.getByRole('textbox', { name: 'Document text' });
+    await editor.locator('p').last().click();
+    await page.keyboard.type('العصبية هي الرابطة');
+    const p = editor.locator('p', { hasText: 'العصبية' });
+    expect(await p.evaluate((el) => getComputedStyle(el).unicodeBidi)).toBe('plaintext');
+    await expect(doc.locator('.desk-embed').first().locator('.sd-emb__meta bdi')).toHaveCount(2);
+  });
+});

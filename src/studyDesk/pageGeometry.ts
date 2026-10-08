@@ -201,3 +201,14 @@ export function pdfLocationNearCentre(): string | null {
   if (!stage || stage.height < 10) return null;
   return pdfLevelAt(stage.top + stage.height / 2);
 }
+
+/** Scrolls the PDF pages view to a `pdf:` place (the pages view has no jump of its own). False when it is not showing. */
+export function goToPdfPlace(location: string): boolean {
+  const at = parsePdfLocation(location);
+  const frame = at && document.querySelector<HTMLElement>(`.pdfp-page[data-page="${at.page}"]`);
+  const stage = frame?.closest<HTMLElement>('.pdfp__stage');
+  if (!at || !frame || !stage) return false;
+  const top = frame.getBoundingClientRect().top - stage.getBoundingClientRect().top + stage.scrollTop + at.y * frame.offsetHeight;
+  stage.scrollTo({ top: Math.max(0, top - stage.clientHeight / 3) });
+  return true;
+}

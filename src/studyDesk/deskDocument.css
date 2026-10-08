@@ -374,3 +374,619 @@
     justify-content: center;
   }
 }
+
+/* Each line takes its direction from its own first letters: Arabic lines run right to left, Latin ones left to right. */
+.sd-editor p,
+.sd-editor h3,
+.sd-editor li,
+.sd-editor blockquote {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* An item's footer: where it came from, and on hover or focus its buttons. */
+.sd-emb__foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-height: 26px;
+}
+.sd-emb__foot .sd-emb__meta {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.sd-emb__acts {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.desk-embed:hover .sd-emb__acts,
+.desk-embed:focus-within .sd-emb__acts,
+.sd-emb--flash .sd-emb__acts {
+  opacity: 1;
+}
+@media (hover: none) {
+  .sd-emb__acts {
+    opacity: 1;
+  }
+}
+.sd-emb__act {
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--ink-soft);
+  font: 500 12px var(--font-ui);
+  padding: 3px 10px;
+  cursor: pointer;
+}
+.sd-emb__act:hover,
+.sd-emb__act:focus-visible {
+  color: var(--ink);
+  outline: none;
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+.sd-emb__edit {
+  user-select: text;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.55 var(--font-ui);
+  padding: 6px 8px;
+  outline: none;
+}
+.sd-emb__edit-hint {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+
+/*
+ * Each kind of item looks like what it is (docEmbeds.ts sets sd-emb--<type>):
+ *   quote     a quotation: a rule at its start edge, the words large, no box
+ *   concept   a compact term line on a soft fill
+ *   question  an open question: a dashed edge and a question mark
+ *   card      front and back of a flashcard
+ *   capture   a screenshot shown wide
+ *   line/note margin notes: a quiet note on the page's own ground
+ */
+.desk-embed.sd-emb--quote {
+  border: 0;
+  border-inline-start: 3px solid var(--accent);
+  border-radius: 0;
+  background: none;
+  padding: 4px 0 4px 16px;
+  padding-inline: 16px 0;
+}
+.sd-emb--quote .sd-emb__text {
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.sd-emb--quote .sd-emb__text--ar {
+  font-size: 23px;
+  line-height: 1.8;
+}
+.sd-emb--quote .sd-emb__body {
+  font-style: italic;
+}
+.sd-emb--quote .sd-emb__type,
+.sd-emb--capture .sd-emb__type {
+  border: 0;
+  color: var(--ink-faint);
+}
+.desk-embed.sd-emb--concept {
+  flex-direction: column;
+  padding: 8px 12px;
+  border-color: transparent;
+  background: var(--accent-soft);
+  border-radius: 10px;
+}
+.sd-emb--concept .sd-emb__text {
+  font-weight: 600;
+}
+.desk-embed.sd-emb--question {
+  border-style: dashed;
+  border-color: var(--accent);
+  background: none;
+}
+.sd-emb--question .sd-emb__head::before {
+  content: '?';
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--bg-elevated);
+  font: 700 13px var(--font-ui);
+  align-self: center;
+}
+.sd-emb--card .sd-emb__head::before {
+  content: 'Front';
+  font: 600 10.5px var(--font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  align-self: center;
+}
+.sd-emb--card .sd-emb__body {
+  color: var(--ink);
+  border-top: 1px dashed var(--border);
+  padding-top: 6px;
+}
+.sd-emb--card .sd-emb__body::before {
+  content: 'Back  ';
+  font: 600 10.5px var(--font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.desk-embed.sd-emb--margin {
+  background: none;
+  border-color: var(--border);
+  border-style: solid;
+}
+.sd-emb--margin.sd-emb--line .sd-emb__type {
+  border: 0;
+  color: var(--ink-faint);
+}
+.sd-emb--capture .sd-emb__img,
+.sd-emb__img {
+  cursor: zoom-in;
+  max-height: 420px;
+  width: auto;
+  align-self: flex-start;
+}
+.sd-emb--capture .sd-emb__text {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+/* A screenshot at full size, over the document. */
+.sd-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 69;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: rgb(20 18 15 / 0.72);
+  cursor: zoom-out;
+}
+.sd-zoom img {
+  max-width: 100%;
+  max-height: calc(100vh - 110px);
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.4);
+  background: #fff;
+}
+.sd-zoom__bar {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-top: 12px;
+  color: #f1ece4;
+  font: 13px var(--font-ui);
+}
+.sd-zoom__bar button {
+  border: 1px solid rgb(255 255 255 / 0.4);
+  background: none;
+  color: inherit;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* "/" on an empty line: the item picker (ItemPicker.tsx). */
+.sd-picker {
+  position: fixed;
+  z-index: 67;
+  width: min(380px, calc(100vw - 24px));
+  max-height: 320px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  font-family: var(--font-ui);
+}
+.sd-picker__input {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  color: var(--ink);
+  font: 15px var(--font-ui);
+  padding: 10px 12px;
+  outline: none;
+}
+.sd-picker__list {
+  overflow-y: auto;
+  padding: 4px;
+}
+.sd-picker__row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  text-align: start;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.sd-picker__row--on {
+  background: var(--accent-soft);
+}
+.sd-picker__t {
+  flex: 1;
+  min-width: 0;
+  font-size: 14.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sd-picker__t--ar {
+  font-family: var(--font-arabic);
+  font-size: 18px;
+}
+.sd-picker__k {
+  flex: none;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.sd-picker__empty {
+  margin: 8px;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+.sd-picker__more {
+  border: 0;
+  border-top: 1px solid var(--border);
+  background: none;
+  color: var(--ink-soft);
+  font: 13px var(--font-ui);
+  padding: 8px 12px;
+  text-align: start;
+  cursor: pointer;
+}
+.sd-picker__more kbd {
+  margin-left: 6px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* Formatting: the toolbar above the text, and the lists and quotations it makes. */
+.sd-fmt {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  gap: 2px;
+  margin: 0 0 10px;
+  padding: 4px 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.sd-fmt button {
+  min-width: 32px;
+  height: 30px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--ink-soft);
+  font: 500 14px var(--font-ui);
+  cursor: pointer;
+}
+.sd-fmt button:hover,
+.sd-fmt button:focus-visible {
+  background: var(--accent-soft);
+  color: var(--ink);
+  outline: none;
+}
+.sd-fmt__h {
+  font-family: var(--look-display, Georgia, serif);
+  font-weight: 600;
+}
+.sd-fmt__q {
+  font: 600 20px/1 Georgia, serif;
+}
+.sd-editor ul,
+.sd-editor ol {
+  margin: 0 0 10px;
+  padding-inline-start: 26px;
+}
+.sd-editor li {
+  margin: 2px 0;
+}
+.sd-editor blockquote {
+  margin: 0 0 10px;
+  padding: 2px 0;
+  padding-inline-start: 14px;
+  border-inline-start: 3px solid var(--border);
+  color: var(--ink-soft);
+}
+
+/* Above the title: the desk kind, the word count and whether it is saved. */
+.sd-doc__status {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sd-doc__status .sd-eyebrow {
+  margin-right: auto;
+}
+.sd-doc__count,
+.sd-doc__saved {
+  font-size: 12px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.sd-doc__saved--failed {
+  color: #b4472f;
+}
+
+/* The side panel as an outline: headings divide it, with how many items each holds; titles get the width. */
+.sd-order__h {
+  padding: 8px 4px 2px;
+}
+.sd-order__hbtn {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  padding: 2px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.sd-order__hbtn:hover,
+.sd-order__hbtn:focus-visible {
+  background: var(--accent-soft);
+  outline: none;
+}
+.sd-order__hbtn span:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sd-order__hn {
+  font: 600 11px var(--font-ui);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.sd-order__i .sd-order__sel {
+  max-width: 0;
+  opacity: 0;
+  padding: 0;
+  border-width: 0;
+  transition: max-width 0.15s, opacity 0.15s;
+}
+.sd-order__i:hover .sd-order__sel,
+.sd-order__i:focus-within .sd-order__sel {
+  max-width: 96px;
+  opacity: 1;
+  padding: 1px 2px;
+  border-width: 1px;
+}
+@media (hover: none) {
+  .sd-order__i .sd-order__sel {
+    max-width: 96px;
+    opacity: 1;
+    border-width: 1px;
+  }
+}
+
+/* Export (ExportMenu.tsx). */
+.sd-export {
+  position: relative;
+}
+.sd-export__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 5;
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+.sd-export__menu button {
+  display: flex;
+  justify-content: space-between;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  font: 14px var(--font-ui);
+  text-align: start;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.sd-export__menu button:hover,
+.sd-export__menu button:focus-visible {
+  background: var(--accent-soft);
+  outline: none;
+}
+.sd-export__menu button span {
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+.sd-export__menu p {
+  margin: 4px 10px 4px;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
+
+/* All desks (DeskList.tsx). */
+.sd-desks .sd-desks__all {
+  border-style: solid;
+}
+.sd-desks__all span {
+  margin-left: 4px;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.sd-dl {
+  position: fixed;
+  z-index: 67;
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, calc(100vw - 24px));
+  max-height: min(70vh, 640px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+  font-family: var(--font-ui);
+}
+.sd-dl__head {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.sd-dl__input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: 15px var(--font-ui);
+  outline: none;
+  padding: 4px 6px;
+}
+.sd-dl__body {
+  overflow-y: auto;
+  padding: 4px 10px 12px;
+}
+.sd-dl__body h4 {
+  margin: 12px 4px 4px;
+  font: 600 11px var(--font-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.sd-dl__body ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.sd-dl__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 9px;
+}
+.sd-dl__row:hover,
+.sd-dl__row--on {
+  background: var(--accent-soft);
+}
+.sd-dl__open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  text-align: start;
+  padding: 7px 8px;
+  cursor: pointer;
+}
+.sd-dl__t {
+  flex: 1;
+  min-width: 0;
+  font-size: 14.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sd-dl__t--ar {
+  font-family: var(--font-arabic);
+  font-size: 18px;
+  font-weight: 400;
+}
+.sd-dl__m {
+  flex: none;
+  font-size: 12px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.sd-dl__x {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--ink-faint);
+  font-size: 17px;
+  cursor: pointer;
+  opacity: 0;
+}
+.sd-dl__row:hover .sd-dl__x,
+.sd-dl__x:focus-visible {
+  opacity: 1;
+}
+@media (hover: none) {
+  .sd-dl__x {
+    opacity: 1;
+  }
+}
+.sd-dl__confirm {
+  display: flex;
+  gap: 4px;
+  padding-right: 6px;
+}
+.sd-dl__confirm button {
+  border: 0;
+  border-radius: 999px;
+  font: 500 12px var(--font-ui);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.sd-dl__del {
+  background: #b4472f;
+  color: #fff;
+}
+.sd-dl__keep {
+  background: var(--bg);
+  color: var(--ink);
+}
+.sd-dl__none {
+  margin: 4px;
+  font-size: 13px;
+  color: var(--ink-faint);
+}

@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Shell } from '../dictionarySearch/Shell';
 import '../dictionarySearch/dictionarySearch.css';
-import { useChordHotkey } from '../readerChords';
+import { libraryService } from '../library/libraryService';
+import { goToBookLocation, useChordHotkey } from '../readerChords';
 import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta, ReaderPreferences } from '../types';
+import type { DeskItem } from './types';
 import { ConceptStrip } from './ConceptStrip';
 import { DeskDocument } from './DeskDocument';
 import { InboxBody } from './InboxBody';
 import { MarginLayer } from './MarginLayer';
 import { registerPdfPageExtension } from '../pdf/pages/extensions';
-import { cleanLocationNearCentre, pdfLocationNearCentre } from './pageGeometry';
+import { placeOf } from './docEmbeds';
+import { cleanLocationNearCentre, goToPdfPlace, parsePdfLocation, pdfLocationNearCentre } from './pageGeometry';
 import { publishPdfDeskItems } from './pdfDesk';
 import { PdfDeskLayer } from './PdfDeskLayer';
 import { PdfMargin } from './PdfMargin';
@@ -22,6 +25,9 @@ import { resolveDesk, useDeskData } from './useDesk';
 import './studyDesk.css';
 
 const NARROW_QUERY = '(max-width: 600px)';
+
+/** A PDF place to scroll to once another book's pages are showing (Go to source); the host may remount on the way. */
+let pendingPdfJump: { bookId: string; location: string } | null = null;
 
 type OpenBook = (book: BookMeta, location?: string) => void;
 
@@ -176,6 +182,44 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
     },
     [data.items, data.deskId]
   );
+  // Go to source from the document: this book jumps to the place; another book opens there.
+  const goToSource = useCallback(
+    async (item: DeskItem) => {
+      const place = placeOf(item);
+      if (!place) return;
+      if (place.bookId === book.id) {
+        setDoc(null);
+        if (!place.location) return;
+        const loc = place.location;
+        // After the document has gone and the page is back.
+        window.requestAnimationFrame(() => {
+          const ok = parsePdfLocation(loc) ? goToPdfPlace(loc) : goToBookLocation(loc);
+          if (!ok) say('This reader cannot jump there');
+        });
+        return;
+      }
+      const other = (await libraryService.listBooks()).find((b) => b.id === place.bookId);
+      if (!other || !onOpenBook) return say('That book is not in the library any more');
+      setDoc(null);
+      // PDF places are scrolled to once the pages are showing; other places open the book there.
+      const pdf = place.location && parsePdfLocation(place.location) ? place.location : null;
+      pendingPdfJump = pdf ? { bookId: other.id, location: pdf } : null;
+      onOpenBook(other, place.location && !pdf ? place.location : undefined);
+    },
+    [book.id, onOpenBook, say]
+  );
+
+  useEffect(() => {
+    const jump = pendingPdfJump;
+    if (!jump || jump.bookId !== book.id) return;
+    pendingPdfJump = null;
+    let tries = 0;
+    const timer = window.setInterval(() => {
+      if (goToPdfPlace(jump.location) || ++tries > 30) window.clearInterval(timer);
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [book.id]);
+
   // D (no modifier): the desk document, when nothing is being typed and no popup or palette is open. Alt+D
   // stays the dictionary search; the dictionary popup's own D (add a dictionary) only runs while it is open.
   useEffect(() => {
@@ -251,6 +295,7 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
             setRegion(true);
           }}
           onPullIn={openPull}
+          onGoToSource={(item) => void goToSource(item)}
           onToast={say}
         />
       )}

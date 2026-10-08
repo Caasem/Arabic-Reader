@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { getBlobStore } from '../blobStore';
 import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta } from '../types';
 import { createOwnDesk, ensureBookDesk, getDesk, renameDesk, saveDeskHtml, updateItem } from './deskStore';
 import './deskDocument.css';
+import { applyLineStart, lineStart, runFormat, type FormatCommand } from './docFormat';
+import { documentBlocks } from './docExport';
+import { DeskList } from './DeskList';
+import { ExportMenu } from './ExportMenu';
+import { ItemPicker } from './ItemPicker';
 import { IconCapture, IconChevron, IconDown, IconEye, IconEyeOff, IconInbox, IconPull, IconUp } from './icons';
+import { fillEmbed, type EmbedAct } from './docEmbeds';
 import { EMBED_CLASS, embedHtml, EMPTY_DOC, outline, sanitizeDocHtml } from './docHtml';
-import { capture, itemTitle, looksArabic, TYPE_LABEL, type DeskData } from './useDesk';
+import { capture, itemTitle, looksArabic, TYPE_LABEL, useDeskImage, type DeskData } from './useDesk';
 import type { Desk, DeskItem } from './types';
 
 interface Props {
@@ -21,10 +26,21 @@ interface Props {
   /** Close the document, capture a region of the page, and come back. */
   onCapture(): void;
   onPullIn?(): void;
+  /** Go to where an item came from (this book or another). */
+  onGoToSource?(item: DeskItem): void;
   onToast(m: string): void;
 }
 
 const MIN_KEY = 'studyDesk.docPanelMin';
+
+const FORMATS: { cmd: FormatCommand; label: string; title: string; icon: React.ReactNode }[] = [
+  { cmd: 'bold', label: 'Bold', title: 'Bold (Ctrl+B)', icon: <b>B</b> },
+  { cmd: 'italic', label: 'Italic', title: 'Italic (Ctrl+I)', icon: <i>I</i> },
+  { cmd: 'heading', label: 'Heading', title: 'Heading (# at the start of a line)', icon: <span className="sd-fmt__h">H</span> },
+  { cmd: 'bullets', label: 'Bulleted list', title: 'Bulleted list (- at the start of a line)', icon: <span>•≡</span> },
+  { cmd: 'numbers', label: 'Numbered list', title: 'Numbered list (1. at the start of a line)', icon: <span>1.</span> },
+  { cmd: 'quote', label: 'Quotation', title: 'Quotation (> at the start of a line)', icon: <span className="sd-fmt__q">“</span> },
+];
 const SAVE_MS = 400;
 
 /** Whether an item shows in the document text (margin notes follow the margin setting). */
@@ -35,47 +51,8 @@ export function shownInDocument(item: DeskItem, mode: 'all' | 'chosen' | 'none')
   return item.inDocument ?? mode === 'all';
 }
 
-function fillEmbed(el: HTMLElement, item: DeskItem | undefined, shown: boolean): void {
-  el.replaceChildren();
-  el.classList.toggle('sd-emb--hidden', !item || !shown);
-  if (!item) return;
-  const head = document.createElement('div');
-  head.className = 'sd-emb__head';
-  const text = document.createElement('span');
-  text.className = item.ar ? 'sd-emb__text sd-emb__text--ar' : 'sd-emb__text';
-  text.dir = 'auto';
-  text.textContent = itemTitle(item);
-  const type = document.createElement('span');
-  type.className = 'sd-emb__type';
-  type.textContent = TYPE_LABEL[item.type];
-  head.append(text, type);
-  el.append(head);
-  if (item.body && item.text) {
-    const body = document.createElement('div');
-    body.className = 'sd-emb__body';
-    body.dir = 'auto';
-    body.textContent = item.body;
-    el.append(body);
-  }
-  if (item.imageHash) {
-    const img = document.createElement('img');
-    img.className = 'sd-emb__img';
-    img.alt = '';
-    el.append(img);
-    void getBlobStore()
-      .url(item.imageHash)
-      .then((u) => {
-        if (u) img.src = u;
-      });
-  }
-  const meta = document.createElement('div');
-  meta.className = 'sd-emb__meta';
-  meta.textContent = [item.source?.chapterLabel ?? item.source?.bookTitle, new Date(item.createdAt).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })].filter(Boolean).join(' · ');
-  el.append(meta);
-}
-
 /** The desk as one notepad, with the inbox beside it to reorder, file and hide items. */
-export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchDesk, onCapture, onPullIn, onToast }: Props) {
+export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchDesk, onCapture, onPullIn, onGoToSource, onToast }: Props) {
   const { prefs } = usePreferences();
   const docMode = prefs.studyDeskMarginsInDocument;
   const [desk, setDesk] = useState<Desk | null>(null);
@@ -109,12 +86,32 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     };
   }, [deskId, book]);
 
+  // New lines are paragraphs (the browser's default is a div), so Enter after a heading or list gives a plain line.
+  useEffect(() => {
+    try {
+      document.execCommand('defaultParagraphSeparator', false, 'p');
+    } catch {
+      // Divs then; the document turns them into paragraphs when it saves.
+    }
+  }, []);
+  function format(cmd: FormatCommand) {
+    if (!edRef.current?.contains(window.getSelection()?.anchorNode ?? null)) edRef.current?.focus();
+    runFormat(cmd);
+    scheduleSave();
+    bump();
+  }
+
+  /** The item whose note is being edited in place (docEmbeds.ts). */
+  const editing = useRef<string | null>(null);
   const fillAll = useCallback(() => {
     edRef.current?.querySelectorAll<HTMLElement>(`.${EMBED_CLASS}`).forEach((el) => {
-      const item = itemsById.get(el.dataset.item ?? '');
-      fillEmbed(el, item, !!item && shownInDocument(item, docMode));
+      const id = el.dataset.item ?? '';
+      // Leave a note being typed alone; it is redrawn once saved.
+      if (id === editing.current && el.querySelector('textarea')) return;
+      const item = itemsById.get(id);
+      fillEmbed(el, item, { shown: !!item && shownInDocument(item, docMode), editing: id === editing.current, bookId: book.id });
     });
-  }, [itemsById, docMode]);
+  }, [itemsById, docMode, book.id]);
 
   // Put the document into the editor once per desk; after that the editor owns it.
   useLayoutEffect(() => {
@@ -157,6 +154,8 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deskItems, fillAll, deskId, desk]);
 
+  /** What the corner says: saving, saved, or a save that failed. */
+  const [saved, setSaved] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
   /** The editor's latest HTML and whether it has unsaved changes; kept so a save still works after the editor is gone (closing). */
   const latest = useRef<{ deskId: string; html: string; dirty: boolean } | null>(null);
   const save = useCallback(() => {
@@ -165,10 +164,14 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     const l = latest.current;
     if (!l || !l.dirty || l.deskId !== deskId) return;
     l.dirty = false;
-    void saveDeskHtml(l.deskId, l.html, { quiet: true });
+    void saveDeskHtml(l.deskId, l.html, { quiet: true }).then(
+      () => setSaved((st) => (st === 'saving' && !latest.current?.dirty ? 'saved' : st)),
+      () => setSaved('failed')
+    );
   }, [deskId]);
 
   function scheduleSave() {
+    setSaved('saving');
     if (edRef.current && loadedFor.current === deskId) latest.current = { deskId, html: edRef.current.innerHTML, dirty: true };
     window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(save, SAVE_MS);
@@ -189,22 +192,23 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     return () => window.clearTimeout(t);
   }, [focusItem, desk, version]);
 
-  function onInput() {
+  function onInput(e: React.FormEvent<HTMLDivElement>) {
     const ed = edRef.current!;
+    // Typing in an item's note is not typing in the document.
+    if (e.target !== ed) return;
     if (!ed.firstElementChild) {
       ed.innerHTML = EMPTY_DOC;
       caretEnd(ed.querySelector('p'));
     }
-    // "# " at the start of a line makes it a heading.
+    // A line that starts "# ", "- ", "1. " or "> " becomes a heading, a list or a quotation (docFormat.ts).
     const sel = window.getSelection();
     let node: Node | null = sel?.anchorNode ?? null;
     while (node && node.parentNode !== ed) node = node.parentNode;
-    if (node && node.nodeType === Node.ELEMENT_NODE && /^(P|DIV)$/.test((node as Element).tagName) && /^#[\s ]/.test(node.textContent ?? '')) {
-      const h = document.createElement('h3');
-      h.textContent = (node.textContent ?? '').replace(/^#[\s ]+/, '');
-      if (!h.textContent) h.innerHTML = '<br>';
-      ed.replaceChild(h, node);
-      caretEnd(h);
+    if (node && node.nodeType === Node.ELEMENT_NODE && /^(P|DIV)$/.test((node as Element).tagName) && lineStart(node.textContent ?? '')) {
+      caretEnd(applyLineStart(node as HTMLElement));
+    } else if (node && node.nodeType === Node.ELEMENT_NODE && (node as Element).tagName === 'P' && (node.textContent ?? '') === '/') {
+      // "/" alone on a line: choose an item to put there.
+      setPicker({ line: node as HTMLElement, anchor: (node as HTMLElement).getBoundingClientRect() });
     } else if (node && node.nodeType === Node.TEXT_NODE) {
       const p = document.createElement('p');
       ed.replaceChild(p, node);
@@ -237,6 +241,13 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
   const itemEntries = entries.filter((e): e is Extract<typeof e, { kind: 'item' }> => e.kind === 'item');
   const headings = entries.filter((e): e is Extract<typeof e, { kind: 'heading' }> => e.kind === 'heading');
   const offPage = deskItems.filter((i) => !itemEntries.some((e) => e.id === i.id));
+  const perHeading = new Map<number, number>();
+  itemEntries.forEach((e) => e.heading !== null && perHeading.set(e.heading, (perHeading.get(e.heading) ?? 0) + 1));
+  const words = useMemo(() => countWords(edRef.current), [version]); // eslint-disable-line react-hooks/exhaustive-deps
+  function scrollToHeading(index: number) {
+    const h = edRef.current?.querySelectorAll('h3')[index];
+    h?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
 
   function shift(id: string, by: -1 | 1) {
     const at = itemEntries.findIndex((e) => e.id === id);
@@ -254,6 +265,121 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     placeBefore(el, heading === null ? (heads[0] ?? null) : (heads[heading + 1] ?? null));
   }
   const dragId = useRef<string | null>(null);
+
+  // --- putting an item where you are writing: "/" on an empty line, or a row dragged from the side panel ---
+  const [picker, setPicker] = useState<{ line: HTMLElement; anchor: DOMRect } | null>(null);
+  /** Puts an item's embed at `ref` (replacing it, or before or after it), moving it if it is already in the text. */
+  function putItem(id: string, ref: Element, how: 'replace' | 'before' | 'after') {
+    const ed = edRef.current;
+    if (!ed) return;
+    let el = embedEl(id);
+    if (el === ref) return;
+    if (!el) {
+      const holder = document.createElement('div');
+      holder.innerHTML = embedHtml(id);
+      el = holder.firstElementChild!;
+    }
+    if (how === 'replace') ref.replaceWith(el);
+    else if (how === 'before') ed.insertBefore(el, ref);
+    else ed.insertBefore(el, ref.nextSibling);
+    known.current.add(id);
+    // Somewhere to keep typing after it.
+    let next = el.nextElementSibling;
+    if (!next || next.tagName !== 'P') {
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      ed.insertBefore(p, el.nextSibling);
+      next = p;
+    }
+    if (how === 'replace') caretEnd(next as HTMLElement);
+    fillAll();
+    scheduleSave();
+    bump();
+  }
+  function pick(item: DeskItem) {
+    if (!picker) return;
+    const line = picker.line;
+    setPicker(null);
+    if (line.isConnected) putItem(item.id, line, 'replace');
+  }
+  function cancelPick() {
+    if (!picker) return;
+    const line = picker.line;
+    setPicker(null);
+    if (line.isConnected && line.textContent === '/') {
+      line.innerHTML = '<br>';
+      caretEnd(line);
+      scheduleSave();
+    }
+  }
+  /** A side-panel row dropped on the text: before or after the line under the pointer. */
+  function onEditorDrop(e: React.DragEvent<HTMLDivElement>) {
+    const id = dragId.current;
+    const ed = edRef.current;
+    dragId.current = null;
+    if (!id || !ed) return;
+    e.preventDefault();
+    const blocks = Array.from(ed.children);
+    let best: { el: Element; d: number; after: boolean } | null = null;
+    for (const b of blocks) {
+      const r = b.getBoundingClientRect();
+      const d = e.clientY < r.top ? r.top - e.clientY : e.clientY > r.bottom ? e.clientY - r.bottom : 0;
+      if (!best || d < best.d) best = { el: b, d, after: e.clientY > r.top + r.height / 2 };
+    }
+    if (best) putItem(id, best.el, best.after ? 'after' : 'before');
+  }
+  /** A screenshot shown at full size. */
+  const [zoom, setZoom] = useState<DeskItem | null>(null);
+
+  // --- the buttons on an item in the text (docEmbeds.ts) ---
+  function finishNote(el: HTMLElement, keep: boolean) {
+    const id = el.dataset.item ?? '';
+    const ta = el.querySelector('textarea');
+    const item = itemsById.get(id);
+    editing.current = null;
+    if (keep && ta && item && ta.value !== (item.body ?? '')) void updateItem(id, { body: ta.value });
+    if (item) fillEmbed(el, item, { shown: shownInDocument(item, docMode), editing: false, bookId: book.id });
+  }
+  function onEditorClick(e: React.MouseEvent<HTMLDivElement>) {
+    const target = e.target as HTMLElement;
+    const btn = target.closest<HTMLElement>('[data-act]');
+    const host = target.closest<HTMLElement>(`.${EMBED_CLASS}`);
+    if (!btn || !host) return;
+    const id = host.dataset.item ?? '';
+    const item = itemsById.get(id);
+    const act = btn.dataset.act as EmbedAct;
+    e.preventDefault();
+    if (!item) return;
+    if (act === 'remove') {
+      host.remove();
+      scheduleSave();
+      bump();
+      onToast('Taken off the page. Put it back from the side panel.');
+    } else if (act === 'source') {
+      save();
+      onGoToSource?.(item);
+    } else if (act === 'zoom') {
+      setZoom(item);
+    } else if (act === 'note') {
+      const open = editing.current && edRef.current?.querySelector<HTMLElement>(`.${EMBED_CLASS}[data-item="${editing.current}"]`);
+      if (open && open !== host) finishNote(open, true);
+      editing.current = id;
+      fillEmbed(host, item, { shown: true, editing: true, bookId: book.id });
+      const ta = host.querySelector('textarea');
+      if (ta) {
+        ta.addEventListener('blur', () => editing.current === id && finishNote(host, true));
+        ta.addEventListener('keydown', (ev) => {
+          ev.stopPropagation();
+          if (ev.key === 'Escape') {
+            ev.preventDefault();
+            finishNote(host, false);
+          }
+        });
+        ta.focus();
+        ta.setSelectionRange(ta.value.length, ta.value.length);
+      }
+    }
+  }
 
   /** An item deleted from the text goes back at the end. */
   function putBack(id: string) {
@@ -281,6 +407,12 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     }
   }
 
+  // Tabs: this book's desk, your most recent own desks and the open one; every desk is under All desks.
+  const [listOpen, setListOpen] = useState(false);
+  const tabDesks = useMemo(() => {
+    const own = data.desks.filter((d) => d.kind === 'own').sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4);
+    return data.desks.filter((d) => (d.kind === 'book' && d.bookId === book.id) || own.includes(d) || d.id === deskId);
+  }, [data.desks, book.id, deskId]);
   const deskLabel = (d: Desk) => (d.kind === 'book' && d.bookId === book.id ? 'This book' : d.title);
   let n = 0;
 
@@ -296,7 +428,7 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
               Back to the page
             </button>
             <div className="sd-desks" role="tablist" aria-label="Desks">
-              {data.desks.map((d) => (
+              {tabDesks.map((d) => (
                 <button key={d.id} type="button" role="tab" aria-selected={d.id === deskId} onClick={() => onSwitchDesk(d.id)}>
                   {deskLabel(d)}
                 </button>
@@ -304,9 +436,26 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
               <button type="button" className="sd-desks__new" onClick={() => void createOwnDesk().then((d) => onSwitchDesk(d.id))}>
                 + Desk
               </button>
+              <button type="button" className="sd-desks__all" aria-haspopup="dialog" aria-expanded={listOpen} onClick={() => setListOpen((v) => !v)}>
+                All desks <span>{data.desks.length}</span>
+              </button>
             </div>
+            <ExportMenu
+              title={desk?.title || 'Desk'}
+              blocks={() => {
+                save();
+                return documentBlocks(sanitizeDocHtml(edRef.current?.innerHTML ?? ''), itemsById, (i) => shownInDocument(i, docMode));
+              }}
+              onToast={onToast}
+            />
           </div>
-          <p className="sd-eyebrow">{desk?.kind === 'own' ? 'Your desk · captures from any book' : 'Book desk'}</p>
+          <div className="sd-doc__status">
+            <p className="sd-eyebrow">{desk?.kind === 'own' ? 'Your desk · captures from any book' : 'Book desk'}</p>
+            <span className="sd-doc__count">{words === 1 ? '1 word' : `${words.toLocaleString()} words`}</span>
+            <span className={'sd-doc__saved sd-doc__saved--' + saved} role="status" aria-live="polite">
+              {saved === 'saving' ? 'Saving…' : saved === 'saved' ? 'Saved' : saved === 'failed' ? 'Not saved: no space left?' : ''}
+            </span>
+          </div>
           <h2
             className="sd-doc__title"
             contentEditable
@@ -323,8 +472,45 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
           >
             {desk?.title}
           </h2>
-          <div ref={edRef} className="sd-editor" role="textbox" contentEditable suppressContentEditableWarning spellCheck aria-label="Document text" aria-multiline="true" onInput={onInput} onBlur={save} />
-          <p className="sd-doc__hint">Type anywhere. # and a space starts a heading. New captures for this desk appear at the end.</p>
+          <div className="sd-fmt" role="toolbar" aria-label="Formatting">
+            {FORMATS.map((f) => (
+              <button key={f.cmd} type="button" title={f.title} aria-label={f.label} onMouseDown={(e) => e.preventDefault()} onClick={() => format(f.cmd)}>
+                {f.icon}
+              </button>
+            ))}
+          </div>
+          <div ref={edRef} className="sd-editor" role="textbox" contentEditable suppressContentEditableWarning spellCheck aria-label="Document text" aria-multiline="true" onInput={onInput}
+            onBlur={save}
+            onClick={onEditorClick}
+            onDragOver={(e) => dragId.current && (e.preventDefault(), (e.dataTransfer.dropEffect = 'move'))}
+            onDrop={onEditorDrop}
+          />
+          <p className="sd-doc__hint">Type anywhere. At the start of a line: # heading, - list, 1. numbered list, &gt; quotation. Ctrl+B bold, Ctrl+I italic. / on an empty line puts an item there; rows of the side panel can be dragged into the text. New captures appear at the end.</p>
+          {listOpen && (
+            <DeskList
+              desks={data.desks}
+              items={data.items}
+              current={deskId}
+              bookId={book.id}
+              onOpen={(id) => {
+                setListOpen(false);
+                if (id !== deskId) onSwitchDesk(id);
+              }}
+              onDeleted={(id) => id === deskId && onSwitchDesk(`book:${book.id}`)}
+              onClose={() => setListOpen(false)}
+              onToast={onToast}
+            />
+          )}
+          {picker && (
+            <ItemPicker
+              items={deskItems}
+              onPage={new Set(itemEntries.map((e) => e.id))}
+              anchor={picker.anchor}
+              onPick={pick}
+              onPullIn={onPullIn && (() => (cancelPick(), onPullIn()))}
+              onCancel={cancelPick}
+            />
+          )}
         </div>
       </div>
       <aside className={'sd-side' + (min ? ' sd-side--min' : '')} aria-label="Inbox for this desk">
@@ -391,7 +577,10 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
                       if (dragId.current) file(dragId.current, e.index);
                       dragId.current = null;
                     }}>
-                      {e.text}
+                      <button type="button" className="sd-order__hbtn" onClick={() => scrollToHeading(e.index)} title="Go to this heading">
+                        <span dir="auto">{e.text}</span>
+                        <span className="sd-order__hn">{perHeading.get(e.index) ?? 0}</span>
+                      </button>
                     </li>
                   );
                 const item = itemsById.get(e.id);
@@ -467,8 +656,48 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
           </>
         )}
       </aside>
+      {zoom?.imageHash && <ImageZoom item={zoom} onClose={() => setZoom(null)} />}
     </div>
   );
+}
+
+/** A screenshot at full size over the document; a click or Esc closes it. */
+function ImageZoom({ item, onClose }: { item: DeskItem; onClose(): void }) {
+  const src = useDeskImage(item.imageHash);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      // Only this closes: the document stays open.
+      e.stopPropagation();
+      onClose();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [onClose]);
+  return (
+    <div className="sd-zoom" role="dialog" aria-label="Image at full size" onClick={onClose}>
+      <div>
+        {src && <img src={src} alt={item.text || 'Screenshot'} />}
+        <div className="sd-zoom__bar">
+          <span dir="auto">{item.text || item.source?.bookTitle || 'Screenshot'}</span>
+          <button type="button" onClick={onClose}>
+            Close · Esc
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Words the reader wrote: the document's text without its items. */
+function countWords(ed: HTMLElement | null): number {
+  if (!ed) return 0;
+  let n = 0;
+  const walk = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT, {
+    acceptNode: (t) => (t.parentElement?.closest(`.${EMBED_CLASS}`) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+  });
+  for (let t = walk.nextNode(); t; t = walk.nextNode()) n += (t.textContent ?? '').split(/\s+/).filter(Boolean).length;
+  return n;
 }
 
 function caretEnd(el: HTMLElement | null) {
