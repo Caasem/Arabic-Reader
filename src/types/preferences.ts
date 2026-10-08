@@ -123,6 +123,14 @@ export interface ReaderPreferences {
   noteCardEnabled: boolean;
   /** Press Alt+F to write a flashcard of your own, in a floating card (src/flashCard). */
   flashCardEnabled: boolean;
+  /** The study desk (src/studyDesk): inbox (Alt+I), concept (Alt+C), region capture (Alt+X), desk documents. */
+  studyDeskEnabled: boolean;
+  /** Notes in the reader's margins (Alt+M), part of the study desk. */
+  studyDeskMargins: 'both' | 'right' | 'left' | 'off';
+  /** Which margin notes appear in the desk document. */
+  studyDeskMarginsInDocument: 'all' | 'chosen' | 'none';
+  /** Margin notes go to the inbox when you leave them (auto) or only when you send them (ask). */
+  studyDeskMarginsToInbox: 'ask' | 'auto';
   /** Show a verb's form (I-X) and its root's other verbs in the dictionary popup (src/verbForms). */
   verbFormsEnabled: boolean;
   /** The aligned, roomier dictionary popup layout (src/popupClean). Off restores the classic popup. */

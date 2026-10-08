@@ -3,7 +3,8 @@ import { db } from '../persistence/schema';
 import { SYNCED_TABLES, isSyncedTable } from '../persistence/syncedTables';
 import { bulkPutSynced } from '../persistence/writeLayer';
 import { getAllWordInstances, upsertWordInstancesBulk } from '../persistence/wordInstancesRepo';
-import { MAIN_DB, STORAGE_REGISTRY, type StoreSpec } from '../storage/registry';
+import { DESK_DB, MAIN_DB, STORAGE_REGISTRY, type StoreSpec } from '../storage/registry';
+import * as deskStore from '../studyDesk/deskStore';
 
 type Row = Record<string, unknown>;
 
@@ -100,6 +101,19 @@ const personalDictionary: RecordStore = {
   },
 };
 
+/** Study desk tables (src/studyDesk): newer-wins by updatedAt, like the main tables. */
+function deskTable(table: 'items' | 'desks'): RecordStore {
+  return {
+    id: `${DESK_DB}/${table}`,
+    read: () => (table === 'items' ? deskStore.readAllItems() : deskStore.readAllDesks()),
+    async restore(rows) {
+      const { toWrite, result } = await newerThanLocal(rows, 'id', 'updatedAt', (keys) => deskStore.bulkGet(table, keys));
+      await deskStore.bulkPut(table, toWrite);
+      return result;
+    },
+  };
+}
+
 function storeFor(spec: StoreSpec): RecordStore | undefined {
   if (spec.db === MAIN_DB) {
     if (isSyncedTable(spec.id)) return syncedStore(spec.id);
@@ -107,6 +121,8 @@ function storeFor(spec: StoreSpec): RecordStore | undefined {
     if (spec.id === 'sensePicks') return sensePicks;
     return undefined;
   }
+  if (spec.id === `${DESK_DB}/items`) return deskTable('items');
+  if (spec.id === `${DESK_DB}/desks`) return deskTable('desks');
   return spec.id === personalDictionary.id ? personalDictionary : undefined;
 }
 

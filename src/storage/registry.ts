@@ -45,6 +45,7 @@ export const PERSONAL_DICTIONARY_DB = 'arabic-reader-personal-dictionary';
 export const ARAMORPH_FILES_DB = 'arabic-reader-aramorph-files';
 export const FREQUENCY_DB = 'arabic-reader-frequency';
 export const BLOBS_DB = 'arabic-reader-blobs';
+export const DESK_DB = 'arabic-reader-desk';
 
 type TableSpec = Omit<StoreSpec, 'id' | 'kind' | 'db'>;
 
@@ -111,6 +112,8 @@ export const STORAGE_REGISTRY: readonly StoreSpec[] = [
     exportFormat: 'none',
     note: 'BlobStore bytes (IndexedDB backend). Class, eviction and export are decided per namespace below.',
   }),
+  table(DESK_DB, 'items', { ...localRecords, note: 'Study desk items (src/studyDesk): captures, concepts, margin notes. Local only until sync covers it.' }),
+  table(DESK_DB, 'desks', { ...localRecords, note: 'Study desks and their documents (sanitized HTML with item embeds). Local only until sync covers it.' }),
   table(BLOBS_DB, 'blobIndex', { ...cache, evictable: false, note: 'BlobStore index: rebuildable by a scan, but it holds the owner references, so never evicted.' }),
 
   // --- BlobStore namespaces (src/blobStore) -----------------------------------
@@ -118,6 +121,7 @@ export const STORAGE_REGISTRY: readonly StoreSpec[] = [
   blobNamespace('pdf', { ...userFile, exportFormat: 'none', note: 'The original PDF of a book added as PDF (Original pages view); owner = book id, referenced by books.pdf.originalHash. Not in the full export yet.' }),
   blobNamespace('font', { ...userFile, exportFormat: 'none', note: 'Uploaded font files; owner = face id. Not exported (licensed to the reader).' }),
   blobNamespace('dictionary', { ...userFile, exportFormat: 'none', note: 'The personal dictionary parsed rows as JSON; owner "personal". Exported through the personal dictionary table, not as a file.' }),
+  blobNamespace('desk', { ...userFile, exportFormat: 'none', note: 'Images on the study desk (region captures of PDF pages, pasted screenshots); owner = desk item id. Not in the full export yet.' }),
   blobNamespace('pack', { cls: 'C', syncs: false, inBackup: false, evictable: true, merge: 'none', exportFormat: 'none', note: 'Reference pack files (PackManager, M1f); downloaded again when evicted.' }),
 ];
 
