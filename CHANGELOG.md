@@ -4,7 +4,7 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
-## v0.62.0 — 2026-10-08
+## v0.62.1 — 2026-10-08
 
 - **A redesigned Library.** The book you are reading sits at the top with its chapter, progress and
   an estimate of the time left at your own pace, plus the other books you have in progress.
