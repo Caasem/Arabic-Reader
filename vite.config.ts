@@ -131,6 +131,12 @@ export default defineConfig({
             options: { cacheName: 'anki-export', expiration: { maxEntries: 2 } },
           },
           {
+            // onnxruntime's WebAssembly (14 MB), loaded only by the offline reading engine of scanned PDF pages; cached once used.
+            urlPattern: /\/assets\/ort-wasm-simd-threaded-[\w-]+\.wasm$/,
+            handler: 'CacheFirst',
+            options: { cacheName: 'ocr-runtime', expiration: { maxEntries: 2 } },
+          },
+          {
             urlPattern: /\/assets\/_virtual_(?:alwasit|alsihah|almaqayis|baranov|vocab-list)-data-[\w-]+\.js$/,
             handler: 'CacheFirst',
             options: { cacheName: 'optional-datasets', expiration: { maxEntries: 7 } },

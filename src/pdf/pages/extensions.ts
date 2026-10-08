@@ -39,7 +39,7 @@ export interface PdfPageExtension {
    */
   wordAt?(tap: PdfWordTap): Promise<PointedWord | null>;
   /** Extra controls in the pages view's top bar. */
-  Toolbar?: ComponentType<{ book: BookMeta; page: number; total: number }>;
+  Toolbar?: ComponentType<{ book: BookMeta; page: number; total: number; opened: OpenedPdf }>;
 }
 
 const extensions = new Map<string, PdfPageExtension>();

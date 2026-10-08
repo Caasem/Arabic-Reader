@@ -23,9 +23,30 @@ export interface WindowBridge {
   toggleFullScreen(): Promise<void>;
 }
 
+/** An engine the operating system provides (electron/ocrEngines.cjs). */
+export interface DesktopOcrEngineInfo {
+  id: string;
+  name: string;
+  description: string;
+  /** Language tags the engine can read, e.g. `ar-SA`. */
+  languages: string[];
+  available: boolean;
+  /** Why it cannot be used, or what is missing. */
+  reason?: string;
+}
+
+export interface DesktopOcrBridge {
+  list(): Promise<DesktopOcrEngineInfo[]>;
+  recognize(id: string, bytes: Uint8Array, language: string): Promise<unknown>;
+  /** Posts a PNG to an address the reader added and returns its JSON answer. */
+  http(url: string, bytes: Uint8Array, language: string): Promise<unknown>;
+}
+
 export interface DesktopBridge {
   syncFolder: SyncFolderBridge;
   window: WindowBridge;
+  /** Text recognition for scanned PDF pages (src/pdf/ocr). */
+  ocr?: DesktopOcrBridge;
   /** BlobStore files (src/blobStore/fsBackend.ts). Optional so a page never assumes it. */
   blobs?: BlobFilesBridge;
 }

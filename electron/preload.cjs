@@ -21,6 +21,12 @@ contextBridge.exposeInMainWorld('arabicReaderDesktop', {
     write: (rel, text) => call('sync-folder:write', rel, text),
     remove: (rel) => call('sync-folder:remove', rel),
   },
+  /** Text recognition for scanned PDF pages: the OS's engines, and a post to an address the reader added. */
+  ocr: {
+    list: () => call('ocr:list'),
+    recognize: (id, bytes, language) => call('ocr:recognize', id, bytes, language),
+    http: (url, bytes, language) => call('ocr:http', url, bytes, language),
+  },
   /** BlobStore bytes as files under the app's user-data folder, named by SHA-256 only. */
   blobs: {
     write: (hash, bytes) => call('blobs:write', hash, bytes),

@@ -529,6 +529,7 @@ export function Reader({
           onUnsaveEntry={(id) => lookups.unsavePopupEntry(id)}
           onSaveSelection={(entry, text) => void lookups.savePopupSelection(entry, text)}
           onEdit={lookups.startEditing}
+          onEditWord={lookups.editPopupWord}
           onMaximise={
             prefs.dictionaryFullPageEnabled
               ? () => {

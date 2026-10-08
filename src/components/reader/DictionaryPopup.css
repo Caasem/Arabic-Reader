@@ -140,6 +140,132 @@
   flex-wrap: wrap;
 }
 
+/* The headword as a button: looks like the text, shows it can be edited on hover. */
+.dict-popup__word-text {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: text;
+  border-radius: 4px;
+  text-decoration: underline dotted transparent;
+  text-underline-offset: 6px;
+  transition: text-decoration-color 0.12s ease, background 0.12s ease;
+}
+
+.dict-popup__word-text:hover,
+.dict-popup__word-text:focus-visible {
+  text-decoration-color: var(--ink-faint);
+  background: var(--accent-soft);
+  outline: none;
+}
+
+.dict-popup__word-input {
+  font: inherit;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 0 6px;
+  margin: 0;
+  min-width: 3ch;
+  max-width: 100%;
+  box-sizing: content-box;
+}
+
+.dict-popup__word-input:focus {
+  outline: 2px solid var(--accent-soft);
+}
+
+.dict-popup__word-text--suspect {
+  text-decoration: underline wavy #b0701c;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 8px;
+}
+
+.dict-popup__ocr {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.dict-popup__ocr-note {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--ink-faint);
+  margin-bottom: 8px;
+}
+
+.dict-popup__ocr .dict-popup__ocr-note {
+  margin-bottom: 0;
+}
+
+.dict-popup__ocr-note--warn {
+  color: #b0701c;
+}
+
+.dict-popup__ocr-note--ok {
+  color: #2e7d4f;
+}
+
+.dict-popup__alts {
+  display: grid;
+  gap: 6px;
+}
+
+.dict-popup__alt {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 2px 12px;
+  align-items: center;
+  text-align: start;
+  font: inherit;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+
+.dict-popup__alt:hover {
+  border-color: var(--accent);
+}
+
+.dict-popup__alt--top {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.dict-popup__alt-word {
+  grid-row: span 2;
+  font-family: var(--font-arabic);
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.dict-popup__alt-gloss {
+  font-size: 0.85rem;
+  min-height: 1.1em;
+}
+
+.dict-popup__alt-key {
+  grid-row: span 2;
+  font: 0.7rem ui-monospace, Consolas, monospace;
+  color: var(--ink-faint);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+
+.dict-popup__alt-why {
+  grid-column: 2;
+  font-size: 0.75rem;
+  color: var(--ink-faint);
+}
+
 .dict-popup__header-actions {
   position: absolute;
   right: 12px;

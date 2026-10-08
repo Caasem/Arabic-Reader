@@ -7,3 +7,4 @@ export type * from './dictionary';
 export type * from './vocabulary';
 export type * from './preferences';
 export type * from './sessions';
+export type * from './ocr';

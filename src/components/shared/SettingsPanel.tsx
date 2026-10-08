@@ -27,6 +27,7 @@ import { ShamelaBetaSettings } from './settings/ShamelaBetaSettings';
 import { SyncSettings } from './settings/SyncSettings';
 import { StorageSettings } from './settings/StorageSettings';
 import { QuietReaderSettings } from '../../quietReader/QuietReaderSettings';
+import { PdfOcrSettings } from '../../pdf/ocr';
 import './SettingsPanel.css';
 
 function BackupSettings() {
@@ -63,6 +64,7 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
       <TouchGestureSettings key="touch" />,
       <SearchSettings key="search" />,
       <PomodoroSettings key="pomodoro" />,
+      <PdfOcrSettings key="pdfocr" />,
     ],
   },
   {

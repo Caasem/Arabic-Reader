@@ -1,3 +1,4 @@
+import type { WordOcrInfo } from '../../types';
 import { normalizeArabic } from '../arabic';
 
 /** Arabic letters, vowel marks and tatweel, including the shaped presentation forms some PDFs hold. */
@@ -40,6 +41,8 @@ export interface PointedWord {
   run: string;
   rect: DOMRect;
   element: HTMLElement;
+  /** Set when the word was read from a scanned page rather than taken from a text layer. */
+  ocr?: WordOcrInfo;
 }
 
 /** The Arabic word drawn under a point inside `layer` (the page's transparent text layer), if any. */

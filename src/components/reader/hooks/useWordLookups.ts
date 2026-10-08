@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, type RefObject } from 'react';
-import type { BookMeta, DictionaryEntry, DictionaryLookupResult, ReaderPreferences, VocabularyItem, WordInstance } from '../../../types';
+import type { BookMeta, WordOcrInfo, DictionaryEntry, DictionaryLookupResult, ReaderPreferences, VocabularyItem, WordInstance } from '../../../types';
 import { lookupWord, saveLookup } from '../../../vocabulary/lookupWord';
 import { vocabularyService } from '../../../vocabulary';
 import { senseText } from '../../../dictionary/senseText';
@@ -21,6 +21,8 @@ export interface LookupState {
   instance: WordInstance | null;
   saved: boolean;
   loading: boolean;
+  /** For a word read from a scanned page: how sure the read is, and the likely corrections. */
+  ocr?: WordOcrInfo;
 }
 
 export interface TouchToast {
@@ -35,6 +37,8 @@ interface Options {
   prefsRef: RefObject<ReaderPreferences>;
   /** Runs as any lookup starts (e.g. to dismiss the hover preview). */
   onLookupStart(): void;
+  /** The reader corrected the headword of a word read from a scan (so the fix can be remembered). */
+  onWordCorrected?(ocr: WordOcrInfo, word: string): void;
 }
 
 function pendingState(target: WordTarget): LookupState {
@@ -44,6 +48,7 @@ function pendingState(target: WordTarget): LookupState {
     x: target.x,
     y: target.y,
     wordRect: target.rect,
+    ocr: target.ocr,
     result: null,
     instance: null,
     saved: false,
@@ -56,7 +61,8 @@ function pendingState(target: WordTarget): LookupState {
  * bubble, quick-save, the edit modal, the quick-add shortcut, and saving or
  * un-saving -- with the book text's saved-word coloring kept in step.
  */
-export function useWordLookups({ book, trackerRef, savedWords, prefsRef, onLookupStart }: Options) {
+export function useWordLookups(options: Options) {
+  const { book, trackerRef, savedWords, prefsRef, onLookupStart } = options;
   const [popup, setPopup] = useState<LookupState | null>(null);
   const [bubble, setBubble] = useState<LookupState | null>(null);
   const [editing, setEditing] = useState<LookupState | null>(null);
@@ -114,6 +120,25 @@ export function useWordLookups({ book, trackerRef, savedWords, prefsRef, onLooku
     setPopup(null);
   }
 
+  /**
+   * The reader corrected the popup's headword (a misread scan, a typo, another form): looks the new word
+   * up in the same popup, in the same place, with the same sentence.
+   */
+  async function editPopupWord(next: string) {
+    const current = popup;
+    const word = next.trim();
+    if (!current || !word || word === current.word) return;
+    const ocr = current.ocr ? { ...current.ocr, suspect: false, candidates: [], corrected: true } : undefined;
+    const target = { word, sectionHref: current.sectionHref ?? '', x: current.x, y: current.y, rect: current.wordRect, sentence: current.instance?.sentence, ocr } as WordTarget;
+    if (current.ocr) options.onWordCorrected?.(current.ocr, word);
+    const token = ++popupTokenRef.current;
+    setPopup(pendingState(target));
+    const resolved = await resolve(target);
+    if (token !== popupTokenRef.current) return;
+    setPopup(resolved);
+    lastLookupRef.current = resolved;
+  }
+
   async function openBubble(target: WordTarget) {
     onLookupStart();
     trackerRef.current?.recordLookup();
@@ -155,6 +180,7 @@ export function useWordLookups({ book, trackerRef, savedWords, prefsRef, onLooku
 
     openPopup,
     closePopup,
+    editPopupWord,
     closeBubble,
     closeAll() {
       closePopup();
