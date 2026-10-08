@@ -491,6 +491,28 @@ test.describe('desk document', () => {
     await expect(page.locator('.qr-chapter .ar-word').first()).toBeVisible();
   });
 
+  test('each kind of item has its own look; a screenshot opens at full size', async ({ page }) => {
+    await openSample(page);
+    await page.keyboard.press('Alt+u');
+    await page.getByRole('button', { name: 'Inbox', exact: true }).click();
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVR42mP8z8Dwn4GBgYGJAQoAADUBAf8Ik8gAAAAASUVORK5CYII=', 'base64');
+    await page.getByLabel('Image file').setInputFiles({ name: 'figure.png', mimeType: 'image/png', buffer: png });
+    await page.keyboard.press('Alt+c');
+    await page.getByRole('textbox', { name: 'Concept' }).fill('Group feeling');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Write a concept' })).toHaveCount(0);
+    await page.keyboard.press('d');
+    const doc = page.getByRole('dialog', { name: 'Desk document' });
+    await expect(doc.locator('.desk-embed.sd-emb--capture')).toHaveCount(1);
+    await expect(doc.locator('.desk-embed.sd-emb--concept')).toHaveCount(1);
+    await doc.locator('.sd-emb__img').click();
+    const zoom = page.getByRole('dialog', { name: 'Image at full size' });
+    await expect(zoom.locator('img')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(zoom).toHaveCount(0);
+    await expect(doc).toBeVisible();
+  });
+
   test('Arabic lines run right to left and source lines keep their parts in order', async ({ page }) => {
     const doc = await docWithItems(page);
     const editor = doc.getByRole('textbox', { name: 'Document text' });

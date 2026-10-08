@@ -63,6 +63,9 @@ export function fillEmbed(host: HTMLElement, item: DeskItem | undefined, opts: E
   host.classList.toggle('sd-emb--hidden', !item || !opts.shown);
   if (!item) return;
   host.classList.add(`sd-emb--${item.type}`);
+  // An Arabic item lays out right to left (a quote's rule at its right edge). Set on each fill: saving drops attributes.
+  if (item.ar) host.setAttribute('dir', 'rtl');
+  else host.removeAttribute('dir');
   if (item.fromMargin) host.classList.add('sd-emb--margin');
 
   const head = el('div', 'sd-emb__head');

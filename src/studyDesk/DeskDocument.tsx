@@ -6,7 +6,7 @@ import './deskDocument.css';
 import { IconCapture, IconChevron, IconDown, IconEye, IconEyeOff, IconInbox, IconPull, IconUp } from './icons';
 import { fillEmbed, type EmbedAct } from './docEmbeds';
 import { EMBED_CLASS, embedHtml, EMPTY_DOC, outline, sanitizeDocHtml } from './docHtml';
-import { capture, itemTitle, looksArabic, TYPE_LABEL, type DeskData } from './useDesk';
+import { capture, itemTitle, looksArabic, TYPE_LABEL, useDeskImage, type DeskData } from './useDesk';
 import type { Desk, DeskItem } from './types';
 
 interface Props {
@@ -224,6 +224,8 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     placeBefore(el, heading === null ? (heads[0] ?? null) : (heads[heading + 1] ?? null));
   }
   const dragId = useRef<string | null>(null);
+  /** A screenshot shown at full size. */
+  const [zoom, setZoom] = useState<DeskItem | null>(null);
 
   // --- the buttons on an item in the text (docEmbeds.ts) ---
   function finishNote(el: HTMLElement, keep: boolean) {
@@ -252,6 +254,8 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     } else if (act === 'source') {
       save();
       onGoToSource?.(item);
+    } else if (act === 'zoom') {
+      setZoom(item);
     } else if (act === 'note') {
       const open = editing.current && edRef.current?.querySelector<HTMLElement>(`.${EMBED_CLASS}[data-item="${editing.current}"]`);
       if (open && open !== host) finishNote(open, true);
@@ -485,6 +489,35 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
           </>
         )}
       </aside>
+      {zoom?.imageHash && <ImageZoom item={zoom} onClose={() => setZoom(null)} />}
+    </div>
+  );
+}
+
+/** A screenshot at full size over the document; a click or Esc closes it. */
+function ImageZoom({ item, onClose }: { item: DeskItem; onClose(): void }) {
+  const src = useDeskImage(item.imageHash);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      // Only this closes: the document stays open.
+      e.stopPropagation();
+      onClose();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [onClose]);
+  return (
+    <div className="sd-zoom" role="dialog" aria-label="Image at full size" onClick={onClose}>
+      <div>
+        {src && <img src={src} alt={item.text || 'Screenshot'} />}
+        <div className="sd-zoom__bar">
+          <span dir="auto">{item.text || item.source?.bookTitle || 'Screenshot'}</span>
+          <button type="button" onClick={onClose}>
+            Close · Esc
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

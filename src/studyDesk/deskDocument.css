@@ -443,3 +443,144 @@
   font-size: 11.5px;
   color: var(--ink-faint);
 }
+
+/*
+ * Each kind of item looks like what it is (docEmbeds.ts sets sd-emb--<type>):
+ *   quote     a quotation: a rule at its start edge, the words large, no box
+ *   concept   a compact term line on a soft fill
+ *   question  an open question: a dashed edge and a question mark
+ *   card      front and back of a flashcard
+ *   capture   a screenshot shown wide
+ *   line/note margin notes: a quiet note on the page's own ground
+ */
+.desk-embed.sd-emb--quote {
+  border: 0;
+  border-inline-start: 3px solid var(--accent);
+  border-radius: 0;
+  background: none;
+  padding: 4px 0 4px 16px;
+  padding-inline: 16px 0;
+}
+.sd-emb--quote .sd-emb__text {
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.sd-emb--quote .sd-emb__text--ar {
+  font-size: 23px;
+  line-height: 1.8;
+}
+.sd-emb--quote .sd-emb__body {
+  font-style: italic;
+}
+.sd-emb--quote .sd-emb__type,
+.sd-emb--capture .sd-emb__type {
+  border: 0;
+  color: var(--ink-faint);
+}
+.desk-embed.sd-emb--concept {
+  flex-direction: column;
+  padding: 8px 12px;
+  border-color: transparent;
+  background: var(--accent-soft);
+  border-radius: 10px;
+}
+.sd-emb--concept .sd-emb__text {
+  font-weight: 600;
+}
+.desk-embed.sd-emb--question {
+  border-style: dashed;
+  border-color: var(--accent);
+  background: none;
+}
+.sd-emb--question .sd-emb__head::before {
+  content: '?';
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--bg-elevated);
+  font: 700 13px var(--font-ui);
+  align-self: center;
+}
+.sd-emb--card .sd-emb__head::before {
+  content: 'Front';
+  font: 600 10.5px var(--font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  align-self: center;
+}
+.sd-emb--card .sd-emb__body {
+  color: var(--ink);
+  border-top: 1px dashed var(--border);
+  padding-top: 6px;
+}
+.sd-emb--card .sd-emb__body::before {
+  content: 'Back  ';
+  font: 600 10.5px var(--font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.desk-embed.sd-emb--margin {
+  background: none;
+  border-color: var(--border);
+  border-style: solid;
+}
+.sd-emb--margin.sd-emb--line .sd-emb__type {
+  border: 0;
+  color: var(--ink-faint);
+}
+.sd-emb--capture .sd-emb__img,
+.sd-emb__img {
+  cursor: zoom-in;
+  max-height: 420px;
+  width: auto;
+  align-self: flex-start;
+}
+.sd-emb--capture .sd-emb__text {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+/* A screenshot at full size, over the document. */
+.sd-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 69;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: rgb(20 18 15 / 0.72);
+  cursor: zoom-out;
+}
+.sd-zoom img {
+  max-width: 100%;
+  max-height: calc(100vh - 110px);
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgb(0 0 0 / 0.4);
+  background: #fff;
+}
+.sd-zoom__bar {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-top: 12px;
+  color: #f1ece4;
+  font: 13px var(--font-ui);
+}
+.sd-zoom__bar button {
+  border: 1px solid rgb(255 255 255 / 0.4);
+  background: none;
+  color: inherit;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font: inherit;
+  cursor: pointer;
+}
