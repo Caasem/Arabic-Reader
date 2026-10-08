@@ -151,6 +151,8 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deskItems, fillAll, deskId, desk]);
 
+  /** What the corner says: saving, saved, or a save that failed. */
+  const [saved, setSaved] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
   /** The editor's latest HTML and whether it has unsaved changes; kept so a save still works after the editor is gone (closing). */
   const latest = useRef<{ deskId: string; html: string; dirty: boolean } | null>(null);
   const save = useCallback(() => {
@@ -159,10 +161,14 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     const l = latest.current;
     if (!l || !l.dirty || l.deskId !== deskId) return;
     l.dirty = false;
-    void saveDeskHtml(l.deskId, l.html, { quiet: true });
+    void saveDeskHtml(l.deskId, l.html, { quiet: true }).then(
+      () => setSaved((st) => (st === 'saving' && !latest.current?.dirty ? 'saved' : st)),
+      () => setSaved('failed')
+    );
   }, [deskId]);
 
   function scheduleSave() {
+    setSaved('saving');
     if (edRef.current && loadedFor.current === deskId) latest.current = { deskId, html: edRef.current.innerHTML, dirty: true };
     window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(save, SAVE_MS);
@@ -232,6 +238,13 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
   const itemEntries = entries.filter((e): e is Extract<typeof e, { kind: 'item' }> => e.kind === 'item');
   const headings = entries.filter((e): e is Extract<typeof e, { kind: 'heading' }> => e.kind === 'heading');
   const offPage = deskItems.filter((i) => !itemEntries.some((e) => e.id === i.id));
+  const perHeading = new Map<number, number>();
+  itemEntries.forEach((e) => e.heading !== null && perHeading.set(e.heading, (perHeading.get(e.heading) ?? 0) + 1));
+  const words = useMemo(() => countWords(edRef.current), [version]); // eslint-disable-line react-hooks/exhaustive-deps
+  function scrollToHeading(index: number) {
+    const h = edRef.current?.querySelectorAll('h3')[index];
+    h?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
 
   function shift(id: string, by: -1 | 1) {
     const at = itemEntries.findIndex((e) => e.id === id);
@@ -416,7 +429,13 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
               </button>
             </div>
           </div>
-          <p className="sd-eyebrow">{desk?.kind === 'own' ? 'Your desk · captures from any book' : 'Book desk'}</p>
+          <div className="sd-doc__status">
+            <p className="sd-eyebrow">{desk?.kind === 'own' ? 'Your desk · captures from any book' : 'Book desk'}</p>
+            <span className="sd-doc__count">{words === 1 ? '1 word' : `${words.toLocaleString()} words`}</span>
+            <span className={'sd-doc__saved sd-doc__saved--' + saved} role="status" aria-live="polite">
+              {saved === 'saving' ? 'Saving…' : saved === 'saved' ? 'Saved' : saved === 'failed' ? 'Not saved: no space left?' : ''}
+            </span>
+          </div>
           <h2
             className="sd-doc__title"
             contentEditable
@@ -523,7 +542,10 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
                       if (dragId.current) file(dragId.current, e.index);
                       dragId.current = null;
                     }}>
-                      {e.text}
+                      <button type="button" className="sd-order__hbtn" onClick={() => scrollToHeading(e.index)} title="Go to this heading">
+                        <span dir="auto">{e.text}</span>
+                        <span className="sd-order__hn">{perHeading.get(e.index) ?? 0}</span>
+                      </button>
                     </li>
                   );
                 const item = itemsById.get(e.id);
@@ -630,6 +652,17 @@ function ImageZoom({ item, onClose }: { item: DeskItem; onClose(): void }) {
       </div>
     </div>
   );
+}
+
+/** Words the reader wrote: the document's text without its items. */
+function countWords(ed: HTMLElement | null): number {
+  if (!ed) return 0;
+  let n = 0;
+  const walk = document.createTreeWalker(ed, NodeFilter.SHOW_TEXT, {
+    acceptNode: (t) => (t.parentElement?.closest(`.${EMBED_CLASS}`) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+  });
+  for (let t = walk.nextNode(); t; t = walk.nextNode()) n += (t.textContent ?? '').split(/\s+/).filter(Boolean).length;
+  return n;
 }
 
 function caretEnd(el: HTMLElement | null) {

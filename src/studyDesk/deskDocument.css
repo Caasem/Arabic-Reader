@@ -718,3 +718,80 @@
   border-inline-start: 3px solid var(--border);
   color: var(--ink-soft);
 }
+
+/* Above the title: the desk kind, the word count and whether it is saved. */
+.sd-doc__status {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.sd-doc__status .sd-eyebrow {
+  margin-right: auto;
+}
+.sd-doc__count,
+.sd-doc__saved {
+  font-size: 12px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.sd-doc__saved--failed {
+  color: #b4472f;
+}
+
+/* The side panel as an outline: headings divide it, with how many items each holds; titles get the width. */
+.sd-order__h {
+  padding: 8px 4px 2px;
+}
+.sd-order__hbtn {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  padding: 2px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.sd-order__hbtn:hover,
+.sd-order__hbtn:focus-visible {
+  background: var(--accent-soft);
+  outline: none;
+}
+.sd-order__hbtn span:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sd-order__hn {
+  font: 600 11px var(--font-ui);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.sd-order__i .sd-order__sel {
+  max-width: 0;
+  opacity: 0;
+  padding: 0;
+  border-width: 0;
+  transition: max-width 0.15s, opacity 0.15s;
+}
+.sd-order__i:hover .sd-order__sel,
+.sd-order__i:focus-within .sd-order__sel {
+  max-width: 96px;
+  opacity: 1;
+  padding: 1px 2px;
+  border-width: 1px;
+}
+@media (hover: none) {
+  .sd-order__i .sd-order__sel {
+    max-width: 96px;
+    opacity: 1;
+    border-width: 1px;
+  }
+}

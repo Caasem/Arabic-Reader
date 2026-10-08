@@ -576,6 +576,24 @@ test.describe('desk document', () => {
     await expect(editor.locator('b, strong')).toContainText('strong');
   });
 
+  test('the side panel outlines the headings; word count and Saved', async ({ page }) => {
+    const doc = await docWithItems(page);
+    const editor = doc.getByRole('textbox', { name: 'Document text' });
+    await editor.locator('p').last().click();
+    await page.keyboard.type('# Village');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('three more words');
+    await expect(doc.locator('.sd-doc__count')).toHaveText('4 words');
+    await expect(doc.getByRole('status').filter({ hasText: 'Saved' })).toBeVisible();
+    // File the concept under the heading: the heading shows one item.
+    const row = doc.locator('.sd-order__i', { hasText: 'Group feeling' });
+    await row.hover();
+    await row.getByRole('combobox', { name: 'File under a heading' }).selectOption({ label: 'Village' });
+    await expect(doc.locator('.sd-order__h', { hasText: 'Village' }).locator('.sd-order__hn')).toHaveText('1');
+    await doc.locator('.sd-order__hbtn', { hasText: 'Village' }).click();
+    await expect(editor.locator('h3')).toBeInViewport();
+  });
+
   test('Arabic lines run right to left and source lines keep their parts in order', async ({ page }) => {
     const doc = await docWithItems(page);
     const editor = doc.getByRole('textbox', { name: 'Document text' });
