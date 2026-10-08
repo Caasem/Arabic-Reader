@@ -90,6 +90,8 @@ interface Props {
   onOpenSettings?(group?: string): void;
   /** Display -> View -> Original layout. */
   onShowOriginal?(): void;
+  /** A book added from a PDF: Display -> Original pages. */
+  onShowPages?(): void;
 }
 
 const isTyping = (target: EventTarget | null) => !!(target as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]');
@@ -100,7 +102,7 @@ const sectionOf = (node: Node | null) => (node instanceof Element ? node : node?
  * the bottom, vocab levels beside the text, the usual dictionary popup, and a
  * drawer for contents, search, marks and saved words.
  */
-export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation, onOpenBookAt, levelsOpen, onLevelsOpenChange, onOpenSettings, onShowOriginal }: Props) {
+export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation, onOpenBookAt, levelsOpen, onLevelsOpenChange, onOpenSettings, onShowOriginal, onShowPages }: Props) {
   const { prefs, resolvedTheme } = usePreferences();
   const prefsRef = useRef(prefs);
   useLayoutEffect(() => {
@@ -1122,6 +1124,7 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
             if (v === 'original') onShowOriginal?.();
           }}
           onOpenSettings={() => onOpenSettings?.('reading')}
+          onShowPages={onShowPages}
           onClose={() => setSheet(null)}
         />
       )}

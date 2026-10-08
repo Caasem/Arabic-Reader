@@ -1,0 +1,78 @@
+.pdfp__stage {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  outline: none;
+  background: var(--bg-sunken, var(--bg));
+}
+
+.pdfp__column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: max-content;
+  min-width: 100%;
+  box-sizing: border-box;
+}
+
+.pdfp-page {
+  position: relative;
+  flex: none;
+  background: #fff;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+}
+
+.pdfp-page__number {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #b4b0a8;
+  font-size: 1.6rem;
+}
+
+.pdfp-page__canvas {
+  display: block;
+}
+
+/* The transparent text over the picture, positioned by pdf.js; it only exists to be tapped. */
+.pdfp-text {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  line-height: 1;
+  text-align: initial;
+  transform-origin: 0 0;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+  cursor: pointer;
+  -webkit-touch-callout: none;
+}
+
+.pdfp-text :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  transform-origin: 0% 0%;
+}
+
+.pdfp-text > :not(.markedContent),
+.pdfp-text .markedContent span:not(.markedContent) {
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+
+.pdfp-text .markedContent {
+  display: contents;
+}
+
+.pdfp-text ::selection {
+  background: var(--accent-soft, rgb(156 122 79 / 0.3));
+}

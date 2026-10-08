@@ -74,12 +74,15 @@ export function DisplaySheet({
   view,
   onSetView,
   onOpenSettings,
+  onShowPages,
   onClose,
 }: {
   center: number;
   view: ReaderView;
   onSetView(view: ReaderView): void;
   onOpenSettings(): void;
+  /** A book added from a PDF: switch to its original pages. */
+  onShowPages?(): void;
   onClose(): void;
 }) {
   const { prefs, updatePrefs } = usePreferences();
@@ -236,6 +239,17 @@ export function DisplaySheet({
           </label>
           <Segmented label="Page turns" options={DIRECTIONS} value={prefs.pageDirection} onChange={(pageDirection) => updatePrefs({ pageDirection })} />
           <Segmented label="View" options={VIEWS} value={view} onChange={onSetView} />
+          {onShowPages && (
+            <Segmented
+              label="PDF"
+              options={[
+                { id: 'text', label: 'Reflowed text' },
+                { id: 'pages', label: 'Original pages' },
+              ]}
+              value="text"
+              onChange={(v) => v === 'pages' && onShowPages()}
+            />
+          )}
           <div className="qr-display__foot">
             <label className="qr-check">
               <input type="checkbox" checked={prefs.showPageBoundaries} onChange={(e) => updatePrefs({ showPageBoundaries: e.target.checked })} />

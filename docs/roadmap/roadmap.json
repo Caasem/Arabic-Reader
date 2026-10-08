@@ -249,7 +249,7 @@
       "deps": [
         "formats-simple"
       ],
-      "notes": "Step 1 done in v0.42.0 (src/importFormats/pdf*.ts): text PDFs are quality-checked (presentation forms, AraMorph hit rate, reversed-order check) and reflowed into an EPUB; scanned, broken, encrypted, corrupt and over-500-MB files are refused with a message. Still to do: the Original-pages view and view switch, keeping the original PDF (BlobStore), 'Pages only' mode for broken text, OCR for scans (separate idea). OPEN: pdfjs-dist is Apache-2.0 and the project is GPL-2.0; the maintainer must decide before release (see the Licence section of the brief).",
+      "notes": "Step 2 done in v0.43.0 (src/pdfPages): the original PDF is kept (BlobStore namespace 'pdf', BookMeta.pdf), scanned or broken-text PDFs are added as pages-only books, and the Original pages view has zoom, paging, text-layer word taps into the normal popup and a per-view position (localStorage). Not done in step 2: page highlights, position mapping between views, taps on scanned pages (needs OCR), export of the original PDF. Step 1 done in v0.42.0 (src/importFormats/pdf*.ts): text PDFs are quality-checked (presentation forms, AraMorph hit rate, reversed-order check) and reflowed into an EPUB; scanned, broken, encrypted, corrupt and over-500-MB files are refused with a message. Still to do: the Original-pages view and view switch, keeping the original PDF (BlobStore), 'Pages only' mode for broken text, OCR for scans (separate idea). OPEN: pdfjs-dist is Apache-2.0 and the project is GPL-2.0; the maintainer must decide before release (see the Licence section of the brief).",
       "brief": "features/formats-pdf.md",
       "milestone": "M3"
     },

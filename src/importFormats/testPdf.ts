@@ -114,3 +114,34 @@ endcmap CMapName currentdict /CMap defineresource pop end end`;
   for (let i = 0; i < out.length; i++) bytes[i] = out.charCodeAt(i) & 0xff;
   return bytes;
 }
+
+/** A small Arabic text PDF for e2e tests: one chapter heading and two paragraphs on each of three pages, drawn right to left. */
+export function sampleArabicBookPdf(): Uint8Array {
+  const sentences = [
+    'ذهب الولد الصغير إلى المدرسة في الصباح الباكر مع أخيه الكبير وكان الطريق طويلا بين البيوت القديمة والأشجار العالية.',
+    'رجع الولد إلى البيت بعد الظهر وجلس مع أمه في الحديقة الجميلة وحكى لها قصة الكتاب الجديد.',
+  ];
+  const wrap = (text: string) => {
+    const out: string[] = [];
+    let line = '';
+    for (const word of text.split(' ')) {
+      if (line && line.length + word.length + 1 > 56) {
+        out.push(line);
+        line = word;
+      } else {
+        line = line ? `${line} ${word}` : word;
+      }
+    }
+    return [...out, line];
+  };
+  const pages = ['الفصل الأول', 'الفصل الثاني', 'الفصل الثالث'].map((title) => {
+    const lines: PdfTestLine[] = [{ text: title, x: 540, y: 720, size: 22, rtl: true }];
+    let y = 680;
+    for (const sentence of sentences) {
+      wrap(sentence).forEach((text, i) => lines.push({ text, x: i === 0 ? 516 : 540, y: (y -= 18), rtl: true }));
+      y -= 14;
+    }
+    return { lines };
+  });
+  return makePdf(pages, { title: 'كتاب القراءة' });
+}
