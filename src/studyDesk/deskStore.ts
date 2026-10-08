@@ -1,6 +1,6 @@
 import { newId } from '../utils/id';
 import { DeskDB } from './db';
-import { appendEmbed, EMPTY_DOC, hasEmbed, removeEmbed, sanitizeDocHtml } from './docHtml';
+import { appendEmbed, EMPTY_DOC, hasEmbed, removeEmbed, replaceEmbedWithHeading, sanitizeDocHtml } from './docHtml';
 import type { Desk, DeskItem, NewDeskItem } from './types';
 
 let db: DeskDB | null = null;
@@ -119,6 +119,18 @@ export async function deleteItem(id: string): Promise<void> {
     if (!item) return;
     const desk = await deskDb().desks.get(item.deskId);
     if (desk) await deskDb().desks.update(desk.id, { html: removeEmbed(desk.html, id), updatedAt: Date.now() });
+    await deskDb().items.delete(id);
+  });
+  changed();
+}
+
+/** A margin note turned into a heading: the heading takes the note's place in the document and the note goes. */
+export async function turnItemIntoHeading(id: string, text: string): Promise<void> {
+  await deskDb().transaction('rw', deskDb().desks, deskDb().items, async () => {
+    const item = await deskDb().items.get(id);
+    if (!item) return;
+    const desk = await deskDb().desks.get(item.deskId);
+    if (desk) await deskDb().desks.update(desk.id, { html: replaceEmbedWithHeading(desk.html, id, text), updatedAt: Date.now() });
     await deskDb().items.delete(id);
   });
   changed();

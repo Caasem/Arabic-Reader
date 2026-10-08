@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { appendEmbed, embedHtml, fileUnderHeading, moveEmbedBefore, outline, removeEmbed, sanitizeDocHtml, shiftEmbed } from './docHtml';
+import { appendEmbed, embedHtml, fileUnderHeading, moveEmbedBefore, outline, removeEmbed, replaceEmbedWithHeading, sanitizeDocHtml, shiftEmbed } from './docHtml';
 
 const ids = (html: string) => outline(html).flatMap((e) => (e.kind === 'item' ? [e.id] : []));
 
@@ -53,5 +53,14 @@ describe('embeds', () => {
     expect(o.find((e) => e.kind === 'item')).toEqual({ kind: 'item', id: 'a', heading: 0 });
     expect(outline(fileUnderHeading(filed, 'a', null))[0]).toEqual({ kind: 'item', id: 'a', heading: null });
     expect(outline(fileUnderHeading(filed, 'a', 1)).find((e) => e.kind === 'item')).toEqual({ kind: 'item', id: 'a', heading: 1 });
+  });
+});
+
+describe('replaceEmbedWithHeading', () => {
+  it('puts the heading where the item was', () => {
+    let html = '<p><br></p>';
+    for (const id of ['a', 'b']) html = appendEmbed(html, id);
+    const out = replaceEmbedWithHeading(html, 'a', 'Rule <b>and</b> dynasty');
+    expect(outline(out)).toEqual([{ kind: 'heading', text: 'Rule <b>and</b> dynasty', index: 0 }, { kind: 'item', id: 'b', heading: 0 }]);
   });
 });

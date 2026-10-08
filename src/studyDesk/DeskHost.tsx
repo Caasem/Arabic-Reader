@@ -7,6 +7,7 @@ import type { BookMeta, ReaderPreferences } from '../types';
 import { ConceptStrip } from './ConceptStrip';
 import { DeskDocument } from './DeskDocument';
 import { InboxBody } from './InboxBody';
+import { MarginLayer } from './MarginLayer';
 import { RegionCapture } from './RegionCapture';
 import { useDeskData } from './useDesk';
 import './studyDesk.css';
@@ -21,6 +22,7 @@ export function DeskHost({ book }: { book: BookMeta }) {
 
 function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dictionarySearchStyle'] }) {
   const data = useDeskData(book);
+  const { prefs, updatePrefs } = usePreferences();
   const [inbox, setInbox] = useState(false);
   const [concept, setConcept] = useState(false);
   const [region, setRegion] = useState(false);
@@ -49,6 +51,27 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
   useChordHotkey('KeyC', true, () => {
     setRegion(false);
     setConcept((v) => !v);
+  });
+  // Alt+M: margins on and off; back on in the layout they had.
+  useChordHotkey('KeyM', true, () => {
+    if (prefs.studyDeskMargins !== 'off') {
+      try {
+        localStorage.setItem('studyDesk.lastMargins', prefs.studyDeskMargins);
+      } catch {
+        // Comes back as both sides.
+      }
+      updatePrefs({ studyDeskMargins: 'off' });
+      say('Margins hidden. Alt+M shows them again.');
+    } else {
+      let last: ReaderPreferences['studyDeskMargins'] = 'both';
+      try {
+        const v = localStorage.getItem('studyDesk.lastMargins');
+        if (v === 'left' || v === 'right' || v === 'both') last = v;
+      } catch {
+        // Both sides.
+      }
+      updatePrefs({ studyDeskMargins: last });
+    }
   });
   useChordHotkey('KeyX', true, () => {
     setConcept(false);
@@ -92,6 +115,7 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
           <InboxBody book={book} data={data} onClose={() => setInbox(false)} onOpenDocument={openDocument} onToast={say} />
         </Shell>
       )}
+      {!doc && <MarginLayer book={book} data={data} onToast={say} onOpenDocument={openDocument} />}
       {concept && <ConceptStrip book={book} deskId={data.deskId} deskName={deskName} onClose={() => setConcept(false)} onToast={say} />}
       {region && <RegionCapture book={book} deskId={data.deskId} deskName={deskName} onClose={closeRegion} onToast={say} />}
       {doc && (

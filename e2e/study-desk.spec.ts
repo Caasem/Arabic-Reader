@@ -110,3 +110,57 @@ test('the desk document embeds captures, makes headings and reorders from the si
   await expect(editor.locator('.desk-embed').first()).toContainText('Second concept');
   await expect(editor.locator('h3')).toHaveText('Notes');
 });
+
+test.describe('margins', () => {
+  test('captures sit in the margin; double-tap writes a note that reaches the document', async ({ page }) => {
+    await openSample(page);
+    await page.keyboard.press('Alt+c');
+    await page.getByRole('textbox', { name: 'Concept' }).fill('Margin concept');
+    await page.keyboard.press('Enter');
+    const glosses = page.locator('.sd-gloss');
+    await expect(glosses).toHaveCount(1);
+    await expect(glosses.first()).toContainText('Margin concept');
+
+    const area = page.locator('.sd-margins__area').last();
+    const box = (await area.boundingBox())!;
+    await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height * 0.6);
+    const note = page.getByRole('textbox', { name: 'Margin note' });
+    await expect(note).toBeFocused();
+    await page.keyboard.type('Why does he go home?');
+    await expect(page.locator('.sd-gloss--m .sd-sug', { hasText: 'Question' })).toBeVisible();
+    await page.locator('.sd-gloss--m').getByRole('button', { name: 'Question', exact: true }).click();
+    await expect(page.locator('.sd-gloss--question')).toHaveCount(1);
+    await page.locator('.sd-gloss--m').getByRole('button', { name: 'Show in document' }).click();
+    const doc = page.getByRole('dialog', { name: 'Desk document' });
+    await expect(doc.locator('.desk-embed', { hasText: 'Why does he go home?' })).toHaveCount(1);
+  });
+
+  test('a margin note becomes a flashcard in review; Alt+M hides the margins', async ({ page }) => {
+    await openSample(page);
+    const area = page.locator('.sd-margins__area').last();
+    await expect(area).toBeVisible();
+    const box = (await area.boundingBox())!;
+    await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height * 0.3);
+    await expect(page.getByRole('textbox', { name: 'Margin note' })).toBeFocused();
+    await page.keyboard.type('عصبية = group feeling');
+    await page.locator('.sd-gloss--m').getByRole('button', { name: 'Flashcard', exact: true }).click();
+    await expect(page.locator('.sd-gloss--card .sd-gloss__front')).toContainText('عصبية');
+    await expect(page.locator('.sd-toast')).toContainText('Added to review');
+
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Alt+m');
+    await expect(page.locator('.sd-margins')).toHaveCount(0);
+    await page.keyboard.press('Alt+m');
+    await expect(page.locator('.sd-gloss--card')).toHaveCount(1);
+  });
+
+  test('an empty note disappears when left', async ({ page }) => {
+    await openSample(page);
+    const area = page.locator('.sd-margins__area').last();
+    const box = (await area.boundingBox())!;
+    await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height * 0.5);
+    await expect(page.getByRole('textbox', { name: 'Margin note' })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.sd-gloss--m')).toHaveCount(0);
+  });
+});

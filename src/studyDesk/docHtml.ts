@@ -180,5 +180,16 @@ export function fileUnderHeading(html: string, itemId: string, heading: number |
   return body.innerHTML;
 }
 
+/** Puts a heading where an item was (a margin note turned into a heading). */
+export function replaceEmbedWithHeading(html: string, itemId: string, text: string): string {
+  const body = parse(html);
+  const el = body.querySelector(`.${EMBED_CLASS}[data-item="${itemId}"]`);
+  const h = body.ownerDocument.createElement('h3');
+  h.textContent = text;
+  if (el) el.replaceWith(h);
+  else body.appendChild(h);
+  return body.innerHTML;
+}
+
 /** A new, empty document. */
 export const EMPTY_DOC = '<p><br></p>';

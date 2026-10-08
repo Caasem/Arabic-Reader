@@ -32,7 +32,7 @@ Everything a reader notices while reading becomes an item: a concept they type, 
 **Margins (Alt+M)**
 - In the quiet reader, the desk spreads into the page margins. Items whose source is on the page sit beside their words, joined by a thin line.
 - Double-tap empty margin space and type straight away. The note stays plain text and is tied to the line beside it. It can be turned into a note, question, concept, flashcard (added to review straight away) or heading, or tied to exact words.
-- Margins: both sides, right only, left only, or off. Notes in the document: all, only chosen, or none. Notes to the inbox: when sent, or automatically.
+- Margins: both sides, right only, left only, or off. On a window too narrow for two margins, "both sides" moves the page over and uses one wide margin. Notes in the document: all, only chosen, or none. Notes to the inbox: when sent, or automatically.
 - Screenshots sit in a small frame; hovering opens a preview beside the margin that never covers the text column. Click or Space keeps it open, Esc closes.
 
 **Pull in (Alt+U)**

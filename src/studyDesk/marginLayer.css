@@ -1,0 +1,418 @@
+/* The desk in the quiet reader's margins (MarginLayer.tsx). Fixed over the reader; only cards and margin areas take the pointer. */
+.sd-margins {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  font-family: var(--font-ui);
+}
+.sd-margins__lines {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.sd-margins__lines path {
+  fill: none;
+  stroke: var(--ink-faint);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+.sd-margins__lines circle {
+  fill: var(--ink-faint);
+}
+.sd-margins__lines .free path {
+  stroke-dasharray: 1 3;
+}
+.sd-margins__lines .on path {
+  stroke: var(--accent);
+  stroke-dasharray: none;
+  stroke-width: 1.4;
+}
+.sd-margins__lines .on circle {
+  fill: var(--accent);
+}
+.sd-margins__mark {
+  position: fixed;
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px var(--accent);
+  pointer-events: none;
+}
+.sd-margins__area {
+  position: fixed;
+  pointer-events: auto;
+  cursor: text;
+  user-select: none;
+}
+.sd-margins__hint {
+  position: absolute;
+  left: 0;
+  bottom: 8px;
+  font-family: var(--look-display, Georgia, serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-faint);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+.sd-margins__area:hover .sd-margins__hint {
+  opacity: 0.8;
+}
+.sd-margins__set {
+  position: fixed;
+  width: 120px;
+  pointer-events: auto;
+  border: 0;
+  background: none;
+  color: var(--ink-faint);
+  font: 600 10.5px var(--font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: right;
+  cursor: pointer;
+}
+.sd-margins__set:hover {
+  color: var(--ink);
+}
+
+/* One card */
+.sd-gloss {
+  position: fixed;
+  pointer-events: auto;
+  padding: 8px 10px 8px 12px;
+  border-radius: 10px;
+  color: var(--ink);
+  transition: background 0.15s, top 0.2s ease;
+}
+.sd-gloss:hover,
+.sd-gloss--focus {
+  background: var(--bg-elevated);
+  box-shadow: 0 1px 2px rgba(28, 27, 25, 0.06);
+}
+.sd-gloss--out {
+  opacity: 0.72;
+}
+.sd-gloss__k {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.sd-gloss__k span {
+  margin-left: auto;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sd-gloss__k .sd-gloss__due {
+  margin-left: 0;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.sd-gloss__q {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 2px 0;
+  overflow-wrap: anywhere;
+}
+.sd-gloss__q--ar {
+  font-family: var(--font-arabic);
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.75;
+  text-align: right;
+}
+.sd-gloss__front {
+  font-size: 14px;
+  font-weight: 600;
+}
+.sd-gloss__front span {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.sd-gloss__body {
+  display: block;
+  width: 100%;
+  resize: none;
+  overflow: hidden;
+  border: 0;
+  outline: 0;
+  padding: 1px 3px;
+  margin: 0 -3px;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--look-display, Georgia, serif);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.sd-gloss__body:focus {
+  background: var(--accent-soft);
+}
+.sd-gloss--line .sd-gloss__body {
+  font-style: italic;
+}
+.sd-gloss--question .sd-gloss__body {
+  color: var(--accent);
+}
+.sd-gloss__body::placeholder {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+/* An empty gloss line under a captured item shows on hover only; a margin note always has its line, to type into. */
+.sd-gloss:not(.sd-gloss--m):not(.sd-gloss--focus):not(:hover) .sd-gloss__body:placeholder-shown {
+  display: none;
+}
+.sd-gloss__flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.sd-gloss__flags:empty,
+.sd-gloss--focus .sd-gloss__flags {
+  display: none;
+}
+.sd-gloss__flags span {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.sd-gloss__tools {
+  display: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.sd-gloss--focus .sd-gloss__tools {
+  display: flex;
+}
+.sd-gloss__tools i {
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+  margin: 0 2px;
+}
+.sd-gloss__tools button {
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 1px 9px;
+  font: 500 11.5px var(--font-ui);
+  cursor: pointer;
+}
+.sd-gloss__tools button:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+.sd-gloss__tools button[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg-elevated);
+}
+.sd-gloss__tools button.sd-sug {
+  border-style: dashed;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.sd-gloss__tools button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Screenshots in a frame, and the preview beside the margin */
+.sd-frame {
+  display: block;
+  position: relative;
+  width: 100%;
+  max-height: 120px;
+  overflow: hidden;
+  padding: 0;
+  margin: 4px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  cursor: zoom-in;
+}
+.sd-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.sd-frame::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 30px;
+  background: linear-gradient(transparent, var(--bg-elevated));
+}
+.sd-ql {
+  position: fixed;
+  z-index: 80;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  pointer-events: none;
+  animation: sd-ql-in 0.14s ease-out;
+}
+.sd-ql--pinned {
+  pointer-events: auto;
+}
+.sd-ql img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 520px;
+  object-fit: contain;
+  background: var(--bg);
+}
+.sd-ql__bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.sd-ql__bar > span:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sd-ql__hint {
+  color: var(--ink-faint);
+}
+.sd-ql__bar button {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font: 500 12px var(--font-ui);
+  cursor: pointer;
+}
+@keyframes sd-ql-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Margin settings */
+.sd-mset {
+  position: fixed;
+  z-index: 82;
+  right: 24px;
+  top: 96px;
+  width: min(480px, calc(100vw - 24px));
+  pointer-events: auto;
+  background: var(--bg-elevated);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sd-mset__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sd-mset__head b {
+  flex: 1;
+  font-weight: 600;
+}
+.sd-mset__head kbd {
+  font: 600 11px var(--font-ui);
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  color: var(--ink-soft);
+}
+.sd-mset__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  font-size: 13px;
+}
+.sd-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+}
+.sd-seg button {
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font: 500 12px var(--font-ui);
+  cursor: pointer;
+}
+.sd-seg button[aria-pressed='true'] {
+  background: var(--bg-elevated);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(28, 27, 25, 0.14);
+}
+.sd-mset__note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+/* One-sided margins: the page moves over to leave one wide margin. */
+body.sd-margins--right .qr-stage--paged {
+  justify-content: flex-start;
+  padding-left: 72px;
+}
+body.sd-margins--right .qr-stage--scroll .qr-column,
+body.sd-margins--right .qr-stage--all .qr-column {
+  margin-left: 72px;
+  margin-right: auto;
+}
+body.sd-margins--left .qr-stage--paged {
+  justify-content: flex-end;
+  padding-right: 72px;
+}
+body.sd-margins--left .qr-stage--scroll .qr-column,
+body.sd-margins--left .qr-stage--all .qr-column {
+  margin-right: 72px;
+  margin-left: auto;
+}
