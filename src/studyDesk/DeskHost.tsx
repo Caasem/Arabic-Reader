@@ -176,6 +176,21 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
     },
     [data.items, data.deskId]
   );
+  // D (no modifier): the desk document, when nothing is being typed and no popup or palette is open. Alt+D
+  // stays the dictionary search; the dictionary popup's own D (add a dictionary) only runs while it is open.
+  useEffect(() => {
+    if (doc || inbox || pull || region || concept) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'KeyD' || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.repeat || e.isComposing || e.defaultPrevented) return;
+      const typing = (e.target as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]');
+      if (typing || document.querySelector('.dict-popup, [role="dialog"]')) return;
+      e.preventDefault();
+      openDocument();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [doc, inbox, pull, region, concept, openDocument]);
+
   // Desk regions on PDF pages: a layer the pages view draws in each page (src/pdf/pages/extensions.ts).
   useEffect(() => registerPdfPageExtension({ id: 'study-desk', Layer: PdfDeskLayer }), []);
   useEffect(() => publishPdfDeskItems(data.items), [data.items]);

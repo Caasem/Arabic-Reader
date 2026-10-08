@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { libraryService } from '../library/libraryService';
 import type { BookMeta } from '../types';
+import { looksArabic } from './useDesk';
 import { filterCandidates, isImageFile, KIND_LABEL, listPullCandidates, pullIn, pullInImage, type PullCandidate, type PullKind, type PullSpot, type PullTarget } from './pullIn';
 
 interface Props {
@@ -201,7 +202,7 @@ export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGo
           {bookList.map((b) => (
             <div key={b.id} role="option" aria-selected={b.id === active} className={'dsearch__entry' + (b.id === active ? ' dsearch__entry--active' : '')} onMouseEnter={() => setSelected(b.id)} onClick={() => goTo(b.id)}>
               <div className="dsearch__entry-head">
-                <span className="dsearch__headword" dir="auto">
+                <span className={looksArabic(b.title) ? 'dsearch__headword' : 'dsearch__headword sd-latin'} dir="auto">
                   {b.title}
                 </span>
                 {b.author && <span className="dsearch__meta" dir="auto">{b.author}</span>}
@@ -242,7 +243,9 @@ export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGo
               <span className={c.ar ? 'dsearch__headword' : 'dsearch__headword sd-latin'} dir="auto" lang={c.ar ? 'ar' : undefined}>
                 {c.text.length > 140 ? c.text.slice(0, 140) + '…' : c.text}
               </span>
-              <span className="dsearch__meta">{c.from}</span>
+              <span className="dsearch__meta">
+                <bdi>{c.from}</bdi>
+              </span>
               <span className="dsearch__provider">{KIND_LABEL[c.kind]}</span>
             </div>
             {c.detail && (

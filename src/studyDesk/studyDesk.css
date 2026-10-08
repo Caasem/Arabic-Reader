@@ -334,6 +334,64 @@
   font-size: 11px;
   opacity: 0.75;
 }
-.sd-pull__books .dsearch__headword {
+
+/*
+ * One type scale for the desk palettes (inbox, Pull in), which borrow the dictionary search's rows. The
+ * dictionary's own sizes (24px Arabic headwords, 22px palette input) stay as they are there.
+ *   title  Arabic 19px · Latin 15px  (Arabic letters read smaller at the same size)
+ *   detail 13.5px · meta and labels 12px / 11px, one line each · bars and hints 12.5px
+ */
+.sd-inbox .sd-inbox__input,
+.dsearch--palette .sd-inbox .sd-inbox__input {
+  font-family: var(--font-ui);
+  font-size: 16px;
+}
+.sd-inbox .dsearch__entry-head {
+  /* The title takes the first line; where it is from and its label sit on the line below. */
+  flex-wrap: wrap;
+  align-items: baseline;
+  row-gap: 2px;
+  min-width: 0;
+}
+.sd-inbox .dsearch__headword {
+  flex: 1 1 100%;
+  min-width: 0;
+  font-size: 19px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.sd-inbox .dsearch__headword.sd-latin {
   font-size: 15px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.sd-inbox .dsearch__meta {
+  flex: 1 1 60px;
+  min-width: 0;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sd-inbox .dsearch__provider {
+  flex: none;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.sd-inbox .sd-inbox__new b {
+  font-size: 15px;
+}
+.sd-inbox .dsearch__hint,
+.sd-inbox .sd-inbox__desk {
+  font-size: 12.5px;
+}
+.sd-inbox .sd-pull__detail {
+  font-size: 13.5px;
+  line-height: 1.45;
+  margin-top: 1px;
 }

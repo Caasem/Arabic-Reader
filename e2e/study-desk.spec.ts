@@ -418,3 +418,30 @@ test.describe('capture trip', () => {
     await expect(page.locator('.dsearch__hint', { hasText: 'Nothing here yet' })).toBeVisible();
   });
 });
+
+test.describe('D opens the desk document', () => {
+  test('in the quiet reader, but not while typing in a margin note', async ({ page }) => {
+    await openSample(page);
+    const doc = page.getByRole('dialog', { name: 'Desk document' });
+    await page.keyboard.press('d');
+    await expect(doc).toBeVisible();
+    // Typing in the document is typing, not the shortcut.
+    await page.keyboard.press('Escape');
+    await expect(doc).toHaveCount(0);
+
+    const area = page.locator('.sd-margins__area').last();
+    const box = (await area.boundingBox())!;
+    await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 1));
+    const note = page.getByRole('textbox', { name: 'Margin note' });
+    await expect(note).toBeFocused();
+    await page.keyboard.type('dd');
+    await expect(note).toHaveValue('dd');
+    await expect(doc).toHaveCount(0);
+  });
+
+  test('on PDF pages', async ({ page }) => {
+    await openScan(page);
+    await page.keyboard.press('d');
+    await expect(page.getByRole('dialog', { name: 'Desk document' })).toBeVisible();
+  });
+});

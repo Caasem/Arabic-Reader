@@ -23,7 +23,8 @@ Everything a reader notices while reading becomes an item: a concept they type, 
 - Alt+X arms region capture: drag a box over the page. On text pages the words inside become the quote, and can be highlighted. On PDF pages the region is also cut out of the page image.
 - Every capture is added to the inbox and, at the same moment, at the end of the current desk's document.
 
-**Desk document**
+**Desk document (D)**
+- D (no modifier, while not typing and with no popup open) opens it from any reader; Esc closes it.
 - A full-page notepad: type anywhere, Enter for new lines, "# " and a space at the start of a line for a heading.
 - Inbox items sit in the text as blocks that cannot be typed into. Deleting one from the text keeps it in the inbox, under "Taken off the page", with Put back.
 - A collapsible side panel holds the inbox in page order: search or write a concept, Capture, Pull in, drag or arrows to reorder, a menu to file under a heading, an eye to hide.

@@ -109,7 +109,7 @@ export function InboxBody({ book, data, onClose, onOpenDocument, onPullIn, onToa
             Pull in
           </button>
         )}
-        <button type="button" className="dsearch__fullpage" onClick={() => onOpenDocument()} title="Open the desk document" aria-label="Open the desk document">
+        <button type="button" className="dsearch__fullpage" onClick={() => onOpenDocument()} title="Open the desk document (D)" aria-label="Open the desk document">
           Document
         </button>
       </div>
@@ -159,7 +159,15 @@ export function InboxBody({ book, data, onClose, onOpenDocument, onPullIn, onToa
 function Row({ item, book, active, desks, onSelect, onShow, onToast }: { item: DeskItem; book: BookMeta; active: boolean; desks: { id: string; name: string }[]; onSelect(): void; onShow(): void; onToast(m: string): void }) {
   const img = useDeskImage(item.imageHash);
   const here = item.source?.bookId === book.id && !!item.source.location;
-  const meta = [item.source?.bookId === book.id ? item.source.chapterLabel : item.source?.bookTitle, new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })].filter(Boolean).join(' · ');
+  // Each part isolated: an Arabic chapter title next to a Latin time would otherwise swap places.
+  const meta = [item.source?.bookId === book.id ? item.source.chapterLabel : item.source?.bookTitle, new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })]
+    .filter((p): p is string => !!p)
+    .map((p, i) => (
+      <span key={i}>
+        {i > 0 && ' · '}
+        <bdi>{p}</bdi>
+      </span>
+    ));
   return (
     <div role="option" aria-selected={active} className={'dsearch__entry' + (active ? ' dsearch__entry--active' : '') + (item.hidden ? ' sd-entry--hidden' : '')} onClick={onSelect}>
       <div className="dsearch__entry-head">
