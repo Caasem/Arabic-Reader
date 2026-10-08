@@ -8,6 +8,7 @@ import { deleteItem, turnItemIntoHeading, updateItem } from './deskStore';
 import { cleanLocationAt, rectsOfCleanLocation } from './pageGeometry';
 import { capture, TYPE_LABEL, useDeskImage, type DeskData } from './useDesk';
 import { shownInDocument } from './DeskDocument';
+import { attachImage, carriesFiles, imageIn } from './marginImages';
 import type { DeskItem, DeskItemType } from './types';
 import './marginLayer.css';
 
@@ -204,21 +205,39 @@ export function MarginLayer({ book, data, onToast, onOpenDocument }: Props) {
 
   // --- double-tap to write ---
   const lastTap = useRef<{ t: number; y: number; side: Side } | null>(null);
-  const startNote = useCallback(
-    async (side: Side, x: number, y: number) => {
-      if (!geo) return;
+  const lineBeside = useCallback(
+    (side: Side, y: number): string | null => {
+      if (!geo) return null;
       const tries = side === 'right' ? [geo.column.right - 8, geo.column.left + geo.column.width / 2, geo.column.left + 8] : [geo.column.left + 8, geo.column.left + geo.column.width / 2, geo.column.right - 8];
-      let location: string | null = null;
       for (const tx of tries) {
-        location = cleanLocationAt(tx, y);
-        if (location) break;
+        const location = cleanLocationAt(tx, y);
+        if (location) return location;
       }
-      void x;
+      return null;
+    },
+    [geo]
+  );
+  const startNote = useCallback(
+    async (side: Side, y: number) => {
+      const location = lineBeside(side, y);
       if (!location) return onToast('Tap beside a line of text');
       const item = await capture(book, data.deskId, { type: 'line', text: '', body: '', fromMargin: true, inInbox: false, pin: { bookId: book.id, location, side } });
       setFocusId(item.id);
     },
-    [geo, book, data.deskId, onToast]
+    [lineBeside, book, data.deskId, onToast]
+  );
+  // An image file dropped on a margin: a screenshot note at that height (marginImages.ts).
+  const [dropSide, setDropSide] = useState<Side | null>(null);
+  const dropImage = useCallback(
+    async (side: Side, y: number, image: File | null) => {
+      setDropSide(null);
+      if (!image) return onToast('Only images can be dropped in a margin');
+      const location = lineBeside(side, y);
+      if (!location) return onToast('Drop beside a line of text');
+      await capture(book, data.deskId, { type: 'capture', text: '', body: '', fromMargin: true, inInbox: false, pin: { bookId: book.id, location, side } }, image);
+      onToast('Image placed in the margin');
+    },
+    [lineBeside, book, data.deskId, onToast]
   );
 
   if (mode === 'off' || !geo || !sides || (!sides.left && !sides.right)) return null;
@@ -237,7 +256,7 @@ export function MarginLayer({ book, data, onToast, onOpenDocument }: Props) {
         return (
           <div
             key={side}
-            className="sd-margins__area"
+            className={'sd-margins__area' + (dropSide === side ? ' sd-margins__area--drop' : '')}
             style={{ left: s.from, width: s.to - s.from, top: geo.stage.top, height: geo.stage.height }}
             onPointerUp={(e) => {
               if (e.target !== e.currentTarget) return;
@@ -245,12 +264,24 @@ export function MarginLayer({ book, data, onToast, onOpenDocument }: Props) {
               const last = lastTap.current;
               if (last && last.side === side && now - last.t < 420 && Math.abs(last.y - e.clientY) < 24) {
                 lastTap.current = null;
-                void startNote(side, e.clientX, e.clientY);
+                void startNote(side, e.clientY);
               } else lastTap.current = { t: now, y: e.clientY, side };
             }}
             onDoubleClick={(e) => e.preventDefault()}
+            onDragOver={(e) => {
+              if (!carriesFiles(e.dataTransfer)) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+              if (dropSide !== side) setDropSide(side);
+            }}
+            onDragLeave={(e) => e.target === e.currentTarget && setDropSide(null)}
+            onDrop={(e) => {
+              if (!carriesFiles(e.dataTransfer)) return;
+              e.preventDefault();
+              void dropImage(side, e.clientY, imageIn(e.dataTransfer));
+            }}
           >
-            <span className="sd-margins__hint">Double-tap to write</span>
+            <span className="sd-margins__hint">{dropSide === side ? 'Drop the image here' : 'Double-tap to write'}</span>
           </div>
         );
       })}
@@ -471,6 +502,18 @@ function Gloss({ item, side, left, width, book, docMode, toInbox, autoFocus, onF
       style={{ left, width }}
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
+      onDragOver={(e) => {
+        if (!carriesFiles(e.dataTransfer)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      }}
+      onDrop={(e) => {
+        if (!carriesFiles(e.dataTransfer)) return;
+        e.preventDefault();
+        const image = imageIn(e.dataTransfer);
+        if (!image) return onToast('Only images can be dropped on a note');
+        void attachImage(item, image).then(() => onToast('Image added to the note'));
+      }}
       onFocus={() => {
         setFocused(true);
         onFocused(true);
@@ -532,6 +575,13 @@ function Gloss({ item, side, left, width, book, docMode, toInbox, autoFocus, onF
         placeholder={item.fromMargin ? 'Write…' : 'Write a gloss…'}
         aria-label={item.fromMargin ? 'Margin note' : 'Gloss'}
         onChange={(e) => edit(e.target.value)}
+        onPaste={(e) => {
+          // A pasted image (a screenshot on the clipboard) goes on the note; text pastes as usual.
+          const image = imageIn(e.clipboardData);
+          if (!image) return;
+          e.preventDefault();
+          void attachImage(item, image).then(() => onToast(item.imageHash ? 'Image replaced' : 'Image added to the note'));
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
             e.preventDefault();

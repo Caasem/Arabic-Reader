@@ -58,6 +58,16 @@
   transition: opacity 0.2s;
   pointer-events: none;
 }
+/* An image file dragged over a margin. */
+.sd-margins__area--drop {
+  border-radius: 12px;
+  outline: 2px dashed var(--accent);
+  outline-offset: -6px;
+  background: var(--accent-soft);
+}
+.sd-margins__area--drop .sd-margins__hint {
+  opacity: 1;
+}
 .sd-margins__area:hover .sd-margins__hint {
   opacity: 0.8;
 }

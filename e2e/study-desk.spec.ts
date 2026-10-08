@@ -216,3 +216,42 @@ test.describe('pull in', () => {
     await expect(page.locator('.sd-gloss .sd-frame img')).toHaveCount(1);
   });
 });
+
+test.describe('margin images', () => {
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVR42mP8z8Dwn4GBgYGJAQoAADUBAf8Ik8gAAAAASUVORK5CYII=';
+
+  test('an image pasted into a margin note turns it into a screenshot', async ({ page }) => {
+    await openSample(page);
+    const area = page.locator('.sd-margins__area').last();
+    const box = (await area.boundingBox())!;
+    await page.mouse.dblclick(box.x + box.width / 2, box.y + box.height * 0.4);
+    const note = page.getByRole('textbox', { name: 'Margin note' });
+    await expect(note).toBeFocused();
+    await page.keyboard.type('Figure');
+    await note.evaluate((el, b64) => {
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      const dt = new DataTransfer();
+      dt.items.add(new File([bytes], 'shot.png', { type: 'image/png' }));
+      el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    }, png);
+    await expect(page.locator('.sd-gloss--capture .sd-frame img')).toHaveCount(1);
+    await expect(note).toHaveValue('Figure');
+  });
+
+  test('an image file dropped on a margin becomes a note at that height', async ({ page }) => {
+    await openSample(page);
+    const area = page.locator('.sd-margins__area').last();
+    await expect(area).toBeVisible();
+    await area.evaluate((el, b64) => {
+      const r = el.getBoundingClientRect();
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      const dt = new DataTransfer();
+      dt.items.add(new File([bytes], 'figure.png', { type: 'image/png' }));
+      const at = { clientX: r.left + r.width / 2, clientY: r.top + r.height * 0.5, dataTransfer: dt, bubbles: true, cancelable: true };
+      el.dispatchEvent(new DragEvent('dragover', at));
+      el.dispatchEvent(new DragEvent('drop', at));
+    }, png);
+    await expect(page.locator('.sd-gloss--m .sd-frame img')).toHaveCount(1);
+    await expect(page.locator('.sd-toast')).toContainText('Image placed');
+  });
+});
