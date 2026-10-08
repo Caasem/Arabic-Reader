@@ -594,6 +594,21 @@ test.describe('desk document', () => {
     await expect(editor.locator('h3')).toBeInViewport();
   });
 
+  test('Export saves Markdown with citations and a Word file', async ({ page }) => {
+    const doc = await docWithItems(page);
+    await doc.getByRole('button', { name: 'Export' }).click();
+    const [md] = await Promise.all([page.waitForEvent('download'), page.getByRole('menuitem', { name: /Save as Markdown/ }).click()]);
+    expect(md.suggestedFilename()).toMatch(/\.md$/);
+    const text = await (await md.createReadStream()).toArray().then((c) => Buffer.concat(c).toString('utf8'));
+    expect(text).toContain('**Group feeling**');
+    expect(text).toMatch(/^> .+\n>\n> — /m);
+    await doc.getByRole('button', { name: 'Export' }).click();
+    const [docx] = await Promise.all([page.waitForEvent('download'), page.getByRole('menuitem', { name: /Save as Word/ }).click()]);
+    expect(docx.suggestedFilename()).toMatch(/\.docx$/);
+    const bytes = await (await docx.createReadStream()).toArray().then((c) => Buffer.concat(c));
+    expect(bytes.subarray(0, 2).toString()).toBe('PK');
+  });
+
   test('Arabic lines run right to left and source lines keep their parts in order', async ({ page }) => {
     const doc = await docWithItems(page);
     const editor = doc.getByRole('textbox', { name: 'Document text' });

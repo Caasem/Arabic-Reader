@@ -795,3 +795,48 @@
     border-width: 1px;
   }
 }
+
+/* Export (ExportMenu.tsx). */
+.sd-export {
+  position: relative;
+}
+.sd-export__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 5;
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+.sd-export__menu button {
+  display: flex;
+  justify-content: space-between;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink);
+  font: 14px var(--font-ui);
+  text-align: start;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.sd-export__menu button:hover,
+.sd-export__menu button:focus-visible {
+  background: var(--accent-soft);
+  outline: none;
+}
+.sd-export__menu button span {
+  color: var(--ink-faint);
+  font-size: 12px;
+}
+.sd-export__menu p {
+  margin: 4px 10px 4px;
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}

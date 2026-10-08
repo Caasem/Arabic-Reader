@@ -4,6 +4,8 @@ import type { BookMeta } from '../types';
 import { createOwnDesk, ensureBookDesk, getDesk, renameDesk, saveDeskHtml, updateItem } from './deskStore';
 import './deskDocument.css';
 import { applyLineStart, lineStart, runFormat, type FormatCommand } from './docFormat';
+import { documentBlocks } from './docExport';
+import { ExportMenu } from './ExportMenu';
 import { ItemPicker } from './ItemPicker';
 import { IconCapture, IconChevron, IconDown, IconEye, IconEyeOff, IconInbox, IconPull, IconUp } from './icons';
 import { fillEmbed, type EmbedAct } from './docEmbeds';
@@ -428,6 +430,14 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
                 + Desk
               </button>
             </div>
+            <ExportMenu
+              title={desk?.title || 'Desk'}
+              blocks={() => {
+                save();
+                return documentBlocks(sanitizeDocHtml(edRef.current?.innerHTML ?? ''), itemsById, (i) => shownInDocument(i, docMode));
+              }}
+              onToast={onToast}
+            />
           </div>
           <div className="sd-doc__status">
             <p className="sd-eyebrow">{desk?.kind === 'own' ? 'Your desk · captures from any book' : 'Book desk'}</p>
