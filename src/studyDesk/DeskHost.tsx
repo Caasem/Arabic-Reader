@@ -20,7 +20,7 @@ import { PdfSelect } from './PdfSelect';
 import type { PullSpot, PullTarget } from './pullIn';
 import { PullInBody } from './PullInBody';
 import { RegionCapture } from './RegionCapture';
-import { endTrip, startTrip, takeTripNote, tripFiledMessage, tripPlacement, useDeskTrip } from './trip';
+import { endTrip, startTrip, takeTripNote, takeTripReopen, tripFiledMessage, tripPlacement, useDeskTrip } from './trip';
 import { TripBar } from './TripBar';
 import { resolveDesk, useDeskData } from './useDesk';
 import './studyDesk.css';
@@ -45,7 +45,7 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
   const [concept, setConcept] = useState(false);
   const [region, setRegion] = useState(false);
   /** Pull in, open: the desk it adds to and the place on the page for margin targets. */
-  const [pull, setPull] = useState<{ deskId: string; spot: PullSpot | null } | null>(null);
+  const [pull, setPull] = useState<{ deskId: string; spot: PullSpot | null; fromDocument?: string } | null>(null);
   /** The desk document, open on a desk (and maybe an item to show). */
   const [doc, setDoc] = useState<{ deskId: string; itemId?: string } | null>(null);
   /** A capture started from the document goes back to it. */
@@ -69,15 +69,21 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
     const came = lastBook.current !== book.id;
     lastBook.current = book.id;
     // Back in the book the trip started from some other way (the library): the trip is over.
-    if (came && trip && trip.from.id === book.id) endTrip();
+    if (came && trip && trip.from.id === book.id) {
+      endTrip();
+      takeTripReopen(book.id);
+    }
     const n = takeTripNote();
     if (n) say(n);
+    // Back from a trip that started in the desk document: open it again, at what was captured.
+    const back = takeTripReopen(book.id);
+    if (back) setDoc({ deskId: back.deskId, itemId: back.itemId });
     // On arriving in a book only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [book.id]);
   const returnHome = useCallback(
-    (message: string) => {
-      const t = endTrip(message);
+    (message: string, itemId?: string) => {
+      const t = endTrip(message, itemId);
       setRegion(false);
       if (t && onOpenBook) onOpenBook(t.from);
     },
@@ -88,7 +94,7 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
       if (!pull || !onOpenBook) return;
       // The desk the capture comes back to must exist before leaving: a capture otherwise falls back to the visited book's own desk.
       const home = await resolveDesk(book, pull.deskId);
-      startTrip({ from: book, deskId: home.id, target, spot: pull.spot, to });
+      startTrip({ from: book, deskId: home.id, target, spot: pull.spot, to, fromDocument: pull.fromDocument ? home.id : undefined });
       setPull(null);
       setDoc(null);
       onOpenBook(to);
@@ -135,7 +141,7 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
     setRegion(false);
     // The place is read before the palette covers the page; from the document there is no page to place on.
     const location = doc ? null : (cleanLocationNearCentre() ?? pdfLocationNearCentre());
-    setPull({ deskId: doc?.deskId ?? data.deskId, spot: location ? { bookId: book.id, location } : null });
+    setPull({ deskId: doc?.deskId ?? data.deskId, spot: location ? { bookId: book.id, location } : null, fromDocument: doc?.deskId });
   }, [doc, data.deskId, book.id]);
   useChordHotkey('KeyU', true, () => {
     if (pull) setPull(null);
@@ -274,7 +280,7 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
           deskId={away ? away.deskId : data.deskId}
           deskName={deskName}
           extra={away ? tripPlacement(away) : undefined}
-          onSent={away ? () => returnHome(tripFiledMessage(away)) : undefined}
+          onSent={away ? (item) => returnHome(tripFiledMessage(away), item.id) : undefined}
           onClose={closeRegion}
           onToast={say}
         />

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { getReaderMarks } from '../readerChords';
 import type { BookMeta } from '../types';
 import { pdfRegionInBox, textInBox, type Box, type PdfRegion, type TextRegion } from './pageGeometry';
-import type { NewDeskItem } from './types';
+import type { DeskItem, NewDeskItem } from './types';
 import { capture, looksArabic } from './useDesk';
 
 type Found = { kind: 'text'; region: TextRegion } | { kind: 'pdf'; region: PdfRegion; preview: string | null };
@@ -26,8 +26,8 @@ export function RegionCapture({
   /** Added to the captured item (a capture trip files it in a margin of the page the reader came from). */
   extra?: Partial<NewDeskItem>;
   onClose(): void;
-  /** After a capture was saved, instead of onClose. */
-  onSent?(): void;
+  /** After a capture was saved, with the item made, instead of onClose. */
+  onSent?(item: DeskItem): void;
   onToast(m: string): void;
 }) {
   const [start, setStart] = useState<{ x: number; y: number } | null>(null);
@@ -79,9 +79,10 @@ export function RegionCapture({
     if (!found || busy) return;
     setBusy(true);
     try {
+      let item: DeskItem;
       if (found.kind === 'text') {
         const r = found.region;
-        await capture(book, deskId, { type: 'quote', text: r.text, ar: looksArabic(r.text), source: { bookId: book.id, bookTitle: book.title, location: r.location, chapterLabel: getReaderMarks()?.capturePage()?.chapterLabel }, ...extra });
+        item = await capture(book, deskId, { type: 'quote', text: r.text, ar: looksArabic(r.text), source: { bookId: book.id, bookTitle: book.title, location: r.location, chapterLabel: getReaderMarks()?.capturePage()?.chapterLabel }, ...extra });
         if (highlight) {
           const marks = getReaderMarks();
           if (marks && !marks.existing({ text: r.text, location: r.location, chapterHref: `clean:${r.chapter}`, chapterLabel: '' }))
@@ -89,9 +90,9 @@ export function RegionCapture({
         }
       } else {
         const r = found.region;
-        await capture(book, deskId, { type: 'capture', text: r.text || `Region of page ${r.page}`, ar: looksArabic(r.text), source: { bookId: book.id, bookTitle: book.title, location: r.location, chapterLabel: `Page ${r.page}` }, ...extra }, r.image ?? undefined);
+        item = await capture(book, deskId, { type: 'capture', text: r.text || `Region of page ${r.page}`, ar: looksArabic(r.text), source: { bookId: book.id, bookTitle: book.title, location: r.location, chapterLabel: `Page ${r.page}` }, ...extra }, r.image ?? undefined);
       }
-      if (onSent) return onSent();
+      if (onSent) return onSent(item);
       onToast(`Captured to ${deskName}${found.kind === 'text' && highlight ? ' and highlighted' : ''}`);
       onClose();
     } finally {

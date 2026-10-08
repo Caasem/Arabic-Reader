@@ -408,6 +408,29 @@ test.describe('capture trip', () => {
     await expect(page.getByRole('region', { name: 'Capture trip' })).toHaveCount(0);
   });
 
+  test('a trip started from the desk document comes back to it, at the capture', async ({ page }) => {
+    await twoBooks(page);
+    await page.keyboard.press('d');
+    const doc = page.getByRole('dialog', { name: 'Desk document' });
+    await doc.locator('.sd-side').getByRole('button', { name: 'Pull in' }).click();
+    const pull = page.getByRole('dialog', { name: 'Pull in' }).or(page.getByRole('complementary', { name: 'Pull in' }));
+    await pull.getByText('Go to another book…').click();
+    await pull.locator('.dsearch__entry', { hasText: 'scan' }).click();
+    await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+    const bar = page.getByRole('region', { name: 'Capture trip' });
+    await bar.getByRole('button', { name: /^Capture/ }).click();
+    const r = (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!;
+    await page.mouse.move(r.x + r.width * 0.2, r.y + 60);
+    await page.mouse.down();
+    await page.mouse.move(r.x + r.width * 0.6, r.y + 160, { steps: 6 });
+    await page.mouse.up();
+    await page.getByRole('dialog', { name: 'Capture' }).getByRole('button', { name: /^Send to/ }).click();
+
+    await expect(doc).toBeVisible({ timeout: 15000 });
+    await expect(doc.locator('.desk-embed.sd-emb--flash')).toContainText('Page 1');
+    await expect(page.locator('.sd-toast')).toContainText('filed in the inbox');
+  });
+
   test('Esc goes back without capturing', async ({ page }) => {
     await twoBooks(page);
     await goToScan(page);
