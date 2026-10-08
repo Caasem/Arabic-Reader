@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { getBlobStore } from '../blobStore';
 import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta } from '../types';
 import { createOwnDesk, ensureBookDesk, getDesk, renameDesk, saveDeskHtml, updateItem } from './deskStore';
 import './deskDocument.css';
 import { IconCapture, IconChevron, IconDown, IconEye, IconEyeOff, IconInbox, IconPull, IconUp } from './icons';
+import { fillEmbed, type EmbedAct } from './docEmbeds';
 import { EMBED_CLASS, embedHtml, EMPTY_DOC, outline, sanitizeDocHtml } from './docHtml';
 import { capture, itemTitle, looksArabic, TYPE_LABEL, type DeskData } from './useDesk';
 import type { Desk, DeskItem } from './types';
@@ -21,6 +21,8 @@ interface Props {
   /** Close the document, capture a region of the page, and come back. */
   onCapture(): void;
   onPullIn?(): void;
+  /** Go to where an item came from (this book or another). */
+  onGoToSource?(item: DeskItem): void;
   onToast(m: string): void;
 }
 
@@ -35,47 +37,8 @@ export function shownInDocument(item: DeskItem, mode: 'all' | 'chosen' | 'none')
   return item.inDocument ?? mode === 'all';
 }
 
-function fillEmbed(el: HTMLElement, item: DeskItem | undefined, shown: boolean): void {
-  el.replaceChildren();
-  el.classList.toggle('sd-emb--hidden', !item || !shown);
-  if (!item) return;
-  const head = document.createElement('div');
-  head.className = 'sd-emb__head';
-  const text = document.createElement('span');
-  text.className = item.ar ? 'sd-emb__text sd-emb__text--ar' : 'sd-emb__text';
-  text.dir = 'auto';
-  text.textContent = itemTitle(item);
-  const type = document.createElement('span');
-  type.className = 'sd-emb__type';
-  type.textContent = TYPE_LABEL[item.type];
-  head.append(text, type);
-  el.append(head);
-  if (item.body && item.text) {
-    const body = document.createElement('div');
-    body.className = 'sd-emb__body';
-    body.dir = 'auto';
-    body.textContent = item.body;
-    el.append(body);
-  }
-  if (item.imageHash) {
-    const img = document.createElement('img');
-    img.className = 'sd-emb__img';
-    img.alt = '';
-    el.append(img);
-    void getBlobStore()
-      .url(item.imageHash)
-      .then((u) => {
-        if (u) img.src = u;
-      });
-  }
-  const meta = document.createElement('div');
-  meta.className = 'sd-emb__meta';
-  meta.textContent = [item.source?.chapterLabel ?? item.source?.bookTitle, new Date(item.createdAt).toLocaleString([], { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })].filter(Boolean).join(' · ');
-  el.append(meta);
-}
-
 /** The desk as one notepad, with the inbox beside it to reorder, file and hide items. */
-export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchDesk, onCapture, onPullIn, onToast }: Props) {
+export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchDesk, onCapture, onPullIn, onGoToSource, onToast }: Props) {
   const { prefs } = usePreferences();
   const docMode = prefs.studyDeskMarginsInDocument;
   const [desk, setDesk] = useState<Desk | null>(null);
@@ -109,12 +72,17 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     };
   }, [deskId, book]);
 
+  /** The item whose note is being edited in place (docEmbeds.ts). */
+  const editing = useRef<string | null>(null);
   const fillAll = useCallback(() => {
     edRef.current?.querySelectorAll<HTMLElement>(`.${EMBED_CLASS}`).forEach((el) => {
-      const item = itemsById.get(el.dataset.item ?? '');
-      fillEmbed(el, item, !!item && shownInDocument(item, docMode));
+      const id = el.dataset.item ?? '';
+      // Leave a note being typed alone; it is redrawn once saved.
+      if (id === editing.current && el.querySelector('textarea')) return;
+      const item = itemsById.get(id);
+      fillEmbed(el, item, { shown: !!item && shownInDocument(item, docMode), editing: id === editing.current, bookId: book.id });
     });
-  }, [itemsById, docMode]);
+  }, [itemsById, docMode, book.id]);
 
   // Put the document into the editor once per desk; after that the editor owns it.
   useLayoutEffect(() => {
@@ -189,8 +157,10 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     return () => window.clearTimeout(t);
   }, [focusItem, desk, version]);
 
-  function onInput() {
+  function onInput(e: React.FormEvent<HTMLDivElement>) {
     const ed = edRef.current!;
+    // Typing in an item's note is not typing in the document.
+    if (e.target !== ed) return;
     if (!ed.firstElementChild) {
       ed.innerHTML = EMPTY_DOC;
       caretEnd(ed.querySelector('p'));
@@ -254,6 +224,54 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     placeBefore(el, heading === null ? (heads[0] ?? null) : (heads[heading + 1] ?? null));
   }
   const dragId = useRef<string | null>(null);
+
+  // --- the buttons on an item in the text (docEmbeds.ts) ---
+  function finishNote(el: HTMLElement, keep: boolean) {
+    const id = el.dataset.item ?? '';
+    const ta = el.querySelector('textarea');
+    const item = itemsById.get(id);
+    editing.current = null;
+    if (keep && ta && item && ta.value !== (item.body ?? '')) void updateItem(id, { body: ta.value });
+    if (item) fillEmbed(el, item, { shown: shownInDocument(item, docMode), editing: false, bookId: book.id });
+  }
+  function onEditorClick(e: React.MouseEvent<HTMLDivElement>) {
+    const target = e.target as HTMLElement;
+    const btn = target.closest<HTMLElement>('[data-act]');
+    const host = target.closest<HTMLElement>(`.${EMBED_CLASS}`);
+    if (!btn || !host) return;
+    const id = host.dataset.item ?? '';
+    const item = itemsById.get(id);
+    const act = btn.dataset.act as EmbedAct;
+    e.preventDefault();
+    if (!item) return;
+    if (act === 'remove') {
+      host.remove();
+      scheduleSave();
+      bump();
+      onToast('Taken off the page. Put it back from the side panel.');
+    } else if (act === 'source') {
+      save();
+      onGoToSource?.(item);
+    } else if (act === 'note') {
+      const open = editing.current && edRef.current?.querySelector<HTMLElement>(`.${EMBED_CLASS}[data-item="${editing.current}"]`);
+      if (open && open !== host) finishNote(open, true);
+      editing.current = id;
+      fillEmbed(host, item, { shown: true, editing: true, bookId: book.id });
+      const ta = host.querySelector('textarea');
+      if (ta) {
+        ta.addEventListener('blur', () => editing.current === id && finishNote(host, true));
+        ta.addEventListener('keydown', (ev) => {
+          ev.stopPropagation();
+          if (ev.key === 'Escape') {
+            ev.preventDefault();
+            finishNote(host, false);
+          }
+        });
+        ta.focus();
+        ta.setSelectionRange(ta.value.length, ta.value.length);
+      }
+    }
+  }
 
   /** An item deleted from the text goes back at the end. */
   function putBack(id: string) {
@@ -323,7 +341,7 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
           >
             {desk?.title}
           </h2>
-          <div ref={edRef} className="sd-editor" role="textbox" contentEditable suppressContentEditableWarning spellCheck aria-label="Document text" aria-multiline="true" onInput={onInput} onBlur={save} />
+          <div ref={edRef} className="sd-editor" role="textbox" contentEditable suppressContentEditableWarning spellCheck aria-label="Document text" aria-multiline="true" onInput={onInput} onBlur={save} onClick={onEditorClick} />
           <p className="sd-doc__hint">Type anywhere. # and a space starts a heading. New captures for this desk appear at the end.</p>
         </div>
       </div>

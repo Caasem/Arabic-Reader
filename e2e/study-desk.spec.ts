@@ -445,3 +445,59 @@ test.describe('D opens the desk document', () => {
     await expect(page.getByRole('dialog', { name: 'Desk document' })).toBeVisible();
   });
 });
+
+test.describe('desk document', () => {
+  /** A quote (region capture of the first line) and a concept, then the document open. */
+  async function docWithItems(page: Page) {
+    await openSample(page);
+    const box = await firstLineBox(page);
+    await page.keyboard.press('Alt+x');
+    await page.mouse.move(box.right, box.top);
+    await page.mouse.down();
+    await page.mouse.move(box.left, box.bottom, { steps: 6 });
+    await page.mouse.up();
+    await page.getByRole('dialog', { name: 'Capture' }).getByRole('button', { name: /^Send to/ }).click();
+    await page.keyboard.press('Alt+c');
+    await page.getByRole('textbox', { name: 'Concept' }).fill('Group feeling');
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog', { name: 'Write a concept' })).toHaveCount(0);
+    await page.keyboard.press('d');
+    const doc = page.getByRole('dialog', { name: 'Desk document' });
+    await expect(doc.locator('.desk-embed')).toHaveCount(2);
+    return doc;
+  }
+
+  test('items have a note, Remove from page and Go to source', async ({ page }) => {
+    const doc = await docWithItems(page);
+    const concept = doc.locator('.desk-embed', { hasText: 'Group feeling' });
+    await concept.hover();
+    await concept.getByRole('button', { name: 'Add note' }).click();
+    const note = concept.getByRole('textbox', { name: 'Note on this item' });
+    await expect(note).toBeFocused();
+    await page.keyboard.type('The bond that founds dynasties');
+    await doc.locator('.sd-doc__title').click();
+    await expect(concept.locator('.sd-emb__body')).toHaveText('The bond that founds dynasties');
+    await expect(concept.getByRole('button', { name: 'Edit note' })).toHaveCount(1);
+
+    await concept.hover();
+    await concept.getByRole('button', { name: 'Remove from page' }).click();
+    await expect(doc.locator('.desk-embed', { hasText: 'Group feeling' })).toHaveCount(0);
+    await expect(doc.locator('.sd-side').getByRole('button', { name: 'Put back' })).toHaveCount(1);
+
+    const quote = doc.locator('.desk-embed').first();
+    await quote.hover();
+    await quote.getByRole('button', { name: 'Go to source' }).click();
+    await expect(doc).toHaveCount(0);
+    await expect(page.locator('.qr-chapter .ar-word').first()).toBeVisible();
+  });
+
+  test('Arabic lines run right to left and source lines keep their parts in order', async ({ page }) => {
+    const doc = await docWithItems(page);
+    const editor = doc.getByRole('textbox', { name: 'Document text' });
+    await editor.locator('p').last().click();
+    await page.keyboard.type('العصبية هي الرابطة');
+    const p = editor.locator('p', { hasText: 'العصبية' });
+    expect(await p.evaluate((el) => getComputedStyle(el).unicodeBidi)).toBe('plaintext');
+    await expect(doc.locator('.desk-embed').first().locator('.sd-emb__meta bdi')).toHaveCount(2);
+  });
+});

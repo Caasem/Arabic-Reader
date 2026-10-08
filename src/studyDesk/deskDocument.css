@@ -374,3 +374,72 @@
     justify-content: center;
   }
 }
+
+/* Each line takes its direction from its own first letters: Arabic lines run right to left, Latin ones left to right. */
+.sd-editor p,
+.sd-editor h3,
+.sd-editor li,
+.sd-editor blockquote {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* An item's footer: where it came from, and on hover or focus its buttons. */
+.sd-emb__foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  min-height: 26px;
+}
+.sd-emb__foot .sd-emb__meta {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.sd-emb__acts {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.desk-embed:hover .sd-emb__acts,
+.desk-embed:focus-within .sd-emb__acts,
+.sd-emb--flash .sd-emb__acts {
+  opacity: 1;
+}
+@media (hover: none) {
+  .sd-emb__acts {
+    opacity: 1;
+  }
+}
+.sd-emb__act {
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--ink-soft);
+  font: 500 12px var(--font-ui);
+  padding: 3px 10px;
+  cursor: pointer;
+}
+.sd-emb__act:hover,
+.sd-emb__act:focus-visible {
+  color: var(--ink);
+  outline: none;
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+.sd-emb__edit {
+  user-select: text;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.55 var(--font-ui);
+  padding: 6px 8px;
+  outline: none;
+}
+.sd-emb__edit-hint {
+  font-size: 11.5px;
+  color: var(--ink-faint);
+}
