@@ -60,11 +60,11 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
       <QuietReaderSettings key="quiet" />,
       <ReadingSettings key="reading" />,
       <FontSettings key="font" />,
-      <PdfOcrSettings key="pdfocr" />,
       <CleanReaderSettings key="clean" />,
       <TouchGestureSettings key="touch" />,
       <SearchSettings key="search" />,
       <PomodoroSettings key="pomodoro" />,
+      <PdfOcrSettings key="pdfocr" />,
     ],
   },
   {
