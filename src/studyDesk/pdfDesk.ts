@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from 'react';
+import type { OpenedPdf } from '../pdf/pages/pdfjsLoader';
 import { parsePdfLocation } from './pageGeometry';
 import type { DeskItem } from './types';
 
@@ -10,9 +11,15 @@ import type { DeskItem } from './types';
 interface PdfDeskState {
   items: DeskItem[];
   hover: string | null;
+  /** A card to focus once it shows (a gloss just started from the page). */
+  focus: string | null;
+  /** A margin note waiting to be tied to words dragged over on the page (Tie to words). */
+  tie: string | null;
+  /** The open PDF, for reading scanned pages (published by the page layer, which the pages view hands it). */
+  opened: OpenedPdf | null;
 }
 
-let state: PdfDeskState = { items: [], hover: null };
+let state: PdfDeskState = { items: [], hover: null, focus: null, tie: null, opened: null };
 const listeners = new Set<() => void>();
 
 function set(patch: Partial<PdfDeskState>): void {
@@ -24,6 +31,12 @@ export const publishPdfDeskItems = (items: DeskItem[]): void => set({ items });
 export const setPdfDeskHover = (hover: string | null): void => {
   if (state.hover !== hover) set({ hover });
 };
+export const setPdfDeskFocus = (focus: string | null): void => set({ focus });
+export const setPdfDeskTie = (tie: string | null): void => set({ tie });
+export const publishOpenedPdf = (opened: OpenedPdf | null): void => {
+  if (state.opened !== opened) set({ opened });
+};
+export const pdfDeskState = (): PdfDeskState => state;
 
 const subscribe = (l: () => void) => {
   listeners.add(l);

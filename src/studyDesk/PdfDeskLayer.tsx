@@ -1,5 +1,6 @@
+import { useEffect } from 'react';
 import type { PdfPageContext } from '../pdf/pages/extensions';
-import { pdfMarks, usePdfDesk } from './pdfDesk';
+import { pdfMarks, publishOpenedPdf, usePdfDesk } from './pdfDesk';
 import './pdfDesk.css';
 
 /**
@@ -7,8 +8,10 @@ import './pdfDesk.css';
  * page. Lives inside the page frame as a pages-view extension layer (src/pdf/pages/extensions.ts) and lets
  * taps through to the text layer. Their cards sit in the margin beside the pages (PdfMargin).
  */
-export function PdfDeskLayer({ book, page, width, height }: PdfPageContext) {
+export function PdfDeskLayer({ book, opened, page, width, height }: PdfPageContext) {
   const { items, hover } = usePdfDesk();
+  // Scanned pages are read from the PDF itself when a drag snaps to words (pdfSnap.ts).
+  useEffect(() => publishOpenedPdf(opened), [opened]);
   // Margin notes sit at a level (no height) and get no box.
   const marks = pdfMarks(items, book.id, page).filter((m) => m.h > 0);
   if (!marks.length) return null;

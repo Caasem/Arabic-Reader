@@ -4,7 +4,7 @@ import type { BookMeta } from '../types';
 import { carriesFiles, imageIn } from './marginImages';
 import { Gloss, MarginSettings } from './MarginLayer';
 import { pdfLevelAt } from './pageGeometry';
-import { pdfMarks, setPdfDeskHover, stackTops, usePdfDesk, type PdfMark } from './pdfDesk';
+import { pdfMarks, setPdfDeskFocus, setPdfDeskHover, setPdfDeskTie, stackTops, usePdfDesk, type PdfMark } from './pdfDesk';
 import { capture, type DeskData } from './useDesk';
 import './pdfDesk.css';
 
@@ -77,7 +77,7 @@ interface Props {
 
 export function PdfMargin({ book, data, onToast, onOpenDocument }: Props) {
   const { prefs, updatePrefs } = usePreferences();
-  const { hover } = usePdfDesk();
+  const { hover, focus } = usePdfDesk();
   const [stage, tick] = useStageGeometry();
   const [wide, setWide] = useState(() => window.innerWidth >= MIN_WINDOW);
   const [focusId, setFocusId] = useState<string | null>(null);
@@ -146,6 +146,14 @@ export function PdfMargin({ book, data, onToast, onOpenDocument }: Props) {
     svg.innerHTML = paths.join('');
   });
 
+  // A gloss started from the page (PdfSelect): focused once its card shows, then forgotten.
+  useEffect(() => {
+    if (focus && placed.some((p) => p.mark.item.id === focus)) {
+      setFocusId(focus);
+      setPdfDeskFocus(null);
+    }
+  }, [focus, placed]);
+
   // --- double-tap the strip to write; drop an image on it ---
   const lastTap = useRef<{ t: number; y: number } | null>(null);
   const newNote = useCallback(
@@ -207,8 +215,12 @@ export function PdfMargin({ book, data, onToast, onOpenDocument }: Props) {
           book={book}
           docMode={prefs.studyDeskMarginsInDocument}
           toInbox={prefs.studyDeskMarginsToInbox}
-          autoFocus={p.mark.item.id === focusId}
-          canTie={false}
+          autoFocus={p.mark.item.id === focusId || p.mark.item.id === focus}
+          canTie={!!p.mark.item.fromMargin}
+          onTie={() => {
+            setPdfDeskTie(p.mark.item.id);
+            onToast('Drag over the words on the page this note belongs to');
+          }}
           onFocused={(f) => setFocusId(f ? p.mark.item.id : null)}
           onHover={(h) => setPdfDeskHover(h ? p.mark.item.id : null)}
           onToast={onToast}

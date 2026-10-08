@@ -55,7 +55,8 @@ Everything a reader notices while reading becomes an item: a concept they type, 
 **PDF pages**
 - A margin to the right of the pages, whenever margins are on; the pages fit beside it. Margins: Hidden frees the space.
 - Regions captured on PDF pages (scanned or not) show as boxes on the page, with a card each in that margin, where a gloss can be written.
-- Double-tap the margin to write a note tied to that height of the page, with the same options as the quiet reader's margin notes (except Tie to words). Drop an image file on it for a screenshot note. Pull in places items there.
+- Double-tap the margin to write a note tied to that height of the page, with the same options as the quiet reader's margin notes; Tie to words ties it to words dragged over next.
+- Highlight without Alt+X: drag over a scanned page (mouse or pen) or select text on a page with a text layer. The box snaps to the words (the text layer, or the words the chosen recognition engine reads there); Gloss in the margin, Send to inbox, Snap to words on or off, Esc cancels. Drop an image file on it for a screenshot note. Pull in places items there.
 
 ## 3. Data
 
