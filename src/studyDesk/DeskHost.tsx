@@ -8,6 +8,9 @@ import { ConceptStrip } from './ConceptStrip';
 import { DeskDocument } from './DeskDocument';
 import { InboxBody } from './InboxBody';
 import { MarginLayer } from './MarginLayer';
+import { cleanLocationNearCentre } from './pageGeometry';
+import type { PullSpot } from './pullIn';
+import { PullInBody } from './PullInBody';
 import { RegionCapture } from './RegionCapture';
 import { useDeskData } from './useDesk';
 import './studyDesk.css';
@@ -26,6 +29,8 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
   const [inbox, setInbox] = useState(false);
   const [concept, setConcept] = useState(false);
   const [region, setRegion] = useState(false);
+  /** Pull in, open: the desk it adds to and the place on the page for margin targets. */
+  const [pull, setPull] = useState<{ deskId: string; spot: PullSpot | null } | null>(null);
   /** The desk document, open on a desk (and maybe an item to show). */
   const [doc, setDoc] = useState<{ deskId: string; itemId?: string } | null>(null);
   /** A capture started from the document goes back to it. */
@@ -73,6 +78,19 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
       updatePrefs({ studyDeskMargins: last });
     }
   });
+  // Alt+U: Pull in (Alt+P is the saved-entries export).
+  const openPull = useCallback(() => {
+    setInbox(false);
+    setConcept(false);
+    setRegion(false);
+    // The place is read before the palette covers the page; from the document there is no page to place on.
+    const location = doc ? null : cleanLocationNearCentre();
+    setPull({ deskId: doc?.deskId ?? data.deskId, spot: location ? { bookId: book.id, location } : null });
+  }, [doc, data.deskId, book.id]);
+  useChordHotkey('KeyU', true, () => {
+    if (pull) setPull(null);
+    else openPull();
+  });
   useChordHotkey('KeyX', true, () => {
     setConcept(false);
     setInbox(false);
@@ -81,15 +99,16 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
 
   // Escape from inside the book reaches the host window.
   useEffect(() => {
-    if (!inbox && !doc) return;
+    if (!inbox && !doc && !pull) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      if (inbox) setInbox(false);
+      if (pull) setPull(null);
+      else if (inbox) setInbox(false);
       else setDoc(null);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [inbox, doc]);
+  }, [inbox, doc, pull]);
 
   const openDocument = useCallback(
     (itemId?: string) => {
@@ -112,8 +131,15 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
     <>
       {inbox && (
         <Shell style={narrow ? 'sheet' : style} onClose={() => setInbox(false)} title="Inbox" keyHint="Alt I" label="Inbox" posKey="studyDesk.inboxPos">
-          <InboxBody book={book} data={data} onClose={() => setInbox(false)} onOpenDocument={openDocument} onToast={say} />
+          <InboxBody book={book} data={data} onClose={() => setInbox(false)} onOpenDocument={openDocument} onPullIn={openPull} onToast={say} />
         </Shell>
+      )}
+      {pull && (
+        <div className="sd-pull-layer">
+          <Shell style={narrow ? 'sheet' : style} onClose={() => setPull(null)} title="Pull in" keyHint="Alt U" label="Pull in" posKey="studyDesk.pullPos">
+            <PullInBody book={book} deskId={pull.deskId} spot={pull.spot} margins={prefs.studyDeskMargins} onClose={() => setPull(null)} onToast={say} />
+          </Shell>
+        </div>
       )}
       {!doc && <MarginLayer book={book} data={data} onToast={say} onOpenDocument={openDocument} />}
       {concept && <ConceptStrip book={book} deskId={data.deskId} deskName={deskName} onClose={() => setConcept(false)} onToast={say} />}
@@ -135,6 +161,7 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
             setDoc(null);
             setRegion(true);
           }}
+          onPullIn={openPull}
           onToast={say}
         />
       )}

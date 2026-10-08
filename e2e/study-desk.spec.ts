@@ -164,3 +164,55 @@ test.describe('margins', () => {
     await expect(page.locator('.sd-gloss--m')).toHaveCount(0);
   });
 });
+
+test.describe('pull in', () => {
+  // A 2x2 PNG.
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVR42mP8z8Dwn4GBgYGJAQoAADUBAf8Ik8gAAAAASUVORK5CYII=', 'base64');
+
+  async function captureFirstLine(page: Page) {
+    const box = await firstLineBox(page);
+    await page.keyboard.press('Alt+x');
+    await page.mouse.move(box.right, box.top);
+    await page.mouse.down();
+    await page.mouse.move(box.left, box.bottom, { steps: 6 });
+    await page.mouse.up();
+    const bar = page.getByRole('dialog', { name: 'Capture' });
+    await bar.getByRole('button', { name: /^Send to/ }).click();
+    await expect(bar).toHaveCount(0);
+  }
+
+  test('Alt+U pulls a saved highlight into the margin, and the inbox button pulls into the inbox', async ({ page }) => {
+    await openSample(page);
+    await captureFirstLine(page);
+    await expect(page.locator('.sd-gloss')).toHaveCount(1);
+
+    await page.keyboard.press('Alt+u');
+    const pull = page.getByRole('dialog', { name: 'Pull in' }).or(page.getByRole('complementary', { name: 'Pull in' }));
+    await expect(pull).toBeVisible();
+    await pull.getByRole('button', { name: 'Highlights' }).click();
+    await expect(pull.locator('.dsearch__entry .dsearch__provider', { hasText: 'Highlight' })).toHaveCount(1);
+    await expect(pull.getByRole('button', { name: 'Right margin' })).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Enter');
+    await expect(pull).toHaveCount(0);
+    await expect(page.locator('.sd-toast')).toContainText('right margin');
+    await expect(page.locator('.sd-gloss')).toHaveCount(2);
+
+    await page.keyboard.press('Alt+i');
+    const inbox = page.getByRole('dialog', { name: 'Inbox' }).or(page.getByRole('complementary', { name: 'Inbox' }));
+    await expect(inbox.locator('.dsearch__entry')).toHaveCount(1);
+    await inbox.getByRole('button', { name: /^Pull in/ }).click();
+    await pull.getByRole('button', { name: 'Inbox', exact: true }).click();
+    await pull.getByRole('button', { name: 'Highlights' }).click();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.sd-toast')).toContainText('inbox');
+    await page.keyboard.press('Alt+i');
+    await expect(inbox.locator('.dsearch__entry')).toHaveCount(2);
+  });
+
+  test('an image file pulled in sits in a frame in the margin', async ({ page }) => {
+    await openSample(page);
+    await page.keyboard.press('Alt+u');
+    await page.getByLabel('Image file').setInputFiles({ name: 'figure.png', mimeType: 'image/png', buffer: png });
+    await expect(page.locator('.sd-gloss .sd-frame img')).toHaveCount(1);
+  });
+});

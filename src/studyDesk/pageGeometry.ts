@@ -120,6 +120,32 @@ export function rectsOfCleanLocation(location: string): DOMRect[] {
   return range ? Array.from(range.getClientRects()) : [];
 }
 
+/**
+ * A clean-text place near the middle of the quiet reader's visible column, for things placed on "this page"
+ * (Pull in). Tries the centre first, then lines above and below it. Null when no quiet-reader text is on screen.
+ */
+export function cleanLocationNearCentre(): string | null {
+  const column = document.querySelector<HTMLElement>('.qr-column')?.getBoundingClientRect();
+  const stage = document.querySelector<HTMLElement>('.qr-stage')?.getBoundingClientRect() ?? column;
+  if (!column || !stage) return null;
+  const top = Math.max(column.top, stage.top, 0);
+  const bottom = Math.min(column.bottom, stage.bottom, window.innerHeight);
+  if (bottom - top < 10) return null;
+  const mid = (top + bottom) / 2;
+  const xs = [column.left + column.width / 2, column.right - 12, column.left + 12];
+  for (let step = 0; step < 12; step++) {
+    for (const sign of step ? [-1, 1] : [1]) {
+      const y = mid + sign * step * 18;
+      if (y < top || y > bottom) continue;
+      for (const x of xs) {
+        const at = cleanLocationAt(x, y);
+        if (at) return at;
+      }
+    }
+  }
+  return null;
+}
+
 /** The clean-text place under a point (a zero-length place), or null. */
 export function cleanLocationAt(x: number, y: number): string | null {
   const pos = caretAt(x, y);
