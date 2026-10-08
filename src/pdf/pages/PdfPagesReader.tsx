@@ -14,6 +14,7 @@ import { ReadingSessionTracker } from '../../reader/session';
 import { usePreferences } from '../../state/PreferencesContext';
 import type { BookMeta } from '../../types';
 import { openPdfPages, type OpenedPdf, type PDFPageProxy } from './pdfjsLoader';
+import { rememberCorrection } from '../ocr/corrections';
 import { pdfPageExtensions, type PdfWordTap } from './extensions';
 import { loadPdfPage, savePdfPage } from './pdfView';
 import { wordAtPoint } from './wordAtPoint';
@@ -140,7 +141,15 @@ export function PdfPagesReader({ book, onBack, onShowText }: { book: BookMeta; o
   const trackerRef = useRef<ReadingSessionTracker | null>(null);
   const total = opened?.doc.numPages ?? book.pdf?.pages ?? 0;
 
-  const lookups = useWordLookups({ book, trackerRef, savedWords: noSavedWords, prefsRef, onLookupStart: () => {} });
+  const lookups = useWordLookups({
+    book,
+    trackerRef,
+    savedWords: noSavedWords,
+    prefsRef,
+    onLookupStart: () => {},
+    // A fix to a word read from a scan is kept for this book (src/pdf/ocr).
+    onWordCorrected: (ocr, corrected) => rememberCorrection(book.id, ocr, corrected),
+  });
   const { popup, bubble, editing } = lookups;
 
   // Open the PDF kept at import.
@@ -282,6 +291,7 @@ export function PdfPagesReader({ book, onBack, onShowText }: { book: BookMeta; o
         x: (rect.left + rect.right) / 2,
         y: rect.top,
         sentence: hit.run.trim() || undefined,
+        ocr: hit.ocr,
       };
       void lookups.openPopup(target);
     },
@@ -358,6 +368,7 @@ export function PdfPagesReader({ book, onBack, onShowText }: { book: BookMeta; o
           onSaveSelection={(entry, text) => void lookups.savePopupSelection(entry, text)}
           onEdit={lookups.startEditing}
           onEditWord={lookups.editPopupWord}
+          ocr={popup.ocr}
           onMaximise={
             prefs.dictionaryFullPageEnabled
               ? () => {

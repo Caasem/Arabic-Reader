@@ -18,7 +18,7 @@ export function OcrChip({ page, opened }: { page: number; opened: OpenedPdf }) {
   let label = 'Scanned page · tap a word';
   let tone = '';
   if (state.phase === 'reading') label = `Reading with ${state.engine}…`;
-  else if (state.phase === 'done') label = `${state.engine} · ${state.ms} ms`;
+  else if (state.phase === 'done') label = `${state.engine} · ${state.ms} ms${state.suspect ? ' · check the word' : ''}`;
   else if (state.phase === 'none' || state.phase === 'error') {
     label = state.message ?? 'Could not read that.';
     tone = ' pdfp-chip--warn';

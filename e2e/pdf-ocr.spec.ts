@@ -78,3 +78,41 @@ test('with no engine the chip says so, and Settings can add one of your own', as
   await section.getByRole('button', { name: 'Remove' }).click();
   await expect(section).toContainText('no built-in text recognition');
 });
+
+test('a read that is not a word is flagged, offers corrections, and a pick looks the word up', async ({ page }) => {
+  await page.route(`${ENGINE_URL}**`, async (route) => {
+    const png = route.request().postDataBuffer();
+    const [width, height] = png && png.length > 24 ? [png.readUInt32BE(16), png.readUInt32BE(20)] : [400, 200];
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' },
+      // Every read, however close the look, gives the misread word: the final ة as ه.
+      body: JSON.stringify({ words: [{ text: 'المدرسه', x: width / 2 - 100, y: height / 2 - 30, w: 200, h: 60 }] }),
+    });
+  });
+  await page.addInitScript((url) => {
+    localStorage.setItem('arabic-reader:pdfOcr', JSON.stringify({ engineId: 'custom:t', custom: [{ id: 'custom:t', name: 'Test engine', url }] }));
+  }, ENGINE_URL);
+  await addScan(page);
+  await page.locator('.book-card__open').first().click();
+  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+  const box = (await page.locator('.pdfp-page[data-page="1"] .pdfp-text').boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 3);
+
+  const popup = page.locator('.dict-popup');
+  await expect(popup).toBeVisible({ timeout: 30000 });
+  await expect(popup).toContainText('Not a known word');
+  const alternative = popup.locator('.dict-popup__alt').first();
+  await expect(alternative).toContainText('المدرسة');
+  await alternative.click();
+  await expect(popup.locator('.dict-popup__word-text')).toHaveText('المدرسة');
+  await expect(popup).toContainText('Corrected');
+
+  // The fix is remembered: the same word, tapped again, comes up right with no warning.
+  await page.keyboard.press('Escape');
+  await expect(popup).toBeHidden();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 3);
+  await expect(popup).toContainText('Remembered from your earlier correction', { timeout: 30000 });
+  await expect(popup.locator('.dict-popup__word-text')).toHaveText('المدرسة');
+});

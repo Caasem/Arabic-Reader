@@ -1,3 +1,4 @@
+import type { WordOcrInfo } from '../../types';
 import type { ReaderPreferences, TouchDictionaryAction } from '../../types';
 import { isFootnoteLink } from '../footnotes/resolveFootnote';
 import { extractSentence } from './extractSentence';
@@ -25,6 +26,8 @@ export interface WordTarget {
   x: number;
   y: number;
   sentence?: string;
+  /** Set for a word read from a scanned page: whether it looks misread, and what it may have been. */
+  ocr?: WordOcrInfo;
 }
 
 export type TouchWordAction = Exclude<TouchDictionaryAction, 'none'>;

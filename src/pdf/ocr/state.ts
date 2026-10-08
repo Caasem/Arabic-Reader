@@ -6,6 +6,8 @@ export interface OcrState {
   engine?: string;
   ms?: number;
   message?: string;
+  /** The last read was not a word the dictionary knows. */
+  suspect?: boolean;
 }
 
 let state: OcrState = { phase: 'idle' };
