@@ -310,7 +310,7 @@ export function PdfPagesReader({ book, onBack, onShowText }: { book: BookMeta; o
           <button className="reader__toc-toggle" onClick={() => setZoom((z) => Math.min(ZOOM_MAX, z + 0.2))} aria-label="Zoom in" title="Zoom in">
             +
           </button>
-          {pdfPageExtensions().map((ext) => ext.Toolbar && <ext.Toolbar key={ext.id} book={book} page={page} total={total} />)}
+          {opened && pdfPageExtensions().map((ext) => ext.Toolbar && <ext.Toolbar key={ext.id} book={book} page={page} total={total} opened={opened} />)}
           {onShowText && (
             <button className="reader__toc-toggle" onClick={onShowText} title="Read the reflowed text">
               Reflowed text
@@ -357,6 +357,7 @@ export function PdfPagesReader({ book, onBack, onShowText }: { book: BookMeta; o
           onUnsaveEntry={(id) => lookups.unsavePopupEntry(id)}
           onSaveSelection={(entry, text) => void lookups.savePopupSelection(entry, text)}
           onEdit={lookups.startEditing}
+          onEditWord={lookups.editPopupWord}
           onMaximise={
             prefs.dictionaryFullPageEnabled
               ? () => {

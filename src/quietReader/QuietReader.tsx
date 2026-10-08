@@ -1148,6 +1148,7 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
           onSaveSelection={(entry, text) => void lookups.savePopupSelection(entry, text).then(bumpSaved)}
           onSaveEntries={(entries) => void lookups.savePopupEntries(entries).then(bumpSaved)}
           onEdit={lookups.startEditing}
+          onEditWord={lookups.editPopupWord}
           onMaximise={
             prefs.dictionaryFullPageEnabled
               ? () => {

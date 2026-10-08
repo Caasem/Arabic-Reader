@@ -11,6 +11,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { createSyncFolder } = require('./syncFolder.cjs');
 const { createBlobFiles } = require('./blobFiles.cjs');
+const { createOcrEngines } = require('./ocrEngines.cjs');
 
 const APP_SCHEME = 'app';
 const APP_HOST = 'bundle';
@@ -217,6 +218,20 @@ handleSync('blobs:read', (_event, hash) => blobs().read(hash));
 handleSync('blobs:has', (_event, hash) => blobs().has(hash));
 handleSync('blobs:remove', (_event, hash) => blobs().remove(hash));
 handleSync('blobs:list', () => blobs().list());
+
+// --- Text recognition for scanned PDF pages ----------------------------------------------------------------
+// The engines the OS provides, and a post to an address the reader added (src/pdf/ocr). The PowerShell
+// worker cannot run from inside the asar archive, so it is unpacked next to it.
+let ocrEngines = null;
+const ocr = () =>
+  (ocrEngines ??= createOcrEngines({
+    scriptPath: path.join(__dirname, 'windows-ocr.ps1').replace('app.asar', 'app.asar.unpacked'),
+    tmpDir: app.getPath('temp'),
+  }));
+handleSync('ocr:list', () => ocr().list());
+handleSync('ocr:recognize', (_event, id, bytes, language) => ocr().recognize(id, bytes, language));
+handleSync('ocr:http', (_event, url, bytes, language) => ocr().http(url, bytes, language));
+app.on('will-quit', () => ocrEngines?.dispose());
 
 app.whenReady().then(async () => {
   await loadSyncRoot();

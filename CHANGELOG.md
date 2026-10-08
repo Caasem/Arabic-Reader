@@ -4,6 +4,20 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.44.0 — 2026-10-09
+
+- **Tap a word on a scanned PDF.** On a page that is only a picture, tapping a word now reads the
+  line around it with a text-recognition engine and opens the word in the usual dictionary popup.
+  The desktop app on Windows uses Windows' own built-in recognition (offline, about a tenth of a
+  second). A small chip in the top bar shows what read the word.
+- **Choose or add an engine.** Settings → Reading → Text recognition lists the engines, with a Test
+  button, and lets you add your own by address (for example a local Tesseract or PaddleOCR
+  server). An address that is not on your computer is marked, because it receives an image of the
+  line you tap.
+- **Correct a word in the popup.** Click the word at the top of the dictionary popup to edit it
+  in place; Enter looks up the corrected word, Esc cancels. Handy when a scan is misread, and for
+  trying another form of any word.
+
 ## v0.43.2 — 2026-10-08
 
 - No visible change. All the PDF code now lives in one module (`src/pdf`), with a single place

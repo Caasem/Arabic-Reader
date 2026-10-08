@@ -125,6 +125,69 @@ function groupEntriesByProvider(entries: DictionaryEntry[]): EntryGroup[] {
   return groups;
 }
 
+/** The popup's headword: click it to correct it (a misread scan, a typo); Enter looks up the corrected word, Esc cancels. */
+function EditableWord({ word, onCommit }: { word: string; onCommit: (word: string) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(word);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const cancelled = useRef(false);
+  useEffect(() => {
+    if (!editing) return;
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, [editing]);
+
+  function commit() {
+    const next = draft.trim();
+    setEditing(false);
+    if (!cancelled.current && next && next !== word) onCommit(next);
+  }
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        className="dict-popup__word-text"
+        title="Click to correct this word"
+        aria-label={`Correct the word ${word}`}
+        onClick={() => {
+          cancelled.current = false;
+          setDraft(word);
+          setEditing(true);
+        }}
+      >
+        {word}
+      </button>
+    );
+  }
+  return (
+    <input
+      ref={inputRef}
+      className="dict-popup__word-input"
+      dir="rtl"
+      lang="ar"
+      value={draft}
+      size={Math.max(draft.length, 3)}
+      aria-label="Correct the word"
+      spellCheck={false}
+      autoComplete="off"
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          inputRef.current?.blur();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          cancelled.current = true;
+          inputRef.current?.blur();
+        }
+      }}
+      onBlur={commit}
+    />
+  );
+}
+
 export function DictionaryPopup({
   word,
   result: lookedUp,
@@ -143,6 +206,7 @@ export function DictionaryPopup({
   onEdit,
   onSaveEntries,
   onMaximise,
+  onEditWord,
   page = false,
 }: {
   word: string;
@@ -186,6 +250,8 @@ export function DictionaryPopup({
   onMaximise?: () => void;
   /** Drawn inside the full-page dictionary: in the page's flow, full width, no backdrop or close button. */
   page?: boolean;
+  /** When given, the headword can be clicked and corrected in place; the popup then shows the corrected word's entry. */
+  onEditWord?: (word: string) => void;
 }) {
   const { prefs, updatePrefs } = usePreferences();
 
@@ -1092,7 +1158,7 @@ export function DictionaryPopup({
         </div>
 
         <div className="dict-popup__word">
-          {word}
+          {onEditWord ? <EditableWord key={word} word={word} onCommit={onEditWord} /> : word}
           {rarity && (
             <span className={'dict-popup__rarity dict-popup__rarity--' + rarity.tier}>
               {TIER_LABELS[rarity.tier]}

@@ -114,6 +114,23 @@ export function useWordLookups({ book, trackerRef, savedWords, prefsRef, onLooku
     setPopup(null);
   }
 
+  /**
+   * The reader corrected the popup's headword (a misread scan, a typo, another form): looks the new word
+   * up in the same popup, in the same place, with the same sentence.
+   */
+  async function editPopupWord(next: string) {
+    const current = popup;
+    const word = next.trim();
+    if (!current || !word || word === current.word) return;
+    const target = { word, sectionHref: current.sectionHref ?? '', x: current.x, y: current.y, rect: current.wordRect, sentence: current.instance?.sentence } as WordTarget;
+    const token = ++popupTokenRef.current;
+    setPopup(pendingState(target));
+    const resolved = await resolve(target);
+    if (token !== popupTokenRef.current) return;
+    setPopup(resolved);
+    lastLookupRef.current = resolved;
+  }
+
   async function openBubble(target: WordTarget) {
     onLookupStart();
     trackerRef.current?.recordLookup();
@@ -155,6 +172,7 @@ export function useWordLookups({ book, trackerRef, savedWords, prefsRef, onLooku
 
     openPopup,
     closePopup,
+    editPopupWord,
     closeBubble,
     closeAll() {
       closePopup();

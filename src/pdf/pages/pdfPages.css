@@ -76,3 +76,25 @@
 .pdfp-text ::selection {
   background: var(--accent-soft, rgb(156 122 79 / 0.3));
 }
+
+/* The small status chip an extension (text recognition) puts beside the zoom controls. */
+.pdfp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 28ch;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--ink-faint, var(--ink));
+  background: var(--accent-soft, rgb(156 122 79 / 0.16));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pdfp-chip--warn {
+  color: #b0701c;
+  background: rgb(176 112 28 / 0.14);
+}

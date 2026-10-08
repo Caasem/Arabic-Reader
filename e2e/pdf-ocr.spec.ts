@@ -1,0 +1,80 @@
+import { test, expect, type Page } from '@playwright/test';
+import { makePdf } from '../src/pdf/testPdf';
+
+/**
+ * Tapping a word on a scanned PDF page (src/pdf/ocr). The engine here is an address the reader added,
+ * answered by the test, so the whole path runs without Windows: crop, engine, picked word, popup.
+ */
+test.use({ viewport: { width: 1440, height: 900 } });
+
+const ENGINE_URL = 'http://ocr.test/ocr';
+
+async function routeEngine(page: Page, requests: string[]) {
+  await page.route(`${ENGINE_URL}**`, async (route) => {
+    requests.push(route.request().url());
+    // Put the word in the middle of the crop, where the tap is: the PNG header holds the crop's size.
+    const png = route.request().postDataBuffer();
+    const [width, height] = png && png.length > 24 ? [png.readUInt32BE(16), png.readUInt32BE(20)] : [400, 200];
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      // The browser asks first (a PNG body is not a simple request), so the address must answer that too.
+      headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' },
+      body: JSON.stringify({ words: [{ text: 'المدرسة،', x: width / 2 - 110, y: height / 2 - 30, w: 220, h: 60 }] }),
+    });
+  });
+}
+
+async function addScan(page: Page) {
+  await page.goto('/');
+  await page.waitForSelector('.navbar__settings', { timeout: 15000 });
+  await page.setInputFiles('.library__actions input[type=file]', { name: 'scan.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf([{ image: true }, { image: true }])) });
+  await expect(page.locator('.book-card')).toHaveCount(1, { timeout: 30000 });
+}
+
+test('a tap on a scanned page is read by the chosen engine and opens the dictionary', async ({ page }) => {
+  const requests: string[] = [];
+  await routeEngine(page, requests);
+  await page.addInitScript((url) => {
+    localStorage.setItem('arabic-reader:pdfOcr', JSON.stringify({ engineId: 'custom:t', custom: [{ id: 'custom:t', name: 'Test engine', url }] }));
+  }, ENGINE_URL);
+  await addScan(page);
+  await page.locator('.book-card__open').first().click();
+  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+  await expect(page.locator('.pdfp-chip')).toContainText('Scanned page');
+
+  const layer = page.locator('.pdfp-page[data-page="1"] .pdfp-text');
+  const box = (await layer.boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 3);
+
+  await expect(page.locator('.dict-popup')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('.dict-popup')).toContainText('المدرسة');
+  await expect(page.locator('.pdfp-chip')).toContainText('Test engine');
+  expect(requests[0]).toContain('lang=ar');
+});
+
+test('with no engine the chip says so, and Settings can add one of your own', async ({ page }) => {
+  const requests: string[] = [];
+  await routeEngine(page, requests);
+  await addScan(page);
+  await page.locator('.book-card__open').first().click();
+  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+  const layer = page.locator('.pdfp-page[data-page="1"] .pdfp-text');
+  const box = (await layer.boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 3);
+  await expect(page.locator('.pdfp-chip--warn')).toContainText('No text recognition is set up');
+
+  await page.getByRole('button', { name: 'Library' }).first().click();
+  await page.click('.navbar__settings');
+  const section = page.locator('.settings-section', { hasText: 'Text recognition' });
+  await expect(section).toContainText('no built-in text recognition');
+  await section.getByRole('button', { name: '+ Add your own engine' }).click();
+  await section.getByPlaceholder('My Tesseract server').fill('Local test');
+  await section.getByPlaceholder('http://localhost:8080/ocr').fill('https://ocr.test/ocr');
+  await expect(section).toContainText('on the internet');
+  await section.getByRole('button', { name: 'Add engine' }).click();
+  await expect(section.locator('.ocr-engine--on')).toContainText('Local test');
+  await expect(section.locator('.ocr-pill')).toContainText('Sends images out');
+  await section.getByRole('button', { name: 'Remove' }).click();
+  await expect(section).toContainText('no built-in text recognition');
+});
