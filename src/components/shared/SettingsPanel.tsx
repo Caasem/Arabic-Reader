@@ -25,6 +25,7 @@ import { FontSettings } from '../../readerFont';
 import { WasitMatchSettings } from '../../wasitMatch';
 import { WasitStructureSettings } from '../../wasitStructure';
 import { ShamelaBetaSettings } from './settings/ShamelaBetaSettings';
+import { LibrarySettings } from './settings/LibrarySettings';
 import { SyncSettings } from './settings/SyncSettings';
 import { StorageSettings } from './settings/StorageSettings';
 import { QuietReaderSettings } from '../../quietReader/QuietReaderSettings';
@@ -84,7 +85,7 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
     id: 'library',
     label: 'Library & data',
     blurb: 'Where books come from and keeping your data safe.',
-    sections: [<ShamelaBetaSettings key="shamela" />, <StorageSettings key="storage" />, <BackupSettings key="backup" />, <SyncSettings key="sync" />, <CrowdSettings key="crowd" />],
+    sections: [<LibrarySettings key="librarypage" />, <ShamelaBetaSettings key="shamela" />, <StorageSettings key="storage" />, <BackupSettings key="backup" />, <SyncSettings key="sync" />, <CrowdSettings key="crowd" />],
   },
   {
     id: 'advanced',

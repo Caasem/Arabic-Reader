@@ -130,7 +130,7 @@ function App() {
           />
           <main className="app__main">
             <Suspense fallback={<div className="app__loading" role="status">Loading…</div>}>
-              {view === 'library' && <Library onOpenBook={openBook} />}
+              {view === 'library' && <Library onOpenBook={openBook} onNavigate={handleNav} />}
               {view === 'read' && activeBook && (
                 <ReaderSwitch
                   book={activeBook}

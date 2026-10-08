@@ -4,6 +4,24 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.62.0 — 2026-10-08
+
+- **A redesigned Library.** The book you are reading sits at the top with its chapter, progress and
+  an estimate of the time left at your own pace, plus the other books you have in progress.
+- **Your highlights come back.** A card shows one of your highlights at a time, with your note, a
+  way to open it in the book, and *Share as card*, which draws it as an image on your device.
+  A "Recently highlighted" row links to all of them.
+- **Reading habits at a glance.** Streak with the last seven days, today's minutes against a daily
+  goal you choose, words saved, and flashcards due with a link straight to Review.
+- **Shelves.** Make your own shelves (Hadith, Grammar…), put books on them from a book's details,
+  and filter by shelf next to All / Reading / Unread / Finished.
+- **Grid or list.** The list shows progress, last read, highlights, words saved and file type.
+- **Book details.** The ⋯ by a title opens a panel with that book's stats and highlights, and
+  Resume, Shelves, Export highlights as Markdown, Free up space and Remove.
+- Search also finds books by the text of your highlights and notes; press **/** to jump to it.
+  Books without a cover get a cloth cover with their Arabic title. Settings → Library & data →
+  Library page turns the highlight card and habits row on or off and sets the goal.
+
 ## v0.44.0 — 2026-10-09
 
 - **Tap a word on a scanned PDF.** On a page that is only a picture, tapping a word now reads the
