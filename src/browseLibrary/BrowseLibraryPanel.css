@@ -1,0 +1,151 @@
+.browse__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.browse {
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  width: 100%;
+  max-width: 640px;
+  max-height: min(86vh, 760px);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 20px 14px;
+  gap: 12px;
+}
+
+.browse__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.browse__head h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.browse__close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.browse__sources {
+  display: flex;
+  gap: 6px;
+}
+
+.browse__source {
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.3));
+  background: none;
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.browse__source--active {
+  background: var(--accent, #3b6e5a);
+  border-color: transparent;
+  color: #fff;
+}
+
+.browse__filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.browse__search {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.browse__category {
+  flex: 0 1 200px;
+  min-width: 0;
+  padding: 8px;
+  font-size: 13px;
+}
+
+.browse__error {
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.browse__list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+}
+
+.browse__note,
+.browse__count {
+  margin: 8px 0;
+  font-size: 13px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.browse__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.18);
+}
+
+.browse__meta {
+  min-width: 0;
+}
+
+.browse__title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.browse__sub {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.browse__add {
+  flex: none;
+  min-width: 72px;
+}
+
+.browse__owned {
+  flex: none;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.browse__more {
+  align-self: center;
+  margin: 12px 0 4px;
+}
+
+.browse__foot {
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}

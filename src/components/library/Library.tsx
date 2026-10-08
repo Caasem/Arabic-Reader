@@ -12,6 +12,7 @@ import { readString, STORAGE_KEYS, writeString } from '../../utils/storage';
 import { useEscapeKey } from '../shared/useEscapeKey';
 import { usePreferences } from '../../state/PreferencesContext';
 import { ShamelaResultCard } from './ShamelaResultCard';
+import { BrowseLibraryPanel } from '../../browseLibrary/BrowseLibraryPanel';
 import { formatOf, IMPORTABLE_EXTENSIONS } from '../../importFormats';
 import './Library.css';
 
@@ -75,6 +76,7 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
   // Removing a book deletes its file and reading position outright (see
   // libraryService.removeBook) -- confirmed first since that's irreversible.
   const [confirmRemoveBook, setConfirmRemoveBook] = useState<BookMeta | null>(null);
+  const [browsing, setBrowsing] = useState(false);
   useEscapeKey(() => setConfirmRemoveBook(null), !!confirmRemoveBook);
   // First-run notice only -- this app's biggest differentiator (a real,
   // ~136k-entry Arabic dictionary built in, no account or internet needed)
@@ -296,6 +298,9 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
           <p className="library__subtitle">Your books, all in one quiet place.</p>
         </div>
         <div className="library__actions">
+          <button className="btn btn--ghost" onClick={() => setBrowsing(true)}>
+            Browse library
+          </button>
           <button className="btn btn--ghost" onClick={loadSample} disabled={importing}>
             Try the sample book
           </button>
@@ -441,6 +446,17 @@ export function Library({ onOpenBook }: { onOpenBook: (book: BookMeta) => void }
               />
             ))}
         </div>
+      )}
+
+      {browsing && (
+        <BrowseLibraryPanel
+          onClose={() => setBrowsing(false)}
+          onBookAdded={(meta) => {
+            setBooks((prev) => [meta, ...prev.filter((b) => b.id !== meta.id)]);
+            setFileIds((prev) => (prev ? new Set(prev).add(meta.id) : prev));
+          }}
+          ownedIds={new Set(books.map((b) => b.id))}
+        />
       )}
 
       {confirmRemoveBook && (
