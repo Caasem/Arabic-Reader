@@ -83,3 +83,39 @@ describe('browse library formats and volumes', () => {
     expect(putBooksOnShelf(shelves, 's', ['a', 'b', 'b'])[0].bookIds).toEqual(['a', 'b']);
   });
 });
+
+describe('browse library samples', () => {
+  const clean = 'ذهب الولد الصغير إلى المدرسة في الصباح الباكر مع أخيه الكبير وكان الطريق طويلا بين البيوت القديمة والأشجار العالية';
+
+  it('gives the first pages that have something on them, cut short', async () => {
+    const { firstPages } = await import('./sample');
+    expect(firstPages('title\nPAGE_SEPARATOR\n\nPAGE_SEPARATOR\nthree')).toEqual([
+      [1, 'title'],
+      [3, 'three'],
+    ]);
+    const long = firstPages(`${'ا'.repeat(2000)}\nPAGE_SEPARATOR\nnext`, 2, 100);
+    expect(long).toHaveLength(1);
+    expect(long[0][1].endsWith('…')).toBe(true);
+  });
+
+  it('cuts a partial download at a line break so no character is split', async () => {
+    const { decodeHead } = await import('./sample');
+    const bytes = new TextEncoder().encode('سطر أول\nسطر ثان ناقص');
+    expect(decodeHead(bytes.subarray(0, bytes.length - 3), false)).toBe('سطر أول');
+    expect(decodeHead(bytes, true)).toBe('سطر أول\nسطر ثان ناقص');
+  });
+
+  it('scores how many sampled words the dictionary reads as real, and labels the result', async () => {
+    const { scoreText, qualityLabel } = await import('./sample');
+    const words = clean.split(' ');
+    const realOnly = async (w: string[]) => new Set(w.filter((x) => words.includes(x)));
+    expect(await scoreText(clean, realOnly)).toEqual({ percent: 100, label: 'Clean' });
+    const half = async (w: string[]) => new Set(w.slice(0, Math.floor(w.length / 2)));
+    const mixed = await scoreText(clean, half);
+    expect(mixed?.percent).toBeGreaterThanOrEqual(40);
+    expect(mixed?.percent).toBeLessThanOrEqual(60);
+    expect(mixed?.label).toBe('Poor scan');
+    expect(await scoreText('كلمة قصيرة', realOnly)).toBeNull();
+    expect([qualityLabel(95), qualityLabel(80), qualityLabel(60)]).toEqual(['Clean', 'Some errors', 'Poor scan']);
+  });
+});

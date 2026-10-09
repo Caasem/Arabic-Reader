@@ -173,4 +173,6 @@ export interface ReaderPreferences {
   libraryShowQuote: boolean;
   /** Show streak, today's minutes, words saved and cards due in the Library. */
   libraryShowHabits: boolean;
+  /** Browse library: show Clean / Some errors / Poor scan on each result, read from a sample of the book's text. Off by default. */
+  browseShowQuality: boolean;
 }

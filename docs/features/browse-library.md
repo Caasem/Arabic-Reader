@@ -1,6 +1,6 @@
 # Browse library
 
-Roadmap id: `browse-library` · Area: Content · Status: built (v0.63.0)
+Roadmap id: `browse-library` · Area: Content · Status: built (v0.68.0)
 
 ## Purpose
 
@@ -26,3 +26,15 @@ The ieasybooks collections on Hugging Face (MIT licence): `waqfeya-library` (abo
 ## Off-switch
 
 Delete `src/browseLibrary/`, the button and panel in `src/components/library/Library.tsx`, and revert the version bump.
+
+## The panel (v0.67.0)
+
+Mockup: the clickable page the layout was settled on. Arabic reads right to left, so each result has the book's text on the right and the **Text** and **PDF** buttons on the left.
+
+- **One press adds a single-volume book** in that format; the button shows the file's size (a HEAD request once the row is on screen, a few at a time).
+- **Several volumes:** a press opens a row of choices (All volumes, Vol. 1, 2, 3 …, each with its size) and an "On a shelf" checkbox; each volume becomes its own book, on a shelf named after the book. A **double-press** adds every missing volume at once. The row opens after a short pause (0.26 s), because opening it on the first press moves the layout and the second press would land elsewhere.
+- **Tap the title** to preview the first page or two (the first 40 KB of the text, read as a stream). There is no separate Preview link.
+- **Tap the author** to show only their books.
+- **Quality badge** (Settings, Browse library; off by default): Clean, Some errors or Poor scan from the share of a sample's words that AraMorph reads as real words. A poor scan adds a note that the PDF is the better choice.
+- **Known words** ("Fits you" ranking and the rules behind it) are not built; the logic will be set up separately.
+- **Add the next volume (v0.68.0):** a book added from Browse library remembers its catalogue entry, format and volume (`BookMeta.browse`). Its details in the Library show "Volume 2 of 4. 3 not added yet" with a button per missing volume (the same format, put on the shelves this volume is on), or "All 4 volumes are in your library". The catalogue comes from the on-device copy; offline and never opened, the row is simply absent.

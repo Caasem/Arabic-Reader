@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { BookMeta, Highlight, LibraryShelf } from '../../types';
 import { useEscapeKey } from '../shared/useEscapeKey';
 import { BookCover } from './BookCover';
@@ -20,6 +20,8 @@ interface Props {
   onFreeSpace(): void;
   onAddFile(): void;
   onRemove(): void;
+  /** Extra rows under the Read button (the volumes of a Browse library book that are not added yet). */
+  extra?: ReactNode;
 }
 
 function formatSize(bytes: number): string {
@@ -105,6 +107,8 @@ export function BookDetails(props: Props) {
               </button>
             )}
           </div>
+
+          {props.extra}
 
           <div className="lib-sheet__section">
             <div className="lib-sheet__section-title">Highlights</div>
