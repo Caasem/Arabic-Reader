@@ -68,6 +68,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   dailyGoalMinutes: 20,
   libraryShowQuote: true,
   libraryShowHabits: true,
+  browseShowQuality: false,
 };
 
 /** A comfortable line length depends on screen width, so a device with no

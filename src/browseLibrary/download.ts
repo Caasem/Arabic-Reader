@@ -107,6 +107,22 @@ export function pathsFor(book: BrowseBook, format: BrowseFormat): string[] {
 
 const sizes = new Map<string, number | null>();
 
+/** Size lookups run a few at a time, so a screenful of results does not open dozens of connections at once. */
+const MAX_SIZE_LOOKUPS = 4;
+let sizeLookups = 0;
+const sizeQueue: (() => void)[] = [];
+
+async function withSizeSlot<T>(run: () => Promise<T>): Promise<T> {
+  if (sizeLookups >= MAX_SIZE_LOOKUPS) await new Promise<void>((resolve) => sizeQueue.push(resolve));
+  sizeLookups++;
+  try {
+    return await run();
+  } finally {
+    sizeLookups--;
+    sizeQueue.shift()?.();
+  }
+}
+
 /** Bytes of one volume's file in this format, from a HEAD request (cached). Null when the host does not say. */
 export async function fileSize(book: BrowseBook, format: BrowseFormat, volume: number): Promise<number | null> {
   const path = pathsFor(book, format)[volume];
@@ -114,11 +130,13 @@ export async function fileSize(book: BrowseBook, format: BrowseFormat, volume: n
   const url = datasetUrl(sourceOf(book).dataset, path);
   if (sizes.has(url)) return sizes.get(url) ?? null;
   try {
-    const res = await fetch(url, { method: 'HEAD' });
-    const n = res.ok ? Number(res.headers.get('content-length')) : 0;
-    const size = n > 0 ? n : null;
-    sizes.set(url, size);
-    return size;
+    return await withSizeSlot(async () => {
+      const res = await fetch(url, { method: 'HEAD' });
+      const n = res.ok ? Number(res.headers.get('content-length')) : 0;
+      const size = n > 0 ? n : null;
+      sizes.set(url, size);
+      return size;
+    });
   } catch {
     return null;
   }
