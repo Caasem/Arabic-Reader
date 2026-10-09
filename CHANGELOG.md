@@ -4,6 +4,10 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.65.1 — 2026-10-09
+
+- Fixed publishing of desktop releases (the installer upload raced and left a draft).
+
 ## v0.65.0 — 2026-10-09
 
 - **The desktop app updates itself.** The installed Windows app checks GitHub Releases at launch and
