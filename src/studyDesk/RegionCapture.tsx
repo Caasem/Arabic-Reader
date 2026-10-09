@@ -95,6 +95,9 @@ export function RegionCapture({
       if (onSent) return onSent(item);
       onToast(`Captured to ${deskName}${found.kind === 'text' && highlight ? ' and highlighted' : ''}`);
       onClose();
+    } catch {
+      // Nothing was filed: the capture stays open (and a trip with it) to try again or Esc.
+      onToast('Could not save the capture. Try again, or Esc to cancel.');
     } finally {
       setBusy(false);
     }

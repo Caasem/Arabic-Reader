@@ -6,12 +6,12 @@ function selectedText(target: EventTarget | null): string {
 }
 
 /**
- * Calls `onToggle` on Alt+<key> (`code` is a KeyboardEvent.code such as 'KeyS').
+ * Calls `onToggle` on Alt+<key> (`code` is a KeyboardEvent.code such as 'KeyS'), or Shift+Alt+<key> with `shift`.
  * Works while typing too: the chord never types a character. The epub reader
  * renders each section in its own iframe, whose keystrokes never reach the
  * host window, so this also watches the page for iframes and listens in each.
  */
-export function useChordHotkey(code: string, enabled: boolean, onToggle: (selection: string) => void): void {
+export function useChordHotkey(code: string, enabled: boolean, onToggle: (selection: string) => void, shift = false): void {
   const toggleRef = useRef(onToggle);
   useEffect(() => {
     toggleRef.current = onToggle;
@@ -22,7 +22,7 @@ export function useChordHotkey(code: string, enabled: boolean, onToggle: (select
 
     const onKeyDown = (e: KeyboardEvent) => {
       // e.code, not e.key: with Alt held, Mac layouts report a different character.
-      if (e.code !== code || !e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.isComposing || e.repeat) return;
+      if (e.code !== code || !e.altKey || e.ctrlKey || e.metaKey || e.shiftKey !== shift || e.isComposing || e.repeat) return;
       e.preventDefault();
       toggleRef.current(selectedText(e.target));
     };
@@ -60,5 +60,5 @@ export function useChordHotkey(code: string, enabled: boolean, onToggle: (select
       window.removeEventListener('keydown', onKeyDown);
       observer.disconnect();
     };
-  }, [code, enabled]);
+  }, [code, enabled, shift]);
 }

@@ -51,6 +51,11 @@ Everything a reader notices while reading becomes an item: a concept they type, 
 **Capture trip (Go to another book)**
 - From Pull in, Go to another book… opens a book with a bar across the top saying what is happening. Margin or inbox is chosen before leaving.
 - Capture (Alt+X or the bar's button) files the capture on the desk the trip started from, pinned to the place on the page left behind, and goes straight back there. Cancel and return, or Esc, goes back without capturing.
+- Capture and stay (Shift+Alt+X or the bar's button) files the capture the same way and keeps the trip open, with a count in the bar. Done, go back (the same button, renamed once something is filed), or Esc, returns home and says how many were filed. A capture that fails to save says so and leaves the trip open.
+- After a trip, Pull in starts with Back to <book>, chosen already: Alt+U then Enter goes to the same book again, filing in the same margin at the same place (or the inbox). Remembered until the app reloads, like the trip itself.
+
+**Piles (prototype)**
+- `src/studyDesk/piles.prototype.html` is a single-file prototype of piles in the margins, not part of the app: hold a dragged card on another for about 300ms to pile it underneath (dropping sooner moves it), hover to fan a pile inside its margin (click or Space keeps it open, Esc closes), drag a card out of the fan to unpile it (a pile of one dissolves), double-click to name a pile with a colour tab, source chips and a count badge, lasso then P to pile, undo for pile, unpile and delete.
 
 **Images in the margins**
 - Paste an image into a margin note to make it a screenshot; drop an image file on a margin for a new screenshot note at that height, or on a note to add it there.

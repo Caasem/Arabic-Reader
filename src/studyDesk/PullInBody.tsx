@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { libraryService } from '../library/libraryService';
 import type { BookMeta } from '../types';
+import type { DeskTrip } from './trip';
 import { looksArabic } from './useDesk';
 import { filterCandidates, isImageFile, KIND_LABEL, listPullCandidates, pullIn, pullInImage, type PullCandidate, type PullKind, type PullSpot, type PullTarget } from './pullIn';
 
@@ -18,11 +19,15 @@ interface Props {
   onGoToBook?(book: BookMeta, target: PullTarget): void;
   /** Open on the book list (Go to another book). */
   initialPicking?: boolean;
+  /** The last trip from this book: a Back to <book> row at the top goes again, same target and spot. */
+  again?: DeskTrip | null;
+  onGoAgain?(): void;
 }
 
 const TARGET_KEY = 'studyDesk.pullTarget';
 const IMAGE = '__image__';
 const GO = '__go__';
+const AGAIN = '__again__';
 const LIMIT = 80;
 const FILTERS: { kind: PullKind | 'all'; label: string }[] = [
   { kind: 'all', label: 'All' },
@@ -41,8 +46,11 @@ function loadTarget(): PullTarget {
   return 'right';
 }
 
+/** Where the trip again files its capture: the same place as last time. */
+const againWhere = (t: DeskTrip) => (t.target === 'inbox' || !t.spot ? 'to the inbox' : `to the ${t.target} margin, same place as last time`);
+
 /** Pull in (Alt+U): the dictionary search's input row and result rows over highlights, words and other books' desk items. */
-export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGoToBook, initialPicking }: Props) {
+export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGoToBook, initialPicking, again, onGoAgain }: Props) {
   const [all, setAll] = useState<PullCandidate[] | null>(null);
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState<PullKind | 'all'>('all');
@@ -77,8 +85,10 @@ export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGo
     return (books ?? []).filter((b) => b.id !== book.id && (!q || `${b.title} ${b.author ?? ''}`.toLowerCase().includes(q)));
   }, [books, book.id, query]);
 
-  const ids = picking ? bookList.map((b) => b.id) : [...(onGoToBook ? [GO] : []), IMAGE, ...list.map((c) => c.key)];
-  const active = selected && ids.includes(selected) ? selected : picking ? (bookList[0]?.id ?? null) : (list[0]?.key ?? IMAGE);
+  // Back to <book> leads, and is chosen at first, while nothing is typed: Alt+U then Enter goes again.
+  const showAgain = !!(again && onGoAgain && onGoToBook && !query.trim());
+  const ids = picking ? bookList.map((b) => b.id) : [...(showAgain ? [AGAIN] : []), ...(onGoToBook ? [GO] : []), IMAGE, ...list.map((c) => c.key)];
+  const active = selected && ids.includes(selected) ? selected : picking ? (bookList[0]?.id ?? null) : showAgain ? AGAIN : (list[0]?.key ?? IMAGE);
 
   // The library's books, loaded once the list is wanted (newest first).
   useEffect(() => {
@@ -147,6 +157,7 @@ export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGo
     } else if (e.key === 'Enter' && !(e.target instanceof HTMLButtonElement)) {
       e.preventDefault();
       if (picking) goTo(active);
+      else if (active === AGAIN) onGoAgain?.();
       else if (active === GO) startPicking();
       else if (active === IMAGE) fileRef.current?.click();
       else {
@@ -220,6 +231,17 @@ export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGo
         </div>
       )}
       {!picking && <div className="dsearch__results" role="listbox" aria-label="Pull in">
+        {showAgain && again && (
+          <div role="option" aria-selected={active === AGAIN} className={'dsearch__entry' + (active === AGAIN ? ' dsearch__entry--active' : '')} onMouseEnter={() => setSelected(AGAIN)} onClick={onGoAgain}>
+            <div className="sd-inbox__new">
+              <span className="dsearch__provider">Capture</span>
+              <b>
+                Back to <bdi className={looksArabic(again.to.title) ? undefined : 'sd-latin'}>{again.to.title}</bdi>
+              </b>
+              <span className="dsearch__meta">{againWhere(again)}</span>
+            </div>
+          </div>
+        )}
         {onGoToBook && (
           <div role="option" aria-selected={active === GO} className={'dsearch__entry' + (active === GO ? ' dsearch__entry--active' : '')} onClick={startPicking}>
             <div className="sd-inbox__new">
