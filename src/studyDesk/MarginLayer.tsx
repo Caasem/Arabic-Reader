@@ -4,13 +4,15 @@ import { getReaderMarks } from '../readerChords';
 import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta, ReaderPreferences } from '../types';
 import { vocabularyService } from '../vocabulary';
-import { deleteItem, turnItemIntoHeading, updateItem } from './deskStore';
+import { deleteItem, patchItems, restoreItems, turnItemIntoHeading, updateItem } from './deskStore';
 import { cleanLocationNearY, rectsOfCleanLocation } from './pageGeometry';
 import { capture, TYPE_LABEL, useDeskImage, type DeskData } from './useDesk';
 import { shownInDocument } from './DeskDocument';
 import { attachImage, carriesFiles, imageIn } from './marginImages';
-import type { DeskItem, DeskItemType } from './types';
+import type { DeskItem, DeskItemType, DeskPin } from './types';
 import { MarginRing, marginActions, useRingTrigger, type DeskCommands, type RingAction, type RingState } from './MarginRing';
+import { fromOtherBooks, groupOf, groupPiles, isBeneath, planName, planPile, planPileMany, planUnpile, shortLabel, undoPatches, type ItemPatch } from './piles';
+import { PileFan } from './PileFan';
 import './marginLayer.css';
 
 /**
@@ -34,6 +36,8 @@ interface Placed {
 }
 
 const EDGE = 64; // keeps clear of the page-turn buttons
+/** How long a dragged card rests on another before dropping piles it; dropping sooner moves it. */
+const HOLD_MS = 300;
 const GUTTER = 28;
 const MIN_SIDE = 140;
 /** How far the page moves from the edge for one-sided margins (marginLayer.css). */
@@ -117,10 +121,18 @@ function visibleRects(location: string, geo: Geo): DOMRect[] {
 interface Props {
   book: BookMeta;
   data: DeskData;
-  onToast(m: string): void;
+  /** With `undo`, the message offers Undo (piles made, cards taken off one, cards deleted). */
+  onToast(m: string, undo?: () => Promise<void>): void;
   onOpenDocument(itemId?: string): void;
   /** For the right-click ring (MarginRing.tsx). */
   commands: DeskCommands;
+}
+
+/** Several plans for the same items, merged (later ones win field by field). */
+function mergePatches(...lists: ItemPatch[][]): ItemPatch[] {
+  const byId = new Map<string, ItemPatch['patch']>();
+  for (const { id, patch } of lists.flat()) byId.set(id, { ...byId.get(id), ...patch });
+  return [...byId].map(([id, patch]) => ({ id, patch }));
 }
 
 export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: Props) {
@@ -169,10 +181,13 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
     return { left: ok(left) ? left : null, right: ok(right) ? right : null };
   }, [geo]);
 
+  // Piles (piles.ts): only a pile's top card is placed; the rest show in its fan.
+  const piles = useMemo(() => groupPiles(data.items), [data.items]);
   const placed = useMemo<Placed[]>(() => {
     if (!geo || !sides || (!sides.left && !sides.right)) return [];
     const out: Placed[] = [];
     for (const item of data.items) {
+      if (isBeneath(item, piles)) continue;
       const pinned = item.pin?.bookId === book.id;
       const location = pinned ? item.pin!.location : item.source?.bookId === book.id && !item.hidden ? item.source.location : undefined;
       if (!location || !isCleanLocation(location)) continue;
@@ -186,7 +201,394 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
     return out.sort((a, b) => a.y - b.y);
     // tick: the page moved.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.items, book.id, geo, sides, mode, tick]);
+  }, [data.items, piles, book.id, geo, sides, mode, tick]);
+
+  // --- piles (piles.ts): the fan, naming, the lasso selection, and changes that can be undone ---
+  const [fan, setFan] = useState<{ id: string; pinned: boolean } | null>(null);
+  const [naming, setNaming] = useState<string | null>(null);
+  const [sel, setSel] = useState<Set<string>>(() => new Set());
+  const [lassoBox, setLassoBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const fanGroup = fan ? piles.get(fan.id) : undefined;
+  const fanTop = fanGroup ? placed.find((p) => p.item.id === fanGroup[0].id) : undefined;
+  const dragging = useRef(false);
+  const openTimer = useRef(0);
+  const closeTimer = useRef(0);
+  useEffect(
+    () => () => {
+      window.clearTimeout(openTimer.current);
+      window.clearTimeout(closeTimer.current);
+    },
+    []
+  );
+  const leaveFan = useCallback(() => {
+    window.clearTimeout(openTimer.current);
+    window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => {
+      if (!dragging.current) setFan((f) => (f && !f.pinned ? null : f));
+    }, 220);
+  }, []);
+  // Pointing at a pile spreads it out; it folds again once the pointer has left it and its fan.
+  const hoverPile = useCallback(
+    (id: string, on: boolean) => {
+      window.clearTimeout(openTimer.current);
+      if (!on) return leaveFan();
+      if (dragging.current) return;
+      window.clearTimeout(closeTimer.current);
+      openTimer.current = window.setTimeout(() => setFan((f) => (f?.pinned || f?.id === id ? f : { id, pinned: false })), 140);
+    },
+    [leaveFan]
+  );
+  const enterFan = useCallback(() => window.clearTimeout(closeTimer.current), []);
+  const closeFan = useCallback(() => {
+    setFan(null);
+    setNaming(null);
+  }, []);
+  const pinFan = useCallback((id: string) => {
+    window.clearTimeout(closeTimer.current);
+    setFan({ id, pinned: true });
+  }, []);
+
+  /** Where a pile sits: its top card's place on the page, and its side. */
+  const placeOf = useCallback(
+    (top: DeskItem): DeskPin | null => {
+      const p = placed.find((x) => x.item.id === top.id);
+      const location = top.pin?.bookId === book.id ? top.pin.location : top.source?.location;
+      return p && location ? { bookId: book.id, location, side: p.side } : null;
+    },
+    [placed, book.id]
+  );
+  const applyUndoable = useCallback(
+    async (patches: ItemPatch[], message: string) => {
+      if (!patches.length) return;
+      const before = data.items.filter((i) => patches.some((p) => p.id === i.id));
+      await patchItems(patches);
+      onToast(message, () => patchItems(undoPatches(before, patches)));
+    },
+    [data.items, onToast]
+  );
+  /** Deletes cards (whole piles or one card of a pile); the rest of a pile closes up, and a pile of one dissolves. */
+  const deleteCards = useCallback(
+    async (gone: DeskItem[]) => {
+      if (!gone.length) return;
+      const ids = new Set(gone.map((i) => i.id));
+      const rest: ItemPatch[][] = [];
+      for (const group of piles.values()) {
+        let left = group;
+        for (const m of group.filter((x) => ids.has(x.id))) {
+          rest.push(planUnpile(left, m.id).filter((p) => !ids.has(p.id)));
+          left = left.filter((x) => x.id !== m.id);
+        }
+      }
+      const restPatches = mergePatches(...rest);
+      const before = data.items.filter((i) => restPatches.some((p) => p.id === i.id));
+      const desks = data.desks.filter((d) => gone.some((i) => i.deskId === d.id));
+      await patchItems(restPatches);
+      for (const item of gone) await deleteItem(item.id);
+      setSel(new Set());
+      onToast(gone.length === 1 ? `Deleted “${shortLabel(gone[0])}”` : `Deleted ${gone.length} cards`, async () => {
+        await restoreItems(gone, desks);
+        await patchItems(undoPatches(before, restPatches));
+      });
+    },
+    [piles, data.items, data.desks, onToast]
+  );
+  // P: the chosen cards and piles become one pile, the highest on the page on top.
+  const pileSelection = useCallback(() => {
+    const tops = [...sel].map((id) => data.items.find((i) => i.id === id)).filter((i): i is DeskItem => !!i);
+    if (tops.length < 2) return onToast('Choose two or more cards first: drag over empty margin, or Shift-click');
+    const at = (i: DeskItem) => layerRef.current?.querySelector(`.sd-margins > [data-gloss="${i.id}"]`)?.getBoundingClientRect();
+    tops.sort((a, b) => (at(a)?.top ?? 0) - (at(b)?.top ?? 0) || (at(a)?.left ?? 0) - (at(b)?.left ?? 0));
+    const groups = tops.map((t) => groupOf(t, piles));
+    setSel(new Set());
+    void applyUndoable(planPileMany(groups, placeOf(tops[0])), `Piled ${groups.flat().length} cards under “${shortLabel(tops[0])}”`);
+  }, [sel, data.items, piles, placeOf, applyUndoable, onToast]);
+  const namePile = useCallback(
+    async (group: DeskItem[], name: string, color: string | undefined) => {
+      setNaming(null);
+      await patchItems(planName(group, name, color));
+      onToast(name.trim() ? `Pile named “${name.trim()}”` : 'Pile name cleared');
+    },
+    [onToast]
+  );
+
+  // What the pointer and key handlers read; they run outside React's render.
+  const latest = useRef({ piles, placed, sides, fan, sel, items: data.items, mode });
+  latest.current = { piles, placed, sides, fan, sel, items: data.items, mode };
+
+  /** The margin a drop lands in; over the text column, the nearer one. */
+  const sideAt = (x: number): Side | null => {
+    const { sides: s, mode: m } = latest.current;
+    const left = s?.left && (m === 'both' || m === 'left') ? s.left : null;
+    const right = s?.right && (m === 'both' || m === 'right') ? s.right : null;
+    if (!left) return right ? 'right' : null;
+    if (!right) return 'left';
+    if (x <= left.to + GUTTER) return 'left';
+    if (x >= right.from - GUTTER) return 'right';
+    return x - left.to < right.from - x ? 'left' : 'right';
+  };
+
+  // --- dragging cards: rest on another card ~300ms to pile, drop sooner to move, drag out of a fan to take off ---
+  interface Drag {
+    kind: 'group' | 'member';
+    group: DeskItem[];
+    item: DeskItem;
+    el: HTMLElement;
+    ghost: HTMLElement;
+    dy: number;
+    start: { x: number; y: number };
+    target: DeskItem[] | null;
+    targetEl: HTMLElement | null;
+    armed: boolean;
+    timer: number;
+  }
+  const lastClick = useRef({ id: '', t: 0 });
+
+  function beginDrag(src: Pick<Drag, 'kind' | 'group' | 'item' | 'el'>, start: { x: number; y: number }): Drag {
+    const rect = src.el.getBoundingClientRect();
+    const ghost = src.el.cloneNode(true) as HTMLElement;
+    // The copy keeps what was typed (a textarea's value is not copied).
+    const from = src.el.querySelectorAll('textarea');
+    ghost.querySelectorAll('textarea').forEach((t, i) => (t.value = from[i]?.value ?? ''));
+    ghost.querySelectorAll('[data-gloss], [data-fan]').forEach((n) => (n.removeAttribute('data-gloss'), n.removeAttribute('data-fan')));
+    ghost.removeAttribute('data-gloss');
+    ghost.removeAttribute('data-fan');
+    ghost.classList.add('sd-ghost');
+    Object.assign(ghost.style, { left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px` });
+    document.body.appendChild(ghost);
+    src.el.classList.add('sd-dragging');
+    document.body.classList.add('sd-dragging-card');
+    dragging.current = true;
+    window.clearTimeout(openTimer.current);
+    if (src.kind === 'group' && src.group.length > 1 && latest.current.fan?.id === src.group[0].pile?.id) closeFan();
+    return { ...src, ghost, dy: start.y - rect.top, start, target: null, targetEl: null, armed: false, timer: 0 };
+  }
+
+  function dragMove(d: Drag, ev: PointerEvent) {
+    d.ghost.style.transform = `translate(${ev.clientX - d.start.x}px, ${ev.clientY - d.start.y}px) rotate(-1.5deg)`;
+    const { items, piles: ps } = latest.current;
+    const hit = document.elementFromPoint(ev.clientX, ev.clientY) as HTMLElement | null;
+    const fanEl = hit?.closest<HTMLElement>('.sd-fan') ?? null;
+    const glossEl = hit?.closest<HTMLElement>('[data-gloss]') ?? null;
+    let group: DeskItem[] | null = null;
+    let el: HTMLElement | null = null;
+    if (fanEl) {
+      group = ps.get(fanEl.dataset.fan ?? '') ?? null;
+      el = fanEl;
+    } else if (glossEl) {
+      const it = items.find((i) => i.id === glossEl.dataset.gloss);
+      group = it ? groupOf(it, ps) : null;
+      el = glossEl;
+    }
+    // Never onto itself, its own pile or its own fan.
+    if (group && group.some((m) => d.group.some((g) => g.id === m.id))) group = null;
+    if ((group?.[0].id ?? null) === (d.target?.[0].id ?? null)) return;
+    window.clearTimeout(d.timer);
+    d.targetEl?.classList.remove('sd-pile-pending', 'sd-pile-armed');
+    d.target = group;
+    d.targetEl = group ? el : null;
+    d.armed = false;
+    if (!group || !el) return;
+    el.classList.add('sd-pile-pending');
+    d.timer = window.setTimeout(() => {
+      d.armed = true;
+      el.classList.remove('sd-pile-pending');
+      el.classList.add('sd-pile-armed');
+    }, HOLD_MS);
+  }
+
+  function endDrag(d: Drag) {
+    window.clearTimeout(d.timer);
+    d.ghost.remove();
+    d.el.classList.remove('sd-dragging');
+    d.targetEl?.classList.remove('sd-pile-pending', 'sd-pile-armed');
+    document.body.classList.remove('sd-dragging-card');
+    dragging.current = false;
+  }
+
+  function drop(d: Drag, ev: PointerEvent) {
+    endDrag(d);
+    const label = `“${shortLabel(d.item)}”`;
+    if (d.armed && d.target) {
+      const place = placeOf(d.target[0]);
+      const under = `“${shortLabel(d.target[0])}”`;
+      if (d.kind === 'group') {
+        const what = d.group.length > 1 ? `${d.group.length} cards` : label;
+        return void applyUndoable(planPile(d.target, d.group, place), `Piled ${what} under ${under} · ${d.target.length + d.group.length} in the pile`);
+      }
+      const dissolves = d.group.length === 2;
+      if (dissolves) closeFan();
+      return void applyUndoable(
+        mergePatches(planUnpile(d.group, d.item.id), planPile(d.target, [d.item], place)),
+        `Moved ${label} to the bottom of the pile under ${under}${dissolves ? ' · the pile it left dissolves' : ''}`
+      );
+    }
+    const side = sideAt(ev.clientX);
+    if (!side) return;
+    const y = ev.clientY - d.dy + 16;
+    if (d.kind === 'member') {
+      const f = layerRef.current?.querySelector('.sd-fan')?.getBoundingClientRect();
+      if (f && ev.clientX >= f.left && ev.clientX <= f.right && ev.clientY >= f.top && ev.clientY <= f.bottom) return;
+      const location = cleanLocationNearY(y, 36) ?? placeOf(d.group[0])?.location;
+      if (!location) return;
+      const dissolves = d.group.length === 2;
+      if (dissolves) closeFan();
+      return void applyUndoable(planUnpile(d.group, d.item.id, { bookId: book.id, location, side }), `Took ${label} off the pile${dissolves ? ' · a pile of one dissolves' : ''}`);
+    }
+    // A move: to the other margin, and a pile or a plain margin note to the line beside the drop. A card tied to
+    // words (a quote, a tied note) keeps its words and only changes side.
+    const free = d.group.length > 1 || (d.item.fromMargin && !d.item.text);
+    const location = (free ? cleanLocationNearY(y, 36) : null) ?? placeOf(d.group[0])?.location;
+    if (!location) return;
+    void patchItems(d.group.map((m) => ({ id: m.id, patch: { pin: { bookId: book.id, location, side } } })));
+  }
+
+  // A press on a card, a pile, or inside a fan: a drag once it moves, a click otherwise.
+  function onLayerPointerDown(e: React.PointerEvent) {
+    if (e.button !== 0 || e.pointerType === 'touch') return;
+    const t = e.target as HTMLElement;
+    if (t.closest('button, input, .sd-frame, .sd-fan__namer, .sd-mset')) return;
+    const ta = t.closest('textarea');
+    if (ta && document.activeElement === ta) return; // typing: text selects as usual
+    const { items, piles: ps, fan: f } = latest.current;
+    const fanEl = t.closest<HTMLElement>('.sd-fan');
+    const glossEl = t.closest<HTMLElement>('[data-gloss]');
+    const inFan = fanEl ? ps.get(fanEl.dataset.fan ?? '') : undefined;
+    let src: Pick<Drag, 'kind' | 'group' | 'item' | 'el'> | null = null;
+    if (fanEl && inFan && t.closest('.sd-fan__grip')) src = { kind: 'group', group: inFan, item: inFan[0], el: fanEl };
+    else if (glossEl) {
+      const item = items.find((i) => i.id === glossEl.dataset.gloss);
+      if (!item) return;
+      src = fanEl && inFan ? { kind: 'member', group: inFan, item, el: glossEl } : { kind: 'group', group: groupOf(item, ps), item, el: glossEl };
+    }
+    if (!src && !fanEl) return;
+    // Focus and text selection wait until it is clear this is not a drag.
+    if (src) e.preventDefault();
+    const start = { x: e.clientX, y: e.clientY };
+    let d: Drag | null = null;
+    const move = (ev: PointerEvent) => {
+      if (!d) {
+        if (!src || Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 5) return;
+        d = beginDrag(src, start);
+      }
+      dragMove(d, ev);
+    };
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      if (d) return ev.type === 'pointercancel' ? endDrag(d) : drop(d, ev);
+      // A click.
+      if (fanEl) {
+        if (!f?.pinned && fanEl.dataset.fan) pinFan(fanEl.dataset.fan);
+        (ta as HTMLTextAreaElement | null)?.focus();
+        return;
+      }
+      if (!src) return;
+      if (ev.shiftKey) {
+        const id = src.group[0].id;
+        setSel((s) => {
+          const next = new Set(s);
+          if (!next.delete(id)) next.add(id);
+          return next;
+        });
+        return;
+      }
+      const pileId = src.group.length > 1 ? src.group[0].pile?.id : undefined;
+      if (ta) {
+        (ta as HTMLTextAreaElement).focus();
+        return;
+      }
+      if (!pileId) return;
+      const now = performance.now();
+      const twice = lastClick.current.id === pileId && now - lastClick.current.t < 400;
+      lastClick.current = { id: pileId, t: now };
+      if (twice) {
+        pinFan(pileId);
+        setNaming(pileId);
+      } else pinFan(pileId);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  }
+
+  // Drag over empty margin space: the lasso. Shift adds to what is chosen.
+  const lassoed = useRef(false);
+  function startLasso(e: React.PointerEvent) {
+    if (e.button !== 0 || e.pointerType === 'touch' || e.target !== e.currentTarget) return;
+    e.preventDefault();
+    const start = { x: e.clientX, y: e.clientY };
+    const keep = e.shiftKey ? new Set(latest.current.sel) : new Set<string>();
+    lassoed.current = false;
+    const move = (ev: PointerEvent) => {
+      if (!lassoed.current && Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 6) return;
+      lassoed.current = true;
+      const l = Math.min(start.x, ev.clientX), t = Math.min(start.y, ev.clientY), r = Math.max(start.x, ev.clientX), b = Math.max(start.y, ev.clientY);
+      setLassoBox({ left: l, top: t, width: r - l, height: b - t });
+      const next = new Set(keep);
+      layerRef.current?.querySelectorAll<HTMLElement>('.sd-margins > [data-gloss]').forEach((el) => {
+        const q = el.getBoundingClientRect();
+        if (q.left < r && q.right > l && q.top < b && q.bottom > t) next.add(el.dataset.gloss!);
+      });
+      setSel(next);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      setLassoBox(null);
+      // A plain click on empty margin lets go of what was chosen.
+      if (!lassoed.current && !e.shiftKey) setSel((s) => (s.size ? new Set() : s));
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  }
+
+  // P piles the chosen cards, Delete deletes them, Esc closes a fan or lets go of the choice.
+  const keys = useRef({ pileSelection, deleteCards, closeFan });
+  keys.current = { pileSelection, deleteCards, closeFan };
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      const { fan: f, sel: s, items, piles: ps } = latest.current;
+      if (e.key === 'Escape') {
+        if (f) {
+          e.stopPropagation();
+          e.preventDefault();
+          keys.current.closeFan();
+        } else if (s.size) {
+          e.stopPropagation();
+          setSel(new Set());
+        }
+        return;
+      }
+      if (!s.size || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        keys.current.pileSelection();
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        const gone = [...s].flatMap((id) => {
+          const it = items.find((i) => i.id === id);
+          return it ? groupOf(it, ps) : [];
+        });
+        void keys.current.deleteCards(gone);
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, []);
+
+  // A click outside a fan kept open closes it.
+  useEffect(() => {
+    if (!fan?.pinned) return;
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t?.closest('.sd-fan, .sd-gloss--pile, .sd-toast, .sd-ring')) return;
+      closeFan();
+    };
+    document.addEventListener('pointerdown', onDown, true);
+    return () => document.removeEventListener('pointerdown', onDown, true);
+  }, [fan?.pinned, closeFan]);
 
   // Pointing at the words an item belongs to lights its card (and the line to it), as hovering the card lights the words.
   const fromText = useRef(false);
@@ -218,11 +620,12 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
     const bottoms: Record<Side, number> = { left: geo.stage.top + 8, right: geo.stage.top + 8 };
     const paths: string[] = [];
     for (const p of placed) {
-      const el = layer.querySelector<HTMLElement>(`[data-gloss="${p.item.id}"]`);
+      const el = layer.querySelector<HTMLElement>(`.sd-margins > [data-gloss="${p.item.id}"]`);
       if (!el) continue;
-      const top = Math.max(p.y - 16, bottoms[p.side]);
+      const tabbed = el.classList.contains('sd-gloss--tabbed') ? 22 : 0;
+      const top = Math.max(p.y - 16, bottoms[p.side] + tabbed);
       el.style.top = `${top}px`;
-      bottoms[p.side] = top + el.offsetHeight + 10;
+      bottoms[p.side] = top + el.offsetHeight + 10 + (el.classList.contains('sd-gloss--pile') ? 10 : 0);
       const sx = p.side === 'right' ? geo.column.right + 6 : geo.column.left - 6;
       const r = el.getBoundingClientRect();
       const gx = p.side === 'right' ? r.left + 1 : r.right - 1;
@@ -232,6 +635,15 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
       paths.push(`<g class="${cls}"><path d="M${sx} ${p.y} C${mx} ${p.y} ${mx} ${gy} ${gx} ${gy}"/><circle cx="${sx}" cy="${p.y}" r="2.4"/></g>`);
     }
     svg.innerHTML = paths.join('');
+    // The fan opens where its pile is, moved up as far as needed to stay on screen (scrolling inside if taller).
+    const fanEl = layer.querySelector<HTMLElement>('.sd-fan');
+    if (fanEl && fanGroup) {
+      const anchor = layer.querySelector<HTMLElement>(`.sd-margins > [data-gloss="${fanGroup[0].id}"]`);
+      const room = window.innerHeight - 24;
+      fanEl.style.maxHeight = `${room}px`;
+      const want = (anchor ? parseFloat(anchor.style.top) : geo.stage.top) - 40;
+      fanEl.style.top = `${Math.max(12, Math.min(want, window.innerHeight - 12 - fanEl.offsetHeight))}px`;
+    }
   });
 
   // --- double-tap to write ---
@@ -267,7 +679,7 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
   const hovered = placed.find((p) => p.item.id === hoverId || p.item.id === focusId);
 
   return (
-    <div ref={layerRef} className="sd-margins" aria-label="Margins">
+    <div ref={layerRef} className="sd-margins" aria-label="Margins" onPointerDown={onLayerPointerDown}>
       <svg ref={svgRef} className="sd-margins__lines" aria-hidden="true" />
       {hovered?.rects.map((r, i) => (
         <div key={i} className="sd-margins__mark" style={{ left: r.left - 2, top: r.top - 1, width: r.width + 4, height: r.height + 2 }} />
@@ -281,11 +693,19 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
             data-side={side}
             style={{ left: s.from, width: s.to - s.from, top: geo.stage.top, height: geo.stage.height }}
             onContextMenu={(e) => e.target === e.currentTarget && areaRing.onContextMenu(e)}
-            onPointerDown={areaRing.onPointerDown}
+            onPointerDown={(e) => {
+              areaRing.onPointerDown(e);
+              startLasso(e);
+            }}
             onPointerMove={areaRing.onPointerMove}
             onPointerUp={(e) => {
               areaRing.onPointerUp();
               if (e.target !== e.currentTarget) return;
+              if (lassoed.current) {
+                lassoed.current = false;
+                lastTap.current = null;
+                return;
+              }
               const now = Date.now();
               const last = lastTap.current;
               if (last && last.side === side && now - last.t < 420 && Math.abs(last.y - e.clientY) < 24) {
@@ -313,6 +733,8 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
       })}
       {placed.map((p) => {
         const s = sides[p.side]!;
+        const group = groupOf(p.item, piles);
+        const pileId = group.length > 1 ? p.item.pile!.id : null;
         return (
           <Gloss
             key={p.item.id}
@@ -325,13 +747,74 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
             toInbox={prefs.studyDeskMarginsToInbox}
             autoFocus={p.item.id === focusId}
             onFocused={(on) => setFocusId(on ? p.item.id : null)}
-            onHover={(on) => setHoverId(on ? p.item.id : null)}
+            onHover={(on) => {
+              setHoverId(on ? p.item.id : null);
+              if (pileId) hoverPile(pileId, on);
+            }}
             onToast={onToast}
             onOpenDocument={onOpenDocument}
             onRing={setRing}
+            selected={sel.has(p.item.id)}
+            showSource={!!pileId}
+            pile={
+              pileId
+                ? { count: group.length, name: p.item.pile?.name, color: p.item.pile?.color, others: fromOtherBooks(group, book.id), onOpen: () => pinFan(pileId) }
+                : undefined
+            }
+            fanned={!!pileId && fan?.id === pileId}
           />
         );
       })}
+      {fan && fanGroup && fanTop && (
+        <PileFan
+          key={fan.id}
+          pileId={fan.id}
+          group={fanGroup}
+          left={sides[fanTop.side]!.from - 8}
+          width={sides[fanTop.side]!.to - sides[fanTop.side]!.from + 16}
+          pinned={fan.pinned}
+          naming={naming === fan.id}
+          onEnter={enterFan}
+          onLeave={leaveFan}
+          onClose={closeFan}
+          onStartNaming={() => (pinFan(fan.id), setNaming(fan.id))}
+          onCancelNaming={() => setNaming(null)}
+          onName={(name, color) => void namePile(fanGroup, name, color)}
+          renderCard={(m) => (
+            <Gloss
+              key={m.id}
+              item={m}
+              side={fanTop.side}
+              left={0}
+              width={0}
+              inline
+              showSource
+              book={book}
+              docMode={prefs.studyDeskMarginsInDocument}
+              toInbox={prefs.studyDeskMarginsToInbox}
+              autoFocus={false}
+              onFocused={() => {}}
+              onHover={(on) => setHoverId(on ? m.id : null)}
+              onToast={onToast}
+              onOpenDocument={onOpenDocument}
+              onRing={setRing}
+              onRemove={() => void deleteCards([m])}
+            />
+          )}
+        />
+      )}
+      {lassoBox && <div className="sd-lasso" style={lassoBox} aria-hidden="true" />}
+      {sel.size > 0 && (
+        <div className="sd-selbar" role="status" style={{ top: geo.stage.top - 30, left: geo.column.left + geo.column.width / 2 }}>
+          {sel.size > 1 ? (
+            <>
+              {sel.size} chosen · <kbd>P</kbd> piles them · <kbd>Del</kbd> deletes · <kbd>Esc</kbd> lets go
+            </>
+          ) : (
+            <>1 chosen · Shift-click or drag over the margin to add more</>
+          )}
+        </div>
+      )}
       {sides.right && (mode === 'both' || mode === 'right') ? (
         <button type="button" className="sd-margins__set" style={{ left: sides.right.to - 120, top: geo.stage.top - 26 }} onClick={() => setSettingsOpen((v) => !v)}>
           Margin settings
@@ -414,10 +897,33 @@ interface GlossProps {
   onTie?(): void;
   /** Opens the right-click ring for this card (its own actions). */
   onRing?(ring: RingState): void;
+  /** The top card of a pile: drawn with the cards beneath it, a count badge and the pile's tab. */
+  pile?: PileChrome;
+  /** In the fan of a pile: laid out in its column instead of beside its line. */
+  inline?: boolean;
+  /** A source chip when the item comes from another book (cards in piles). */
+  showSource?: boolean;
+  /** A × to delete the card (in a pile's fan). */
+  onRemove?(): void;
+  /** Chosen with the lasso or Shift-click. */
+  selected?: boolean;
+  /** Its pile is fanned out: the fan shows it instead. */
+  fanned?: boolean;
+}
+
+/** What the top card of a pile shows of the pile. */
+export interface PileChrome {
+  count: number;
+  name?: string;
+  color?: string;
+  /** Cards from other books. */
+  others: number;
+  /** Click or Space on the badge: keep the fan open. */
+  onOpen(): void;
 }
 
 /** One card in a margin; also used beside PDF pages (PdfMargin). */
-export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFocus, onFocused, onHover, onToast, onOpenDocument, canTie = true, onTie, onRing }: GlossProps) {
+export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFocus, onFocused, onHover, onToast, onOpenDocument, canTie = true, onTie, onRing, pile, inline, showSource, onRemove, selected, fanned }: GlossProps) {
   const [body, setBody] = useState(item.body ?? '');
   const [focused, setFocused] = useState(false);
   const [preview, setPreview] = useState<'hover' | 'pinned' | null>(null);
@@ -566,14 +1072,20 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
   };
   const shownInDoc = shownInDocument(item, docMode);
   const plain = item.fromMargin && item.type === 'line';
-  const kind = item.fromMargin ? (plain ? null : TYPE_LABEL[item.type]) : TYPE_LABEL[item.type];
+  // In piles every card names its kind, plain notes too.
+  const kind = item.fromMargin ? (plain ? (pile || inline ? 'Note' : null) : TYPE_LABEL[item.type]) : TYPE_LABEL[item.type];
+  const elsewhere = showSource && item.source && item.source.bookId !== book.id ? item.source.bookTitle || 'another book' : null;
 
   return (
     <div
       ref={boxRef}
       data-gloss={item.id}
-      className={'sd-gloss sd-gloss--' + side + (item.fromMargin ? ' sd-gloss--m sd-gloss--' + item.type : '') + (focused ? ' sd-gloss--focus' : '') + (item.fromMargin && !shownInDoc ? ' sd-gloss--out' : '')}
-      style={{ left, width }}
+      className={
+        'sd-gloss sd-gloss--' + side + (item.fromMargin ? ' sd-gloss--m sd-gloss--' + item.type : '') + (focused ? ' sd-gloss--focus' : '') + (item.fromMargin && !shownInDoc ? ' sd-gloss--out' : '') +
+        (pile ? ' sd-gloss--pile' : '') + (pile?.name || pile?.color ? ' sd-gloss--tabbed' : '') + (inline ? ' sd-gloss--inline' : '') + (selected ? ' sd-gloss--sel' : '') + (fanned ? ' sd-gloss--fanned' : '')
+      }
+      style={inline ? undefined : { left, width, ...(pile?.color ? ({ '--tab': pile.color } as React.CSSProperties) : {}) }}
+      aria-label={pile ? `Pile${pile.name ? ` ${pile.name}` : ''}, ${pile.count} cards` : undefined}
       onContextMenu={(e) => outsideText(e) && cardRing.onContextMenu(e)}
       onPointerDown={(e) => outsideText(e) && cardRing.onPointerDown(e)}
       onPointerMove={cardRing.onPointerMove}
@@ -603,9 +1115,36 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
         void leave();
       }}
     >
+      {pile && (
+        <>
+          <span className="sd-pile__under sd-pile__under--2" aria-hidden="true" />
+          <span className="sd-pile__under sd-pile__under--1" aria-hidden="true" />
+          {(pile.name || pile.color) && <span className="sd-pile__tab">{pile.name}</span>}
+          <button
+            type="button"
+            className="sd-pile__count"
+            title={`${pile.count} cards. Click or Space keeps them spread out`}
+            aria-label={`Open the pile of ${pile.count}`}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={pile.onOpen}
+          >
+            {pile.count}
+          </button>
+        </>
+      )}
+      {onRemove && (
+        <button type="button" className="sd-gloss__x" aria-label="Delete this card" title="Delete (Undo in the message)" onMouseDown={(e) => e.preventDefault()} onClick={onRemove}>
+          ×
+        </button>
+      )}
       {kind && (
         <div className="sd-gloss__k">
           {kind}
+          {elsewhere && (
+            <b className="sd-gloss__src" title={`From ${elsewhere}`} dir="auto">
+              ↗ {elsewhere}
+            </b>
+          )}
           {!item.fromMargin && item.source?.chapterLabel && <span>{item.source.chapterLabel}</span>}
           {item.type === 'card' && <span className="sd-gloss__due">Review · due today</span>}
         </div>
@@ -715,6 +1254,11 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
           </button>
         )}
       </div>
+      {pile && pile.others > 0 && (
+        <div className="sd-pile__src">
+          {pile.others} of {pile.count} from other books
+        </div>
+      )}
       {preview && img && <QuickLook src={img} side={side} anchor={boxRef.current} pinned={preview === 'pinned'} caption={item.text || item.source?.bookTitle || 'Screenshot'} onClose={() => setPreview(null)} />}
     </div>
   );

@@ -270,6 +270,27 @@
   box-shadow: var(--shadow);
   max-width: calc(100vw - 24px);
 }
+/* With Undo: room for the button (piles made, cards taken off a pile or deleted). */
+.sd-toast--undo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 6px 5px 16px;
+}
+.sd-toast button {
+  border: 1px solid color-mix(in srgb, var(--bg) 40%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--bg);
+  padding: 3px 10px;
+  font: 600 12.5px var(--font-ui);
+  cursor: pointer;
+}
+.sd-toast button kbd {
+  margin-left: 4px;
+  font: 500 10.5px var(--font-ui);
+  opacity: 0.7;
+}
 
 /* Pull in (Alt+U). Above the desk document when opened from it. */
 .sd-pull-layer {
