@@ -82,8 +82,9 @@ test('an existing install gets the starter books once, and removing one keeps it
   await page.goto('/');
   const card = page.locator('.book-card', { hasText: 'نَارَادَا' });
   await expect(card).toBeVisible({ timeout: 15000 });
-  await card.hover();
-  await card.getByRole('button', { name: /remove/i }).click();
+  // Remove lives in the book's details since the Library redesign.
+  await card.getByRole('button', { name: /^Details for/ }).click();
+  await page.getByRole('button', { name: /Remove from library/ }).click();
   await page.getByRole('button', { name: /^remove$/i }).click();
   await expect(card).toHaveCount(0);
   await page.reload();
