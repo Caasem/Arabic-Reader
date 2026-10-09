@@ -8,6 +8,7 @@ import { NoteHost } from '../noteCard';
 import { FlashHost } from '../flashCard';
 import { PicksExportHost } from '../picksExport';
 import { DeskHost } from '../studyDesk';
+import { AnnotateHost } from '../annotate';
 import { useReaderView } from '../quietReader/readerView';
 import { saveCleanFocus } from './cleanFocus';
 import { usePdfView } from '../pdf/pages/pdfView';
@@ -46,6 +47,7 @@ export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: 
       <FlashHost book={props.book} />
       <PicksExportHost book={props.book} />
       <DeskHost book={props.book} onOpenBook={props.onOpenBookAt} />
+      <AnnotateHost book={props.book} />
     </>
   );
 

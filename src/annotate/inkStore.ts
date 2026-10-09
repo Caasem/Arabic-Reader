@@ -76,13 +76,12 @@ type TableName = 'strokes' | 'sketches';
 
 export const readAll = (table: TableName): Promise<Array<InkStroke | Sketch>> => inkDb()[table].toArray();
 
-export async function bulkGet(table: TableName, ids: string[]): Promise<Array<InkStroke | Sketch | undefined>> {
-  return table === 'strokes' ? inkDb().strokes.bulkGet(ids) : inkDb().sketches.bulkGet(ids);
+export async function bulkGet(table: TableName, ids: string[]): Promise<(Record<string, unknown> | undefined)[]> {
+  return (await inkDb().table(table).bulkGet(ids)) as (Record<string, unknown> | undefined)[];
 }
 
-export async function bulkPut(table: TableName, rows: Array<InkStroke | Sketch>): Promise<void> {
+export async function bulkPut(table: TableName, rows: Record<string, unknown>[]): Promise<void> {
   if (!rows.length) return;
-  if (table === 'strokes') await inkDb().strokes.bulkPut(rows as InkStroke[]);
-  else await inkDb().sketches.bulkPut(rows as Sketch[]);
+  await inkDb().table(table).bulkPut(rows);
   changed();
 }
