@@ -390,7 +390,7 @@ test.describe('capture trip', () => {
   test('captures in another book and comes back with it in the margin', async ({ page }) => {
     await twoBooks(page);
     const bar = await goToScan(page);
-    await bar.getByRole('button', { name: /^Capture/ }).click();
+    await bar.getByRole('button', { name: 'Capture Alt X', exact: true }).click();
     await expect(bar).toHaveCount(0);
     const r = (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!;
     await page.mouse.move(r.x + r.width * 0.2, r.y + 60);
@@ -418,7 +418,7 @@ test.describe('capture trip', () => {
     await pull.locator('.dsearch__entry', { hasText: 'scan' }).click();
     await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
     const bar = page.getByRole('region', { name: 'Capture trip' });
-    await bar.getByRole('button', { name: /^Capture/ }).click();
+    await bar.getByRole('button', { name: 'Capture Alt X', exact: true }).click();
     const r = (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!;
     await page.mouse.move(r.x + r.width * 0.2, r.y + 60);
     await page.mouse.down();
@@ -429,6 +429,35 @@ test.describe('capture trip', () => {
     await expect(doc).toBeVisible({ timeout: 15000 });
     await expect(doc.locator('.desk-embed.sd-emb--flash')).toContainText('Page 1');
     await expect(page.locator('.sd-toast')).toContainText('filed in the inbox');
+  });
+
+  test('Capture and stay files each capture and keeps the trip; Done goes back, and Pull in offers the book again', async ({ page }) => {
+    await twoBooks(page);
+    const bar = await goToScan(page);
+    const r = (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!;
+    for (const [i, y] of [60, 260].entries()) {
+      await page.keyboard.press('Shift+Alt+x');
+      await expect(bar).toHaveCount(0);
+      await page.mouse.move(r.x + r.width * 0.2, r.y + y);
+      await page.mouse.down();
+      await page.mouse.move(r.x + r.width * 0.6, r.y + y + 90, { steps: 6 });
+      await page.mouse.up();
+      await page.getByRole('dialog', { name: 'Capture' }).getByRole('button', { name: /^Send to/ }).click();
+      await expect(bar).toBeVisible();
+      await expect(bar).toContainText(`${i + 1} filed`);
+    }
+    await bar.getByRole('button', { name: /^Done, go back/ }).click();
+    await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
+    await expect(page.locator('.sd-toast')).toContainText('Captured 2 things from');
+    await expect(page.locator('.sd-margins .sd-gloss', { hasText: 'Page 1' })).toHaveCount(2);
+
+    // Alt+U then Enter: the same trip again.
+    await page.keyboard.press('Alt+u');
+    const pull = page.getByRole('dialog', { name: 'Pull in' }).or(page.getByRole('complementary', { name: 'Pull in' }));
+    await expect(pull.locator('[role=option][aria-selected=true]')).toContainText('Back to');
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+    await expect(page.getByRole('region', { name: 'Capture trip' })).toContainText('right margin');
   });
 
   test('Esc goes back without capturing', async ({ page }) => {
