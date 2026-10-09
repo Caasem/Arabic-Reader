@@ -152,6 +152,12 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
     svg.innerHTML = paths.join('');
   });
 
+  // The card of the box (or card) pointed at is lit.
+  useEffect(() => {
+    layerRef.current?.querySelectorAll('.sd-gloss--lit').forEach((el) => el.classList.remove('sd-gloss--lit'));
+    if (hover) layerRef.current?.querySelector(`[data-gloss="${hover}"]`)?.classList.add('sd-gloss--lit');
+  });
+
   // A gloss started from the page (PdfSelect): focused once its card shows, then forgotten.
   useEffect(() => {
     if (focus && placed.some((p) => p.mark.item.id === focus)) {

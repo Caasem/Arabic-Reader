@@ -122,6 +122,8 @@ export function Dock({
           </button>
         </DockSlot>
       ))}
+      {/* Other features add their own buttons here (the study desk's Margins / Document switch). */}
+      <span id="qr-dock-extra" className="qr-dock__extra" />
     </nav>
   );
 }

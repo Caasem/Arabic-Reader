@@ -4,7 +4,7 @@ import type { BookMeta } from '../types';
 import { deleteItem, updateItem } from './deskStore';
 import { MarginRing, type DeskCommands, type RingState } from './MarginRing';
 import { formatPdfLocation, pdfRegionInBox } from './pageGeometry';
-import { pdfDeskState, setPdfDeskFocus, setPdfDeskTie, usePdfDesk } from './pdfDesk';
+import { pdfDeskState, setPdfDeskFocus, setPdfDeskHover, setPdfDeskTie, usePdfDesk } from './pdfDesk';
 import { setSnapEnabled, snapDrag, snapEnabled, type FracBox, type Snapped } from './pdfSnap';
 import { capture, looksArabic, type DeskData } from './useDesk';
 
@@ -50,6 +50,33 @@ export function PdfSelect({ book, data, active, commands, onToast }: { book: Boo
   const [busy, setBusy] = useState(false);
   const [, setTick] = useState(0);
   const run = useRef(0);
+  // Pointing at a highlighted box lights its card in the margin (the boxes let the pointer through to the page).
+  useEffect(() => {
+    let lit = false;
+    const onMove = (e: MouseEvent) => {
+      if (!(e.target as Element | null)?.closest?.('.pdfp-page')) {
+        if (lit) {
+          lit = false;
+          setPdfDeskHover(null);
+        }
+        return;
+      }
+      const box = Array.from(document.querySelectorAll<HTMLElement>('.pdfp-page .sd-pdfbox')).find((b) => {
+        const r = b.getBoundingClientRect();
+        return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      });
+      if (box?.dataset.item) {
+        lit = true;
+        setPdfDeskHover(box.dataset.item);
+      } else if (lit) {
+        lit = false;
+        setPdfDeskHover(null);
+      }
+    };
+    document.addEventListener('mousemove', onMove, { passive: true });
+    return () => document.removeEventListener('mousemove', onMove);
+  }, []);
+
   /** Right-click on a highlighted box: the ring for it (elsewhere on the page the browser's own menu stays). */
   const [ring, setRing] = useState<RingState | null>(null);
   useEffect(() => {
