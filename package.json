@@ -1,7 +1,7 @@
 {
   "name": "arabic-reader-app",
   "private": true,
-  "version": "0.65.0",
+  "version": "0.65.1",
   "license": "GPL-2.0",
   "type": "module",
   "main": "electron/main.cjs",
@@ -93,7 +93,8 @@
       {
         "provider": "github",
         "owner": "Caasem",
-        "repo": "Arabic-Reader"
+        "repo": "Arabic-Reader",
+        "releaseType": "release"
       }
     ],
     "nsis": {
