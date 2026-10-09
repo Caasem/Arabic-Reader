@@ -4,6 +4,13 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.65.0 — 2026-10-09
+
+- **The desktop app updates itself.** The installed Windows app checks GitHub Releases at launch and
+  every few hours, downloads a new version quietly and installs it when you next close the app.
+  Releases are built by pushing a `v<version>` tag (see `.github/workflows/release-desktop.yml`).
+  The portable build is no longer produced, since it cannot update itself.
+
 ## v0.62.1 — 2026-10-08
 
 - **A redesigned Library.** The book you are reading sits at the top with its chapter, progress and
