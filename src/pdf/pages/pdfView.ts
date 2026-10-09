@@ -15,6 +15,16 @@ export function loadPdfView(book: BookMeta): PdfView {
   return readString(viewKey(book.id)) === 'pages' ? 'pages' : 'text';
 }
 
+/** Remember which view a book opens in next (the Library's PDF / Text buttons use this before opening it). */
+export function rememberPdfView(bookId: string, view: PdfView): void {
+  writeString(viewKey(bookId), view);
+}
+
+/** A book added from a PDF whose text reflowed can be read either way; any other book has one view. */
+export function hasPdfChoice(book: BookMeta): boolean {
+  return book.pdf?.reflow === 'ok';
+}
+
 export function usePdfView(book: BookMeta): [PdfView, (view: PdfView) => void] {
   const [state, setState] = useState(() => ({ id: book.id, view: loadPdfView(book) }));
   const view = state.id === book.id ? state.view : loadPdfView(book);

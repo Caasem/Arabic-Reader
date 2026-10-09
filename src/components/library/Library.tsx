@@ -16,6 +16,7 @@ import { BrowseLibraryPanel } from '../../browseLibrary/BrowseLibraryPanel';
 import { formatOf, IMPORTABLE_EXTENSIONS } from '../../importFormats';
 import { highlightsMarkdown } from '../../dataExport/highlightsMd';
 import { saveFile } from '../../utils/saveFile';
+import { hasPdfChoice, rememberPdfView, type PdfView } from '../../pdf/pages/pdfView';
 import { BookCover } from './BookCover';
 import { BookDetails } from './BookDetails';
 import { ContinueReading } from './ContinueReading';
@@ -220,6 +221,12 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
       return;
     }
     onOpenBook(book, cfi);
+  }
+
+  /** A PDF book's own pages or its reflowed text: remembered for the book, then opened. */
+  function openBookAs(book: BookMeta, view: PdfView) {
+    rememberPdfView(book.id, view);
+    openBook(book);
   }
 
   function openHighlight(h: Highlight) {
@@ -651,7 +658,18 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
                       <span role="cell">{s?.highlights ?? 0}</span>
                       <span role="cell">{s?.words ?? 0}</span>
                       <span role="cell" className="lib-list__fmt">
-                        {book.format.toUpperCase()}
+                        {hasPdfChoice(book) && !missing ? (
+                          <span className="lib-open-as" role="group" aria-label={`Open ${book.title} as`}>
+                            <button type="button" className="lib-open-as__btn" onClick={() => openBookAs(book, 'pages')}>
+                              PDF
+                            </button>
+                            <button type="button" className="lib-open-as__btn" onClick={() => openBookAs(book, 'text')}>
+                              Text
+                            </button>
+                          </span>
+                        ) : (
+                          book.format.toUpperCase()
+                        )}
                       </span>
                       <span role="cell">
                         <button type="button" className="lib-icon-btn lib-icon-btn--quiet" aria-label={`Details for ${book.title}`} onClick={() => setDetailsId(book.id)}>
@@ -708,6 +726,16 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
                         </div>
                       )}
                       {missing ? <div className="book-card__missing">File not on this device</div> : <div className="book-card__meta">{meta}</div>}
+                      {hasPdfChoice(book) && !missing && (
+                        <span className="lib-open-as" role="group" aria-label={`Open ${book.title} as`}>
+                          <button type="button" className="lib-open-as__btn" onClick={() => openBookAs(book, 'pages')}>
+                            PDF
+                          </button>
+                          <button type="button" className="lib-open-as__btn" onClick={() => openBookAs(book, 'text')}>
+                            Text
+                          </button>
+                        </span>
+                      )}
                       {missing && (
                         <button className="btn btn--ghost book-card__add-file" onClick={() => askForFile(book)}>
                           Add file

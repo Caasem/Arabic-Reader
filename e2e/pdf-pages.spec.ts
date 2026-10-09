@@ -94,3 +94,27 @@ test('pdf.js data (decoders, fonts) ships with the app, so scanned books are not
     'cmaps/Adobe-Japan1-UCS2.bcmap': '200 ok',
   });
 });
+
+test('a PDF book opens from the Library as its pages or as text, and a scan offers only pages', async ({ page }) => {
+  await addPdf(page, 'reading.pdf', sampleArabicBookPdf());
+  const card = page.locator('.book-card', { hasText: 'كتاب القراءة' });
+  await expect(card).toHaveCount(1, { timeout: 30000 });
+  const choice = card.getByRole('group', { name: /Open .* as/ });
+  await expect(choice.getByRole('button')).toHaveText(['PDF', 'Text']);
+
+  await choice.getByRole('button', { name: 'PDF' }).click();
+  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 3', { timeout: 20000 });
+  await expect.poll(() => inkOf(page, 1), { timeout: 20000 }).toBeGreaterThan(0.001);
+
+  await page.locator('.app__main').getByRole('button', { name: 'Library' }).first().click();
+  await card.getByRole('group', { name: /Open .* as/ }).getByRole('button', { name: 'Text' }).click();
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 20000 });
+  await expect(page.locator('.pdfp-page')).toHaveCount(0);
+
+  // A scanned PDF has no text to switch to, so its card has no choice.
+  await page.locator('.app__main').getByRole('button', { name: 'Library' }).first().click();
+  await page.setInputFiles('.library__actions input[type=file]', { name: 'scan.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf([{ image: true }, { image: true }])) });
+  const scan = page.locator('.book-card', { hasText: 'scan' });
+  await expect(scan).toHaveCount(1, { timeout: 30000 });
+  await expect(scan.getByRole('group', { name: /Open .* as/ })).toHaveCount(0);
+});
