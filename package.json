@@ -93,7 +93,8 @@
       {
         "provider": "github",
         "owner": "Caasem",
-        "repo": "Arabic-Reader"
+        "repo": "Arabic-Reader",
+        "releaseType": "release"
       }
     ],
     "nsis": {

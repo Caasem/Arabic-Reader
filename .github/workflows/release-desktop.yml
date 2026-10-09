@@ -34,6 +34,16 @@ jobs:
             echo "Tag $GITHUB_REF_NAME does not match package.json version"; exit 1
           fi
 
+      # electron-builder uploads files in parallel and, when no release exists yet,
+      # the uploads race to create it (leaving a draft with missing files). Creating
+      # it first, already published, avoids that and keeps the updater able to see it.
+      - name: Create the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "See CHANGELOG.md." --verify-tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and publish the installer
         run: npm run build && npx electron-builder --win --publish always
         env:
