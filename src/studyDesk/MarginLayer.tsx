@@ -188,6 +188,28 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.items, book.id, geo, sides, mode, tick]);
 
+  // Pointing at the words an item belongs to lights its card (and the line to it), as hovering the card lights the words.
+  const fromText = useRef(false);
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if ((e.target as Element | null)?.closest?.('.sd-gloss, .sd-margins__area')) return;
+      const hit = placed.find((p) => p.rects.some((r) => e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom));
+      if (hit) {
+        fromText.current = true;
+        setHoverId((h) => (h === hit.item.id ? h : hit.item.id));
+      } else if (fromText.current) {
+        fromText.current = false;
+        setHoverId(null);
+      }
+    };
+    document.addEventListener('mousemove', onMove, { passive: true });
+    return () => document.removeEventListener('mousemove', onMove);
+  }, [placed]);
+  useEffect(() => {
+    layerRef.current?.querySelectorAll('.sd-gloss--lit').forEach((el) => el.classList.remove('sd-gloss--lit'));
+    if (hoverId) layerRef.current?.querySelector(`[data-gloss="${hoverId}"]`)?.classList.add('sd-gloss--lit');
+  });
+
   // Stack the cards beside their lines and draw the leader lines (DOM, after render, once heights are known).
   useLayoutEffect(() => {
     const layer = layerRef.current;

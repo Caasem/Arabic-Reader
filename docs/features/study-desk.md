@@ -40,6 +40,7 @@ Everything a reader notices while reading becomes an item: a concept they type, 
 - In the quiet reader, the desk spreads into the page margins. Items whose source is on the page sit beside their words, joined by a thin line.
 - Double-tap empty margin space and type straight away. The note stays plain text and is tied to the line beside it. It can be turned into a note, question, concept, flashcard (added to review straight away) or heading, or tied to exact words.
 - Margins: both sides, right only, left only, or off. On a window too narrow for two margins, "both sides" moves the page over and uses one wide margin. Notes in the document: all, only chosen, or none. Notes to the inbox: when sent, or automatically.
+- Margins and Document sit at the end of the reader's dock; in Focus, where the margins stay, they sit beside "Leave focus". Pointing at an item's words (or its box on a PDF page) lights its card, and pointing at the card lights the words.
 - Right-click a margin (long-press on touch) for a ring of shortcuts around the pointer: write a note here, capture, pull in, inbox, document, go to another book, margin settings, hide margins. A note, a captured item and a highlighted box on a PDF page each have their own ring. Each button names its key; number keys pick, Esc closes.
 - Screenshots sit in a small frame; hovering opens a preview beside the margin that never covers the text column. Click or Space keeps it open, Esc closes.
 

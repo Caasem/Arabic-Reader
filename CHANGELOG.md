@@ -4,6 +4,16 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.66.0 — 2026-10-09
+
+- **Margins and Document in the reader's dock.** The quiet reader's dock ends with Margins (on or off, like Alt+M)
+  and Document (the desk document, like D). In Focus, where the margins stay, the same switch sits beside
+  "Leave focus".
+- **Pointing lights the note.** Pointing at the words a margin item belongs to, or at a highlighted box on a PDF
+  page, lights its card in the margin.
+- **Right-click ring in the margins** (since v0.64.0): right-click a margin, a margin note or a PDF highlight for
+  a ring of shortcuts, each naming its key.
+
 ## v0.65.1 — 2026-10-09
 
 - Fixed publishing of desktop releases (the installer upload raced and left a draft).

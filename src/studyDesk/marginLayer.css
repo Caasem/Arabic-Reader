@@ -426,3 +426,45 @@ body.sd-margins--left .qr-stage--all .qr-column {
   margin-right: 72px;
   margin-left: auto;
 }
+
+/* Margins / Document (DeskSwitch.tsx): in the dock's slot, or beside the Focus pill. */
+.qr-dock__extra {
+  display: contents;
+}
+.sd-switch-pill {
+  position: fixed;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 6px 6px 14px;
+  border: 1px solid var(--qr-line, var(--border));
+  border-radius: 999px;
+  background: var(--qr-chrome, var(--bg-elevated));
+  font: 13px var(--font-ui);
+  color: var(--qr-soft, var(--ink-soft));
+}
+.sd-switch-pill button {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink);
+  font: 600 13px var(--font-ui);
+  cursor: pointer;
+}
+.sd-switch-pill button:hover,
+.sd-switch-pill button:focus-visible {
+  background: var(--accent-soft);
+  outline: none;
+}
+.sd-switch-pill button[aria-pressed='true'] {
+  border-color: var(--accent);
+}
+
+/* A card lit while the words or box it belongs to are pointed at. */
+.sd-gloss--lit {
+  background: var(--bg-elevated);
+  box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px rgb(0 0 0 / 0.1);
+}

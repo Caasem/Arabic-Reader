@@ -18,6 +18,7 @@ import { PdfDeskLayer } from './PdfDeskLayer';
 import { PdfMargin } from './PdfMargin';
 import { PdfSelect } from './PdfSelect';
 import type { DeskCommands } from './MarginRing';
+import { DeskSwitch } from './DeskSwitch';
 import type { PullSpot, PullTarget } from './pullIn';
 import { PullInBody } from './PullInBody';
 import { RegionCapture } from './RegionCapture';
@@ -287,6 +288,7 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
       )}
       {book.pdf && <PdfMargin book={book} data={data} commands={commands} onToast={say} onOpenDocument={openDocument} />}
       {book.pdf && !doc && <PdfSelect book={book} data={data} active={!region && !pull} commands={commands} onToast={say} />}
+      {!doc && <DeskSwitch marginsOn={prefs.studyDeskMargins !== 'off'} onToggleMargins={toggleMargins} onDocument={() => openDocument()} />}
       {!doc && <MarginLayer book={book} data={data} commands={commands} onToast={say} onOpenDocument={openDocument} />}
       {concept && <ConceptStrip book={book} deskId={data.deskId} deskName={deskName} onClose={() => setConcept(false)} onToast={say} />}
       {away && !region && <TripBar trip={away} onCapture={() => (setConcept(false), setInbox(false), setRegion(true))} onCancel={() => returnHome('Back where you were, nothing captured')} />}

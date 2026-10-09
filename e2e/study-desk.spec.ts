@@ -842,3 +842,66 @@ test.describe('right-click ring in the margins', () => {
     await expect(frame.locator('.sd-pdfbox')).toHaveCount(0);
   });
 });
+
+test.describe('dock switch and lit cards', () => {
+  test('Margins and Document in the dock, and beside the Focus pill', async ({ page }) => {
+    await openSample(page);
+    const dock = page.locator('.qr-dock');
+    const margins = dock.getByRole('button', { name: 'Margins' });
+    await expect(margins).toHaveAttribute('aria-pressed', 'true');
+    await margins.click();
+    await expect(page.locator('.sd-margins')).toHaveCount(0);
+    await expect(margins).toHaveAttribute('aria-pressed', 'false');
+    await margins.click();
+    await expect(page.locator('.sd-margins__area').first()).toBeVisible();
+
+    await dock.getByRole('button', { name: 'Focus' }).click();
+    const pill = page.getByRole('group', { name: 'Desk' });
+    await expect(pill).toContainText('Margins stay');
+    await expect(page.locator('.sd-margins__area').first()).toBeVisible();
+    await pill.getByRole('button', { name: 'Margins' }).click();
+    await expect(page.locator('.sd-margins')).toHaveCount(0);
+    await pill.getByRole('button', { name: 'Margins' }).click();
+    await pill.getByRole('button', { name: 'Document' }).click();
+    await expect(page.getByRole('dialog', { name: 'Desk document' })).toBeVisible();
+  });
+
+  test('pointing at the words of an item lights its card', async ({ page }) => {
+    await openSample(page);
+    const box = await firstLineBox(page);
+    await page.keyboard.press('Alt+x');
+    await page.mouse.move(box.right, box.top);
+    await page.mouse.down();
+    await page.mouse.move(box.left, box.bottom, { steps: 6 });
+    await page.mouse.up();
+    await page.getByRole('dialog', { name: 'Capture' }).getByRole('button', { name: /^Send to/ }).click();
+    const card = page.locator('.sd-gloss').first();
+    await expect(card).toBeVisible();
+    await expect(card).not.toHaveClass(/sd-gloss--lit/);
+    const w = (await page.locator('.qr-chapter p .ar-word').first().boundingBox())!;
+    await page.mouse.move(w.x + w.width / 2, w.y + w.height / 2);
+    await expect(card).toHaveClass(/sd-gloss--lit/);
+    await page.mouse.move(w.x + w.width / 2, w.y + 400);
+    await expect(card).not.toHaveClass(/sd-gloss--lit/);
+  });
+
+  test('pointing at a highlighted box on a PDF page lights its card', async ({ page }) => {
+    await openScan(page);
+    const frame = page.locator('.pdfp-page[data-page="1"]');
+    const r = (await frame.boundingBox())!;
+    await page.keyboard.press('Alt+x');
+    await page.mouse.move(r.x + r.width * 0.2, r.y + 60);
+    await page.mouse.down();
+    await page.mouse.move(r.x + r.width * 0.6, r.y + 160, { steps: 6 });
+    await page.mouse.up();
+    await page.getByRole('dialog', { name: 'Capture' }).getByRole('button', { name: /^Send to/ }).click();
+    const card = page.locator('.sd-pdfmargin .sd-gloss');
+    await expect(card).toHaveCount(1);
+    const b = (await frame.locator('.sd-pdfbox').boundingBox())!;
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await expect(card).toHaveClass(/sd-gloss--lit/);
+    await expect(frame.locator('.sd-pdfbox')).toHaveClass(/sd-pdfbox--on/);
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height + 200);
+    await expect(card).not.toHaveClass(/sd-gloss--lit/);
+  });
+});
