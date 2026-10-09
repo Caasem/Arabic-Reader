@@ -782,3 +782,63 @@ test.describe('highlighting on scanned PDF pages', () => {
     await expect(page.locator('.sd-gloss--m')).toContainText('المدرسة الكبيرة');
   });
 });
+
+test.describe('right-click ring in the margins', () => {
+  test('a margin opens the ring: write here, and the desk shortcuts', async ({ page }) => {
+    await openSample(page);
+    const area = page.locator('.sd-margins__area').last();
+    const box = (await area.boundingBox())!;
+    const y = await lineY(page, 1);
+    await page.mouse.click(box.x + box.width / 2, y, { button: 'right' });
+    const ring = page.getByRole('menu', { name: 'Margin' });
+    await expect(ring).toBeVisible();
+    await expect(ring.getByRole('menuitem')).toHaveCount(8);
+    await expect(ring.getByRole('menuitem', { name: /Pull in/ })).toContainText('Alt U');
+    await ring.getByRole('menuitem', { name: /Write a note here/ }).click();
+    await expect(ring).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: 'Margin note' })).toBeFocused();
+    await page.keyboard.type('Why the village?');
+    await page.keyboard.press('Escape');
+
+    // The note's own ring: turn it into a question.
+    const note = page.locator('.sd-gloss--m');
+    const nb = (await note.boundingBox())!;
+    await page.mouse.click(nb.x + 3, nb.y + 3, { button: 'right' });
+    const noteRing = page.getByRole('menu', { name: 'Margin note' });
+    await noteRing.getByRole('menuitem', { name: /Question/ }).click();
+    await expect(page.locator('.sd-gloss--question')).toHaveCount(1);
+
+    // Number keys pick a button; Esc closes.
+    await page.mouse.click(box.x + box.width / 2, y + 120, { button: 'right' });
+    await expect(ring).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(ring).toHaveCount(0);
+    await page.mouse.click(box.x + box.width / 2, y + 120, { button: 'right' });
+    await page.keyboard.press('5');
+    await expect(page.getByRole('dialog', { name: 'Desk document' })).toBeVisible();
+  });
+
+  test('beside PDF pages: the strip has the ring, and a highlight box has its own', async ({ page }) => {
+    await openScan(page);
+    const frame = page.locator('.pdfp-page[data-page="1"]');
+    const r = (await frame.boundingBox())!;
+    await page.keyboard.press('Alt+x');
+    await page.mouse.move(r.x + r.width * 0.2, r.y + 60);
+    await page.mouse.down();
+    await page.mouse.move(r.x + r.width * 0.6, r.y + 160, { steps: 6 });
+    await page.mouse.up();
+    await page.getByRole('dialog', { name: 'Capture' }).getByRole('button', { name: /^Send to/ }).click();
+    await expect(frame.locator('.sd-pdfbox')).toHaveCount(1);
+
+    const strip = (await page.locator('.sd-pdfmargin__area').boundingBox())!;
+    await page.mouse.click(strip.x + strip.width / 2, strip.y + strip.height - 60, { button: 'right' });
+    await expect(page.getByRole('menu', { name: 'Margin' })).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    const b = (await frame.locator('.sd-pdfbox').boundingBox())!;
+    await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2, { button: 'right' });
+    const boxRing = page.getByRole('menu', { name: 'Highlight' });
+    await boxRing.getByRole('menuitem', { name: /Delete highlight/ }).click();
+    await expect(frame.locator('.sd-pdfbox')).toHaveCount(0);
+  });
+});
