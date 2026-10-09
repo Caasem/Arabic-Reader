@@ -59,7 +59,12 @@ export class LibraryService {
       }
     }
     const buf = await file.arrayBuffer();
-    const book = ePub(buf.slice(0)); // epub.js may detach the buffer
+    // Opened by hand so its asset-URL pass can be switched off: this read only wants the title, author and cover, and
+    // epub.js runs that pass in the background after opening, so destroying the book below used to end it with a
+    // "reading 'replaceCss'" TypeError on every import.
+    const book = ePub();
+    (book as unknown as { replacements(): Promise<void> }).replacements = () => Promise.resolve();
+    void book.open(buf.slice(0)).catch(() => {}); // epub.js may detach the buffer
     let coverDataUrl: string | undefined;
     let metadata: { title?: string; creator?: string; language?: string };
     try {

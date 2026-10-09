@@ -59,3 +59,13 @@ test('an unsupported file explains which types work', async ({ page }) => {
   await page.setInputFiles('.library__actions input[type=file]', { name: 'letter.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from('PK') });
   await expect(page.locator('.library__error')).toContainText('EPUB, PDF, TXT, Markdown, MOBI or AZW3');
 });
+
+test('importing a book raises no console errors (epub.js background pass used to hit a destroyed book)', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  page.on('pageerror', (e) => errors.push(e.message));
+  await addFile(page, 'quiet.txt', ['كتاب هادئ', 'الفصل الأول', 'ذهب الولد إلى المدرسة في الصباح الباكر.'].join('\n\n'));
+  await expect(page.locator('.book-card', { hasText: 'كتاب هادئ' })).toHaveCount(1, { timeout: 30000 });
+  await page.waitForTimeout(1500);
+  expect(errors.filter((e) => !/manifest\.json|ERR_FAILED|CORS/.test(e))).toEqual([]);
+});
