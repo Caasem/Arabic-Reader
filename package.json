@@ -33,6 +33,7 @@
     "@capacitor/core": "^8.5.1",
     "@capacitor/ios": "^8.5.1",
     "dexie": "^4.4.5",
+    "electron-updater": "^6.8.9",
     "epubjs": "^0.3.93",
     "fflate": "^0.8.3",
     "foliate-js": "^1.0.1",
@@ -84,16 +85,17 @@
           "arch": [
             "x64"
           ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
         }
       ],
       "icon": "build-resources/icon.ico"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Caasem",
+        "repo": "Arabic-Reader"
+      }
+    ],
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
