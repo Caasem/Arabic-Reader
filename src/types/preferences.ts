@@ -142,6 +142,8 @@ export interface ReaderPreferences {
   studyDeskMarginsInDocument: 'all' | 'chosen' | 'none';
   /** Margin notes go to the inbox when you leave them (auto) or only when you send them (ask). */
   studyDeskMarginsToInbox: 'ask' | 'auto';
+  /** Ink and sketches (src/annotate): write on the page (Alt+W) and a sketch sheet beside it (Alt+K). */
+  annotateEnabled: boolean;
   /** Show a verb's form (I-X) and its root's other verbs in the dictionary popup (src/verbForms). */
   verbFormsEnabled: boolean;
   /** The aligned, roomier dictionary popup layout (src/popupClean). Off restores the classic popup. */

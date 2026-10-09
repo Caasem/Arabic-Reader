@@ -51,6 +51,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   studyDeskMargins: 'both',
   studyDeskMarginsInDocument: 'all',
   studyDeskMarginsToInbox: 'ask',
+  annotateEnabled: true,
   verbFormsEnabled: true,
   dictionaryPopupCleanLayout: true,
   collapseManyArabicEntries: true,
