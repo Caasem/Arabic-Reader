@@ -2,7 +2,7 @@
  * pdf.js and the dictionary for the real app. Loaded only when a PDF is added, so neither
  * pdfjs-dist nor its worker is part of the main bundle (see ../pdfjs.ts).
  */
-import { loadPdfjs } from '../pdfjs';
+import { loadPdfjs, pdfDataUrls } from '../pdfjs';
 import type { PdfDeps, PdfDocument } from './convert';
 
 export async function loadPdfDeps(): Promise<PdfDeps> {
@@ -21,6 +21,7 @@ export async function loadPdfDeps(): Promise<PdfDeps> {
           disableFontFace: true,
           useSystemFonts: false,
           verbosity: 0,
+          ...pdfDataUrls(),
         });
         const doc = await task.promise;
         return {

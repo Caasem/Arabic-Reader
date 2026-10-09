@@ -74,6 +74,40 @@ function bundledLexiconPlugin(id: string, file: string, optional = false): Plugi
   })
 }
 
+/**
+ * pdf.js reads its own data at run time: the standard fonts (text with non-embedded fonts), the
+ * ICC profiles and character maps, and the WebAssembly decoders for the JBIG2 and JPEG 2000
+ * images that scanned books are made of. Without them a scanned book shows every page blank.
+ * The files are served from <base>/pdfjs/<folder>/ (dev) and copied there by the build, so they
+ * come with the app (offline, Electron, Capacitor) and nothing is fetched from a CDN; the page
+ * side is pdfDataUrls() in src/pdf/pdfjs.ts.
+ */
+function pdfjsDataPlugin(): Plugin {
+  const root = path.join(__dirname, 'node_modules', 'pdfjs-dist')
+  const folders = ['standard_fonts', 'wasm', 'cmaps', 'iccs']
+  const typeOf = (file: string) => (file.endsWith('.wasm') ? 'application/wasm' : file.endsWith('.js') ? 'text/javascript' : 'application/octet-stream')
+  return {
+    name: 'pdfjs-data',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const m = /^\/pdfjs\/(standard_fonts|wasm|cmaps|iccs)\/([\w.-]+)(?:\?.*)?$/.exec(req.url ?? '')
+        const file = m && path.join(root, m[1], m[2])
+        if (!file || !fs.existsSync(file)) return next()
+        res.setHeader('Content-Type', typeOf(file))
+        res.end(fs.readFileSync(file))
+      })
+    },
+    generateBundle() {
+      for (const folder of folders) {
+        for (const name of fs.readdirSync(path.join(root, folder))) {
+          if (name.startsWith('LICENSE')) continue
+          this.emitFile({ type: 'asset', fileName: `pdfjs/${folder}/${name}`, source: fs.readFileSync(path.join(root, folder, name)) })
+        }
+      }
+    },
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   // Relative: the app is also served from a GitHub Pages project subpath,
@@ -88,6 +122,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    pdfjsDataPlugin(),
     bundledDictDataPlugin(),
     bundledVocabListPlugin(),
     bundledAlWasitDataPlugin(),
@@ -118,12 +153,18 @@ export default defineConfig({
         // The app shell, all view chunks, and the dictionary worker (which
         // carries the dictionary data) are precached for offline use.
         // Lala.ttf is the default reading font (138 KB), so it is precached too.
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,ttf}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,ttf}', 'pdfjs/{standard_fonts,wasm}/*'],
         // The optional datasets aren't precached -- most users never enable
         // them -- but are cached on first use so an enabled feature keeps
         // working offline.
         globIgnores: ['**/_virtual_alwasit-data-*.js', '**/_virtual_alsihah-data-*.js', '**/_virtual_almaqayis-data-*.js', '**/_virtual_baranov-data-*.js', '**/_virtual_vocab-list-data-*.js'],
         runtimeCaching: [
+          {
+            // pdf.js's character maps and ICC profiles (1.5 MB), needed only by unusual PDFs; cached once used.
+            urlPattern: /\/pdfjs\/(?:cmaps|iccs)\//,
+            handler: 'CacheFirst',
+            options: { cacheName: 'pdfjs-data', expiration: { maxEntries: 400 } },
+          },
           {
             // sql.js's WebAssembly, loaded only for an Anki package export; cached once used.
             urlPattern: /\/assets\/sql-wasm-[\w-]+\.wasm$/,
