@@ -244,8 +244,19 @@
   cursor: pointer;
 }
 
+/* Yellow is the Reading Graph highlight (.hl): soft gold behind gold ink. ::highlight() takes colours only, so
+   its rounded corners and hover outline cannot follow. */
 ::highlight(qr-hl-yellow) {
-  background-color: rgba(231, 198, 91, 0.45);
+  background-color: #f6ead0;
+  color: #7d5a14;
+}
+:root[data-theme='dark'] ::highlight(qr-hl-yellow) {
+  background-color: #3b3220;
+  color: #e6c47c;
+}
+:root[data-theme='sepia'] ::highlight(qr-hl-yellow) {
+  background-color: #efdcb4;
+  color: #6b4c10;
 }
 ::highlight(qr-hl-green) {
   background-color: rgba(139, 184, 114, 0.45);

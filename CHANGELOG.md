@@ -4,6 +4,12 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.72.0 — 2026-10-09
+
+- **Highlights look like Reading Graph's.** Highlighted boxes on PDF pages are soft gold with rounded corners and a
+  little room each side, outlined in gold when lit, with a teal dot once they have a gloss. Yellow highlights in the
+  reader are soft gold behind gold text (dark and sepia themes have their own pair).
+
 ## v0.71.0 — 2026-10-09
 
 - **Write on the page.** Alt+W (or Write in the reader's dock, or in the PDF pages' top bar) turns the page into a
