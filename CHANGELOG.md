@@ -4,6 +4,18 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.70.0 — 2026-10-09
+
+- **Piles in the margins.** Drag a margin card onto another and rest there for a moment: it goes underneath, and
+  the card you dropped on stays on top. Dropping sooner just moves the card (to the other margin, or a note to
+  another line). Drop more cards on a pile and they go to the bottom.
+- Point at a pile to spread it out in its margin, never over the text. Click it, or press Space on its count, to
+  keep it open; Esc closes it. Drag a card out to take it off; a pile left with one card stops being a pile.
+- Double-click a pile to name it and give it a colour tab. Cards from other books show where they came from, and
+  the pile shows how many cards it holds.
+- Drag over empty margin to choose several cards (or Shift-click), then press P to pile them, or Delete.
+- Piling, taking a card off and deleting each offer Undo in the message (or Ctrl+Z).
+
 ## v0.69.0 — 2026-10-09
 
 - **Capture and stay.** On a capture trip, *Capture and stay* (Shift+Alt+X or the bar's button) files the capture

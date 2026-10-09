@@ -58,12 +58,35 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
   const toastTimer = useRef<number>(0);
   const narrow = useNarrow();
 
-  const say = useCallback((m: string) => {
+  /** What the toast's Undo (and Ctrl+Z while it shows) puts back: piles made, cards taken off, cards deleted. */
+  const undoRef = useRef<(() => Promise<void>) | null>(null);
+  const [undoable, setUndoable] = useState(false);
+  const say = useCallback((m: string, undo?: () => Promise<void>) => {
     setToast(m);
+    undoRef.current = undo ?? null;
+    setUndoable(!!undo);
     window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 2200);
+    toastTimer.current = window.setTimeout(() => (setToast(null), (undoRef.current = null), setUndoable(false)), undo ? 6000 : 2200);
   }, []);
   useEffect(() => () => window.clearTimeout(toastTimer.current), []);
+  const runUndo = useCallback(() => {
+    const undo = undoRef.current;
+    undoRef.current = null;
+    setUndoable(false);
+    if (undo) void undo().then(() => say('Undone'));
+  }, [say]);
+  // Ctrl+Z (Cmd+Z) while an undo is offered, unless typing (the text box keeps its own undo).
+  useEffect(() => {
+    if (!undoable) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.key.toLowerCase() !== 'z') return;
+      if ((e.target as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      e.preventDefault();
+      runUndo();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [undoable, runUndo]);
 
   // --- capture trips (trip.ts): away in another book to capture one thing for the book left behind ---
   const trip = useDeskTrip();
@@ -367,8 +390,13 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
         />
       )}
       {toast && (
-        <div className="sd-toast" role="status">
-          {toast}
+        <div className={'sd-toast' + (undoable ? ' sd-toast--undo' : '')} role="status">
+          <span>{toast}</span>
+          {undoable && (
+            <button type="button" onClick={runUndo}>
+              Undo <kbd>Ctrl Z</kbd>
+            </button>
+          )}
         </div>
       )}
     </>

@@ -54,8 +54,14 @@ Everything a reader notices while reading becomes an item: a concept they type, 
 - Capture and stay (Shift+Alt+X or the bar's button) files the capture the same way and keeps the trip open, with a count in the bar. Done, go back (the same button, renamed once something is filed), or Esc, returns home and says how many were filed. A capture that fails to save says so and leaves the trip open.
 - After a trip, Pull in starts with Back to <book>, chosen already: Alt+U then Enter goes to the same book again, filing in the same margin at the same place (or the inbox). Remembered until the app reloads, like the trip itself.
 
-**Piles (prototype)**
-- `src/studyDesk/piles.prototype.html` is a single-file prototype of piles in the margins, not part of the app: hold a dragged card on another for about 300ms to pile it underneath (dropping sooner moves it), hover to fan a pile inside its margin (click or Space keeps it open, Esc closes), drag a card out of the fan to unpile it (a pile of one dissolves), double-click to name a pile with a colour tab, source chips and a count badge, lasso then P to pile, undo for pile, unpile and delete.
+**Piles (quiet reader margins)**
+- Drag a margin card (mouse or pen) onto another and rest there about 300ms: it goes underneath and the card dropped on stays on top. A ring fills on the target while it waits, then it says "Pile here". Dropping sooner moves the card: to the other margin, and a plain note (or a whole pile) to the line beside the drop; a card tied to words keeps its words and only changes side. Dropping on a pile adds to its bottom.
+- Pointing at a pile spreads it out (the fan) inside its own margin, never over the text column. A click, or Space on the count badge, keeps it open; Esc or a click elsewhere closes it. Cards in the fan can be edited, deleted (×) or dragged out: into empty margin they leave the pile at the line beside the drop; onto another card or pile they join it. A pile left with one card is no pile. The grip in the fan's header moves the whole pile.
+- Double-click a pile (or the fan's header) to name it and choose a colour tab. Cards from other books show a source chip; the pile shows a count badge and how many came from other books.
+- Drag over empty margin to choose cards (Shift adds; Shift-click a card too); P piles them (the highest on the page on top), Delete deletes them, Esc lets go.
+- Piling, taking a card off and deleting say so with Undo in the message; Ctrl+Z does the same while it shows (not while typing, where the note keeps its own undo).
+- Stored on the items themselves (`pile`: id, order, name, colour), so piles go with the desk in the export. Piles are made in the quiet reader's margins; the margin beside PDF pages shows its cards one by one.
+- `src/studyDesk/piles.prototype.html` is the single-file prototype these were built from.
 
 **Images in the margins**
 - Paste an image into a margin note to make it a screenshot; drop an image file on a margin for a new screenshot note at that height, or on a note to add it there.

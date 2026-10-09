@@ -23,6 +23,19 @@ export interface DeskPin {
   side: 'left' | 'right';
 }
 
+/**
+ * A pile of margin cards (piles.ts): one card on top, the rest beneath it in order. Every member carries the
+ * pile's id, its own place in it, and the pile's name and colour tab, so no other table is needed.
+ */
+export interface DeskPile {
+  id: string;
+  /** 0 is the top card; larger is further down. */
+  order: number;
+  name?: string;
+  /** The colour tab, a CSS colour. */
+  color?: string;
+}
+
 export interface DeskItem {
   id: string;
   deskId: string;
@@ -47,6 +60,8 @@ export interface DeskItem {
   hidden?: boolean;
   /** A card made from this item was added to review (vocabulary id). */
   reviewId?: string;
+  /** In a pile in the margin. A pile of one is no pile and is shown as a lone card. */
+  pile?: DeskPile;
   createdAt: number;
   updatedAt: number;
 }

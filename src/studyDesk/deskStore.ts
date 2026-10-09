@@ -113,6 +113,44 @@ export async function updateItem(id: string, patch: Partial<Omit<DeskItem, 'id' 
   changed();
 }
 
+/** Several items changed at once (a pile made, a card taken off one), with one change notification. */
+export async function patchItems(patches: { id: string; patch: Partial<Omit<DeskItem, 'id' | 'createdAt'>> }[]): Promise<void> {
+  if (!patches.length) return;
+  const now = Date.now();
+  await deskDb().transaction('rw', deskDb().items, async () => {
+    for (const { id, patch } of patches) {
+      const item = await deskDb().items.get(id);
+      if (!item) continue;
+      // Undefined in a patch clears the field (Dexie's update would keep it).
+      const next = { ...item, ...patch, updatedAt: now } as Record<string, unknown>;
+      for (const [k, v] of Object.entries(patch)) if (v === undefined) delete next[k];
+      await deskDb().items.put(next as unknown as DeskItem);
+    }
+  });
+  changed();
+}
+
+/**
+ * Undo of a delete: the items come back as they were, and each desk's document (as it was before the delete) gets
+ * that text back if nothing else changed it since; otherwise the items go back at the end of it.
+ */
+export async function restoreItems(items: DeskItem[], desks: Desk[]): Promise<void> {
+  await deskDb().transaction('rw', deskDb().desks, deskDb().items, async () => {
+    await deskDb().items.bulkPut(items);
+    for (const before of desks) {
+      const now = await deskDb().desks.get(before.id);
+      if (!now) continue;
+      let html = now.html;
+      // Untouched since the delete: the text then is the text before without these items.
+      const ids = items.filter((i) => i.deskId === before.id).map((i) => i.id);
+      if (ids.reduce((h, id) => removeEmbed(h, id), before.html) === now.html) html = before.html;
+      for (const item of items) if (item.deskId === before.id && !hasEmbed(html, item.id)) html = appendEmbed(html, item.id);
+      if (html !== now.html) await deskDb().desks.update(before.id, { html, updatedAt: Date.now() });
+    }
+  });
+  changed();
+}
+
 export async function deleteItem(id: string): Promise<void> {
   await deskDb().transaction('rw', deskDb().desks, deskDb().items, async () => {
     const item = await deskDb().items.get(id);

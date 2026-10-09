@@ -5,7 +5,7 @@ import { DeskDB } from './db';
 import { outline } from './docHtml';
 import {
   addItem, createOwnDesk, deleteItem, ensureBookDesk, getDesk, listItems, listPinnedForBook, onDeskChange, putBackInDocument,
-  saveDeskHtml, sendItemToDesk, setDeskDBForTests,
+  patchItems, restoreItems, saveDeskHtml, sendItemToDesk, setDeskDBForTests,
 } from './deskStore';
 
 const book = { id: 'b1', title: 'Muqaddima' };
@@ -67,5 +67,54 @@ describe('deskStore', () => {
     await addItem(desk.id, { type: 'concept', text: 'x' });
     off();
     expect(calls).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('deskStore: piles', () => {
+  let n = 0;
+  beforeEach(() => setDeskDBForTests(new DeskDB(`desk-pile-test-${++n}`)));
+  afterEach(() => setDeskDBForTests(null));
+
+  it('patches several items at once, and undefined clears a field', async () => {
+    const desk = await ensureBookDesk(book);
+    const a = await addItem(desk.id, { type: 'line', text: '', fromMargin: true, pin: { bookId: 'b1', location: 'clean:1:0:4', side: 'right' } });
+    const b = await addItem(desk.id, { type: 'line', text: '', fromMargin: true });
+    let calls = 0;
+    const off = onDeskChange(() => calls++);
+    await patchItems([
+      { id: a.id, patch: { pile: { id: 'p1', order: 0 } } },
+      { id: b.id, patch: { pile: { id: 'p1', order: 1 }, pin: a.pin } },
+    ]);
+    off();
+    expect(calls).toBe(1);
+    const [x, y] = await listItems(desk.id);
+    expect(x.pile).toEqual({ id: 'p1', order: 0 });
+    expect(y.pin).toEqual(a.pin);
+    await patchItems([{ id: a.id, patch: { pile: undefined } }]);
+    expect('pile' in (await listItems(desk.id))[0]).toBe(false);
+  });
+
+  it('restores deleted items to the document where they were, if it was not changed since', async () => {
+    const desk = await ensureBookDesk(book);
+    const a = await addItem(desk.id, { type: 'concept', text: 'A' });
+    const b = await addItem(desk.id, { type: 'concept', text: 'B' });
+    const c = await addItem(desk.id, { type: 'concept', text: 'C' });
+    const before = (await getDesk(desk.id))!;
+    await deleteItem(b.id);
+    expect(await order(desk.id)).toEqual([a.id, c.id]);
+    await restoreItems([b], [before]);
+    expect(await order(desk.id)).toEqual([a.id, b.id, c.id]);
+    expect((await listItems(desk.id)).map((i) => i.text)).toEqual(['A', 'B', 'C']);
+  });
+
+  it('puts restored items at the end when the document changed meanwhile', async () => {
+    const desk = await ensureBookDesk(book);
+    const a = await addItem(desk.id, { type: 'concept', text: 'A' });
+    const b = await addItem(desk.id, { type: 'concept', text: 'B' });
+    const before = (await getDesk(desk.id))!;
+    await deleteItem(a.id);
+    const c = await addItem(desk.id, { type: 'concept', text: 'C' });
+    await restoreItems([a], [before]);
+    expect(await order(desk.id)).toEqual([b.id, c.id, a.id]);
   });
 });
