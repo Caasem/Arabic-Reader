@@ -4,7 +4,7 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
-## v0.67.0 — 2026-10-09
+## v0.69.0 — 2026-10-09
 
 - **Capture and stay.** On a capture trip, *Capture and stay* (Shift+Alt+X or the bar's button) files the capture
   and keeps you in the other book, with a count in the bar. *Done, go back* (or Esc) returns you home. A capture

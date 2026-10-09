@@ -107,6 +107,22 @@ export function pathsFor(book: BrowseBook, format: BrowseFormat): string[] {
 
 const sizes = new Map<string, number | null>();
 
+/** Size lookups run a few at a time, so a screenful of results does not open dozens of connections at once. */
+const MAX_SIZE_LOOKUPS = 4;
+let sizeLookups = 0;
+const sizeQueue: (() => void)[] = [];
+
+async function withSizeSlot<T>(run: () => Promise<T>): Promise<T> {
+  if (sizeLookups >= MAX_SIZE_LOOKUPS) await new Promise<void>((resolve) => sizeQueue.push(resolve));
+  sizeLookups++;
+  try {
+    return await run();
+  } finally {
+    sizeLookups--;
+    sizeQueue.shift()?.();
+  }
+}
+
 /** Bytes of one volume's file in this format, from a HEAD request (cached). Null when the host does not say. */
 export async function fileSize(book: BrowseBook, format: BrowseFormat, volume: number): Promise<number | null> {
   const path = pathsFor(book, format)[volume];
@@ -114,11 +130,13 @@ export async function fileSize(book: BrowseBook, format: BrowseFormat, volume: n
   const url = datasetUrl(sourceOf(book).dataset, path);
   if (sizes.has(url)) return sizes.get(url) ?? null;
   try {
-    const res = await fetch(url, { method: 'HEAD' });
-    const n = res.ok ? Number(res.headers.get('content-length')) : 0;
-    const size = n > 0 ? n : null;
-    sizes.set(url, size);
-    return size;
+    return await withSizeSlot(async () => {
+      const res = await fetch(url, { method: 'HEAD' });
+      const n = res.ok ? Number(res.headers.get('content-length')) : 0;
+      const size = n > 0 ? n : null;
+      sizes.set(url, size);
+      return size;
+    });
   } catch {
     return null;
   }
@@ -181,18 +199,19 @@ export async function addBrowseBooks(book: BrowseBook, request: AddRequest, onPr
 
   for (const v of request.volumes) {
     const title = volumeTitle(book.title, v, volumeCount);
+    const browse = { key: book.key, format: request.format, volume: v };
     try {
       const bytes = await fetchVolume(v);
       onProgress(`Adding ${label(v)}…`);
       let meta: BookMeta;
       if (request.format === 'pdf') {
-        const { meta: added, converted } = await libraryService.importBook(new File([bytes as BlobPart], `${title}.pdf`, { type: 'application/pdf' }));
+        const { meta: added, converted } = await libraryService.importBook(new File([bytes as BlobPart], `${title}.pdf`, { type: 'application/pdf' }), { browse });
         meta = added;
         if (converted?.reflow && converted.reflow !== 'ok') result.pagesOnly++;
       } else {
         const chapters = volumesToChapters([splitPages(decodeText(bytes).text)], title);
         const blob = await writeEpub({ title, author: book.author || undefined, language: 'ar', rtl: true, chapters });
-        meta = await libraryService.importEpub(new File([blob], `${title}.epub`, { type: 'application/epub+zip' }), { format: 'txt', originalFileName: paths[v].split('/').pop() });
+        meta = await libraryService.importEpub(new File([blob], `${title}.epub`, { type: 'application/epub+zip' }), { format: 'txt', originalFileName: paths[v].split('/').pop(), browse });
       }
       rememberAdded(addedKey(book, request.format, v), meta.id);
       result.books.push(meta);
