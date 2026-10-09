@@ -3,7 +3,7 @@
  * a PDF book is opened as pages (see ../pdfjs.ts).
  */
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
-import { loadPdfjs, type PdfjsModule } from '../pdfjs';
+import { loadPdfjs, pdfDataUrls, type PdfjsModule } from '../pdfjs';
 
 export type { PDFDocumentProxy, PDFPageProxy };
 export type { PdfjsModule };
@@ -18,7 +18,7 @@ export async function openPdfPages(data: Uint8Array): Promise<OpenedPdf> {
   const { pdfjs, createWorker } = await loadPdfjs();
   const worker = createWorker();
   try {
-    const task = pdfjs.getDocument({ data, worker, disableFontFace: false, useSystemFonts: false, verbosity: 0 });
+    const task = pdfjs.getDocument({ data, worker, disableFontFace: false, useSystemFonts: false, verbosity: 0, ...pdfDataUrls() });
     const doc = await task.promise;
     return {
       pdfjs,
