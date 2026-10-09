@@ -108,3 +108,25 @@ test('the quality badge is off until Settings turns it on, then separates clean 
   await expect(row(page, 'موسوعة الأجزاء').locator('.browse__badge')).toContainText('Poor scan', { timeout: 30000 });
   await expect(row(page, 'موسوعة الأجزاء').locator('.browse__warn')).toContainText('PDF');
 });
+
+test("a Browse book's details offer the volumes not added yet, and adding them completes the set", async ({ page }) => {
+  await openBrowse(page);
+  const multi = row(page, 'موسوعة الأجزاء');
+  await multi.getByRole('button', { name: /Text/ }).click();
+  const menu = multi.getByRole('group', { name: 'Volumes as Text' });
+  await menu.getByRole('button', { name: /Vol\. 2/ }).click();
+  await expect(menu.getByRole('button', { name: /Vol\. 2/ })).toContainText('added ✓', { timeout: 30000 });
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('button', { name: 'Details for موسوعة الأجزاء — المجلد 2' }).click();
+  const next = page.locator('.lib-next');
+  await expect(next).toContainText('Volume 2 of 3', { timeout: 20000 });
+  await expect(next).toContainText('2 not added yet');
+  await expect(next.getByRole('button')).toHaveText([/Add volume 1/, /Add volume 3/]);
+
+  await next.getByRole('button', { name: /Add volume 3/ }).click();
+  await expect(next).toContainText('1 not added yet', { timeout: 30000 });
+  await next.getByRole('button', { name: /Add volume 1/ }).click();
+  await expect(next).toContainText('All 3 volumes are in your library', { timeout: 30000 });
+  for (const v of [1, 2, 3]) await expect(page.locator('.book-card', { hasText: `المجلد ${v}` })).toHaveCount(1);
+});

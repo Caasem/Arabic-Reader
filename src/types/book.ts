@@ -30,6 +30,11 @@ export interface BookMeta {
    * 'none' (no text layer: scanned). Anything but 'ok' opens in the pages view only.
    */
   pdf?: { pages: number; reflow: 'ok' | 'broken' | 'none'; originalHash: string };
+  /**
+   * A book added from Browse library (src/browseLibrary): which catalogue entry, in which format, and which
+   * volume of it. The Library's book details use it to offer the volumes of the same book that are not added yet.
+   */
+  browse?: { key: string; format: 'txt' | 'pdf'; volume: number };
 }
 
 /** The one automatic "where I left off" per book. */

@@ -1,6 +1,6 @@
 # Browse library
 
-Roadmap id: `browse-library` · Area: Content · Status: built (v0.67.0)
+Roadmap id: `browse-library` · Area: Content · Status: built (v0.68.0)
 
 ## Purpose
 
@@ -37,3 +37,4 @@ Mockup: the clickable page the layout was settled on. Arabic reads right to left
 - **Tap the author** to show only their books.
 - **Quality badge** (Settings, Browse library; off by default): Clean, Some errors or Poor scan from the share of a sample's words that AraMorph reads as real words. A poor scan adds a note that the PDF is the better choice.
 - **Known words** ("Fits you" ranking and the rules behind it) are not built; the logic will be set up separately.
+- **Add the next volume (v0.68.0):** a book added from Browse library remembers its catalogue entry, format and volume (`BookMeta.browse`). Its details in the Library show "Volume 2 of 4. 3 not added yet" with a button per missing volume (the same format, put on the shelves this volume is on), or "All 4 volumes are in your library". The catalogue comes from the on-device copy; offline and never opened, the row is simply absent.

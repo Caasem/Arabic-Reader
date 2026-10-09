@@ -13,6 +13,7 @@ import type { ViewName } from '../shared/NavBar';
 import { usePreferences } from '../../state/PreferencesContext';
 import { ShamelaResultCard } from './ShamelaResultCard';
 import { BrowseLibraryPanel } from '../../browseLibrary/BrowseLibraryPanel';
+import { NextVolumes } from '../../browseLibrary/NextVolumes';
 import { formatOf, IMPORTABLE_EXTENSIONS } from '../../importFormats';
 import { highlightsMarkdown } from '../../dataExport/highlightsMd';
 import { saveFile } from '../../utils/saveFile';
@@ -227,6 +228,13 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
   function openBookAs(book: BookMeta, view: PdfView) {
     rememberPdfView(book.id, view);
     openBook(book);
+  }
+
+  /** Books that arrived from Browse library: onto the shelf now, without waiting for the next listing. */
+  function handleBrowseAdded(added: BookMeta[]) {
+    const ids = new Set(added.map((b) => b.id));
+    setBooks((prev) => [...added, ...prev.filter((b) => !ids.has(b.id))]);
+    setFileIds((prev) => (prev ? new Set([...prev, ...ids]) : prev));
   }
 
   function openHighlight(h: Highlight) {
@@ -808,11 +816,7 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
       {browsing && (
         <BrowseLibraryPanel
           onClose={() => setBrowsing(false)}
-          onBooksAdded={(added) => {
-            const ids = new Set(added.map((b) => b.id));
-            setBooks((prev) => [...added, ...prev.filter((b) => !ids.has(b.id))]);
-            setFileIds((prev) => (prev ? new Set([...prev, ...ids]) : prev));
-          }}
+          onBooksAdded={handleBrowseAdded}
           ownedIds={new Set(books.map((b) => b.id))}
         />
       )}
@@ -834,6 +838,7 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
           onFreeSpace={() => setConfirm({ kind: 'freeSpace', book: detailsBook })}
           onAddFile={() => askForFile(detailsBook)}
           onRemove={() => setConfirm({ kind: 'remove', book: detailsBook })}
+          extra={<NextVolumes book={detailsBook} books={books} onAdded={handleBrowseAdded} />}
         />
       )}
 
