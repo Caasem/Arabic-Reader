@@ -1,0 +1,741 @@
+<meta charset="utf-8">
+<title>Margin Piles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&display=swap">
+<style>
+/* Layout: the quiet reader's page with a margin on each side; piles live only in the margins, the text column is never covered. */
+:root {
+  --bg: #faf7f2;
+  --paper: #fffdf9;
+  --ink: #1c1b19;
+  --ink-soft: #5d5850;
+  --ink-faint: #a39d95;
+  --line: #e7e0d5;
+  --accent: #9c7a4f;
+  --accent-wash: rgba(156, 122, 79, 0.12);
+  --shadow: 0 1px 2px rgba(40, 30, 15, 0.08), 0 4px 14px rgba(40, 30, 15, 0.08);
+  --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Newsreader', Georgia, 'Times New Roman', serif;
+  --font-ar: 'Amiri', 'Traditional Arabic', 'Geeza Pro', serif;
+  --t-note: #6f7d8c;
+  --t-question: #a0703a;
+  --t-flash: #5b7f5f;
+  --t-shot: #7a6a9a;
+  --t-high: #b08a2e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #16151a; --paper: #201f25; --ink: #efe9df; --ink-soft: #b9b1a5; --ink-faint: #706b64; --line: #34323a;
+    --accent: #d0ab74; --accent-wash: rgba(208, 171, 116, 0.14); --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
+    --t-note: #94a3b4; --t-question: #d39a5c; --t-flash: #86b08a; --t-shot: #a796c8; --t-high: #d8b34f;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #16151a; --paper: #201f25; --ink: #efe9df; --ink-soft: #b9b1a5; --ink-faint: #706b64; --line: #34323a;
+  --accent: #d0ab74; --accent-wash: rgba(208, 171, 116, 0.14); --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
+  --t-note: #94a3b4; --t-question: #d39a5c; --t-flash: #86b08a; --t-shot: #a796c8; --t-high: #d8b34f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); padding: 20px 16px 80px; }
+header { max-width: 1120px; margin: 0 auto 14px; display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: end; justify-content: space-between; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: 26px; margin: 0; text-wrap: balance; }
+h1 small { display: block; font: 13px var(--font-ui); color: var(--ink-soft); margin-top: 4px; }
+.keys { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--ink-soft); max-width: 640px; }
+.keys span { white-space: nowrap; }
+kbd { font: 11px var(--font-ui); padding: 1px 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: var(--paper); color: var(--ink); }
+.btn { font: 13px var(--font-ui); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.scroller { max-width: 1120px; margin: 0 auto; overflow-x: auto; }
+.stage { position: relative; display: grid; grid-template-columns: 260px minmax(380px, 1fr) 260px; min-width: 900px; user-select: none; -webkit-user-select: none; }
+.margin { position: relative; min-height: 820px; }
+.margin::before { content: attr(data-label); position: absolute; top: -18px; left: 12px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); }
+.page { background: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 44px 48px 56px; box-shadow: var(--shadow); }
+.page__head { display: flex; justify-content: space-between; font-family: var(--font-display); font-style: italic; color: var(--ink-faint); font-size: 13px; margin-bottom: 26px; }
+.page p { font-family: var(--font-ar); font-size: 22px; line-height: 2.05; margin: 0 0 18px; text-align: justify; }
+.page mark { background: rgba(214, 178, 74, .32); color: inherit; border-radius: 3px; padding: 0 2px; }
+.page__foot { text-align: center; color: var(--ink-faint); font-size: 12px; font-variant-numeric: tabular-nums; margin-top: 18px; }
+
+/* Stacks: a lone card or a pile, placed at a height in a margin. */
+.stack { position: absolute; left: 14px; right: 14px; touch-action: none; cursor: grab; border-radius: 10px; }
+.stack.dragging { opacity: .3; }
+.stack.sel .card { box-shadow: 0 0 0 2px var(--accent), var(--shadow); }
+.stack.pile { padding-bottom: 8px; }
+.under { position: absolute; left: 0; right: 0; top: 0; bottom: 8px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); }
+.under.u1 { transform: translate(4px, 4px) rotate(1.4deg); }
+.under.u2 { transform: translate(-3px, 8px) rotate(-1.6deg); }
+.badge { position: absolute; top: -9px; right: -8px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: var(--ink); color: var(--paper); font-size: 12px; font-weight: 600; display: grid; place-items: center; font-variant-numeric: tabular-nums; z-index: 2; }
+.tab { position: absolute; left: 10px; top: -19px; max-width: calc(100% - 50px); height: 20px; padding: 0 9px; border-radius: 6px 6px 0 0; background: var(--tab, var(--accent)); color: #fff; font-size: 11.5px; font-weight: 600; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stack.pile.named { margin-top: 0; }
+.srcsum { position: relative; margin-top: 6px; font-size: 11px; color: var(--ink-soft); padding-left: 2px; }
+
+.card { position: relative; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px 10px; box-shadow: var(--shadow); font-size: 13px; line-height: 1.45; }
+.card__top { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
+.chip::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--tc); }
+.src { margin-left: auto; font-size: 10.5px; color: var(--ink-soft); background: var(--accent-wash); padding: 1px 7px; border-radius: 9px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card[data-type="note"] { --tc: var(--t-note); }
+.card[data-type="question"] { --tc: var(--t-question); border-style: dashed; border-color: var(--t-question); }
+.card[data-type="flashcard"] { --tc: var(--t-flash); }
+.card[data-type="screenshot"] { --tc: var(--t-shot); }
+.card[data-type="highlight"] { --tc: var(--t-high); }
+.ar { font-family: var(--font-ar); font-size: 18px; line-height: 1.7; direction: rtl; text-align: right; }
+.q::after { content: ' ?'; color: var(--t-question); font-weight: 700; }
+.quote { border-inline-start: 3px solid var(--t-high); padding-inline-start: 8px; }
+.flash { display: grid; gap: 4px; }
+.flash .back { border-top: 1px dashed var(--line); padding-top: 4px; color: var(--ink-soft); }
+.shot { height: 64px; border-radius: 5px; border: 1px solid var(--line); margin-bottom: 5px;
+  background: linear-gradient(90deg, transparent 18%, rgba(214,178,74,.35) 18% 62%, transparent 62%) 0 22px / 100% 9px no-repeat,
+              repeating-linear-gradient(180deg, transparent 0 7px, var(--line) 7px 9px), var(--bg); }
+.cap { color: var(--ink-soft); font-size: 12px; }
+
+/* Hold-to-pile: the target fills a ring for 300ms, then says "Pile here". */
+.stack.pending .card { box-shadow: 0 0 0 2px var(--accent-wash), var(--shadow); }
+.stack.pending::after { content: ''; position: absolute; inset: -6px; border-radius: 14px; border: 2px solid var(--accent); clip-path: inset(0 100% 0 0); animation: hold 300ms linear forwards; pointer-events: none; }
+@keyframes hold { to { clip-path: inset(0 0 0 0); } }
+.stack.armed::after { content: 'Pile here'; position: absolute; inset: -6px; border-radius: 14px; border: 2px solid var(--accent); background: var(--accent-wash); display: grid; place-items: end center; font-size: 11px; font-weight: 600; color: var(--accent); padding-bottom: 2px; pointer-events: none; animation: none; clip-path: none; }
+
+.ghost { position: fixed; left: 0; top: 0; pointer-events: none; z-index: 50; transform-origin: 30% 20%; }
+.ghost .card { box-shadow: 0 10px 30px rgba(0,0,0,.22); }
+
+/* The fan: the pile spread out, inside its own margin only. */
+.margin.fanning > .stack:not(.fanned) { opacity: .35; }
+.fan { position: absolute; left: 6px; right: 6px; z-index: 20; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(3px); border: 1px solid var(--line); border-radius: 14px; padding: 8px 8px 6px; box-shadow: var(--shadow); display: flex; flex-direction: column; }
+.fan.pinned { border-color: var(--accent); }
+.fan__head { display: flex; align-items: center; gap: 7px; padding: 2px 4px 8px; font-size: 12.5px; }
+.grip { cursor: grab; color: var(--ink-faint); font-size: 15px; letter-spacing: -2px; padding: 0 2px; touch-action: none; }
+.swatch-dot { width: 10px; height: 10px; border-radius: 3px; background: var(--tab, var(--ink-faint)); flex: none; }
+.fan__name { font-weight: 600; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fan__name.empty { font-weight: 400; color: var(--ink-faint); font-style: italic; }
+.fan__count { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.x { border: 0; background: none; color: var(--ink-soft); cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 4px; border-radius: 5px; }
+.x:hover { color: var(--ink); background: var(--accent-wash); }
+.fan__list { display: flex; flex-direction: column; gap: 7px; overflow-y: auto; padding: 2px 2px 4px; }
+.fcard { position: relative; touch-action: none; cursor: grab; transition: transform 220ms cubic-bezier(.2,.8,.3,1), opacity 160ms; border-radius: 10px; }
+.fcard:nth-child(odd) { transform: rotate(-.6deg); }
+.fcard:nth-child(even) { transform: rotate(.5deg); }
+.fcard.dragging { opacity: .3; }
+.fcard .x { position: absolute; top: 4px; right: 4px; opacity: 0; z-index: 2; }
+.fcard:hover .x, .fcard:focus-within .x { opacity: 1; }
+.fcard .pos { position: absolute; left: -2px; top: -6px; font-size: 10px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+.fan__foot { font-size: 11px; color: var(--ink-faint); padding: 6px 4px 0; }
+
+.namer { display: grid; gap: 7px; padding: 4px 4px 10px; }
+.namer input { font: 14px var(--font-ui); padding: 6px 8px; border-radius: 7px; border: 1px solid var(--accent); background: var(--paper); color: var(--ink); width: 100%; }
+.swatches { display: flex; gap: 6px; align-items: center; }
+.swatches button { width: 22px; height: 22px; border-radius: 6px; border: 2px solid transparent; background: var(--tab); cursor: pointer; padding: 0; }
+.swatches button[aria-pressed="true"] { border-color: var(--ink); }
+.swatches button.none { background: var(--paper); border: 1px dashed var(--ink-faint); }
+.namer__acts { display: flex; gap: 6px; justify-content: flex-end; font-size: 11px; color: var(--ink-faint); align-items: center; }
+
+.lasso { position: absolute; border: 1px dashed var(--accent); background: var(--accent-wash); border-radius: 4px; pointer-events: none; z-index: 30; }
+.selbar { position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--paper); border-radius: 10px; padding: 7px 12px; font-size: 13px; z-index: 60; box-shadow: var(--shadow); }
+.selbar kbd { background: transparent; color: inherit; border-color: currentColor; }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; gap: 14px; align-items: center; background: var(--ink); color: var(--paper); border-radius: 10px; padding: 9px 10px 9px 14px; font-size: 13.5px; z-index: 60; box-shadow: var(--shadow); max-width: calc(100vw - 32px); }
+.toast button { font: 600 13px var(--font-ui); color: var(--bg); background: transparent; border: 1px solid color-mix(in srgb, var(--paper) 40%, transparent); border-radius: 7px; padding: 4px 9px; cursor: pointer; }
+.toast kbd { background: transparent; color: inherit; border-color: currentColor; opacity: .7; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fcard { transition: none; }
+  .stack.pending::after { animation-duration: 1ms; }
+}
+</style>
+
+<header>
+  <h1>Piles in the margin <small>Study desk prototype: a page of the Muqaddima with its margins. Everything here is sample data.</small></h1>
+  <div class="keys" aria-label="How to use">
+    <span>Drag onto a card, hold ~0.3s: <b>pile</b></span>
+    <span>Drop sooner: <b>move</b></span>
+    <span>Hover a pile: fan · <kbd>Click</kbd>/<kbd>Space</kbd> keeps it · <kbd>Esc</kbd></span>
+    <span>Drag out of the fan to unpile</span>
+    <span>Double-click a pile to name it</span>
+    <span>Drag empty margin to lasso, then <kbd>P</kbd></span>
+    <span><kbd>Del</kbd> deletes · <kbd>Ctrl Z</kbd> undo</span>
+    <button class="btn" id="reset" type="button">Reset sample</button>
+  </div>
+</header>
+
+<div class="scroller">
+  <div class="stage" id="stage">
+    <div class="margin" data-side="left" data-label="Left margin"></div>
+    <article class="page" lang="ar" dir="rtl">
+      <div class="page__head" dir="ltr"><span>al-Muqaddima · ch. 6</span><span>§ 30</span></div>
+      <p>اعلم أن الحذق في العلم والتفنن فيه والاستيلاء عليه إنما هو بحصول <mark>ملكة</mark> في الإحاطة بمبادئه وقواعده، والوقوف على مسائله، واستنباط فروعه من أصوله.</p>
+      <p>وما لم تحصل هذه الملكة لم يكن الحذق في ذلك الفن المتناول حاصلاً. وهذه الملكة هي في غير الفهم والوعي، لأنا نجد فهم المسألة الواحدة من الفن الواحد ووعيها مشتركاً بين من شدا في ذلك الفن وبين من هو مبتدئ فيه.</p>
+      <p>والملكات كلها جسمانية، سواء كانت في البدن أو في الدماغ من الفكر وغيره، والجسمانيات كلها محسوسة، فتفتقر إلى التعليم. ولهذا كان السند في التعليم في كل علم أو صناعة يفتقر إلى مشاهير المعلمين فيها.</p>
+      <p>ويدل أيضاً على أن تعليم العلم صناعة اختلاف الاصطلاحات فيه، فلكل إمام من الأئمة المشاهير اصطلاح في التعليم يختص به، شأن الصنائع كلها.</p>
+      <div class="page__foot">431</div>
+    </article>
+    <div class="margin" data-side="right" data-label="Right margin"></div>
+  </div>
+</div>
+
+<div class="selbar" id="selbar" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+  const BOOK = 'al-Muqaddima';
+  const HOLD_MS = 300;
+  const COLOURS = [
+    { name: 'Green', v: '#4f7a5a' }, { name: 'Blue', v: '#4a6f96' }, { name: 'Rose', v: '#a65a5a' },
+    { name: 'Ochre', v: '#a8822f' }, { name: 'Plum', v: '#7a5a8c' },
+  ];
+  const TYPE_LABEL = { note: 'Note', question: 'Question', flashcard: 'Flashcard', screenshot: 'Screenshot', highlight: 'Highlight' };
+
+  function sample() {
+    const cards = {
+      c1: { type: 'note', text: 'Malaka is learned by doing, not by memorising. Compare ch. 6 §29.', book: BOOK },
+      c2: { type: 'question', text: 'Does he mean the same malaka for crafts and for sciences', book: BOOK },
+      c3: { type: 'screenshot', text: 'p. 431, the list of the sciences', book: BOOK },
+      c4: { type: 'flashcard', front: 'ملكة', back: 'a settled skill; habitus', book: BOOK },
+      c5: { type: 'highlight', text: 'إنما العلم بالتعلم', book: 'Iḥyāʾ ʿUlūm al-Dīn', ar: true },
+      c6: { type: 'note', text: 'Al-Ghazali: habit is what makes causes look necessary.', book: 'Tahāfut al-Falāsifa' },
+      c7: { type: 'screenshot', text: 'p. 428, teaching as a craft', book: BOOK },
+      c8: { type: 'highlight', text: 'والملكات لا تحصل إلا بتكرار الأفعال', book: 'Kitāb al-ʿIbar', ar: true },
+      c9: { type: 'note', text: 'Ask in class: is the sanad of teachers part of the malaka itself?', book: BOOK },
+      c10: { type: 'question', text: 'Why do old cities keep their crafts longer', book: BOOK },
+      c11: { type: 'flashcard', front: 'اصطلاح', back: 'technical usage; a school’s terms', book: BOOK },
+    };
+    const stacks = [
+      { id: 's1', side: 'left', y: 10, members: ['c1'] },
+      { id: 's2', side: 'left', y: 130, members: ['c2'] },
+      { id: 's3', side: 'left', y: 250, members: ['c3'] },
+      { id: 's4', side: 'left', y: 400, members: ['c4'] },
+      { id: 's11', side: 'left', y: 520, members: ['c11'] },
+      { id: 's5', side: 'right', y: 30, members: ['c5', 'c6', 'c7'], name: 'Habit and skill', color: '#4f7a5a' },
+      { id: 's8', side: 'right', y: 250, members: ['c8'] },
+      { id: 's9', side: 'right', y: 380, members: ['c9'] },
+      { id: 's10', side: 'right', y: 500, members: ['c10'] },
+    ];
+    return { cards, stacks, next: 20 };
+  }
+
+  let S = sample();
+  const history = [];
+  const ui = { fan: null, naming: null, sel: new Set() };
+  const tops = new Map();
+  const stage = document.getElementById('stage');
+  const margins = { left: stage.querySelector('[data-side=left]'), right: stage.querySelector('[data-side=right]') };
+  const toastEl = document.getElementById('toast');
+  const selbar = document.getElementById('selbar');
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const stackById = (id) => S.stacks.find((s) => s.id === id);
+  const isPile = (s) => s && s.members.length > 1;
+  const clone = (x) => JSON.parse(JSON.stringify(x));
+  const shortOf = (cid) => {
+    const c = S.cards[cid];
+    const t = c.type === 'flashcard' ? c.front : c.text;
+    return t.length > 28 ? t.slice(0, 28) + '…' : t;
+  };
+
+  // --- undo ---
+  let toastTimer = 0;
+  function record(before, msg) {
+    history.push(before);
+    toast(msg, true);
+  }
+  function undo() {
+    const before = history.pop();
+    if (!before) return toast('Nothing to undo');
+    S = before;
+    ui.fan = null; ui.naming = null; ui.sel.clear();
+    render();
+    toast('Undone');
+  }
+  function toast(msg, canUndo) {
+    toastEl.innerHTML = `<span>${esc(msg)}</span>` + (canUndo ? `<button type="button" id="undoBtn">Undo <kbd>Ctrl Z</kbd></button>` : '');
+    toastEl.hidden = false;
+    if (canUndo) document.getElementById('undoBtn').onclick = undo;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => (toastEl.hidden = true), canUndo ? 6000 : 2200);
+  }
+
+  // --- cards ---
+  function cardHTML(cid) {
+    const c = S.cards[cid];
+    const src = c.book !== BOOK ? `<span class="src" title="From ${esc(c.book)}">↗ ${esc(c.book)}</span>` : '';
+    let body;
+    if (c.type === 'flashcard') body = `<div class="flash"><div class="ar">${esc(c.front)}</div><div class="back">${esc(c.back)}</div></div>`;
+    else if (c.type === 'screenshot') body = `<div class="shot" aria-hidden="true"></div><div class="cap">${esc(c.text)}</div>`;
+    else if (c.type === 'highlight') body = `<div class="quote ${c.ar ? 'ar' : ''}">${esc(c.text)}</div>`;
+    else if (c.type === 'question') body = `<div class="q">${esc(c.text)}</div>`;
+    else body = `<div>${esc(c.text)}</div>`;
+    return `<div class="card" data-type="${c.type}"><div class="card__top"><span class="chip">${TYPE_LABEL[c.type]}</span>${src}</div>${body}</div>`;
+  }
+
+  // --- render ---
+  function render() {
+    for (const side of ['left', 'right']) {
+      const m = margins[side];
+      m.querySelectorAll('.stack, .fan').forEach((n) => n.remove());
+      m.classList.toggle('fanning', !!(ui.fan && stackById(ui.fan.id)?.side === side));
+      const list = S.stacks.filter((s) => s.side === side).sort((a, b) => a.y - b.y);
+      let bottom = 0;
+      for (const s of list) {
+        const el = stackEl(s);
+        m.appendChild(el);
+        const top = Math.max(s.y, bottom + (s.name || s.color ? 22 : 0));
+        el.style.top = top + 'px';
+        tops.set(s.id, top);
+        bottom = top + el.offsetHeight + 12;
+      }
+    }
+    if (ui.fan) renderFan();
+    updateSelbar();
+  }
+
+  function stackEl(s) {
+    const el = document.createElement('div');
+    const pile = isPile(s);
+    el.className = 'stack' + (pile ? ' pile' : '') + (ui.sel.has(s.id) ? ' sel' : '') + (ui.fan?.id === s.id ? ' fanned' : '');
+    el.dataset.stack = s.id;
+    el.tabIndex = 0;
+    const others = s.members.filter((m) => S.cards[m].book !== BOOK).length;
+    el.setAttribute('aria-label', pile ? `Pile${s.name ? ' ' + s.name : ''}, ${s.members.length} cards` : TYPE_LABEL[S.cards[s.members[0]].type]);
+    el.innerHTML =
+      (pile ? '<div class="under u2"></div><div class="under u1"></div>' : '') +
+      (pile && (s.name || s.color) ? `<div class="tab" style="--tab:${s.color || 'var(--accent)'}">${esc(s.name || '')}</div>` : '') +
+      cardHTML(s.members[0]) +
+      (pile ? `<span class="badge" title="${s.members.length} cards">${s.members.length}</span>` : '') +
+      (pile && others ? `<div class="srcsum">${others} of ${s.members.length} from other books</div>` : '');
+    if (pile) {
+      el.addEventListener('pointerenter', () => hoverOpen(s.id));
+      el.addEventListener('pointerleave', hoverClose);
+    }
+    return el;
+  }
+
+  function renderFan() {
+    const s = stackById(ui.fan.id);
+    if (!isPile(s)) { ui.fan = null; return; }
+    const m = margins[s.side];
+    const f = document.createElement('div');
+    f.className = 'fan' + (ui.fan.pinned ? ' pinned' : '');
+    f.dataset.fan = s.id;
+    f.setAttribute('role', 'group');
+    f.setAttribute('aria-label', `Pile ${s.name || ''} opened`);
+    const naming = ui.naming === s.id;
+    f.innerHTML =
+      `<div class="fan__head"><span class="grip" data-grip title="Drag to move the pile">⠿</span>` +
+      `<span class="swatch-dot" style="--tab:${s.color || 'var(--ink-faint)'}"></span>` +
+      `<span class="fan__name ${s.name ? '' : 'empty'}" title="Double-click to name">${esc(s.name || 'Unnamed pile, double-click to name')}</span>` +
+      `<span class="fan__count">${s.members.length}</span><button class="x" type="button" data-close aria-label="Close">×</button></div>` +
+      (naming ? namerHTML(s) : '') +
+      `<div class="fan__list">${s.members.map((cid, i) => `<div class="fcard" data-card="${cid}" tabindex="0"><span class="pos">${i === 0 ? 'top' : i + 1}</span>${cardHTML(cid)}<button class="x" type="button" data-del="${cid}" aria-label="Delete card">×</button></div>`).join('')}</div>` +
+      `<div class="fan__foot">${ui.fan.pinned ? 'Kept open · Esc closes' : 'Click or Space keeps it open'} · drag a card out to unpile</div>`;
+    m.appendChild(f);
+    // Fit inside the margin: start where the pile is, move up if it would run off the bottom.
+    const mh = Math.max(m.offsetHeight, 600);
+    let top = Math.max(0, (tops.get(s.id) ?? s.y) - 40);
+    f.style.maxHeight = mh + 'px';
+    const h = f.offsetHeight;
+    if (top + h > mh) top = Math.max(0, mh - h);
+    f.style.top = top + 'px';
+    // Spread out from the pile.
+    if (!ui.fan.animated && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      ui.fan.animated = true;
+      const cards = [...f.querySelectorAll('.fcard')];
+      cards.forEach((c) => { c.style.transition = 'none'; c.style.transform = `translateY(${-c.offsetTop + 30}px) scale(.96)`; c.style.opacity = '.6'; });
+      f.offsetHeight;
+      cards.forEach((c) => { c.style.transition = ''; c.style.transform = ''; c.style.opacity = ''; });
+    }
+    f.addEventListener('pointerenter', () => clearTimeout(closeTimer));
+    f.addEventListener('pointerleave', hoverClose);
+    f.addEventListener('dblclick', (e) => { if (!e.target.closest('input, button')) startNaming(s.id); });
+    f.querySelector('[data-close]').onclick = closeFan;
+    f.querySelectorAll('[data-del]').forEach((b) => (b.onclick = () => deleteMember(s.id, b.dataset.del)));
+    if (naming) wireNamer(f, s);
+  }
+
+  function namerHTML(s) {
+    return `<div class="namer"><input id="pileName" maxlength="40" placeholder="Name this pile" value="${esc(s.name || '')}" aria-label="Pile name">` +
+      `<div class="swatches" role="group" aria-label="Colour tab"><button type="button" class="none" data-colour="" aria-label="No colour" aria-pressed="${!s.color}"></button>` +
+      COLOURS.map((c) => `<button type="button" style="--tab:${c.v}" data-colour="${c.v}" aria-label="${c.name}" aria-pressed="${s.color === c.v}"></button>`).join('') +
+      `</div><div class="namer__acts"><span><kbd>Enter</kbd> saves · <kbd>Esc</kbd> cancels</span><button type="button" class="btn" data-save>Save</button></div></div>`;
+  }
+  function wireNamer(f, s) {
+    const input = f.querySelector('#pileName');
+    let colour = s.color || '';
+    f.querySelectorAll('[data-colour]').forEach((b) => (b.onclick = () => {
+      colour = b.dataset.colour;
+      f.querySelectorAll('[data-colour]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      input.focus();
+    }));
+    const save = () => {
+      const name = input.value.trim();
+      if (name === (s.name || '') && colour === (s.color || '')) { ui.naming = null; return render(); }
+      const before = clone(S);
+      s.name = name || undefined;
+      s.color = colour || undefined;
+      ui.naming = null;
+      render();
+      record(before, name ? `Named “${name}”` : 'Pile name cleared');
+    };
+    f.querySelector('[data-save]').onclick = save;
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); save(); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); ui.naming = null; render(); }
+    });
+    requestAnimationFrame(() => { input.focus(); input.select(); });
+  }
+
+  // --- fan open / close ---
+  let openTimer = 0, closeTimer = 0;
+  function hoverOpen(id) {
+    if (drag || lasso) return;
+    clearTimeout(closeTimer);
+    if (ui.fan?.id === id) return;
+    if (ui.fan?.pinned) return;
+    clearTimeout(openTimer);
+    openTimer = setTimeout(() => openFan(id, false), 140);
+  }
+  function hoverClose() {
+    clearTimeout(openTimer);
+    if (!ui.fan || ui.fan.pinned || ui.naming || drag) return;
+    clearTimeout(closeTimer);
+    closeTimer = setTimeout(closeFan, 220);
+  }
+  function openFan(id, pinned) {
+    ui.fan = { id, pinned };
+    render();
+  }
+  function closeFan() {
+    if (!ui.fan) return;
+    const id = ui.fan.id;
+    ui.fan = null; ui.naming = null;
+    render();
+    stage.querySelector(`[data-stack="${id}"]`)?.focus({ preventScroll: true });
+  }
+  function pinFan(id) {
+    if (ui.fan?.id === id && ui.fan.pinned) return closeFan();
+    ui.fan = { id, pinned: true, animated: ui.fan?.id === id };
+    render();
+    stage.querySelector('.fan .fcard')?.focus({ preventScroll: true });
+  }
+  function startNaming(id) {
+    ui.fan = { id, pinned: true, animated: ui.fan?.id === id };
+    ui.naming = id;
+    render();
+  }
+
+  // --- operations (each records an undo step) ---
+  function settle(s) {
+    // A pile of one dissolves; an empty stack goes.
+    if (s.members.length === 1) { const had = !!(s.name || s.color); s.name = undefined; s.color = undefined; return had ? 'dissolved' : 'single'; }
+    if (!s.members.length) S.stacks = S.stacks.filter((x) => x !== s);
+    return '';
+  }
+  function pileStackOnto(srcId, targetId) {
+    const before = clone(S);
+    const src = stackById(srcId), t = stackById(targetId);
+    t.members.push(...src.members);
+    if (!t.name && src.name) { t.name = src.name; t.color = src.color; }
+    S.stacks = S.stacks.filter((x) => x !== src);
+    ui.sel.clear();
+    render();
+    record(before, `Piled ${src.members.length > 1 ? src.members.length + ' cards' : '“' + shortOf(src.members[0]) + '”'} under “${shortOf(t.members[0])}” · ${t.members.length} in the pile`);
+  }
+  function moveMemberOnto(fromId, cid, targetId) {
+    const before = clone(S);
+    const from = stackById(fromId), t = stackById(targetId);
+    from.members = from.members.filter((m) => m !== cid);
+    t.members.push(cid);
+    const r = settle(from);
+    if (r === 'single' || r === 'dissolved') ui.fan = null;
+    render();
+    record(before, `Moved “${shortOf(cid)}” to the bottom of another pile${r ? ' · the old pile dissolved' : ''}`);
+  }
+  function unpile(fromId, cid, side, y) {
+    const before = clone(S);
+    const from = stackById(fromId);
+    from.members = from.members.filter((m) => m !== cid);
+    S.stacks.push({ id: 's' + S.next++, side, y, members: [cid] });
+    const r = settle(from);
+    if (r) ui.fan = null;
+    render();
+    record(before, `Took “${shortOf(cid)}” off the pile${r ? ' · a pile of one dissolves' : ''}`);
+  }
+  function moveStack(id, side, y) {
+    // Undoable without a toast, so undoing a later pile does not also put this card back.
+    history.push(clone(S));
+    const s = stackById(id);
+    s.side = side; s.y = Math.max(0, Math.round(y));
+    render();
+  }
+  function deleteMember(fromId, cid) {
+    const label = shortOf(cid);
+    const before = clone(S);
+    const from = stackById(fromId);
+    from.members = from.members.filter((m) => m !== cid);
+    delete S.cards[cid];
+    const r = settle(from);
+    if (r || !from.members.length) ui.fan = null;
+    render();
+    record(before, `Deleted “${label}”`);
+  }
+  function deleteStacks(ids) {
+    if (!ids.length) return;
+    const before = clone(S);
+    let n = 0;
+    for (const id of ids) {
+      const s = stackById(id);
+      if (!s) continue;
+      n += s.members.length;
+      s.members.forEach((m) => delete S.cards[m]);
+      S.stacks = S.stacks.filter((x) => x !== s);
+    }
+    ui.sel.clear(); ui.fan = null;
+    render();
+    record(before, `Deleted ${n} card${n === 1 ? '' : 's'}`);
+  }
+  function pileSelection() {
+    const ids = [...ui.sel].filter(stackById);
+    if (ids.length < 2) return toast('Select two or more cards to pile (drag over empty margin)');
+    const before = clone(S);
+    const order = ids.map(stackById).sort((a, b) => (tops.get(a.id) ?? a.y) - (tops.get(b.id) ?? b.y) || (a.side === 'left' ? -1 : 1));
+    const [top, ...rest] = order;
+    for (const s of rest) {
+      top.members.push(...s.members);
+      if (!top.name && s.name) { top.name = s.name; top.color = s.color; }
+      S.stacks = S.stacks.filter((x) => x !== s);
+    }
+    ui.sel.clear();
+    render();
+    record(before, `Piled ${top.members.length} cards under “${shortOf(top.members[0])}”`);
+  }
+  // --- pointer: press, drag, hold-to-pile, lasso ---
+  let drag = null, lasso = null, lastClick = { id: null, t: 0 };
+
+  stage.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || e.target.closest('input, button, .namer')) return;
+    const fan = e.target.closest('.fan');
+    const grip = e.target.closest('[data-grip]');
+    const fcard = e.target.closest('.fcard');
+    const st = e.target.closest('.stack');
+    const margin = e.target.closest('.margin');
+    if (grip) press(e, { kind: 'stack', id: fan.dataset.fan, el: fan });
+    else if (fcard) press(e, { kind: 'member', id: fan.dataset.fan, cid: fcard.dataset.card, el: fcard });
+    else if (fan) press(e, { kind: 'fanbg', id: fan.dataset.fan, el: fan });
+    else if (st) press(e, { kind: 'stack', id: st.dataset.stack, el: st });
+    else if (margin) startLasso(e, margin);
+  });
+
+  function press(e, src) {
+    const start = { x: e.clientX, y: e.clientY };
+    const rect = src.el.getBoundingClientRect();
+    const onMove = (ev) => {
+      if (!drag) {
+        if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 5 || src.kind === 'fanbg') return;
+        beginDrag(src, rect, start);
+      }
+      dragMove(ev);
+    };
+    const onUp = (ev) => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      if (drag) return ev.type === 'pointercancel' ? cancelDrag() : drop(ev);
+      click(src, ev);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  }
+
+  function click(src, ev) {
+    if (src.kind === 'member') return src.el.focus({ preventScroll: true });
+    if (src.kind === 'fanbg') return;
+    const s = stackById(src.id);
+    const now = performance.now();
+    const double = lastClick.id === s.id && now - lastClick.t < 380;
+    lastClick = { id: s.id, t: now };
+    if (ev.shiftKey || ev.ctrlKey || ev.metaKey) {
+      ui.sel.has(s.id) ? ui.sel.delete(s.id) : ui.sel.add(s.id);
+      return render();
+    }
+    if (isPile(s)) {
+      if (double) return startNaming(s.id);
+      if (ui.fan?.id === s.id && !ui.fan.pinned) { ui.fan.pinned = true; ui.fan.animated = true; render(); return stage.querySelector('.fan .fcard')?.focus({ preventScroll: true }); }
+      return pinFan(s.id);
+    }
+    ui.sel = new Set([s.id]);
+    render();
+    stage.querySelector(`[data-stack="${s.id}"]`)?.focus({ preventScroll: true });
+  }
+
+  function beginDrag(src, rect, start) {
+    clearTimeout(openTimer); clearTimeout(closeTimer);
+    const ghost = document.createElement('div');
+    ghost.className = 'ghost';
+    ghost.style.width = rect.width + 'px';
+    ghost.innerHTML = src.kind === 'member' ? cardHTML(src.cid) : (src.el.classList.contains('fan') ? stage.querySelector(`[data-stack="${src.id}"]`).innerHTML : src.el.innerHTML);
+    ghost.querySelectorAll('.x, .pos').forEach((n) => n.remove());
+    document.body.appendChild(ghost);
+    drag = { src, ghost, dx: start.x - rect.left, dy: start.y - rect.top, target: null, armed: false, timer: 0 };
+    if (src.kind === 'stack') {
+      if (ui.fan?.id === src.id) { ui.fan = null; ui.naming = null; render(); }
+      stage.querySelector(`[data-stack="${src.id}"]`)?.classList.add('dragging');
+    } else {
+      src.el.classList.add('dragging');
+    }
+  }
+
+  function dragMove(ev) {
+    const { ghost, dx, dy } = drag;
+    ghost.style.transform = `translate(${ev.clientX - dx}px, ${ev.clientY - dy}px) rotate(-1.5deg)`;
+    const hit = document.elementFromPoint(ev.clientX, ev.clientY);
+    const overOwnFan = drag.src.kind === 'member' && hit?.closest(`[data-fan="${drag.src.id}"]`);
+    const st = !overOwnFan && hit?.closest('.stack');
+    const tid = st && st.dataset.stack !== drag.src.id ? st.dataset.stack : null;
+    if (tid === drag.target) return;
+    clearTimeout(drag.timer);
+    stage.querySelectorAll('.pending, .armed').forEach((n) => n.classList.remove('pending', 'armed'));
+    drag.target = tid; drag.armed = false;
+    if (!tid) return;
+    st.classList.add('pending');
+    drag.timer = setTimeout(() => {
+      drag.armed = true;
+      st.classList.remove('pending');
+      st.classList.add('armed');
+    }, HOLD_MS);
+  }
+
+  function endDragVisuals() {
+    clearTimeout(drag.timer);
+    drag.ghost.remove();
+    stage.querySelectorAll('.pending, .armed, .dragging').forEach((n) => n.classList.remove('pending', 'armed', 'dragging'));
+  }
+  function cancelDrag() {
+    if (!drag) return;
+    endDragVisuals();
+    drag = null;
+    render();
+  }
+
+  // The margin under the pointer; over the text column, the nearer margin.
+  function marginAt(x) {
+    const l = margins.left.getBoundingClientRect(), r = margins.right.getBoundingClientRect();
+    if (x <= l.right) return 'left';
+    if (x >= r.left) return 'right';
+    return x - l.right < r.left - x ? 'left' : 'right';
+  }
+
+  function drop(ev) {
+    const d = drag;
+    endDragVisuals();
+    drag = null;
+    const { src } = d;
+    if (d.armed && d.target) {
+      if (src.kind === 'stack') return pileStackOnto(src.id, d.target);
+      return moveMemberOnto(src.id, src.cid, d.target);
+    }
+    const side = marginAt(ev.clientX);
+    const y = ev.clientY - margins[side].getBoundingClientRect().top - d.dy;
+    if (src.kind === 'member') {
+      const fanEl = stage.querySelector(`[data-fan="${src.id}"]`);
+      const fr = fanEl?.getBoundingClientRect();
+      if (fr && ev.clientX >= fr.left && ev.clientX <= fr.right && ev.clientY >= fr.top && ev.clientY <= fr.bottom) return render();
+      return unpile(src.id, src.cid, side, y);
+    }
+    moveStack(src.id, side, y);
+  }
+
+  function startLasso(e, margin) {
+    const sr = stage.getBoundingClientRect();
+    const box = document.createElement('div');
+    box.className = 'lasso';
+    stage.appendChild(box);
+    const start = { x: e.clientX, y: e.clientY };
+    const keep = e.shiftKey ? new Set(ui.sel) : new Set();
+    lasso = { box };
+    if (ui.fan && !ui.fan.pinned) closeFan();
+    const move = (ev) => {
+      const l = Math.min(start.x, ev.clientX), t = Math.min(start.y, ev.clientY), r = Math.max(start.x, ev.clientX), b = Math.max(start.y, ev.clientY);
+      Object.assign(box.style, { left: l - sr.left + 'px', top: t - sr.top + 'px', width: r - l + 'px', height: b - t + 'px' });
+      const sel = new Set(keep);
+      stage.querySelectorAll('.stack').forEach((el) => {
+        const q = el.getBoundingClientRect();
+        const hit = q.left < r && q.right > l && q.top < b && q.bottom > t;
+        if (hit) sel.add(el.dataset.stack);
+        el.classList.toggle('sel', sel.has(el.dataset.stack));
+      });
+      ui.sel = sel;
+      updateSelbar();
+    };
+    const up = (ev) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      box.remove();
+      lasso = null;
+      if (Math.hypot(ev.clientX - start.x, ev.clientY - start.y) < 4) {
+        ui.sel = keep;
+        if (ui.fan?.pinned) ui.fan = null;
+      }
+      render();
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  }
+
+  function updateSelbar() {
+    const n = ui.sel.size;
+    selbar.hidden = n === 0;
+    if (n) selbar.innerHTML = n > 1 ? `${n} selected · <kbd>P</kbd> piles them · <kbd>Del</kbd> deletes · <kbd>Esc</kbd> clears` : `1 selected · Shift-click or lasso to add more`;
+  }
+
+  // --- keys ---
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.target.closest?.('input')) { e.preventDefault(); return undo(); }
+    if (e.target.closest?.('input')) return;
+    const focusStack = e.target.closest?.('.stack');
+    const focusCard = e.target.closest?.('.fcard');
+    if (e.key === 'Escape') {
+      if (drag) return cancelDrag();
+      if (ui.naming) { ui.naming = null; return render(); }
+      if (ui.fan) return closeFan();
+      if (ui.sel.size) { ui.sel.clear(); return render(); }
+    } else if ((e.key === ' ' || e.key === 'Enter') && focusStack && isPile(stackById(focusStack.dataset.stack))) {
+      e.preventDefault();
+      pinFan(focusStack.dataset.stack);
+    } else if (e.key === ' ' && focusCard) {
+      e.preventDefault();
+    } else if (e.key.toLowerCase() === 'p' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      pileSelection();
+    } else if ((e.key === 'n' || e.key === 'F2') && (focusStack || focusCard)) {
+      const id = focusCard ? e.target.closest('.fan').dataset.fan : focusStack.dataset.stack;
+      if (isPile(stackById(id))) { e.preventDefault(); startNaming(id); }
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (focusCard) { e.preventDefault(); return deleteMember(e.target.closest('.fan').dataset.fan, focusCard.dataset.card); }
+      const ids = ui.sel.size ? [...ui.sel] : focusStack ? [focusStack.dataset.stack] : [];
+      if (ids.length) { e.preventDefault(); deleteStacks(ids); }
+    } else if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && focusCard) {
+      e.preventDefault();
+      const sib = e.key === 'ArrowDown' ? focusCard.nextElementSibling : focusCard.previousElementSibling;
+      sib?.focus();
+    }
+  });
+
+  // A click outside a kept-open fan closes it.
+  document.addEventListener('pointerdown', (e) => {
+    if (ui.fan?.pinned && !e.target.closest('.fan, .stack, .toast')) closeFan();
+  });
+
+  document.getElementById('reset').onclick = () => {
+    const before = clone(S);
+    S = sample(); ui.fan = null; ui.naming = null; ui.sel.clear();
+    render();
+    record(before, 'Sample restored');
+  };
+
+  document.fonts?.ready.then(render);
+  render();
+})();
+</script>
