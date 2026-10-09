@@ -12,6 +12,7 @@ const path = require('node:path');
 const { createSyncFolder } = require('./syncFolder.cjs');
 const { createBlobFiles } = require('./blobFiles.cjs');
 const { createOcrEngines } = require('./ocrEngines.cjs');
+const { startAutoUpdate } = require('./autoUpdate.cjs');
 
 const APP_SCHEME = 'app';
 const APP_HOST = 'bundle';
@@ -243,6 +244,7 @@ app.whenReady().then(async () => {
     callback(permission === 'fullscreen');
   });
   createWindow();
+  startAutoUpdate();
 });
 
 app.on('window-all-closed', () => {
