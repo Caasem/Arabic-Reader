@@ -4,6 +4,15 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.69.0 — 2026-10-09
+
+- **Capture and stay.** On a capture trip, *Capture and stay* (Shift+Alt+X or the bar's button) files the capture
+  and keeps you in the other book, with a count in the bar. *Done, go back* (or Esc) returns you home. A capture
+  that fails to save leaves the trip open.
+- **Back to the last book.** After a trip, Pull in (Alt+U) starts with *Back to <book>*: Enter goes again to the
+  same book, filing in the same margin at the same place.
+- A prototype of piles in the study desk margin (`src/studyDesk/piles.prototype.html`, not part of the app yet).
+
 ## v0.66.0 — 2026-10-09
 
 - **Margins and Document in the reader's dock.** The quiet reader's dock ends with Margins (on or off, like Alt+M)

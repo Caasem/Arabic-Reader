@@ -324,6 +324,15 @@
   color: var(--ink);
   font-weight: 600;
 }
+.sd-trip__count {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
 .sd-trip__acts {
   display: flex;
   gap: 8px;

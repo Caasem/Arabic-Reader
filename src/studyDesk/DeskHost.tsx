@@ -22,7 +22,7 @@ import { DeskSwitch } from './DeskSwitch';
 import type { PullSpot, PullTarget } from './pullIn';
 import { PullInBody } from './PullInBody';
 import { RegionCapture } from './RegionCapture';
-import { endTrip, startTrip, takeTripNote, takeTripReopen, tripFiledMessage, tripPlacement, useDeskTrip } from './trip';
+import { againTrip, countTripCapture, endTrip, lastTripFrom, startTrip, takeTripNote, takeTripReopen, tripDoneMessage, tripFiledMessage, tripPlacement, tripStayMessage, useDeskTrip } from './trip';
 import { TripBar } from './TripBar';
 import { resolveDesk, useDeskData } from './useDesk';
 import './studyDesk.css';
@@ -46,6 +46,8 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
   const [inbox, setInbox] = useState(false);
   const [concept, setConcept] = useState(false);
   const [region, setRegion] = useState(false);
+  /** On a trip, the open capture was started with Capture and stay: file it and keep the trip open. */
+  const stay = useRef(false);
   /** Pull in, open: the desk it adds to and the place on the page for margin targets. */
   const [pull, setPull] = useState<{ deskId: string; spot: PullSpot | null; fromDocument?: string; picking?: boolean } | null>(null);
   /** The desk document, open on a desk (and maybe an item to show). */
@@ -103,6 +105,38 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
     },
     [pull, onOpenBook, book]
   );
+  // Back to <book> in Pull in: the last trip from this book again, same target and spot.
+  const goAgain = useCallback(async () => {
+    const last = lastTripFrom(book.id);
+    if (!pull || !onOpenBook || !last) return;
+    const to = (await libraryService.listBooks()).find((b) => b.id === last.to.id);
+    if (!to) return say('That book is not in the library any more');
+    const home = await resolveDesk(book, last.deskId);
+    startTrip({ ...againTrip(last, !!pull.fromDocument), deskId: home.id, fromDocument: pull.fromDocument ? home.id : undefined, to });
+    setPull(null);
+    setDoc(null);
+    onOpenBook(to);
+  }, [pull, onOpenBook, book, say]);
+  // On a trip: Capture (file it and go back) or Capture and stay (file it, take more).
+  const startCapture = useCallback((andStay: boolean) => {
+    stay.current = andStay;
+    setConcept(false);
+    setInbox(false);
+    setRegion(true);
+  }, []);
+  const tripSent = useCallback(
+    (item: DeskItem) => {
+      if (!away) return;
+      if (!stay.current) return returnHome(tripFiledMessage(away, (away.captured ?? 0) + 1), item.id);
+      const t = countTripCapture(item.id);
+      setRegion(false);
+      if (t) say(tripStayMessage(t));
+    },
+    [away, returnHome, say]
+  );
+  const tripDone = useCallback(() => {
+    if (away) returnHome(tripDoneMessage(away), away.lastItemId);
+  }, [away, returnHome]);
 
   const desk = data.desks.find((d) => d.id === (away ? away.deskId : data.deskId));
   const deskName = away ? (desk?.kind === 'own' ? desk.title : `${away.from.title}’s desk`) : !desk || (desk.kind === 'book' && desk.bookId === book.id) ? 'this book’s desk' : desk.title;
@@ -156,10 +190,16 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
     else openPull();
   });
   useChordHotkey('KeyX', true, () => {
+    stay.current = false;
     setConcept(false);
     setInbox(false);
     setRegion((v) => !v);
   });
+  // Shift+Alt+X on a trip: Capture and stay.
+  useChordHotkey('KeyX', !!away, () => {
+    if (region) setRegion(false);
+    else startCapture(true);
+  }, true);
 
   // On a trip, Esc with nothing else open goes back without capturing. Read before the reader's own Esc
   // handlers (capture phase), so closing a dictionary popup does not also end the trip.
@@ -170,11 +210,11 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
       if (document.querySelector('.dict-popup, [role="dialog"]')) return;
       const typing = (e.target as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]');
       if (typing) return;
-      returnHome('Back where you were, nothing captured');
+      tripDone();
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [away, inbox, doc, pull, region, concept, returnHome]);
+  }, [away, inbox, doc, pull, region, concept, tripDone]);
 
   // Escape from inside the book reaches the host window.
   useEffect(() => {
@@ -199,7 +239,7 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
   );
   // What the right-click ring in the margins can do (MarginRing.tsx).
   const commands: DeskCommands = {
-    capture: () => (setConcept(false), setInbox(false), setRegion(true)),
+    capture: () => startCapture(false),
     pullIn: openPull,
     inbox: () => setInbox(true),
     document: openDocument,
@@ -282,7 +322,7 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
       {pull && (
         <div className="sd-pull-layer">
           <Shell style={narrow ? 'sheet' : style} onClose={() => setPull(null)} title="Pull in" keyHint="Alt U" label="Pull in" posKey="studyDesk.pullPos">
-            <PullInBody book={book} deskId={pull.deskId} spot={pull.spot} margins={pull.spot?.location.startsWith('pdf:') && prefs.studyDeskMargins !== 'off' ? 'right' : prefs.studyDeskMargins} initialPicking={pull.picking} onClose={() => setPull(null)} onToast={say} onGoToBook={onOpenBook && !away ? (to, target) => void goToBook(to, target) : undefined} />
+            <PullInBody book={book} deskId={pull.deskId} spot={pull.spot} margins={pull.spot?.location.startsWith('pdf:') && prefs.studyDeskMargins !== 'off' ? 'right' : prefs.studyDeskMargins} initialPicking={pull.picking} onClose={() => setPull(null)} onToast={say} onGoToBook={onOpenBook && !away ? (to, target) => void goToBook(to, target) : undefined} again={onOpenBook && !away ? lastTripFrom(book.id) : null} onGoAgain={() => void goAgain()} />
           </Shell>
         </div>
       )}
@@ -291,14 +331,14 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
       {!doc && <DeskSwitch marginsOn={prefs.studyDeskMargins !== 'off'} onToggleMargins={toggleMargins} onDocument={() => openDocument()} />}
       {!doc && <MarginLayer book={book} data={data} commands={commands} onToast={say} onOpenDocument={openDocument} />}
       {concept && <ConceptStrip book={book} deskId={data.deskId} deskName={deskName} onClose={() => setConcept(false)} onToast={say} />}
-      {away && !region && <TripBar trip={away} onCapture={() => (setConcept(false), setInbox(false), setRegion(true))} onCancel={() => returnHome('Back where you were, nothing captured')} />}
+      {away && !region && <TripBar trip={away} onCapture={() => startCapture(false)} onCaptureStay={() => startCapture(true)} onCancel={tripDone} />}
       {region && (
         <RegionCapture
           book={book}
           deskId={away ? away.deskId : data.deskId}
           deskName={deskName}
           extra={away ? tripPlacement(away) : undefined}
-          onSent={away ? (item) => returnHome(tripFiledMessage(away), item.id) : undefined}
+          onSent={away ? tripSent : undefined}
           onClose={closeRegion}
           onToast={say}
         />
@@ -316,6 +356,7 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
           }}
           onCapture={() => {
             backToDoc.current = doc.deskId;
+            stay.current = false;
             data.setDeskId(doc.deskId);
             setDoc(null);
             setRegion(true);
