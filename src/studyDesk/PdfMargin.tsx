@@ -3,6 +3,7 @@ import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta } from '../types';
 import { carriesFiles, imageIn } from './marginImages';
 import { Gloss, MarginSettings } from './MarginLayer';
+import { MarginRing, marginActions, useRingTrigger, type DeskCommands, type RingState } from './MarginRing';
 import { pdfLevelAt } from './pageGeometry';
 import { pdfMarks, setPdfDeskFocus, setPdfDeskHover, setPdfDeskTie, stackTops, usePdfDesk, type PdfMark } from './pdfDesk';
 import { capture, type DeskData } from './useDesk';
@@ -73,9 +74,11 @@ interface Props {
   data: DeskData;
   onToast(m: string): void;
   onOpenDocument(itemId?: string): void;
+  /** For the right-click ring (MarginRing.tsx). */
+  commands: DeskCommands;
 }
 
-export function PdfMargin({ book, data, onToast, onOpenDocument }: Props) {
+export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Props) {
   const { prefs, updatePrefs } = usePreferences();
   const { hover, focus } = usePdfDesk();
   const [stage, tick] = useStageGeometry();
@@ -83,6 +86,9 @@ export function PdfMargin({ book, data, onToast, onOpenDocument }: Props) {
   const [focusId, setFocusId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dropping, setDropping] = useState(false);
+  // Right-click (or long-press) the strip: the ring of shortcuts.
+  const [ring, setRing] = useState<RingState | null>(null);
+  const stripRing = useRingTrigger((x, y) => setRing({ x, y, title: 'Margin', actions: marginActions(commands, () => void newNote(y), () => setSettingsOpen(true)) }));
   const layerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -177,7 +183,11 @@ export function PdfMargin({ book, data, onToast, onOpenDocument }: Props) {
       <div
         className={'sd-margins__area sd-pdfmargin__area' + (dropping ? ' sd-margins__area--drop' : '')}
         style={{ left: stage.right, width: PDF_STRIP, top: stage.top, height: stage.height }}
+        onContextMenu={(e) => e.target === e.currentTarget && stripRing.onContextMenu(e)}
+        onPointerDown={stripRing.onPointerDown}
+        onPointerMove={stripRing.onPointerMove}
         onPointerUp={(e) => {
+          stripRing.onPointerUp();
           if (e.target !== e.currentTarget) return;
           const now = Date.now();
           const last = lastTap.current;
@@ -225,12 +235,14 @@ export function PdfMargin({ book, data, onToast, onOpenDocument }: Props) {
           onHover={(h) => setPdfDeskHover(h ? p.mark.item.id : null)}
           onToast={onToast}
           onOpenDocument={onOpenDocument}
+          onRing={setRing}
         />
       ))}
       <button type="button" className="sd-margins__set" style={{ left: stage.right + PDF_STRIP - 130, top: stage.top + 4 }} onClick={() => setSettingsOpen((v) => !v)}>
         Margin settings
       </button>
       {settingsOpen && <MarginSettings prefs={prefs} update={updatePrefs} onClose={() => setSettingsOpen(false)} />}
+      {ring && <MarginRing {...ring} onClose={() => setRing(null)} />}
     </div>
   );
 }

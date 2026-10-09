@@ -17,6 +17,7 @@ import { publishPdfDeskItems } from './pdfDesk';
 import { PdfDeskLayer } from './PdfDeskLayer';
 import { PdfMargin } from './PdfMargin';
 import { PdfSelect } from './PdfSelect';
+import type { DeskCommands } from './MarginRing';
 import type { PullSpot, PullTarget } from './pullIn';
 import { PullInBody } from './PullInBody';
 import { RegionCapture } from './RegionCapture';
@@ -45,7 +46,7 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
   const [concept, setConcept] = useState(false);
   const [region, setRegion] = useState(false);
   /** Pull in, open: the desk it adds to and the place on the page for margin targets. */
-  const [pull, setPull] = useState<{ deskId: string; spot: PullSpot | null; fromDocument?: string } | null>(null);
+  const [pull, setPull] = useState<{ deskId: string; spot: PullSpot | null; fromDocument?: string; picking?: boolean } | null>(null);
   /** The desk document, open on a desk (and maybe an item to show). */
   const [doc, setDoc] = useState<{ deskId: string; itemId?: string } | null>(null);
   /** A capture started from the document goes back to it. */
@@ -114,7 +115,7 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
     setConcept((v) => !v);
   });
   // Alt+M: margins on and off; back on in the layout they had.
-  useChordHotkey('KeyM', true, () => {
+  const toggleMargins = () => {
     if (prefs.studyDeskMargins !== 'off') {
       try {
         localStorage.setItem('studyDesk.lastMargins', prefs.studyDeskMargins);
@@ -133,16 +134,22 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
       }
       updatePrefs({ studyDeskMargins: last });
     }
-  });
+  };
+  useChordHotkey('KeyM', true, toggleMargins);
   // Alt+U: Pull in (Alt+P is the saved-entries export).
-  const openPull = useCallback(() => {
-    setInbox(false);
-    setConcept(false);
-    setRegion(false);
-    // The place is read before the palette covers the page; from the document there is no page to place on.
-    const location = doc ? null : (cleanLocationNearCentre() ?? pdfLocationNearCentre());
-    setPull({ deskId: doc?.deskId ?? data.deskId, spot: location ? { bookId: book.id, location } : null, fromDocument: doc?.deskId });
-  }, [doc, data.deskId, book.id]);
+  // `picking`: open straight on the book list (Go to another book, from the ring).
+  const openPullAt = useCallback(
+    (picking: boolean) => {
+      setInbox(false);
+      setConcept(false);
+      setRegion(false);
+      // The place is read before the palette covers the page; from the document there is no page to place on.
+      const location = doc ? null : (cleanLocationNearCentre() ?? pdfLocationNearCentre());
+      setPull({ deskId: doc?.deskId ?? data.deskId, spot: location ? { bookId: book.id, location } : null, fromDocument: doc?.deskId, picking });
+    },
+    [doc, data.deskId, book.id]
+  );
+  const openPull = useCallback(() => openPullAt(false), [openPullAt]);
   useChordHotkey('KeyU', true, () => {
     if (pull) setPull(null);
     else openPull();
@@ -189,6 +196,15 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
     },
     [data.items, data.deskId]
   );
+  // What the right-click ring in the margins can do (MarginRing.tsx).
+  const commands: DeskCommands = {
+    capture: () => (setConcept(false), setInbox(false), setRegion(true)),
+    pullIn: openPull,
+    inbox: () => setInbox(true),
+    document: openDocument,
+    hideMargins: () => prefs.studyDeskMargins !== 'off' && toggleMargins(),
+    goToBook: onOpenBook && !away ? () => openPullAt(true) : undefined,
+  };
   // Go to source from the document: this book jumps to the place; another book opens there.
   const goToSource = useCallback(
     async (item: DeskItem) => {
@@ -265,13 +281,13 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
       {pull && (
         <div className="sd-pull-layer">
           <Shell style={narrow ? 'sheet' : style} onClose={() => setPull(null)} title="Pull in" keyHint="Alt U" label="Pull in" posKey="studyDesk.pullPos">
-            <PullInBody book={book} deskId={pull.deskId} spot={pull.spot} margins={pull.spot?.location.startsWith('pdf:') && prefs.studyDeskMargins !== 'off' ? 'right' : prefs.studyDeskMargins} onClose={() => setPull(null)} onToast={say} onGoToBook={onOpenBook && !away ? (to, target) => void goToBook(to, target) : undefined} />
+            <PullInBody book={book} deskId={pull.deskId} spot={pull.spot} margins={pull.spot?.location.startsWith('pdf:') && prefs.studyDeskMargins !== 'off' ? 'right' : prefs.studyDeskMargins} initialPicking={pull.picking} onClose={() => setPull(null)} onToast={say} onGoToBook={onOpenBook && !away ? (to, target) => void goToBook(to, target) : undefined} />
           </Shell>
         </div>
       )}
-      {book.pdf && <PdfMargin book={book} data={data} onToast={say} onOpenDocument={openDocument} />}
-      {book.pdf && !doc && <PdfSelect book={book} data={data} active={!region && !pull} onToast={say} />}
-      {!doc && <MarginLayer book={book} data={data} onToast={say} onOpenDocument={openDocument} />}
+      {book.pdf && <PdfMargin book={book} data={data} commands={commands} onToast={say} onOpenDocument={openDocument} />}
+      {book.pdf && !doc && <PdfSelect book={book} data={data} active={!region && !pull} commands={commands} onToast={say} />}
+      {!doc && <MarginLayer book={book} data={data} commands={commands} onToast={say} onOpenDocument={openDocument} />}
       {concept && <ConceptStrip book={book} deskId={data.deskId} deskName={deskName} onClose={() => setConcept(false)} onToast={say} />}
       {away && !region && <TripBar trip={away} onCapture={() => (setConcept(false), setInbox(false), setRegion(true))} onCancel={() => returnHome('Back where you were, nothing captured')} />}
       {region && (

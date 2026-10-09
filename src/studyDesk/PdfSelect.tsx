@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta } from '../types';
-import { updateItem } from './deskStore';
+import { deleteItem, updateItem } from './deskStore';
+import { MarginRing, type DeskCommands, type RingState } from './MarginRing';
 import { formatPdfLocation, pdfRegionInBox } from './pageGeometry';
 import { pdfDeskState, setPdfDeskFocus, setPdfDeskTie, usePdfDesk } from './pdfDesk';
 import { setSnapEnabled, snapDrag, snapEnabled, type FracBox, type Snapped } from './pdfSnap';
@@ -40,7 +41,7 @@ function onScreen(frame: HTMLElement, b: FracBox) {
   return { left: f.left + b.x * f.width, top: f.top + b.y * f.height, width: b.w * f.width, height: b.h * f.height };
 }
 
-export function PdfSelect({ book, data, active, onToast }: { book: BookMeta; data: DeskData; active: boolean; onToast(m: string): void }) {
+export function PdfSelect({ book, data, active, commands, onToast }: { book: BookMeta; data: DeskData; active: boolean; commands: DeskCommands; onToast(m: string): void }) {
   const { prefs } = usePreferences();
   const { tie } = usePdfDesk();
   const [pending, setPending] = useState<Pending | null>(null);
@@ -49,6 +50,32 @@ export function PdfSelect({ book, data, active, onToast }: { book: BookMeta; dat
   const [busy, setBusy] = useState(false);
   const [, setTick] = useState(0);
   const run = useRef(0);
+  /** Right-click on a highlighted box: the ring for it (elsewhere on the page the browser's own menu stays). */
+  const [ring, setRing] = useState<RingState | null>(null);
+  useEffect(() => {
+    const onMenu = (e: MouseEvent) => {
+      const box = Array.from(document.querySelectorAll<HTMLElement>('.pdfp-page .sd-pdfbox')).find((b) => {
+        const r = b.getBoundingClientRect();
+        return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      });
+      const id = box?.dataset.item;
+      const item = id ? data.items.find((i) => i.id === id) : undefined;
+      if (!item) return;
+      e.preventDefault();
+      setRing({
+        x: e.clientX,
+        y: e.clientY,
+        title: 'Highlight',
+        actions: [
+          { id: 'gloss', label: 'Write a gloss', run: () => setPdfDeskFocus(item.id) },
+          { id: 'doc', label: 'Show in document', keys: 'D', run: () => commands.document(item.id) },
+          { id: 'delete', label: 'Delete highlight', danger: true, run: () => void deleteItem(item.id).then(() => onToast('Highlight deleted')) },
+        ],
+      });
+    };
+    document.addEventListener('contextmenu', onMenu, true);
+    return () => document.removeEventListener('contextmenu', onMenu, true);
+  }, [data.items, commands, onToast]);
 
   const snapNow = useCallback(async (p: Pending, on: boolean) => {
     const mine = ++run.current;
@@ -207,6 +234,7 @@ export function PdfSelect({ book, data, active, onToast }: { book: BookMeta; dat
 
   return (
     <>
+      {ring && <MarginRing {...ring} onClose={() => setRing(null)} />}
       {tie && !pending && (
         <div className="sd-pdfsel__tie" role="status">
           Drag over the words on the page this note belongs to{tiedNote?.body ? `: “${tiedNote.body.split('\n')[0].slice(0, 40)}”` : ''} · <kbd>Esc</kbd> cancels

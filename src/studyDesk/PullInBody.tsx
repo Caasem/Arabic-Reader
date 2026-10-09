@@ -16,6 +16,8 @@ interface Props {
   onToast(m: string): void;
   /** Go to another book to capture from it, then come back (a capture trip, trip.ts). */
   onGoToBook?(book: BookMeta, target: PullTarget): void;
+  /** Open on the book list (Go to another book). */
+  initialPicking?: boolean;
 }
 
 const TARGET_KEY = 'studyDesk.pullTarget';
@@ -40,7 +42,7 @@ function loadTarget(): PullTarget {
 }
 
 /** Pull in (Alt+U): the dictionary search's input row and result rows over highlights, words and other books' desk items. */
-export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGoToBook }: Props) {
+export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGoToBook, initialPicking }: Props) {
   const [all, setAll] = useState<PullCandidate[] | null>(null);
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState<PullKind | 'all'>('all');
@@ -51,7 +53,7 @@ export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGo
   const busy = useRef(false);
   /** Choosing a book to go to, instead of something to pull in. */
   const [books, setBooks] = useState<BookMeta[] | null>(null);
-  const [picking, setPicking] = useState(false);
+  const [picking, setPicking] = useState(!!initialPicking && !!onGoToBook);
 
   const sides: PullTarget[] = !spot || margins === 'off' ? [] : margins === 'both' ? ['left', 'right'] : [margins];
   const target: PullTarget = sides.includes(chosenTarget) ? chosenTarget : chosenTarget !== 'inbox' && sides.length ? sides[sides.length - 1] : 'inbox';
@@ -78,12 +80,17 @@ export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGo
   const ids = picking ? bookList.map((b) => b.id) : [...(onGoToBook ? [GO] : []), IMAGE, ...list.map((c) => c.key)];
   const active = selected && ids.includes(selected) ? selected : picking ? (bookList[0]?.id ?? null) : (list[0]?.key ?? IMAGE);
 
+  // The library's books, loaded once the list is wanted (newest first).
+  useEffect(() => {
+    if (!picking || books) return;
+    void libraryService.listBooks().then((all) => setBooks([...all].sort((a, b) => (b.updatedAt ?? b.addedAt) - (a.updatedAt ?? a.addedAt))));
+  }, [picking, books]);
+
   function startPicking() {
     setPicking(true);
     setQuery('');
     setSelected(null);
     inputRef.current?.focus();
-    if (!books) void libraryService.listBooks().then((all) => setBooks([...all].sort((a, b) => (b.updatedAt ?? b.addedAt) - (a.updatedAt ?? a.addedAt))));
   }
 
   function goTo(id: string | null) {

@@ -10,6 +10,7 @@ import { capture, TYPE_LABEL, useDeskImage, type DeskData } from './useDesk';
 import { shownInDocument } from './DeskDocument';
 import { attachImage, carriesFiles, imageIn } from './marginImages';
 import type { DeskItem, DeskItemType } from './types';
+import { MarginRing, marginActions, useRingTrigger, type DeskCommands, type RingAction, type RingState } from './MarginRing';
 import './marginLayer.css';
 
 /**
@@ -118,9 +119,11 @@ interface Props {
   data: DeskData;
   onToast(m: string): void;
   onOpenDocument(itemId?: string): void;
+  /** For the right-click ring (MarginRing.tsx). */
+  commands: DeskCommands;
 }
 
-export function MarginLayer({ book, data, onToast, onOpenDocument }: Props) {
+export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: Props) {
   const { prefs, updatePrefs } = usePreferences();
   const chosen = prefs.studyDeskMargins;
   const [geo, tick, remeasure] = useGeometry();
@@ -139,6 +142,12 @@ export function MarginLayer({ book, data, onToast, onOpenDocument }: Props) {
   const [focusId, setFocusId] = useState<string | null>(null);
   const [hoverId, setHoverId] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Right-click (or long-press) empty margin space: the ring of shortcuts.
+  const [ring, setRing] = useState<RingState | null>(null);
+  const areaRing = useRingTrigger((x, y, el) => {
+    const side = (el.dataset.side as Side) || 'right';
+    setRing({ x, y, title: 'Margin', actions: marginActions(commands, () => void startNote(side, y), () => setSettingsOpen(true)) });
+  });
   const layerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -247,8 +256,13 @@ export function MarginLayer({ book, data, onToast, onOpenDocument }: Props) {
           <div
             key={side}
             className={'sd-margins__area' + (dropSide === side ? ' sd-margins__area--drop' : '')}
+            data-side={side}
             style={{ left: s.from, width: s.to - s.from, top: geo.stage.top, height: geo.stage.height }}
+            onContextMenu={(e) => e.target === e.currentTarget && areaRing.onContextMenu(e)}
+            onPointerDown={areaRing.onPointerDown}
+            onPointerMove={areaRing.onPointerMove}
             onPointerUp={(e) => {
+              areaRing.onPointerUp();
               if (e.target !== e.currentTarget) return;
               const now = Date.now();
               const last = lastTap.current;
@@ -292,6 +306,7 @@ export function MarginLayer({ book, data, onToast, onOpenDocument }: Props) {
             onHover={(on) => setHoverId(on ? p.item.id : null)}
             onToast={onToast}
             onOpenDocument={onOpenDocument}
+            onRing={setRing}
           />
         );
       })}
@@ -307,6 +322,7 @@ export function MarginLayer({ book, data, onToast, onOpenDocument }: Props) {
         )
       )}
       {settingsOpen && <MarginSettings prefs={prefs} update={updatePrefs} onClose={() => setSettingsOpen(false)} />}
+      {ring && <MarginRing {...ring} onClose={() => setRing(null)} />}
     </div>
   );
 }
@@ -374,10 +390,12 @@ interface GlossProps {
   canTie?: boolean;
   /** Tie to words another way (PDF pages: drag over the words next); the quiet reader uses the text selection. */
   onTie?(): void;
+  /** Opens the right-click ring for this card (its own actions). */
+  onRing?(ring: RingState): void;
 }
 
 /** One card in a margin; also used beside PDF pages (PdfMargin). */
-export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFocus, onFocused, onHover, onToast, onOpenDocument, canTie = true, onTie }: GlossProps) {
+export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFocus, onFocused, onHover, onToast, onOpenDocument, canTie = true, onTie, onRing }: GlossProps) {
   const [body, setBody] = useState(item.body ?? '');
   const [focused, setFocused] = useState(false);
   const [preview, setPreview] = useState<'hover' | 'pinned' | null>(null);
@@ -486,6 +504,40 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
     onToast('Tied to the words');
   }
 
+  // Right-click (or long-press) the card, outside its text box: the ring with this card's own actions.
+  function ringActions(): RingAction[] {
+    if (item.fromMargin) {
+      const turn = (type: DeskItemType | 'heading', label: string): RingAction => ({ id: type, label, run: () => void turnInto(type) });
+      return [
+        turn('question', 'Question'),
+        turn('concept', 'Concept'),
+        turn('card', 'Flashcard'),
+        turn('heading', 'Heading'),
+        ...(canTie ? [{ id: 'tie', label: 'Tie to words', run: tie }] : []),
+        item.inInbox
+          ? turn('line', 'Plain note')
+          : { id: 'inbox', label: 'Send to inbox', run: () => void updateItem(item.id, { inInbox: true }).then(() => onToast('Sent to the inbox')) },
+        { id: 'doc', label: 'Show in document', run: () => onOpenDocument(item.id) },
+        { id: 'delete', label: 'Delete', danger: true, run: () => void deleteItem(item.id) },
+      ];
+    }
+    return [
+      {
+        id: 'gloss',
+        label: 'Write a gloss',
+        run: () => {
+          setFocused(true);
+          requestAnimationFrame(() => ref.current?.focus());
+        },
+      },
+      ...(img ? [{ id: 'look', label: 'Preview the image', keys: 'Space', run: () => setPreview('pinned') }] : []),
+      { id: 'doc', label: 'Show in document', run: () => onOpenDocument(item.id) },
+      { id: 'hide', label: 'Hide', run: () => void updateItem(item.id, { hidden: true }).then(() => onToast('Hidden from the margin and the document. Show it again from the inbox.')) } as RingAction,
+    ];
+  }
+  const cardRing = useRingTrigger((x, y) => onRing?.({ x, y, title: item.fromMargin ? 'Margin note' : TYPE_LABEL[item.type], actions: ringActions() }));
+  const outsideText = (e: React.SyntheticEvent) => !!onRing && !(e.target as HTMLElement).closest('textarea, button');
+
   const suggest = {
     question: /\?\s*$/.test(body.trim()) || /^\s*(why|how|what|is|does|can)\b/i.test(body),
     card: /\S\s*=\s*\S/.test(body),
@@ -500,6 +552,10 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
       data-gloss={item.id}
       className={'sd-gloss sd-gloss--' + side + (item.fromMargin ? ' sd-gloss--m sd-gloss--' + item.type : '') + (focused ? ' sd-gloss--focus' : '') + (item.fromMargin && !shownInDoc ? ' sd-gloss--out' : '')}
       style={{ left, width }}
+      onContextMenu={(e) => outsideText(e) && cardRing.onContextMenu(e)}
+      onPointerDown={(e) => outsideText(e) && cardRing.onPointerDown(e)}
+      onPointerMove={cardRing.onPointerMove}
+      onPointerUp={cardRing.onPointerUp}
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
       onDragOver={(e) => {

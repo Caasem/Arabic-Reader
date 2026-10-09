@@ -1,0 +1,109 @@
+/* The ring of shortcuts (MarginRing.tsx). */
+.sd-ring-back {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+}
+.sd-ring {
+  position: fixed;
+  /* A point at the ring's centre (1px so it counts as shown); the buttons are placed around it. */
+  width: 1px;
+  height: 1px;
+}
+.sd-ring__hub {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 104px;
+  height: 104px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  display: grid;
+  place-content: center;
+  gap: 2px;
+  text-align: center;
+  padding: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  font-family: var(--font-ui);
+  animation: sd-ring-in 0.14s ease-out;
+}
+.sd-ring__hub b {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.25;
+}
+.sd-ring__hub span {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.sd-ring__btn {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--ink);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.14);
+  display: grid;
+  place-content: center;
+  gap: 1px;
+  padding: 6px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  animation: sd-ring-in 0.16s ease-out;
+  transition: background 0.1s, transform 0.1s, border-color 0.1s;
+}
+.sd-ring__btn:hover,
+.sd-ring__btn:focus-visible,
+.sd-ring__btn--on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg-elevated);
+  outline: none;
+  transform: translate(-50%, -50%) scale(1.08);
+}
+.sd-ring__btn--danger:hover,
+.sd-ring__btn--danger:focus-visible,
+.sd-ring__btn--danger.sd-ring__btn--on {
+  background: #b4472f;
+  border-color: #b4472f;
+}
+.sd-ring__l {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+.sd-ring__n {
+  position: absolute;
+  top: -4px;
+  right: -2px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--ink-faint);
+  font: 600 10px/15px var(--font-ui);
+}
+.sd-ring__btn kbd {
+  font: 500 9.5px var(--font-ui);
+  opacity: 0.7;
+  border: 0;
+  background: none;
+  padding: 0;
+}
+@keyframes sd-ring-in {
+  from {
+    opacity: 0;
+    scale: 0.85;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sd-ring__hub,
+  .sd-ring__btn {
+    animation: none;
+  }
+}
