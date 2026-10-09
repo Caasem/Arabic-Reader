@@ -17,6 +17,7 @@ import { BookVocabSettings } from '../../bookVocab';
 import { NoteSettings } from '../../noteCard';
 import { FlashSettings } from '../../flashCard';
 import { StudyDeskSettings } from '../../studyDesk';
+import { AnnotateSettings } from '../../annotate';
 import { VerbFormsSettings } from '../../verbForms';
 import { PopupCleanSettings } from '../../popupClean';
 import { CrowdSettings } from '../../crowdSync';
@@ -74,7 +75,7 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
     id: 'dictionary',
     label: 'Dictionary',
     blurb: 'Which dictionaries answer, and how lookups appear.',
-    sections: [<DictionarySettings key="dictionaries" />, <DictionarySearchSettings key="dsearch" />, <BookSearchSettings key="bsearch" />, <BookVocabSettings key="bvocab" />, <NoteSettings key="notecard" />, <FlashSettings key="flashcard" />, <StudyDeskSettings key="studydesk" />, <VerbFormsSettings key="verbforms" />, <PopupCleanSettings key="popupclean" />, <WasitMatchSettings key="wasitmatch" />, <WasitStructureSettings key="wasitstructure" />],
+    sections: [<DictionarySettings key="dictionaries" />, <DictionarySearchSettings key="dsearch" />, <BookSearchSettings key="bsearch" />, <BookVocabSettings key="bvocab" />, <NoteSettings key="notecard" />, <FlashSettings key="flashcard" />, <StudyDeskSettings key="studydesk" />, <AnnotateSettings key="annotate" />, <VerbFormsSettings key="verbforms" />, <PopupCleanSettings key="popupclean" />, <WasitMatchSettings key="wasitmatch" />, <WasitStructureSettings key="wasitstructure" />],
   },
   {
     id: 'vocabulary',

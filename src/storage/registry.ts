@@ -46,6 +46,7 @@ export const ARAMORPH_FILES_DB = 'arabic-reader-aramorph-files';
 export const FREQUENCY_DB = 'arabic-reader-frequency';
 export const BLOBS_DB = 'arabic-reader-blobs';
 export const DESK_DB = 'arabic-reader-desk';
+export const INK_DB = 'arabic-reader-ink';
 
 type TableSpec = Omit<StoreSpec, 'id' | 'kind' | 'db'>;
 
@@ -114,6 +115,8 @@ export const STORAGE_REGISTRY: readonly StoreSpec[] = [
   }),
   table(DESK_DB, 'items', { ...localRecords, note: 'Study desk items (src/studyDesk): captures, concepts, margin notes. Local only until sync covers it.' }),
   table(DESK_DB, 'desks', { ...localRecords, note: 'Study desks and their documents (sanitized HTML with item embeds). Local only until sync covers it.' }),
+  table(INK_DB, 'strokes', { ...localRecords, note: 'Ink written on book pages (src/annotate): PDF strokes in page units, clean-text strokes tied to a word. Local only until sync covers it.' }),
+  table(INK_DB, 'sketches', { ...localRecords, note: 'Sketch sheets beside the pages (src/annotate): freehand strokes and diagram nodes per page or passage. Local only until sync covers it.' }),
   table(BLOBS_DB, 'blobIndex', { ...cache, evictable: false, note: 'BlobStore index: rebuildable by a scan, but it holds the owner references, so never evicted.' }),
 
   // --- BlobStore namespaces (src/blobStore) -----------------------------------

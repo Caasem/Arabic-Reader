@@ -4,6 +4,27 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.72.0 — 2026-10-09
+
+- **Highlights look like Reading Graph's.** Highlighted boxes on PDF pages are soft gold with rounded corners and a
+  little room each side, outlined in gold when lit, with a teal dot once they have a gloss. Yellow highlights in the
+  reader are soft gold behind gold text (dark and sepia themes have their own pair).
+
+## v0.71.0 — 2026-10-09
+
+- **Write on the page.** Alt+W (or Write in the reader's dock, or in the PDF pages' top bar) turns the page into a
+  writing surface: pen, see-through marker, eraser, four colours, three widths, Undo and Redo, Done or Esc. A stylus
+  widens its line as it presses harder; once a stylus has been used, fingers scroll instead of writing.
+- On PDF pages the ink is kept in page units, so it stays exactly where it was written at every zoom. In the reader
+  each stroke is tied to the word it starts on: it moves with that word when the text reflows (window size, font
+  size, columns) and grows with the font.
+- **Sketch beside the page.** Alt+K (or Sketch) opens a sheet at the right, or the whole reader with Expand. Freehand
+  writing, and a Diagram mode on the same sheet: add nodes (N or double-click), drag a node's dot onto another to
+  connect them, arrows on or off, move and resize, edit by double-click or Enter; Quote adds the words selected on
+  the page as a quote node. Zoom with Ctrl+scroll or a pinch, Fit, Undo and Redo. Each PDF page, and each passage
+  of a book, keeps its own sheet; tapping the page or Esc closes it.
+- Settings → Ink and sketches switches the feature off.
+
 ## v0.70.0 — 2026-10-09
 
 - **Piles in the margins.** Drag a margin card onto another and rest there for a moment: it goes underneath, and

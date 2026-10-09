@@ -20,7 +20,7 @@ export function PdfDeskLayer({ book, opened, page, width, height }: PdfPageConte
       {marks.map((m) => (
         <div
           key={m.item.id}
-          className={'sd-pdfbox' + (hover === m.item.id ? ' sd-pdfbox--on' : '')}
+          className={'sd-pdfbox' + (hover === m.item.id ? ' sd-pdfbox--on' : '') + (m.item.body?.trim() ? ' sd-pdfbox--noted' : '')}
           data-item={m.item.id}
           style={{ left: m.x * width, top: m.y * height, width: m.w * width, height: m.h * height }}
         />

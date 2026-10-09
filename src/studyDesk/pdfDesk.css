@@ -6,16 +6,33 @@
   z-index: 3;
 }
 .sd-pdfbox {
+  /* The Reading Graph highlight (.hl): soft gold, rounded, 4px of room each side, a gold outline when lit.
+     Paper colours, because PDF pages stay white in every theme. */
   position: absolute;
-  border-radius: 3px;
-  background: rgb(250 204 21 / 0.22);
-  box-shadow: inset 0 0 0 1.5px rgb(202 138 4 / 0.55);
+  box-sizing: content-box;
+  margin-left: -4px;
+  padding: 0 4px;
+  border-radius: 6px;
+  background: #f6ead0;
   mix-blend-mode: multiply;
-  transition: background 0.15s, box-shadow 0.15s;
+  transition: outline-color 0.15s;
+  outline: 2px solid transparent;
+  outline-offset: 1px;
 }
 .sd-pdfbox--on {
-  background: rgb(250 204 21 / 0.34);
-  box-shadow: inset 0 0 0 2px var(--accent);
+  outline-color: #7d5a14;
+}
+/* A highlight with a gloss written in the margin carries Reading Graph's teal dot. */
+.sd-pdfbox--noted::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2e7d74;
+  mix-blend-mode: normal;
 }
 /* The margin beside the pages: a strip kept free to the right of the stage; the pages fit the rest. */
 body.sd-pdf-margin .pdfp .reader__body {

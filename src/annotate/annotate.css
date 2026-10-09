@@ -1,0 +1,587 @@
+/*
+ * Ink and sketches (src/annotate). Colours come from the app's variables (and the quiet reader's look), so
+ * the themes apply; ink on PDF pages uses paper colours because the pages stay white in every theme.
+ */
+:root {
+  --ink-panel-w: 440px;
+  --ink-chrome: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
+  --ink-shadow: 0 18px 48px rgba(28, 27, 25, 0.13), 0 2px 6px rgba(28, 27, 25, 0.06);
+  --ink-primary: var(--look-accent-ink, #7a5a32);
+  --ink-teal: var(--look-secondary, #2e7d74);
+}
+:root[data-theme='dark'] {
+  --ink-shadow: 0 18px 48px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --ink-primary: var(--look-accent-ink, #d0ab74);
+}
+
+/* ---- Strokes ------------------------------------------------------------------------------------------ */
+.ink-stroke {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ink-stroke--marker {
+  opacity: 0.3;
+}
+
+/* Ink inside a PDF page frame (a pages-view extension layer), over the text layer while writing. */
+.ink-page {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 4;
+  pointer-events: none;
+  overflow: visible;
+}
+.ink-page--on {
+  pointer-events: auto;
+  touch-action: none;
+  cursor: crosshair;
+}
+.ink-page--on.ink-page--pen {
+  touch-action: pan-x pan-y pinch-zoom;
+}
+.ink-page--erase {
+  cursor: cell;
+}
+
+/* Ink over the quiet reader's text: a layer the size of the stage, above it. */
+.ink-clean {
+  position: fixed;
+  z-index: 20;
+  overflow: hidden;
+  pointer-events: none;
+}
+.ink-clean svg {
+  display: block;
+  overflow: visible;
+}
+.ink-clean--on {
+  pointer-events: auto;
+  touch-action: none;
+  cursor: crosshair;
+}
+.ink-clean--on.ink-clean--pen {
+  touch-action: pan-x pan-y pinch-zoom;
+}
+.ink-clean--erase {
+  cursor: cell;
+}
+body.ink-writing .qr-stage {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---- The bar while writing ---------------------------------------------------------------------------- */
+.ink-bar {
+  position: fixed;
+  z-index: 60;
+  top: calc(env(safe-area-inset-top, 0px) + 72px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100vw - 20px);
+  padding: 5px 6px 5px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--ink-chrome);
+  box-shadow: var(--ink-shadow);
+  backdrop-filter: blur(8px);
+  color: var(--ink);
+  font: 500 13px/1.3 'DM Sans', var(--font-ui);
+  overflow-x: auto;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+.ink-bar__label {
+  margin-right: 6px;
+  color: var(--ink-soft);
+}
+.ink-bar__label b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.ink-ib {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.ink-bar .ink-ib {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+}
+.ink-ib--wide {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 12.5px;
+}
+.ink-ib:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+.ink-ib[aria-pressed='true'] {
+  background: var(--ink-primary);
+  border-color: var(--ink-primary);
+  color: var(--bg);
+}
+.ink-ib:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.ink-sep {
+  flex: none;
+  width: 1px;
+  height: 22px;
+  margin: 0 4px;
+  background: var(--border);
+}
+.ink-swatch {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 3px solid var(--bg-elevated);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--border);
+  cursor: pointer;
+}
+.ink-swatch[aria-pressed='true'] {
+  box-shadow: 0 0 0 2px var(--ink);
+}
+.ink-width {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+}
+.ink-width i {
+  display: block;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.ink-width[aria-pressed='true'] {
+  border-color: var(--border);
+  background: var(--bg);
+}
+.ink-done {
+  margin-left: 4px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink-primary);
+  color: var(--bg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ink-tbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ink-tbtn--on {
+  background: var(--accent-soft) !important;
+  color: var(--ink-primary) !important;
+}
+
+/* ---- Sketch panel ------------------------------------------------------------------------------------- */
+body.ink-sketching .qr {
+  width: calc(100% - var(--ink-panel-w));
+}
+body.ink-sketching .pdfp .reader__body {
+  padding-right: var(--ink-panel-w);
+}
+.sk-panel {
+  position: fixed;
+  z-index: 55;
+  top: calc(env(safe-area-inset-top, 0px) + 0px);
+  right: 0;
+  bottom: 0;
+  width: var(--ink-panel-w);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--ink-shadow);
+  color: var(--ink);
+  font: 14px/1.5 'DM Sans', var(--font-ui);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: sk-in 0.16s ease-out;
+}
+@keyframes sk-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+.sk-panel--full {
+  left: 0;
+  width: auto;
+  border-left: 0;
+}
+.sk-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.sk-head__where {
+  flex: 1;
+  min-width: 110px;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+}
+.sk-head__where b {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.sk-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.sk-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+}
+.sk-seg button {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.sk-seg button[aria-pressed='true'] {
+  background: var(--ink-primary);
+  color: var(--bg);
+}
+.sk-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.sk-grow {
+  flex: 1;
+}
+.sk-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+.sk-stage > div:first-child {
+  position: absolute;
+  inset: 0;
+}
+.sk-surface {
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--border) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+  cursor: crosshair;
+}
+.sk-surface--diagram {
+  cursor: default;
+}
+.sk-surface--hand {
+  cursor: grab;
+}
+.sk-surface--erase {
+  cursor: cell;
+}
+.sk-surface--panning,
+.sk-surface--panning .sk-node {
+  cursor: grabbing;
+}
+.sk-lay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+.sk-nodes {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+}
+.sk-node {
+  position: absolute;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  box-shadow: 0 2px 8px rgba(28, 27, 25, 0.07);
+  color: var(--ink);
+  font: 500 14px/1.5 'DM Sans', var(--font-arabic, 'Noto Naskh Arabic'), var(--font-ui);
+  text-align: center;
+  cursor: grab;
+}
+.sk-surface:not(.sk-surface--diagram) .sk-node {
+  pointer-events: none;
+}
+.sk-node__text {
+  max-width: 100%;
+  min-width: 1ch;
+  outline: none;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.sk-node__text:empty::before {
+  content: 'Type a label';
+  color: var(--ink-faint);
+}
+.sk-node--note {
+  border-color: var(--ink-teal);
+}
+/* A quote from the page keeps the highlight look (Reading Graph's .hl). */
+.sk-node--quote {
+  border-color: transparent;
+  background: var(--qr-gold-soft, var(--look-highlight-soft, #f6ead0));
+  color: var(--qr-gold-ink, var(--look-highlight-ink, #7d5a14));
+  font-family: var(--font-arabic, 'Noto Naskh Arabic'), serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.7;
+}
+.sk-node__tag {
+  position: absolute;
+  top: -9px;
+  left: 10px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--ink-soft);
+  font: 700 9.5px/16px 'DM Sans', var(--font-ui);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+.sk-node--sel {
+  border-color: var(--ink-primary);
+  box-shadow: 0 0 0 2px var(--accent-soft), 0 6px 20px rgba(28, 27, 25, 0.12);
+}
+.sk-node--from {
+  outline: 2px dashed var(--ink-teal);
+  outline-offset: 4px;
+}
+.sk-node--editing {
+  cursor: text;
+}
+.sk-node--editing .sk-node__text {
+  min-width: 4ch;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.sk-port {
+  position: absolute;
+  top: 50%;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  box-sizing: border-box;
+  border: 2px solid var(--ink-primary);
+  border-radius: 50%;
+  background: var(--bg-elevated);
+  opacity: 0;
+  cursor: crosshair;
+  transition: opacity 0.12s;
+}
+.sk-node:hover .sk-port,
+.sk-node--sel .sk-port {
+  opacity: 1;
+}
+.sk-resize {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 12px;
+  height: 12px;
+  border-right: 2px solid var(--ink-faint);
+  border-bottom: 2px solid var(--ink-faint);
+  border-radius: 0 0 6px 0;
+  opacity: 0;
+  cursor: nwse-resize;
+}
+.sk-node--sel .sk-resize {
+  opacity: 1;
+}
+.sk-edge {
+  fill: none;
+  stroke: var(--ink-soft);
+  stroke-width: 1.6;
+}
+.sk-edge--on {
+  stroke: var(--ink-primary);
+  stroke-width: 2.6;
+}
+.sk-edge--tmp {
+  stroke: var(--ink-primary);
+  stroke-dasharray: 5 4;
+}
+.sk-arrowhead {
+  fill: var(--ink-soft);
+}
+.sk-arrowhead--on {
+  fill: var(--ink-primary);
+}
+.sk-edge-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 16;
+}
+.sk-surface--diagram .sk-edge-hit {
+  pointer-events: stroke;
+  cursor: pointer;
+}
+.sk-empty {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  transform: translate(-50%, -50%);
+  width: min(300px, 80%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-soft);
+  text-align: center;
+  pointer-events: none;
+}
+.sk-empty b {
+  color: var(--ink);
+  font-family: 'Newsreader', var(--look-display, Georgia, serif);
+  font-size: 19px;
+  font-weight: 500;
+}
+.sk-empty span {
+  font-size: 13px;
+}
+.sk-zoom {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--ink-chrome);
+  box-shadow: 0 2px 8px rgba(28, 27, 25, 0.08);
+}
+.sk-zoom button {
+  height: 28px;
+  min-width: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-soft);
+  font: 600 12.5px 'DM Sans', var(--font-ui);
+  cursor: pointer;
+}
+.sk-zoom button:hover {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+.sk-zoom output {
+  min-width: 42px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.sk-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+.sk-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-teal);
+}
+.sk-dot--bad {
+  background: var(--danger, #b3543f);
+}
+
+@media (max-width: 760px) {
+  .sk-panel {
+    left: 0;
+    width: auto;
+    border-left: 0;
+  }
+  body.ink-sketching .qr {
+    width: 100%;
+  }
+  body.ink-sketching .pdfp .reader__body {
+    padding-right: 0;
+  }
+  .sk-full {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sk-panel {
+    animation: none;
+  }
+}

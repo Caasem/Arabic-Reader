@@ -3,8 +3,9 @@ import { db } from '../persistence/schema';
 import { SYNCED_TABLES, isSyncedTable } from '../persistence/syncedTables';
 import { bulkPutSynced } from '../persistence/writeLayer';
 import { getAllWordInstances, upsertWordInstancesBulk } from '../persistence/wordInstancesRepo';
-import { DESK_DB, MAIN_DB, STORAGE_REGISTRY, type StoreSpec } from '../storage/registry';
+import { DESK_DB, INK_DB, MAIN_DB, STORAGE_REGISTRY, type StoreSpec } from '../storage/registry';
 import * as deskStore from '../studyDesk/deskStore';
+import * as inkStore from '../annotate/inkStore';
 
 type Row = Record<string, unknown>;
 
@@ -114,6 +115,19 @@ function deskTable(table: 'items' | 'desks'): RecordStore {
   };
 }
 
+/** Ink and sketch tables (src/annotate): newer-wins by updatedAt, like the desk. */
+function inkTable(table: 'strokes' | 'sketches'): RecordStore {
+  return {
+    id: `${INK_DB}/${table}`,
+    read: () => inkStore.readAll(table),
+    async restore(rows) {
+      const { toWrite, result } = await newerThanLocal(rows, 'id', 'updatedAt', (keys) => inkStore.bulkGet(table, keys));
+      await inkStore.bulkPut(table, toWrite);
+      return result;
+    },
+  };
+}
+
 function storeFor(spec: StoreSpec): RecordStore | undefined {
   if (spec.db === MAIN_DB) {
     if (isSyncedTable(spec.id)) return syncedStore(spec.id);
@@ -123,6 +137,8 @@ function storeFor(spec: StoreSpec): RecordStore | undefined {
   }
   if (spec.id === `${DESK_DB}/items`) return deskTable('items');
   if (spec.id === `${DESK_DB}/desks`) return deskTable('desks');
+  if (spec.id === `${INK_DB}/strokes`) return inkTable('strokes');
+  if (spec.id === `${INK_DB}/sketches`) return inkTable('sketches');
   return spec.id === personalDictionary.id ? personalDictionary : undefined;
 }
 
