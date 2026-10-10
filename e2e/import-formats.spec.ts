@@ -1,12 +1,14 @@
 import { test, expect, type Page } from '@playwright/test';
 import { useOriginalReader } from './originalReader';
 import { makePdf, sampleArabicBookPdf } from '../src/pdf/testPdf';
+import { turnOnPdfConvert } from './pdfConvert';
 
 test.beforeEach(async ({ page }) => useOriginalReader(page));
 
-async function addFile(page: Page, name: string, text: string | Uint8Array, mimeType = 'text/plain') {
+async function addFile(page: Page, name: string, text: string | Uint8Array, mimeType = 'text/plain', convertPdf = false) {
   await page.goto('/');
   await page.waitForSelector('.navbar__settings', { timeout: 15000 });
+  if (convertPdf) await turnOnPdfConvert(page);
   await page.setInputFiles('.library__actions input[type=file]', { name, mimeType, buffer: typeof text === 'string' ? Buffer.from(text, 'utf-8') : Buffer.from(text) });
 }
 
@@ -39,7 +41,7 @@ test('a Markdown file is converted, with headings as chapters', async ({ page })
 });
 
 test('a text PDF is converted to a reflowed book with a chapter per heading, and its words can be looked up', async ({ page }) => {
-  await addFile(page, 'reading.pdf', sampleArabicBookPdf(), 'application/pdf');
+  await addFile(page, 'reading.pdf', sampleArabicBookPdf(), 'application/pdf', true);
   const card = page.locator('.book-card', { hasText: 'كتاب القراءة' });
   await expect(card).toHaveCount(1, { timeout: 30000 });
   await expect(page.locator('.library__notice', { hasText: 'converted from PDF · 3 pages' })).toBeVisible();

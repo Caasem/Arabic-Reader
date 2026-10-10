@@ -4,6 +4,15 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.75.0 — 2026-10-10
+
+- **PDFs open as their pages.** Adding a PDF no longer tries to convert it: the app keeps the PDF, counts its pages
+  and opens it straight into the pages view ("Adding <name>…", then "added as PDF pages · N pages"). Scanned PDFs no
+  longer show a "Converting" message for a conversion that cannot happen.
+- **Settings → Reading → PDF → Convert PDFs to text when adding** (off by default) brings back the old behaviour for
+  PDFs added from then on: the text is read and reflowed into a book, with the pages kept too.
+- The note for scanned PDFs now says that tapping a word reads it with text recognition.
+
 ## v0.74.0 — 2026-10-10
 
 - **Send a sketch to the margin.** "To margin" in the sketch panel puts the sheet beside its page (PDF) or the first

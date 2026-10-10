@@ -50,7 +50,7 @@ export interface Converted {
   /** Pages of the source, for a PDF. */
   pages?: number;
   /** For a PDF: how the text came out; the PDF itself is `original`. */
-  pdf?: { pages: number; reflow: 'ok' | 'broken' | 'none' };
+  pdf?: { pages: number; reflow: 'ok' | 'broken' | 'none' | 'skipped' };
   original?: File;
   warnings: string[];
 }
@@ -58,7 +58,8 @@ export interface Converted {
 const stripExt = (name: string) => name.replace(/\.[^.]+$/, '');
 
 /** Converts a non-EPUB book file to an EPUB. Throws with a reader-facing message when it can't. */
-export async function convertToEpub(file: File, options: { loadPdfDeps?: () => Promise<PdfDeps> } = {}): Promise<Converted> {
+/** `pdfConvert`: read a PDF's text and reflow it (Settings → PDF); otherwise a PDF is added as its pages. */
+export async function convertToEpub(file: File, options: { loadPdfDeps?: () => Promise<PdfDeps>; pdfConvert?: boolean } = {}): Promise<Converted> {
   const format = formatOf(file.name);
   if (!format || format === 'epub') throw new Error(`"${file.name}" is not a book type Arabic Reader can convert.`);
   const fallbackTitle = stripExt(file.name);
@@ -86,10 +87,11 @@ export async function convertToEpub(file: File, options: { loadPdfDeps?: () => P
       if (md.droppedImages) warnings.push(`${md.droppedImages} image${md.droppedImages === 1 ? '' : 's'} skipped`);
     }
   } else if (format === 'pdf') {
-    const { convertPdf, PdfImportError, PDF_MESSAGES, MAX_PDF_BYTES } = await import('../pdf/import/convert');
+    const { convertPdf, openPdfPages, PdfImportError, PDF_MESSAGES, MAX_PDF_BYTES } = await import('../pdf/import/convert');
     if (file.size > MAX_PDF_BYTES) throw new PdfImportError(PDF_MESSAGES.tooLarge);
     const loadPdfDeps = options.loadPdfDeps ?? (async () => (await import('../pdf/import/browser')).loadPdfDeps());
-    const book = await convertPdf(new Uint8Array(await file.arrayBuffer()), await loadPdfDeps(), fallbackTitle);
+    const read = options.pdfConvert ? convertPdf : openPdfPages;
+    const book = await read(new Uint8Array(await file.arrayBuffer()), await loadPdfDeps(), fallbackTitle);
     title = book.title ?? fallbackTitle;
     author = book.author;
     pages = book.pages;

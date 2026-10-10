@@ -29,7 +29,7 @@ export interface BookMeta {
    * `reflow` says how the EPUB came out: 'ok' (reflowed text), 'broken' (the text layer was unusable) or
    * 'none' (no text layer: scanned). Anything but 'ok' opens in the pages view only.
    */
-  pdf?: { pages: number; reflow: 'ok' | 'broken' | 'none'; originalHash: string };
+  pdf?: { pages: number; reflow: 'ok' | 'broken' | 'none' | 'skipped'; originalHash: string };
   /**
    * A book added from Browse library (src/browseLibrary): which catalogue entry, in which format, and which
    * volume of it. The Library's book details use it to offer the volumes of the same book that are not added yet.

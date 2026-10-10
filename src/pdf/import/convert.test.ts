@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import JSZip from 'jszip';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
@@ -7,7 +7,7 @@ import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { convertToEpub } from '../../importFormats';
 import { convertPdf, MAX_PDF_BYTES, PDF_MESSAGES, PdfImportError, type PdfDeps } from './convert';
 import { arabicTokens, assessText } from './quality';
-import { lineWidth, makePdf, PAGE_HEIGHT, PAGE_WIDTH, type PdfTestLine, type PdfTestPage } from '../testPdf';
+import { lineWidth, makePdf, PAGE_HEIGHT, PAGE_WIDTH, sampleArabicBookPdf, type PdfTestLine, type PdfTestPage } from '../testPdf';
 
 // pdf.js runs in its fake-worker mode under Node.
 pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(createRequire(import.meta.url).resolve('pdfjs-dist/legacy/build/pdf.worker.mjs')).href;
@@ -218,7 +218,7 @@ describe('convertPdf', () => {
 describe('convertToEpub with a PDF', () => {
   it('builds an EPUB with a chapter per heading and records the page count', async () => {
     const file = new File([makePdf(bookPages()) as BlobPart], 'تجربة.pdf', { type: 'application/pdf' });
-    const converted = await convertToEpub(file, { loadPdfDeps: async () => deps });
+    const converted = await convertToEpub(file, { loadPdfDeps: async () => deps, pdfConvert: true });
     expect(converted).toMatchObject({ format: 'pdf', chapters: 2, pages: 3, pdf: { pages: 3, reflow: 'ok' }, warnings: [] });
     expect(converted.original).toBe(file);
     expect(converted.epub.name).toBe('تجربة.epub');
@@ -232,10 +232,22 @@ describe('convertToEpub with a PDF', () => {
 describe('convertToEpub with a pages-only PDF', () => {
   it('builds a one-page stand-in book that carries the reason', async () => {
     const file = new File([makePdf([{ image: true }, { image: true }]) as BlobPart], 'scan.pdf', { type: 'application/pdf' });
-    const converted = await convertToEpub(file, { loadPdfDeps: async () => deps });
+    const converted = await convertToEpub(file, { loadPdfDeps: async () => deps, pdfConvert: true });
     expect(converted).toMatchObject({ chapters: 1, pages: 2, pdf: { pages: 2, reflow: 'none' }, warnings: [PDF_MESSAGES.scanned] });
     const zip = await JSZip.loadAsync(await converted.epub.arrayBuffer());
     expect(await zip.file('OEBPS/chapter-0001.xhtml')!.async('string')).toContain('scanned images');
+  });
+});
+
+describe('convertToEpub with a PDF, by default', () => {
+  it('adds the pages without reading any text, even when the PDF has text', async () => {
+    const file = new File([sampleArabicBookPdf() as BlobPart], 'reading.pdf', { type: 'application/pdf' });
+    const analyse = vi.fn(deps.analyse);
+    const converted = await convertToEpub(file, { loadPdfDeps: async () => ({ ...deps, analyse }) });
+    expect(converted).toMatchObject({ chapters: 1, pages: 3, pdf: { pages: 3, reflow: 'skipped' }, warnings: [] });
+    expect(analyse).not.toHaveBeenCalled();
+    const zip = await JSZip.loadAsync(await converted.epub.arrayBuffer());
+    expect(await zip.file('OEBPS/chapter-0001.xhtml')!.async('string')).toContain('Convert PDFs to text when adding');
   });
 });
 

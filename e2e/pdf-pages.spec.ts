@@ -1,12 +1,14 @@
 import { test, expect, type Page } from '@playwright/test';
 import { makePdf, sampleArabicBookPdf } from '../src/pdf/testPdf';
+import { turnOnPdfConvert } from './pdfConvert';
 
 /** Books added from a PDF: the Original pages view (src/pdf/pages) and the switch from the reflowed text. */
 test.use({ viewport: { width: 1440, height: 900 } });
 
-async function addPdf(page: Page, name: string, data: Uint8Array) {
+async function addPdf(page: Page, name: string, data: Uint8Array, convert = false) {
   await page.goto('/');
   await page.waitForSelector('.navbar__settings', { timeout: 15000 });
+  if (convert) await turnOnPdfConvert(page);
   await page.setInputFiles('.library__actions input[type=file]', { name, mimeType: 'application/pdf', buffer: Buffer.from(data) });
 }
 
@@ -21,7 +23,7 @@ async function tapFirstWord(page: Page) {
 }
 
 test('a text PDF can be switched from reflowed text to its original pages, and words look up there', async ({ page }) => {
-  await addPdf(page, 'reading.pdf', sampleArabicBookPdf());
+  await addPdf(page, 'reading.pdf', sampleArabicBookPdf(), true);
   const card = page.locator('.book-card', { hasText: 'كتاب القراءة' });
   await expect(card).toHaveCount(1, { timeout: 30000 });
   await card.locator('.book-card__open').click();
@@ -46,7 +48,6 @@ test('a scanned PDF is added as pages and opens in the pages view', async ({ pag
   await addPdf(page, 'scan.pdf', makePdf([{ image: true }, { image: true }]));
   const notice = page.locator('.library__notice', { hasText: 'added as PDF pages · 2 pages' });
   await expect(notice).toBeVisible({ timeout: 30000 });
-  await expect(notice).toContainText('scanned images');
   await page.locator('.book-card').first().locator('.book-card__open').click();
   await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
   await expect(page.getByRole('button', { name: 'Reflowed text' })).toHaveCount(0);
@@ -65,7 +66,7 @@ async function inkOf(page: Page, pageNumber: number): Promise<number> {
 }
 
 test('the original pages draw their text and images instead of coming up blank', async ({ page }) => {
-  await addPdf(page, 'reading.pdf', sampleArabicBookPdf());
+  await addPdf(page, 'reading.pdf', sampleArabicBookPdf(), true);
   const card = page.locator('.book-card', { hasText: 'كتاب القراءة' });
   await expect(card).toHaveCount(1, { timeout: 30000 });
   await card.locator('.book-card__open').click();
@@ -96,7 +97,7 @@ test('pdf.js data (decoders, fonts) ships with the app, so scanned books are not
 });
 
 test('a PDF book opens from the Library as its pages or as text, and a scan offers only pages', async ({ page }) => {
-  await addPdf(page, 'reading.pdf', sampleArabicBookPdf());
+  await addPdf(page, 'reading.pdf', sampleArabicBookPdf(), true);
   const card = page.locator('.book-card', { hasText: 'كتاب القراءة' });
   await expect(card).toHaveCount(1, { timeout: 30000 });
   const choice = card.getByRole('group', { name: /Open .* as/ });
@@ -117,4 +118,15 @@ test('a PDF book opens from the Library as its pages or as text, and a scan offe
   const scan = page.locator('.book-card', { hasText: 'scan' });
   await expect(scan).toHaveCount(1, { timeout: 30000 });
   await expect(scan.getByRole('group', { name: /Open .* as/ })).toHaveCount(0);
+});
+
+test('by default a text PDF is added as its pages without converting, and opens straight into them', async ({ page }) => {
+  await addPdf(page, 'reading.pdf', sampleArabicBookPdf());
+  await expect(page.locator('.library__notice', { hasText: 'added as PDF pages · 3 pages' })).toBeVisible({ timeout: 30000 });
+  const card = page.locator('.book-card', { hasText: 'كتاب القراءة' });
+  await expect(card.getByRole('group', { name: /Open .* as/ })).toHaveCount(0);
+  await card.locator('.book-card__open').click();
+  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 3', { timeout: 20000 });
+  await expect(page.getByRole('button', { name: 'Reflowed text' })).toHaveCount(0);
+  await tapFirstWord(page);
 });
