@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sketchOutline, sketchPin, sketchSvg } from './toMargin';
+import { pngScale, sketchOutline, sketchPin, sketchSvg, wrapLines } from './toMargin';
 
 const node = (id: string, text: string, x = 0, y = 0) => ({ id, x, y, w: 100, h: 40, text, kind: 'plain' as const });
 
@@ -32,5 +32,22 @@ describe('sketchSvg', () => {
     expect(svg).toContain('A &amp; B');
     expect(svg).toContain('marker-end="url(#a)"');
     expect(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true);
+  });
+});
+
+describe('picture cards', () => {
+  it("wraps a node's words over lines instead of cutting them", () => {
+    expect(wrapLines('one two three four five six seven', 100, 14, 100)).toEqual(['one two', 'three four', 'five six', 'seven']);
+    // Too many lines for the box: the last kept line ends in an ellipsis.
+    const short = wrapLines('one two three four five six seven', 100, 14, 46);
+    expect(short).toHaveLength(2);
+    expect(short[1].endsWith('…')).toBe(true);
+    expect(sketchSvg({ nodes: [node('a', 'a long sentence that will not fit on one line of the box', 0, 0)], edges: [], strokes: [] }).svg).toContain('<tspan');
+  });
+
+  it('keeps PNGs sharp: at least twice the sheet, up to 4096 pixels on the long side', () => {
+    expect(pngScale(300, 200)).toBe(4);
+    expect(pngScale(1500, 600)).toBeCloseTo(4096 / 1500);
+    expect(pngScale(5000, 800)).toBe(2);
   });
 });

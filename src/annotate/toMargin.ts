@@ -4,14 +4,15 @@ import { bookDeskId, listItems } from '../studyDesk/deskStore';
 import { attachImage } from '../studyDesk/marginImages';
 import { formatPdfLocation } from '../studyDesk/pageGeometry';
 import { capture } from '../studyDesk/useDesk';
-import { borderPoint, contentBox, pathD } from './geometry';
+import { borderPoint, contentBox, pathD, r1 } from './geometry';
 import { PAPER_COLORS } from './inkUi';
 import type { Sketch } from './types';
 
 /**
  * A sketch sent to the margin becomes a study desk item pinned beside the place the sheet belongs to, so it
  * behaves like every other margin card (leader line, document, export):
- * - picture: a screenshot card of the sheet; it is drawn again whenever the sheet changes;
+ * - picture: a card with the sheet as an SVG (sharp at any size, in the card and its large preview); it is drawn
+ *   again whenever the sheet changes. Word export turns it into a PNG (docxExport.ts);
  * - outline: a margin note whose lines are the diagram (each arrow's target indented under its node);
  * - node: one node's words as a margin note.
  * Each carries `sketchId`, so the card can open its sheet again.
@@ -55,6 +56,32 @@ export function sketchPin(s: Pick<Sketch, 'key' | 'location'>): string | null {
 
 const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
+/**
+ * A node's words in lines that fit its box (an estimate: an image cannot measure text), the last one ending in
+ * "…" when they do not all fit. Words longer than a line are cut.
+ */
+export function wrapLines(text: string, width: number, size: number, height: number): string[] {
+  const per = Math.max(4, Math.floor((width - 16) / (size * 0.55)));
+  const max = Math.max(1, Math.floor((height - 8) / (size * 1.3)));
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.replace(/\s+/g, ' ').trim().split(' ')) {
+    const w = word.length > per ? word.slice(0, per - 1) + '…' : word;
+    if (!line) line = w;
+    else if (line.length + 1 + w.length <= per) line += ' ' + w;
+    else {
+      lines.push(line);
+      line = w;
+    }
+  }
+  if (line) lines.push(line);
+  if (lines.length <= max) return lines;
+  const kept = lines.slice(0, max);
+  const last = kept[max - 1];
+  kept[max - 1] = (last.length >= per ? last.slice(0, per - 1) : last) + '…';
+  return kept;
+}
+
 /** The sheet as a standalone SVG on paper (fixed colours, as an image cannot read the theme). */
 export function sketchSvg(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): { svg: string; w: number; h: number } {
   const box = contentBox(s.strokes, s.nodes) ?? { x: 0, y: 0, w: 200, h: 120 };
@@ -76,26 +103,53 @@ export function sketchSvg(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): { svg
   for (const n of s.nodes) {
     const fill = n.kind === 'quote' ? '#f6ead0' : '#ffffff';
     const stroke = n.kind === 'note' ? '#2e7d74' : n.kind === 'quote' ? '#f6ead0' : '#d9d2c5';
-    const text = n.text.length > 40 ? n.text.slice(0, 38) + '…' : n.text;
+    const size = n.kind === 'quote' ? 16 : 14;
+    const lines = wrapLines(n.text, n.w, size, n.h);
+    const lh = size * 1.3;
+    const y0 = n.y + n.h / 2 - ((lines.length - 1) * lh) / 2;
     body += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="14" fill="${fill}" stroke="${stroke}" stroke-width="1.2"/>`;
-    body += `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2}" text-anchor="middle" dominant-baseline="central" font-family="'Noto Naskh Arabic','Segoe UI',Tahoma,sans-serif" font-size="${n.kind === 'quote' ? 16 : 14}" fill="${n.kind === 'quote' ? '#7d5a14' : '#1c1b19'}">${esc(text)}</text>`;
+    body += `<text text-anchor="middle" dominant-baseline="central" direction="${/[؀-ۿ]/.test(n.text) ? 'rtl' : 'ltr'}" font-family="'Noto Naskh Arabic','Segoe UI',Tahoma,sans-serif" font-size="${size}" fill="${n.kind === 'quote' ? '#7d5a14' : '#1c1b19'}">${lines.map((l, i) => `<tspan x="${n.x + n.w / 2}" y="${r1(y0 + i * lh)}">${esc(l)}</tspan>`).join('')}</text>`;
   }
   for (const st of s.strokes) body += `<path d="${pathD(st.pts)}" fill="none" stroke="${PAPER_COLORS[st.color]}" stroke-width="${st.width}" stroke-linecap="round" stroke-linejoin="round"/>`;
   return { svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x0} ${y0} ${w} ${h}" width="${w}" height="${h}">${body}</svg>`, w, h };
 }
 
-/** The sheet as a PNG, at most 1000 pixels wide. */
-export async function sketchPng(s: Sketch): Promise<Blob> {
-  const { svg, w, h } = sketchSvg(s);
-  const scale = Math.min(2, 1000 / w);
-  const img = new Image();
-  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-  await img.decode();
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(w * scale);
-  canvas.height = Math.round(h * scale);
-  canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('No image'))), 'image/png'));
+/** The sheet as an SVG file: what picture cards show. */
+export function sketchSvgBlob(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): Blob {
+  return new Blob([sketchSvg(s).svg], { type: 'image/svg+xml' });
+}
+
+/**
+ * How many pixels per sheet pixel a PNG of a w×h sheet gets: never below 2 (sharp on high-density screens),
+ * and as much as fits 4096 pixels on the long side, so a large sheet keeps its fine lines and small writing.
+ */
+export function pngScale(w: number, h: number): number {
+  return Math.max(2, Math.min(4, 4096 / Math.max(w, h, 1)));
+}
+
+/** Any SVG image as a PNG (for Word, which takes no SVG), at `pngScale`. */
+export async function svgToPng(svg: Blob): Promise<Blob> {
+  const url = URL.createObjectURL(svg);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const w = img.naturalWidth || 800;
+    const h = img.naturalHeight || 600;
+    const scale = pngScale(w, h);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+    canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return await new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('No image'))), 'image/png'));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** The sheet as a PNG (export), sharp at `pngScale`. */
+export function sketchPng(s: Sketch): Promise<Blob> {
+  return svgToPng(sketchSvgBlob(s));
 }
 
 export async function sendSketchToMargin(book: BookMeta, sketch: Sketch, how: SendHow, nodeId?: string | null): Promise<void> {
@@ -110,7 +164,7 @@ export async function sendSketchToMargin(book: BookMeta, sketch: Sketch, how: Se
     sketchId: sketch.id,
   };
   const deskId = bookDeskId(book.id);
-  if (how === 'picture') await capture(book, deskId, { ...base, type: 'capture', body: '' }, await sketchPng(sketch));
+  if (how === 'picture') await capture(book, deskId, { ...base, type: 'capture', body: '' }, sketchSvgBlob(sketch));
   else if (how === 'outline') await capture(book, deskId, { ...base, type: 'line', body: sketchOutline(sketch) });
   else {
     const node = sketch.nodes.find((n) => n.id === nodeId);
@@ -123,6 +177,6 @@ export async function sendSketchToMargin(book: BookMeta, sketch: Sketch, how: Se
 export async function refreshSketchCards(sketch: Sketch): Promise<void> {
   const cards = (await listItems()).filter((i) => i.sketchId === sketch.id && i.type === 'capture');
   if (!cards.length) return;
-  const png = await sketchPng(sketch);
-  for (const c of cards) await attachImage(c, png);
+  const svg = sketchSvgBlob(sketch);
+  for (const c of cards) await attachImage(c, svg);
 }

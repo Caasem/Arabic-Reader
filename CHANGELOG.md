@@ -4,6 +4,13 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.83.0 — 2026-10-10
+
+- **Sharp sketch pictures in the margin.** A sketch sent To margin as a picture is now kept as an SVG, so it is
+  sharp in the card and in its large preview at any size (it was a PNG of at most 1000 pixels, so big sheets came
+  out blurred). A node's words wrap over several lines in the picture instead of being cut after 40 characters.
+- Word export turns these pictures into PNGs at two to four times their size.
+
 ## v0.82.0 — 2026-10-10
 
 - **Highlights show on Night pages.** With Display → Pages → Night, a highlight was all but invisible (the page is

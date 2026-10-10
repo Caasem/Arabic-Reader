@@ -160,6 +160,8 @@ test('a sketch goes to the margin as a picture card that opens its sheet again',
 
   const card = page.locator('.sd-gloss', { hasText: 'Sketch' }).first();
   await expect(card).toBeVisible({ timeout: 10000 });
+  // The picture is the sheet as an SVG, so it stays sharp at any size (Word export makes a PNG of it).
+  await expect.poll(() => card.locator('img').evaluate(async (img: HTMLImageElement) => (await (await fetch(img.src)).blob()).type)).toBe('image/svg+xml');
   await card.hover();
   await card.getByRole('button', { name: 'Open sketch' }).click();
   await expect(page.getByRole('complementary', { name: 'Sketch' }).locator('.sk-node')).toHaveText('Group feeling');
