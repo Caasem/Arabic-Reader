@@ -43,20 +43,20 @@ test('F enters Focus in the reader; Alt twice opens a rail with every tool, whic
   await expect(page.locator('.qr-dock')).toBeVisible();
 });
 
-test('PDF pages: the top bar has the shared tools and Focus; Focus hides the bar and the rail writes on the page', async ({ page }) => {
+test('PDF pages: the dock has the shared tools and Focus; Focus hides the dock and the rail writes on the page', async ({ page }) => {
   await page.goto('/');
   await page.waitForSelector('.navbar__settings', { timeout: 15000 });
   await page.setInputFiles('.library__actions input[type=file]', { name: 'reading.pdf', mimeType: 'application/pdf', buffer: Buffer.from(sampleArabicBookPdf()) });
   const card = page.locator('.book-card', { hasText: 'كتاب القراءة' });
   await expect(card).toHaveCount(1, { timeout: 30000 });
   await card.locator('.book-card__open').click();
-  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 3', { timeout: 20000 });
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 3', { timeout: 20000 });
 
-  const bar = page.locator('.reader__topbar');
-  for (const name of ['Margins', 'Document', 'Write', 'Sketch', 'Focus']) await expect(bar.getByRole('button', { name: new RegExp('^' + name) })).toBeVisible();
-  await bar.getByRole('button', { name: /^Focus/ }).click();
-  await expect(page.locator('.reader__topbar')).toBeHidden();
-  await expect(page.locator('.reader__footer')).toBeHidden();
+  const bar = page.locator('.pdfp .qr-dock');
+  for (const name of ['Display', 'Pomodoro timer', 'Focus', 'Margins', 'Document', 'Write', 'Sketch']) await expect(bar.getByRole('button', { name, exact: true })).toBeVisible();
+  await bar.getByRole('button', { name: 'Focus', exact: true }).click();
+  await expect(page.locator('.pdfp .qr-dock')).toHaveCount(0);
+  await expect(page.locator('.pdfp .qr-header')).toHaveCount(0);
   const pill = page.getByRole('group', { name: 'Focus' });
   await expect(pill).toContainText('Page 1 of 3');
 
@@ -68,5 +68,5 @@ test('PDF pages: the top bar has the shared tools and Focus; Focus hides the bar
   await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');
   await expect(pill).toHaveCount(0);
-  await expect(page.locator('.reader__topbar')).toBeVisible();
+  await expect(page.locator('.pdfp .qr-dock')).toBeVisible();
 });

@@ -74,6 +74,8 @@ export function useReaderSearch({
   const [active, setActive] = useState(0);
   const [history, setHistory] = useState<string[]>(readHistory);
   const request = useRef(0);
+  // Only "This page" depends on where the reader is; moving must not search again (and lose the chosen result) otherwise.
+  const pageChapter = scope === 'page' ? chapter : -1;
 
   const remember = useCallback(
     (text: string) => {
@@ -121,7 +123,7 @@ export function useReaderSearch({
             found.push(...searchTexts(m.texts, trimmed, mode, { paragraphs: m.paragraphs }).map((h) => titled(h, m, other, `${other.title} · `)));
           }
         } else {
-          const chapters = scope === 'page' ? [chapter] : undefined;
+          const chapters = scope === 'page' ? [pageChapter] : undefined;
           if (match === 'root') {
             const r = await searchSameRoot(book.id, model, trimmed, chapters);
             found = r.hits.map((h) => titled(h, model, book));
@@ -141,7 +143,7 @@ export function useReaderSearch({
         if (id === request.current) setSearching(false);
       }
     },
-    [scope, match, model, book, chapter, remember]
+    [scope, match, model, book, pageChapter, remember]
   );
 
   // Live search waits for typing to pause, and never covers Library scope (it parses every book).

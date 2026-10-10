@@ -1,11 +1,64 @@
-.pdfp__stage {
-  flex: 1;
+/* The pages view sits in the reader's frame (.qr, quietReader.css): header on top, the body below it. The body is
+   what the study desk's margin and the sketch panel pad from the right; the frame inside it holds the scrolling
+   stage and everything that floats over it (page turns, where you are, the dock, its sheets). */
+.pdfp__body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  box-sizing: border-box;
+}
+
+.pdfp__frame {
   position: relative;
+  flex: 1;
   min-width: 0;
+}
+
+.pdfp__stage {
+  position: absolute;
+  inset: 0;
   overflow: auto;
   overscroll-behavior: contain;
   outline: none;
-  background: var(--bg-sunken, var(--bg));
+  background: var(--bg);
+}
+
+/* Over the pages, where you are reads on a chip. */
+.pdfp .qr-where {
+  z-index: 3;
+  padding: 4px 12px;
+  border: 1px solid var(--qr-line);
+  border-radius: 999px;
+  background: var(--qr-chrome);
+  backdrop-filter: blur(8px);
+}
+
+.pdfp--compact .qr-where--right {
+  bottom: 84px;
+}
+.pdfp--compact .qr-where--left {
+  display: none;
+}
+
+.pdfp .qr-turn {
+  box-shadow: var(--qr-shadow);
+}
+
+.pdfp__extensions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pdfp__reading {
+  padding: 24px;
+}
+
+.qr-display__hint {
+  font-size: 12px;
+  color: var(--qr-soft);
 }
 
 .pdfp__column {
@@ -21,8 +74,25 @@
   position: relative;
   flex: none;
   background: #fff;
-  border-radius: 2px;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+  border-radius: 3px;
+  box-shadow:
+    0 1px 3px rgb(28 27 25 / 0.12),
+    0 12px 32px rgb(28 27 25 / 0.08);
+}
+
+/* Display -> Pages: warmer paper, or night (the picture inverted, so dark paper with light print). */
+.pdfp--sepia .pdfp-page {
+  background: #f4ead6;
+}
+.pdfp--sepia .pdfp-page__canvas {
+  filter: sepia(0.35) saturate(1.1) brightness(0.97);
+  mix-blend-mode: multiply;
+}
+.pdfp--night .pdfp-page {
+  background: #1d1c21;
+}
+.pdfp--night .pdfp-page__canvas {
+  filter: invert(0.9) hue-rotate(180deg);
 }
 
 .pdfp-page__number {

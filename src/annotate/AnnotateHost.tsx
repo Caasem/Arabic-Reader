@@ -47,7 +47,7 @@ function Active({ book }: { book: BookMeta }) {
     return () => setInkUi({ inking: false, sketch: false, full: false });
   }, [book.id]);
 
-  // Write and Sketch in the shared tool list: the dock, the PDF top bar and the Focus rail.
+  // Write and Sketch in the shared tool list: the dock (reader and PDF pages) and the Focus rail.
   useEffect(() => {
     const offs = [
       registerReaderTool({ id: 'ink:write', label: 'Write', title: 'Write on the page', keys: 'Alt+W', group: 'ink', order: 0, readers: ['clean', 'pdf'], icon: <IconPen size={18} />, isOn: () => inkUi().inking, run: () => setInkUi({ inking: !inkUi().inking }) }),

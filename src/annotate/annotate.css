@@ -260,7 +260,7 @@ body.ink-writing .qr-stage {
 body.ink-sketching .qr {
   width: calc(100% - var(--ink-panel-w));
 }
-body.ink-sketching .pdfp .reader__body {
+body.ink-sketching .pdfp .pdfp__body {
   padding-right: var(--ink-panel-w);
 }
 .sk-panel {
@@ -623,7 +623,7 @@ body.ink-sketching .pdfp .reader__body {
   body.ink-sketching .qr {
     width: 100%;
   }
-  body.ink-sketching .pdfp .reader__body {
+  body.ink-sketching .pdfp .pdfp__body {
     padding-right: 0;
   }
   .sk-full {

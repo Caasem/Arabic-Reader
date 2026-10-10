@@ -32,15 +32,16 @@ test('a text PDF can be switched from reflowed text to its original pages, and w
   await page.locator('.qr-dock').getByRole('button', { name: 'Display', exact: true }).click();
   await page.getByRole('dialog', { name: 'Display' }).getByRole('button', { name: 'Original pages' }).click();
 
-  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 3', { timeout: 20000 });
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 3', { timeout: 20000 });
   await expect(page.locator('.pdfp-page canvas').first()).toBeVisible();
   await tapFirstWord(page);
 
   // Next page, then back to the reflowed text.
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Next page' }).click();
-  await expect(page.locator('.reader__footer')).toContainText('Page 2 of 3');
-  await page.getByRole('button', { name: 'Reflowed text' }).click();
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 2 of 3');
+  await page.locator('.qr-dock').getByRole('button', { name: 'Display', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Display' }).getByRole('button', { name: 'Reflowed text' }).click();
   await page.waitForSelector('.qr-chapter .ar-word', { timeout: 20000 });
 });
 
@@ -49,7 +50,7 @@ test('a scanned PDF is added as pages and opens in the pages view', async ({ pag
   const notice = page.locator('.library__notice', { hasText: 'added as PDF pages · 2 pages' });
   await expect(notice).toBeVisible({ timeout: 30000 });
   await page.locator('.book-card').first().locator('.book-card__open').click();
-  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 2', { timeout: 20000 });
   await expect(page.getByRole('button', { name: 'Reflowed text' })).toHaveCount(0);
 });
 
@@ -73,7 +74,7 @@ test('the original pages draw their text and images instead of coming up blank',
   await page.waitForSelector('.qr-chapter .ar-word', { timeout: 20000 });
   await page.locator('.qr-dock').getByRole('button', { name: 'Display', exact: true }).click();
   await page.getByRole('dialog', { name: 'Display' }).getByRole('button', { name: 'Original pages' }).click();
-  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 3', { timeout: 20000 });
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 3', { timeout: 20000 });
   await expect.poll(() => inkOf(page, 1), { timeout: 20000, message: 'text page has ink' }).toBeGreaterThan(0.001);
 });
 
@@ -104,7 +105,7 @@ test('a PDF book opens from the Library as its pages or as text, and a scan offe
   await expect(choice.getByRole('button')).toHaveText(['PDF', 'Text']);
 
   await choice.getByRole('button', { name: 'PDF' }).click();
-  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 3', { timeout: 20000 });
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 3', { timeout: 20000 });
   await expect.poll(() => inkOf(page, 1), { timeout: 20000 }).toBeGreaterThan(0.001);
 
   await page.locator('.app__main').getByRole('button', { name: 'Library' }).first().click();
@@ -126,7 +127,31 @@ test('by default a text PDF is added as its pages without converting, and opens 
   const card = page.locator('.book-card', { hasText: 'كتاب القراءة' });
   await expect(card.getByRole('group', { name: /Open .* as/ })).toHaveCount(0);
   await card.locator('.book-card__open').click();
-  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 3', { timeout: 20000 });
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 3', { timeout: 20000 });
   await expect(page.getByRole('button', { name: 'Reflowed text' })).toHaveCount(0);
   await tapFirstWord(page);
+});
+
+test('PDF pages have the reader’s dock in the same order; Contents and Search work on the pages', async ({ page }) => {
+  await addPdf(page, 'reading.pdf', sampleArabicBookPdf());
+  const card = page.locator('.book-card', { hasText: 'كتاب القراءة' });
+  await expect(card).toHaveCount(1, { timeout: 30000 });
+  await card.locator('.book-card__open').click();
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 3', { timeout: 20000 });
+
+  const dock = page.locator('.pdfp .qr-dock');
+  const names = await dock.locator('button').evaluateAll((buttons) => buttons.map((b) => b.getAttribute('aria-label')));
+  expect(names).toEqual(['Contents', 'Search', 'Marks', 'Words', 'Display', 'Levels', 'Pomodoro timer', 'Focus', 'Margins', 'Document', 'Write', 'Sketch']);
+
+  await dock.getByRole('button', { name: 'Contents', exact: true }).click();
+  const drawer = page.locator('.qr-drawer');
+  await expect(drawer).toContainText('Reading now · page 1');
+  await drawer.getByRole('button', { name: /^Page 3/ }).click();
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 3 of 3');
+
+  await drawer.getByRole('tab', { name: 'Search' }).click();
+  await drawer.locator('input').fill('الحديقة');
+  await expect(drawer).toContainText('3 matches', { timeout: 10000 });
+  await drawer.locator('.qr-result').first().click();
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 3');
 });

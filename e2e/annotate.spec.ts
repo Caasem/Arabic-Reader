@@ -117,7 +117,7 @@ test('Write on a PDF page keeps the ink on the page at every zoom', async ({ pag
   const card = page.locator('.book-card', { hasText: 'كتاب القراءة' });
   await expect(card).toHaveCount(1, { timeout: 30000 });
   await card.locator('.book-card__open').click();
-  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 3', { timeout: 20000 });
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 3', { timeout: 20000 });
 
   await page.getByRole('button', { name: 'Write', exact: true }).click();
   const frame = page.locator('.pdfp-page[data-page="1"]');
@@ -132,7 +132,9 @@ test('Write on a PDF page keeps the ink on the page at every zoom', async ({ pag
     return [(s.x - p.x) / p.width, (s.y - p.y) / p.height, s.width / p.width].map((n) => Math.round(n * 100) / 100);
   };
   const atFit = await share();
-  await page.getByRole('button', { name: 'Zoom in' }).click();
+  await page.locator('.qr-dock').getByRole('button', { name: 'Display', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Display' }).getByRole('button', { name: 'Zoom in' }).click();
+  await page.locator('.qr-dock').getByRole('button', { name: 'Display', exact: true }).click();
   await expect.poll(async () => (await frame.boundingBox())!.width, { timeout: 5000 }).toBeGreaterThan(f.width + 20);
   expect(await share()).toEqual(atFit);
 
