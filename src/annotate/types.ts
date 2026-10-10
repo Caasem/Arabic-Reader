@@ -55,6 +55,8 @@ export interface SketchNode {
   deskItemId?: string;
   /** A picture node: the region of the page, as a data URL. */
   image?: string;
+  /** A tint for the box (a #rrggbb colour), unset for the plain box. */
+  color?: string;
 }
 
 export interface SketchEdge {

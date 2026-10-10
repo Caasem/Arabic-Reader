@@ -6,6 +6,8 @@ import { getReaderMarks } from '../readerChords';
 import { openDictionaryPage } from '../dictionaryPage/events';
 import { updateItem } from '../studyDesk/deskStore';
 import { goToPlace, placeRects } from './placeLinks';
+import { TEMPLATES } from './templates';
+import { HIGHLIGHTER_PRESETS } from '../studyDesk/highlighterColour';
 import { bookSketches, deleteSketch, isEmptySketch, newSketch, onInkChange, saveSketch } from './inkStore';
 import { refreshSketchCards, sendSketchToMargin, sketchOutline, sketchPng, sketchSvgBlob, type SendHow } from './toMargin';
 import { usePreferences } from '../state/PreferencesContext';
@@ -32,6 +34,7 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
   const ui = useInkUi();
   const { prefs } = usePreferences();
   const [menu, setMenu] = useState(false);
+  const [templates, setTemplates] = useState(false);
   const [tabMenu, setTabMenu] = useState(false);
   const [listOpen, setListOpen] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -779,8 +782,47 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
           <button type="button" className="ink-ib" disabled={!state?.selected} aria-label="Delete the selection (Delete)" title="Delete · Del" onClick={() => surface.current?.deleteSelection()}>
             <IconTrash />
           </button>
+          <span className="ink-sep" aria-hidden="true" />
+          <button type="button" className="ink-ib ink-ib--wide" disabled={state?.empty} aria-label="Tidy the diagram" title="Lay the diagram out as a tree" onClick={() => surface.current?.tidy()}>
+            Tidy
+          </button>
+          <span className="sk-send">
+            <button type="button" className="ink-ib ink-ib--wide" aria-haspopup="menu" aria-expanded={templates} onClick={() => setTemplates(!templates)}>
+              Templates ▾
+            </button>
+            {templates && (
+              <span className="sk-send__menu" role="menu" aria-label="Templates">
+                {TEMPLATES.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setTemplates(false);
+                      surface.current?.addTemplate(t.nodes, t.edges);
+                    }}
+                  >
+                    <b>{t.label}</b>
+                    <span>{t.hint}</span>
+                  </button>
+                ))}
+              </span>
+            )}
+          </span>
           <span className="sk-grow" />
           <UndoRedo onUndo={() => surface.current?.undo()} onRedo={() => surface.current?.redo()} state={state} />
+        </div>
+      )}
+
+      {mode === 'diagram' && !!state?.nodes && (
+        <div className="sk-tools sk-tools--sub" role="toolbar" aria-label="Box colour">
+          <span className="sk-tools__label">{state.nodes > 1 ? `${state.nodes} boxes` : 'Box'}</span>
+          <button type="button" className="ink-swatch sk-swatch--none" aria-pressed={!state.nodeColor} aria-label="Colour: none" title="No colour" onClick={() => surface.current?.setNodeColor(null)} />
+          {HIGHLIGHTER_PRESETS.map((c) => (
+            <button key={c.id} type="button" className="ink-swatch" style={{ background: c.id }} aria-pressed={state.nodeColor === c.id} aria-label={`Colour: ${c.label}`} onClick={() => surface.current?.setNodeColor(c.id)} />
+          ))}
+          <span className="sk-grow" />
+          <span className="sk-tools__hint">Shift-click or Shift-drag selects more</span>
         </div>
       )}
 

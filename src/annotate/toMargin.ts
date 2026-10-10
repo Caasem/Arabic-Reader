@@ -57,6 +57,15 @@ export function sketchPin(s: Pick<Sketch, 'key' | 'location'>): string | null {
   return at ? formatCleanLocation({ chapter: at.chapter, start: at.start, end: at.start + 1 }) : null;
 }
 
+/** A #rrggbb colour mixed with white: `amount` of the colour. */
+function mix(hex: string, amount: number): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return '#ffffff';
+  const n = parseInt(m[1], 16);
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(255 + (v - 255) * amount));
+  return `rgb(${c.join(' ')})`;
+}
+
 const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
 
 /**
@@ -104,7 +113,7 @@ export function sketchSvg(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): { svg
     body += `<path d="M${p1[0]} ${p1[1]}L${p2[0]} ${p2[1]}" fill="none" stroke="#6b6560" stroke-width="1.6"${e.dir ? ' marker-end="url(#a)"' : ''}/>`;
   }
   for (const n of s.nodes) {
-    const fill = n.kind === 'quote' ? '#f6ead0' : '#ffffff';
+    const fill = n.color ? mix(n.color, 0.45) : n.kind === 'quote' ? '#f6ead0' : '#ffffff';
     const stroke = n.kind === 'note' ? '#2e7d74' : n.kind === 'quote' ? '#f6ead0' : '#d9d2c5';
     if (n.image) {
       body += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="14" fill="#ffffff" stroke="#d9d2c5" stroke-width="1.2"/>`;

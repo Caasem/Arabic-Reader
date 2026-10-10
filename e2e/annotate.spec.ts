@@ -345,3 +345,41 @@ test('a quote from the reader goes back to its words, and its words open the dic
   await expect(page.locator('.dpage')).toBeVisible();
 });
 
+
+test('diagram: a template, tinted boxes, Shift to select more, and Tidy lays it out', async ({ page }) => {
+  await openSample(page);
+  await page.keyboard.press('Alt+k');
+  const panel = page.getByRole('complementary', { name: 'Sketch' });
+  await panel.getByRole('button', { name: 'Diagram' }).click();
+  await panel.getByRole('button', { name: 'Templates ▾' }).click();
+  await panel.getByRole('menuitem', { name: /Root family/ }).click();
+  const nodes = panel.locator('.sk-node');
+  await expect(nodes).toHaveCount(6);
+  await expect(panel.locator('.sk-edge')).toHaveCount(5);
+
+  // The first node is selected: tint it.
+  const colours = panel.getByRole('toolbar', { name: 'Box colour' });
+  await colours.getByRole('button', { name: 'Colour: Yellow' }).click();
+  await expect(nodes.first()).toHaveClass(/sk-node--tinted/);
+  // Shift-click a second box: both take the next colour.
+  await nodes.nth(1).click({ modifiers: ['Shift'] });
+  await expect(colours).toContainText('2 boxes');
+  await colours.getByRole('button', { name: 'Colour: Blue' }).click();
+  await expect(panel.locator('.sk-node--tinted')).toHaveCount(2);
+
+  // Tidy: the root on top, the five words made from it side by side in the row below.
+  await panel.getByRole('button', { name: 'Tidy the diagram' }).click();
+  const tops = await nodes.evaluateAll((els) => els.map((el) => Math.round(parseFloat((el as HTMLElement).style.top))));
+  expect(new Set(tops.slice(1)).size).toBe(1);
+  expect(tops[0]).toBeLessThan(tops[1]);
+
+  // Shift-drag on the sheet selects every box it touches.
+  const stage = (await panel.locator('.sk-surface').boundingBox())!;
+  await page.keyboard.down('Shift');
+  await page.mouse.move(stage.x + 4, stage.y + 4);
+  await page.mouse.down();
+  await page.mouse.move(stage.x + stage.width - 4, stage.y + stage.height - 40, { steps: 6 });
+  await page.mouse.up();
+  await page.keyboard.up('Shift');
+  await expect(colours).toContainText('6 boxes');
+});

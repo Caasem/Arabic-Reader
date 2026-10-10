@@ -4,6 +4,16 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.89.0 — 2026-10-10
+
+- **Coloured boxes in diagrams.** Select a box (or several) and pick a colour from the row that appears: cream,
+  yellow, green, blue, purple or red, or none. Pictures of the sheet keep the colours.
+- **Select several boxes:** Shift-click boxes, or Shift-drag a box around them on the sheet. Drag one to move them
+  all; Delete removes them all.
+- **Tidy** lays the diagram out as a tree: what nothing points to on top, each arrow's end a row lower.
+- **Templates** for study: a root and the words made from it, the i‘rāb of a sentence, and an argument map
+  (claim, reasons, evidence, objection, reply). Write over the placeholders.
+
 ## v0.88.0 — 2026-10-10
 
 - **The sketch panel and the PDF margin no longer fight for room.** Both used the right of the screen, so with the
