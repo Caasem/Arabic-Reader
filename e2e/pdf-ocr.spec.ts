@@ -40,7 +40,7 @@ test('a tap on a scanned page is read by the chosen engine and opens the diction
   }, ENGINE_URL);
   await addScan(page);
   await page.locator('.book-card__open').first().click();
-  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 2', { timeout: 20000 });
   await expect(page.locator('.pdfp-chip')).toContainText('Scanned page');
 
   const layer = page.locator('.pdfp-page[data-page="1"] .pdfp-text');
@@ -58,7 +58,7 @@ test('with no engine the chip says so, and Settings can add one of your own', as
   await routeEngine(page, requests);
   await addScan(page);
   await page.locator('.book-card__open').first().click();
-  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 2', { timeout: 20000 });
   const layer = page.locator('.pdfp-page[data-page="1"] .pdfp-text');
   const box = (await layer.boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 3);
@@ -100,7 +100,7 @@ test('a read that is not a word is flagged, offers corrections, and a pick looks
   }, ENGINE_URL);
   await addScan(page);
   await page.locator('.book-card__open').first().click();
-  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 2', { timeout: 20000 });
   const box = (await page.locator('.pdfp-page[data-page="1"] .pdfp-text').boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 3);
 
@@ -149,7 +149,7 @@ test('a second opinion is asked only when the first read is not a word, and the 
   });
   await addScan(page);
   await page.locator('.book-card__open').first().click();
-  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 2', { timeout: 20000 });
   const box = (await page.locator('.pdfp-page[data-page="1"] .pdfp-text').boundingBox())!;
   await page.mouse.click(box.x + box.width / 2, box.y + box.height / 3);
   const popup = page.locator('.dict-popup');

@@ -34,7 +34,7 @@ const FONT_MIN = 80;
 const FONT_MAX = 160;
 const FONT_STEP = 10;
 
-function Segmented<T extends string>({
+export function Segmented<T extends string>({
   label,
   options,
   value,
@@ -61,6 +61,32 @@ function Segmented<T extends string>({
             onClick={() => onChange(o.id)}
           >
             {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** The app's theme, as four swatches (the reader's and the PDF pages' Display sheets). */
+export function ThemePicker() {
+  const { prefs, updatePrefs } = usePreferences();
+  return (
+    <div>
+      <div className="qr-label">Theme</div>
+      <div className="qr-themes" role="group" aria-label="Theme">
+        {THEMES.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className={'qr-theme' + (prefs.theme === t.id ? ' qr-theme--on' : '')}
+            aria-pressed={prefs.theme === t.id}
+            onClick={() => updatePrefs({ theme: t.id })}
+          >
+            <span className={`qr-theme__swatch qr-theme__swatch--${t.id}`} lang="ar">
+              ع
+            </span>
+            {t.label}
           </button>
         ))}
       </div>
@@ -130,25 +156,7 @@ export function DisplaySheet({
             </div>
           </div>
 
-          <div>
-            <div className="qr-label">Theme</div>
-            <div className="qr-themes" role="group" aria-label="Theme">
-              {THEMES.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  className={'qr-theme' + (prefs.theme === t.id ? ' qr-theme--on' : '')}
-                  aria-pressed={prefs.theme === t.id}
-                  onClick={() => updatePrefs({ theme: t.id })}
-                >
-                  <span className={`qr-theme__swatch qr-theme__swatch--${t.id}`} lang="ar">
-                    ع
-                  </span>
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <ThemePicker />
 
           <div>
             <div className="qr-label">Arabic font</div>

@@ -180,7 +180,7 @@ test.describe('piles beside PDF pages', () => {
     await page.setInputFiles('.library__actions input[type=file]', { name: 'scan.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf([{ image: true }, { image: true }])) });
     await expect(page.locator('.book-card')).toHaveCount(1, { timeout: 30000 });
     await page.locator('.book-card__open').first().click();
-    await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+    await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 2', { timeout: 20000 });
     const area = page.locator('.sd-pdfmargin__area');
     await expect(area).toBeVisible();
     const a = (await area.boundingBox())!;

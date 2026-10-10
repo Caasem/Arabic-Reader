@@ -146,6 +146,8 @@ export interface ReaderPreferences {
   studyDeskMarginsToInbox: 'ask' | 'auto';
   /** Adding a PDF reads its text and reflows it into a book (off: it is added as its pages, without trying). */
   pdfConvertToText: boolean;
+  /** How PDF pages are drawn: as printed, warmer (sepia), or dark with light text (night). */
+  pdfPageTint: 'paper' | 'sepia' | 'night';
   /** Ink and sketches (src/annotate): write on the page (Alt+W) and a sketch sheet beside it (Alt+K). */
   annotateEnabled: boolean;
   /** Show a verb's form (I-X) and its root's other verbs in the dictionary popup (src/verbForms). */

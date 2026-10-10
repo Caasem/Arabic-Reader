@@ -4,6 +4,17 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.78.0 — 2026-10-10
+
+- **PDF pages look like the reader.** The same header (Library, title, bookmark, settings), the same dock at the
+  bottom, page-turn buttons at the sides, where you are ("Page 12 of 300 · 4%") on a chip, and the progress line
+  along the bottom. The old top bar and footer are gone.
+- **The PDF dock**: Display, Timer and Focus, then Margins, Document, Write and Sketch, in the reader's order.
+- **Display for PDF pages**: zoom (−, +, Fit to width), Pages tinted Paper, Sepia or Night, the theme, page-turn
+  direction, and the switch to the reflowed text when the book has one.
+- **Bookmark a PDF page** from the header; the arrow keys turn pages the way the side buttons do (Display → Page turns).
+- Focus on PDF pages hides the header and dock the same way the reader does.
+
 ## v0.77.0 — 2026-10-10
 
 - **The dock shows icons.** Every tool now fits in the reader's dock, however narrow the window: each one is an icon,
