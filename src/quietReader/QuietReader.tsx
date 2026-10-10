@@ -7,7 +7,7 @@ import { VocabularyEditModal } from '../components/reader/VocabularyEditModal';
 import { useHoverPreview } from '../components/reader/hooks/useHoverPreview';
 import { useWordLookups } from '../components/reader/hooks/useWordLookups';
 import { chapterHtml } from '../cleanReader/chapterHtml';
-import { loadCleanFocus, saveCleanFocus } from '../cleanReader/cleanFocus';
+import { registerReaderTool, refreshReaderTools, setFocusWhere, setReaderFocus, useReaderFocus } from '../readerTools';
 import { loadCleanPosition, saveCleanPosition } from '../cleanReader/cleanPosition';
 import { elementAsDocument } from '../cleanReader/elementAsDocument';
 import { parseCleanEpub } from '../cleanReader/parseCleanEpub';
@@ -26,7 +26,7 @@ import type { BookMeta, Highlight, HighlightColor, VocabularyItem } from '../typ
 import { vocabularyService } from '../vocabulary';
 import { BookDrawer, type BookmarkRow, type ChapterRow, type DrawerTab, type HighlightRow } from './BookDrawer';
 import { buildBookModel, type BookModel } from './bookModel';
-import { Dock, FocusPill, Header, ProgressRail, TurnButtons, type DockAction } from './Chrome';
+import { Dock, DOCK_ITEMS, Header, ProgressRail, TurnButtons, type DockAction } from './Chrome';
 import { searchForms, searchTexts } from './cleanSearch';
 import { normalizeForSearch } from '../reader/tokenizer/arabicTokenizer';
 import { DisplaySheet } from './DisplaySheet';
@@ -190,7 +190,9 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   }, []);
 
   // --- Panels -----------------------------------------------------------------------------------------
-  const [focus, setFocus] = useState(loadCleanFocus);
+  // Focus is shared with the PDF pages (src/readerTools): one switch, one pill, one tool rail.
+  const focus = useReaderFocus().on;
+  const setFocus = setReaderFocus;
   const [levelsOwn, setLevelsOwn] = useState(false);
   const levels = levelsOpen ?? levelsOwn;
   const setLevels = useCallback((open: boolean) => (onLevelsOpenChange ? onLevelsOpenChange(open) : setLevelsOwn(open)), [onLevelsOpenChange]);
@@ -229,8 +231,8 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   // --- Layout -----------------------------------------------------------------------------------------
   const narrow = size.w < NARROW_PX;
   const popup = lookups.popup;
-  const padL = !narrow && chrome && levels ? LEVELS_WIDTH + 48 : 0;
-  const padR = !narrow && chrome && drawer ? DRAWER_WIDTH : 0;
+  const padL = !narrow && levels ? LEVELS_WIDTH + 48 : 0;
+  const padR = !narrow && drawer ? DRAWER_WIDTH : 0;
   const region = size.w - padL - padR;
   const twoColumns = mode === 'paged' && prefs.twoColumnEnabled;
   const baseWidth = 380 + 3.8 * prefs.readingWidthPct;
@@ -895,7 +897,6 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
 
   // --- Focus ------------------------------------------------------------------------------------------
   useEffect(() => {
-    saveCleanFocus(focus);
     onFocusChromeChange?.(focus);
   }, [focus, onFocusChromeChange]);
   useEffect(() => () => onFocusChromeChange?.(false), [onFocusChromeChange]);
@@ -1027,6 +1028,21 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   if (sheet) dockActive.add(sheet);
   if (levels) dockActive.add('levels');
 
+  // The dock's own buttons are reading tools in the shared list (src/readerTools), so the Focus rail has them
+  // too; the pill says where the reader is.
+  const onDockRef = useRef(onDock);
+  onDockRef.current = onDock;
+  const activeRef = useRef<ReadonlySet<DockAction>>(dockActive);
+  activeRef.current = dockActive;
+  useEffect(() => {
+    const offs = DOCK_ITEMS.filter((i) => i.id !== 'focus').map((item, order) =>
+      registerReaderTool({ id: `qr:${item.id}`, label: item.label, title: item.title, group: 'read', order, readers: ['clean'], icon: item.icon, isOn: () => activeRef.current.has(item.id), run: () => onDockRef.current(item.id) })
+    );
+    return () => offs.forEach((off) => off());
+  }, []);
+  useEffect(() => refreshReaderTools(), [drawer, sheet, levels]);
+  useEffect(() => setFocusWhere(whereLabel), [whereLabel]);
+
   const articleStyle = {
     width: colW,
     fontFamily,
@@ -1054,7 +1070,6 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
           onOpenSettings={() => onOpenSettings?.()}
         />
       )}
-      {focus && <FocusPill onLeave={() => setFocus(false)} />}
 
       <div
         ref={stageRef}
@@ -1115,7 +1130,7 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
 
       <ProgressRail percent={percent} ticks={model ? chapterStarts(model.chars) : []} />
 
-      {chrome && sheet === 'display' && (
+      {sheet === 'display' && (
         <DisplaySheet
           center={dockCenter}
           view={view}
@@ -1128,7 +1143,7 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
           onClose={() => setSheet(null)}
         />
       )}
-      {chrome && sheet === 'timer' && <TimerPopover book={book} center={dockCenter + (labels ? 220 : 90)} onClose={() => setSheet(null)} />}
+      {sheet === 'timer' && <TimerPopover book={book} center={dockCenter + (labels ? 220 : 90)} onClose={() => setSheet(null)} />}
 
       {popup && (
         <DictionaryPopup
@@ -1159,11 +1174,11 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
           }
         />
       )}
-      {chrome && levels && model && (
+      {levels && model && (
         <MarginLevels book={book} model={model} savedItems={savedItems ?? []} onJump={(_, occ) => jumpTo(occ)} onClose={() => setLevels(false)} />
       )}
 
-      {chrome && drawer && model && (
+      {drawer && model && (
         <BookDrawer
           bookTitle={model.book.title || book.title}
           author={book.author}

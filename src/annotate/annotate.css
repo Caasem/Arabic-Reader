@@ -196,14 +196,64 @@ body.ink-writing .qr-stage {
   font-weight: 600;
   cursor: pointer;
 }
-.ink-tbtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+
+/* The sheet's "To margin" menu. */
+.sk-send {
+  position: relative;
 }
-.ink-tbtn--on {
-  background: var(--accent-soft) !important;
-  color: var(--ink-primary) !important;
+.sk-send__btn {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink-primary);
+  color: var(--bg);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sk-send__menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 5;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  box-shadow: var(--ink-shadow);
+}
+.sk-send__menu button {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.sk-send__menu button:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+.sk-send__menu button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.sk-send__menu b {
+  font-size: 13px;
+  font-weight: 600;
+}
+.sk-send__menu span {
+  color: var(--ink-soft);
+  font-size: 12px;
 }
 
 /* ---- Sketch panel ------------------------------------------------------------------------------------- */

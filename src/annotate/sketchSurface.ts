@@ -19,6 +19,8 @@ export interface SurfaceState {
   zoom: number;
   empty: boolean;
   selected: boolean;
+  /** The selected node, if a node (not a connector) is selected. */
+  node: string | null;
   /** The selected connector, and whether it has an arrow. */
   edge: { id: string; dir: boolean } | null;
 }
@@ -207,6 +209,7 @@ export class SketchSurface {
       zoom: this.sketch.view.s,
       empty: !this.sketch.strokes.length && !this.sketch.nodes.length,
       selected: !!(this.sel || this.selEdge),
+      node: this.sel,
       edge: e ? { id: e.id, dir: e.dir } : null,
     });
   }

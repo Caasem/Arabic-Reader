@@ -142,3 +142,26 @@ test('Write on a PDF page keeps the ink on the page at every zoom', async ({ pag
   await page.getByRole('button', { name: 'Sketch', exact: true }).click();
   await expect(page.getByRole('complementary', { name: 'Sketch' })).toContainText('Page 1');
 });
+
+test('a sketch goes to the margin as a picture card that opens its sheet again', async ({ page }) => {
+  await openSample(page);
+  await page.keyboard.press('Alt+k');
+  const panel = page.getByRole('complementary', { name: 'Sketch' });
+  await panel.getByRole('button', { name: 'Diagram' }).click();
+  await panel.getByRole('button', { name: 'Add a node (N)' }).click();
+  await page.keyboard.type('Group feeling');
+  await page.keyboard.press('Enter');
+  await expect(panel).toContainText('Saved on this device');
+
+  await panel.getByRole('button', { name: /To margin/ }).click();
+  await panel.getByRole('menuitem', { name: /as a picture/ }).click();
+  await expect(panel.locator('.sk-foot [role=status]')).toContainText('Sketch sent to the margin');
+  await page.keyboard.press('Escape');
+  await expect(panel).toHaveCount(0);
+
+  const card = page.locator('.sd-gloss', { hasText: 'Sketch' }).first();
+  await expect(card).toBeVisible({ timeout: 10000 });
+  await card.hover();
+  await card.getByRole('button', { name: 'Open sketch' }).click();
+  await expect(page.getByRole('complementary', { name: 'Sketch' }).locator('.sk-node')).toHaveText('Group feeling');
+});

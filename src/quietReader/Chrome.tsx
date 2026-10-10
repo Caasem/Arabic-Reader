@@ -1,3 +1,4 @@
+import { DockTools } from '../readerTools';
 import type { ReactNode } from 'react';
 import {
   IconBackChevron,
@@ -70,7 +71,7 @@ export function Header({
 
 export type DockAction = 'contents' | 'search' | 'marks' | 'words' | 'display' | 'levels' | 'timer' | 'focus';
 
-const ITEMS: { id: DockAction; label: string; title: string; icon: ReactNode }[] = [
+export const DOCK_ITEMS: { id: DockAction; label: string; title: string; icon: ReactNode }[] = [
   { id: 'contents', label: 'Contents', title: 'Contents', icon: <IconList /> },
   { id: 'search', label: 'Search', title: 'Search this book, your library or the dictionary', icon: <IconSearch /> },
   { id: 'marks', label: 'Marks', title: 'Bookmarks and highlights', icon: <IconBookmark /> },
@@ -107,7 +108,7 @@ export function Dock({
 }) {
   return (
     <nav className="qr-dock" aria-label="Reader tools" style={{ left: center }}>
-      {ITEMS.map((item) => (
+      {DOCK_ITEMS.map((item) => (
         <DockSlot key={item.id} before={item.id === 'display' || item.id === 'levels'}>
           <button
             type="button"
@@ -122,8 +123,8 @@ export function Dock({
           </button>
         </DockSlot>
       ))}
-      {/* Other features add their own buttons here (the study desk's Margins / Document switch). */}
-      <span id="qr-dock-extra" className="qr-dock__extra" />
+      {/* Other features' tools (study desk, ink) come from the shared tool list (src/readerTools). */}
+      <DockTools labels={labels} />
     </nav>
   );
 }
@@ -173,19 +174,6 @@ export function ProgressRail({ percent, ticks }: { percent: number; ticks: numbe
       {ticks.map((t, i) => (
         <div key={i} className="qr-rail__tick" style={{ left: `${t * 100}%` }} />
       ))}
-    </div>
-  );
-}
-
-export function FocusPill({ onLeave }: { onLeave(): void }) {
-  return (
-    <div className="qr-focus-pill">
-      <span>
-        Focus · <strong>Esc</strong> or
-      </span>
-      <button type="button" onClick={onLeave}>
-        Leave focus
-      </button>
     </div>
   );
 }

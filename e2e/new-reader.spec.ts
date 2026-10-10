@@ -88,7 +88,7 @@ test('a word opens the usual dictionary popup, in Focus too, and saving it colou
 
   // Focus hides the reader's chrome, not the dictionary.
   await dock(page, 'Focus').click();
-  await expect(page.locator('.qr-focus-pill')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Focus' })).toBeVisible();
   await page.locator('.qr-text .ar-word', { hasText: 'الشَّمْسَ' }).first().click();
   await expect(page.locator('.dict-popup')).toBeVisible();
   await expect(page.locator('.dict-popup__group-header').first()).toContainText('English', { timeout: 15000 });
@@ -151,7 +151,7 @@ test('focus, the timer, and vocab levels', async ({ page }) => {
   await openSample(page);
 
   await dock(page, 'Focus').click();
-  await expect(page.locator('.qr-focus-pill')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Focus' })).toBeVisible();
   await expect(page.locator('.qr-header')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(page.locator('.qr-header')).toBeVisible();

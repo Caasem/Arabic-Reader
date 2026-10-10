@@ -4,6 +4,28 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.74.0 — 2026-10-10
+
+- **Send a sketch to the margin.** "To margin" in the sketch panel puts the sheet beside its page (PDF) or the first
+  line of its passage (reader) as a study desk card: the whole sheet as a picture (drawn again whenever the sheet
+  changes), the whole sheet as an outline (each node a line, arrows indented under it), or just the selected node as
+  a margin note. The card is labelled Sketch or From sketch and has Open sketch, which opens the sheet again.
+- Sketch cards are ordinary desk items: they appear in the desk document and its export like screenshots and notes.
+
+## v0.73.0 — 2026-10-10
+
+- **One Focus for both readers.** F enters and leaves Focus in the reader and on PDF pages (the dock's Focus button
+  and a new Focus button in the PDF top bar do the same); Focus is still remembered for the next book. On PDF pages
+  Focus hides the top bar and footer.
+- **The same pill and tool rail.** The pill says where you are (page, chapter, percent), fades while you read and
+  comes back when you move. Tools in the pill, or Alt pressed twice, opens a rail with every reader tool: Contents,
+  Search, Marks, Words, Display, Levels, Timer, Margins, Document, Capture, Write and Sketch. Drawers, Display,
+  Levels and the timer now open inside Focus instead of being out of reach.
+- **One tool list.** The study desk (Margins, Document, Capture) and ink (Write, Sketch) register their tools once;
+  the quiet reader's dock, the PDF top bar and the Focus rail all show them. The desk's separate "Margins stay"
+  pill in Focus is gone (its buttons are in the rail).
+- Esc in Focus closes, in turn: a popup, the ink bar or sketch, the rail, an open drawer, then Focus.
+
 ## v0.72.2 — 2026-10-09
 
 - Writing on the page right after a book opens no longer loses the first stroke.

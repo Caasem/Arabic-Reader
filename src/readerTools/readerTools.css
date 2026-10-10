@@ -1,0 +1,174 @@
+/* Shared Focus (src/readerTools): the pill, the tool rail, and the PDF pages without their bar and footer. */
+:root {
+  --rt-chrome: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
+  --rt-shadow: 0 18px 48px rgba(28, 27, 25, 0.13), 0 2px 6px rgba(28, 27, 25, 0.06);
+  --rt-primary: var(--look-accent-ink, #7a5a32);
+}
+:root[data-theme='dark'] {
+  --rt-shadow: 0 18px 48px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.35);
+  --rt-primary: var(--look-accent-ink, #d0ab74);
+}
+
+.rt-pill {
+  position: fixed;
+  z-index: 58;
+  top: calc(env(safe-area-inset-top, 0px) + 14px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 20px);
+  padding: 5px 6px 5px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--rt-chrome);
+  box-shadow: var(--rt-shadow);
+  backdrop-filter: blur(8px);
+  color: var(--ink-soft);
+  font: 500 12.5px/1.3 'DM Sans', var(--font-ui);
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  transition: opacity 0.4s;
+}
+.rt-pill strong {
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.rt-pill kbd {
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  font: 600 10.5px 'DM Sans', var(--font-ui);
+}
+.rt-pill button {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.rt-pill button[aria-pressed='true'] {
+  background: var(--rt-primary);
+  border-color: var(--rt-primary);
+  color: var(--bg);
+}
+.rt-pill--idle {
+  opacity: 0;
+}
+.rt-pill--idle:hover,
+.rt-pill--idle:focus-within {
+  opacity: 1;
+}
+
+.rt-rail {
+  position: fixed;
+  z-index: 58;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--rt-chrome);
+  box-shadow: var(--rt-shadow);
+  backdrop-filter: blur(8px);
+  animation: rt-rail-in 0.16s ease-out;
+}
+@keyframes rt-rail-in {
+  from {
+    opacity: 0;
+    transform: translate(-6px, -50%);
+  }
+}
+.rt-rail__item {
+  display: contents;
+}
+.rt-rail__sep {
+  height: 1px;
+  margin: 3px 8px;
+  background: var(--border);
+}
+.rt-rail__btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 66px;
+  padding: 8px 2px 6px;
+  border: 0;
+  border-radius: 16px;
+  background: none;
+  color: var(--ink);
+  font: 500 11px/1.2 'DM Sans', var(--font-ui);
+  cursor: pointer;
+}
+.rt-rail__btn:hover {
+  background: var(--accent-soft);
+}
+.rt-rail__btn[aria-pressed='true'] {
+  background: var(--rt-primary);
+  color: var(--bg);
+}
+.rt-rail__btn kbd {
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--ink-soft);
+  font: 600 9.5px 'DM Sans', var(--font-ui);
+}
+.rt-rail__btn[aria-pressed='true'] kbd {
+  border-color: currentColor;
+  color: inherit;
+}
+.rt-rail__btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* The quiet reader's dock: each registered tool (with its separator) sits in the dock's own row. */
+.qr-dock__extra {
+  display: contents;
+}
+
+/* The PDF pages' top bar: the shared tools. */
+.rt-tbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.rt-tbtn svg {
+  width: 15px;
+  height: 15px;
+}
+.rt-tbtn--on {
+  background: var(--accent-soft) !important;
+  color: var(--rt-primary) !important;
+}
+
+/* PDF pages in Focus: no top bar, no footer; the page gets the room. */
+body.rt-focus--pdf .pdfp .reader__topbar,
+body.rt-focus--pdf .pdfp .reader__footer {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rt-rail {
+    animation: none;
+  }
+  .rt-pill {
+    transition: none;
+  }
+}

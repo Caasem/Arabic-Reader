@@ -3,6 +3,8 @@ import type { BookMeta } from '../types';
 import { formatCleanLocation } from '../quietReader/location';
 import { sketchForPassage } from './geometry';
 import { bookSketches, isEmptySketch, newSketch, onInkChange, saveSketch } from './inkStore';
+import { refreshSketchCards, sendSketchToMargin, type SendHow } from './toMargin';
+import { usePreferences } from '../state/PreferencesContext';
 import { COLOR_NAMES, keyOwner, PEN_WIDTHS, setInkUi, THEME_COLORS, useInkUi } from './inkUi';
 import { SketchSurface, type DiagramTool, type DrawTool, type SurfaceState } from './sketchSurface';
 import type { InkColor, Sketch } from './types';
@@ -32,6 +34,9 @@ function sheetFor(sketches: Sketch[], place: Place): Sketch | undefined {
  */
 export function SketchPanel({ book, place }: { book: BookMeta; place: Place | null }) {
   const ui = useInkUi();
+  const { prefs } = usePreferences();
+  const [menu, setMenu] = useState(false);
+  const [sent, setSent] = useState<string | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const surface = useRef<SketchSurface | null>(null);
@@ -64,8 +69,13 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
     if (!s || (!s.stored && isEmptySketch(s.sketch))) return;
     s.stored = true;
     setSaveState('saving');
-    saveSketch(structuredClone(s.sketch)).then(
-      () => setSaveState('saved'),
+    const copy = structuredClone(s.sketch);
+    saveSketch(copy).then(
+      () => {
+        setSaveState('saved');
+        // Picture cards of this sheet in the margin follow it.
+        void refreshSketchCards(copy).catch(() => undefined);
+      },
       () => setSaveState('failed')
     );
   }, []);
@@ -96,10 +106,15 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
   // Show the sheet for where the reader is; a new place gets a blank sheet, saved once something is on it.
   useEffect(() => {
     const s = surface.current;
-    if (!s || !place || !sketches) return;
-    const found = sheetFor(sketches, place);
+    if (!s || !sketches) return;
+    // A margin card's Open sketch shows its own sheet, wherever the reader is.
+    const wanted = ui.openSketch ? sketches.find((x) => x.id === ui.openSketch) : undefined;
+    if (!wanted && !place) return;
+    const found = wanted ?? sheetFor(sketches, place!);
     const cur = sheet.current;
     if (found && cur?.sketch.id === found.id) return;
+    if (!place) return;
+    if (ui.openSketch && cur?.sketch.id === ui.openSketch) return;
     if (!found && cur && !cur.stored && cur.sketch.key === placeKey(place)) {
       // Still blank: it simply belongs to what is now on screen.
       if (place.kind === 'clean') cur.sketch.location = formatCleanLocation(place);
@@ -109,7 +124,7 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
     const next = found ?? newSketch(book.id, placeKey(place), place.kind === 'pdf' ? `pdf:${place.page}` : formatCleanLocation(place));
     sheet.current = { sketch: structuredClone(next), stored: !!found };
     s.load(next);
-  }, [place, sketches, book.id, flush]);
+  }, [place, sketches, book.id, flush, ui.openSketch]);
 
   useEffect(() => surface.current?.setTool(tool), [tool]);
   useEffect(() => surface.current?.setDiagramTool(dtool), [dtool]);
@@ -188,6 +203,22 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
     surface.current?.addNode(undefined, text.length > 120 ? text.slice(0, 118) + '…' : text, 'quote', sheet.current?.sketch.location);
   };
 
+  const send = (how: SendHow) => {
+    setMenu(false);
+    const cur = sheet.current;
+    if (!cur || isEmptySketch(cur.sketch)) return setSent('Draw or add a node first');
+    flush();
+    sendSketchToMargin(book, structuredClone(cur.sketch), how, state?.node).then(
+      () => setSent(how === 'node' ? 'Node sent to the margin' : how === 'outline' ? 'Outline sent to the margin' : 'Sketch sent to the margin'),
+      (e: Error) => setSent(e.message || 'Could not send it')
+    );
+  };
+  useEffect(() => {
+    if (!sent) return;
+    const t = window.setTimeout(() => setSent(null), 2400);
+    return () => window.clearTimeout(t);
+  }, [sent]);
+
   const mode = state?.mode ?? 'draw';
   return (
     <aside ref={panelRef} className={'sk-panel' + (ui.full ? ' sk-panel--full' : '')} aria-label="Sketch">
@@ -204,6 +235,29 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
             Diagram
           </button>
         </span>
+        {prefs.studyDeskEnabled && (
+          <span className="sk-send">
+            <button type="button" className="sk-send__btn" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} title="Put this sheet in the margin beside its page">
+              To margin ▾
+            </button>
+            {menu && (
+              <span className="sk-send__menu" role="menu">
+                <button type="button" role="menuitem" onClick={() => send('picture')}>
+                  <b>Whole sheet, as a picture</b>
+                  <span>A card of the drawing; it follows the sheet</span>
+                </button>
+                <button type="button" role="menuitem" onClick={() => send('outline')}>
+                  <b>Whole sheet, as an outline</b>
+                  <span>Nodes and arrows as lines of a margin note</span>
+                </button>
+                <button type="button" role="menuitem" disabled={!state?.node} onClick={() => send('node')}>
+                  <b>Selected node only</b>
+                  <span>{state?.node ? 'Its words as a margin note' : 'Select a node in Diagram first'}</span>
+                </button>
+              </span>
+            )}
+          </span>
+        )}
         <button type="button" className="ink-ib sk-full" aria-pressed={ui.full} aria-label="Use the whole reader" title="Full size" onClick={() => setInkUi({ full: !ui.full })}>
           <IconExpand />
         </button>
@@ -316,7 +370,7 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
       </div>
       <div className="sk-foot">
         <span className={'sk-dot' + (saveState === 'failed' ? ' sk-dot--bad' : '')} />
-        <span>{saveState === 'saving' ? 'Saving…' : saveState === 'failed' ? 'Not saved' : 'Saved on this device'}</span>
+        <span role="status">{sent ?? (saveState === 'saving' ? 'Saving…' : saveState === 'failed' ? 'Not saved' : 'Saved on this device')}</span>
         <span className="sk-grow" />
         <span>{ui.penSeen ? 'Stylus found: fingers move the sheet' : 'Pinch or Ctrl+scroll to zoom'}</span>
       </div>

@@ -18,7 +18,7 @@ import { PdfDeskLayer } from './PdfDeskLayer';
 import { PdfMargin } from './PdfMargin';
 import { PdfSelect } from './PdfSelect';
 import type { DeskCommands } from './MarginRing';
-import { DeskSwitch } from './DeskSwitch';
+import { useDeskTools } from './deskTools';
 import type { PullSpot, PullTarget } from './pullIn';
 import { PullInBody } from './PullInBody';
 import { RegionCapture } from './RegionCapture';
@@ -261,6 +261,9 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
     [data.items, data.deskId]
   );
   // What the right-click ring in the margins can do (MarginRing.tsx).
+  // Margins, Document and Capture in the shared tool list: the dock, the PDF top bar and the Focus rail.
+  useDeskTools({ marginsOn: prefs.studyDeskMargins !== 'off', onToggleMargins: toggleMargins, onDocument: () => openDocument(), onCapture: () => startCapture(false) });
+
   const commands: DeskCommands = {
     capture: () => startCapture(false),
     pullIn: openPull,
@@ -351,7 +354,6 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
       )}
       {book.pdf && <PdfMargin book={book} data={data} commands={commands} onToast={say} onOpenDocument={openDocument} />}
       {book.pdf && !doc && <PdfSelect book={book} data={data} active={!region && !pull} commands={commands} onToast={say} />}
-      {!doc && <DeskSwitch marginsOn={prefs.studyDeskMargins !== 'off'} onToggleMargins={toggleMargins} onDocument={() => openDocument()} />}
       {!doc && <MarginLayer book={book} data={data} commands={commands} onToast={say} onOpenDocument={openDocument} />}
       {concept && <ConceptStrip book={book} deskId={data.deskId} deskName={deskName} onClose={() => setConcept(false)} onToast={say} />}
       {away && !region && <TripBar trip={away} onCapture={() => startCapture(false)} onCaptureStay={() => startCapture(true)} onCancel={tripDone} />}

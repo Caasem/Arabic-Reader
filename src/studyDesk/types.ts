@@ -60,6 +60,8 @@ export interface DeskItem {
   hidden?: boolean;
   /** A card made from this item was added to review (vocabulary id). */
   reviewId?: string;
+  /** Sent from a sketch sheet (src/annotate): the sheet's id, so the card can open it again. */
+  sketchId?: string;
   /** In a pile in the margin. A pile of one is no pile and is shown as a lone card. */
   pile?: DeskPile;
   createdAt: number;
