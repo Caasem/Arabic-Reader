@@ -30,7 +30,8 @@ export const PDF_MESSAGES = {
   tooLarge: 'This PDF is too large to convert (limit 500 MB).',
   password: 'This PDF is password-protected. Remove the password and add it again.',
   corrupt: 'This PDF could not be read.',
-  scanned: 'This PDF is scanned images. Word lookup needs text recognition (coming later).',
+  scanned: 'This PDF is scanned images. Tapping a word reads it with text recognition (Settings → Text recognition).',
+  asPages: 'Added as PDF pages. To read a PDF as reflowable text instead, turn on Settings → PDF → Convert PDFs to text when adding, then add it again.',
   broken: 'The text in this PDF could not be extracted cleanly. You can read the pages; word lookup works where the text is usable.',
 } as const;
 
@@ -41,8 +42,11 @@ export class PdfImportError extends Error {
   }
 }
 
-/** 'ok': reflowed text. 'broken': text layer unusable. 'none': no text layer (scanned). The last two have no chapters. */
-export type PdfReflow = 'ok' | 'broken' | 'none';
+/**
+ * 'ok': reflowed text. 'broken': text layer unusable. 'none': no text layer (scanned). 'skipped': added as pages
+ * without trying (the default; Settings → PDF turns conversion on). All but 'ok' have no chapters.
+ */
+export type PdfReflow = 'ok' | 'broken' | 'none' | 'skipped';
 
 export interface ConvertedPdf {
   title?: string;
@@ -102,6 +106,18 @@ function readInfo(info: unknown): { title?: string; author?: string } {
  * or one whose text fails the quality test, comes back with no chapters and `reflow` 'none' or
  * 'broken': it is read as pages.
  */
+/** The PDF as pages only, without reading its text: title, author and page count (the default on import). */
+export async function openPdfPages(data: Uint8Array, deps: PdfDeps, fallbackTitle: string): Promise<ConvertedPdf> {
+  if (data.length > MAX_PDF_BYTES) throw new PdfImportError(PDF_MESSAGES.tooLarge);
+  const doc = await openOrExplain(deps, data);
+  try {
+    const info = readInfo((await doc.getMetadata().catch(() => ({ info: undefined }))).info);
+    return { ...info, title: info.title ?? fallbackTitle, rtl: false, chapters: [], pages: doc.numPages, reflow: 'skipped', notice: PDF_MESSAGES.asPages, warnings: [] };
+  } finally {
+    await doc.destroy().catch(() => {});
+  }
+}
+
 export async function convertPdf(data: Uint8Array, deps: PdfDeps, fallbackTitle: string): Promise<ConvertedPdf> {
   if (data.length > MAX_PDF_BYTES) throw new PdfImportError(PDF_MESSAGES.tooLarge);
   const doc = await openOrExplain(deps, data);

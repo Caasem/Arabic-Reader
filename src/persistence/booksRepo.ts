@@ -93,7 +93,7 @@ export async function getPdfOriginal(id: string): Promise<Blob | undefined> {
   return hash ? blobs().get(hash) : undefined;
 }
 /** Keeps the PDF a book came from and records it on the book (`pdf.originalHash`). */
-export async function savePdfOriginal(id: string, file: Blob, pdf: { pages: number; reflow: 'ok' | 'broken' | 'none' }): Promise<void> {
+export async function savePdfOriginal(id: string, file: Blob, pdf: { pages: number; reflow: 'ok' | 'broken' | 'none' | 'skipped' }): Promise<void> {
   const { hash } = await blobs().put(file, { ns: PDF_NS, owner: id, type: 'application/pdf' });
   try {
     await updateSynced('books', id, { pdf: { ...pdf, originalHash: hash } });

@@ -117,9 +117,6 @@ test('Write on a PDF page keeps the ink on the page at every zoom', async ({ pag
   const card = page.locator('.book-card', { hasText: 'كتاب القراءة' });
   await expect(card).toHaveCount(1, { timeout: 30000 });
   await card.locator('.book-card__open').click();
-  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 20000 });
-  await page.locator('.qr-dock').getByRole('button', { name: 'Display', exact: true }).click();
-  await page.getByRole('dialog', { name: 'Display' }).getByRole('button', { name: 'Original pages' }).click();
   await expect(page.locator('.reader__footer')).toContainText('Page 1 of 3', { timeout: 20000 });
 
   await page.getByRole('button', { name: 'Write', exact: true }).click();

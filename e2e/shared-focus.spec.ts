@@ -50,9 +50,6 @@ test('PDF pages: the top bar has the shared tools and Focus; Focus hides the bar
   const card = page.locator('.book-card', { hasText: 'كتاب القراءة' });
   await expect(card).toHaveCount(1, { timeout: 30000 });
   await card.locator('.book-card__open').click();
-  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 20000 });
-  await page.locator('.qr-dock').getByRole('button', { name: 'Display', exact: true }).click();
-  await page.getByRole('dialog', { name: 'Display' }).getByRole('button', { name: 'Original pages' }).click();
   await expect(page.locator('.reader__footer')).toContainText('Page 1 of 3', { timeout: 20000 });
 
   const bar = page.locator('.reader__topbar');

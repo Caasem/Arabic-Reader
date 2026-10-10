@@ -167,9 +167,9 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
       const failures: string[] = [];
       for (const file of Array.from(files)) {
         const format = formatOf(file.name);
-        setImportLabel(format && format !== 'epub' ? `Converting ${file.name}…` : null);
+        setImportLabel(format === 'pdf' && !prefs.pdfConvertToText ? `Adding ${file.name}…` : format && format !== 'epub' ? `Converting ${file.name}…` : null);
         try {
-          const { meta, converted } = await libraryService.importBook(file);
+          const { meta, converted } = await libraryService.importBook(file, { pdfConvert: prefs.pdfConvertToText });
           // A file that completed a synced book keeps that book's id: replace it rather than list it twice.
           setBooks((prev) => [meta, ...prev.filter((b) => b.id !== meta.id)]);
           setFileIds((prev) => (prev ? new Set(prev).add(meta.id) : prev));

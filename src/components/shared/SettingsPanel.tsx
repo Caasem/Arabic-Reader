@@ -32,6 +32,7 @@ import { SyncSettings } from './settings/SyncSettings';
 import { StorageSettings } from './settings/StorageSettings';
 import { QuietReaderSettings } from '../../quietReader/QuietReaderSettings';
 import { PdfOcrSettings } from '../../pdf/ocr';
+import { PdfImportSettings } from '../../pdf/import/PdfImportSettings';
 import './SettingsPanel.css';
 
 function BackupSettings() {
@@ -68,6 +69,7 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
       <TouchGestureSettings key="touch" />,
       <SearchSettings key="search" />,
       <PomodoroSettings key="pomodoro" />,
+      <PdfImportSettings key="pdfimport" />,
       <PdfOcrSettings key="pdfocr" />,
     ],
   },

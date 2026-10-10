@@ -1,7 +1,8 @@
 /**
- * PDF support, in one module. A PDF is added as a book in two ways at once: its text is checked and
- * reflowed into an EPUB for the ordinary readers, and the PDF itself is kept so its pages can be read
- * as they are. Anything PDF-specific lives here; the rest of the app only has the touch points below.
+ * PDF support, in one module. A PDF is added as its pages: the PDF itself is kept and read as it is,
+ * with no attempt to read its text (`openPdfPages`). With Settings → PDF → Convert PDFs to text when adding
+ * (`pdfConvertToText`), its text is also checked and reflowed into an EPUB for the ordinary readers
+ * (`convertPdf`). Anything PDF-specific lives here; the rest of the app only has the touch points below.
  *
  *   src/pdf/
  *     pdfjs.ts        the one pdf.js loader (lazy; bundled worker; works offline)
