@@ -129,7 +129,7 @@ export function FocusHost({ reader, onChromeHidden }: { reader: ReaderKind | nul
 }
 
 function FocusRail({ reader }: { reader: ReaderKind }) {
-  const tools = useReaderTools(reader);
+  const tools = useReaderTools(reader).filter((t) => !t.noRail);
   let group = '';
   return (
     <nav className="rt-rail" aria-label="Reader tools">
@@ -181,37 +181,6 @@ function PdfToolsBar({ page, total }: { book: BookMeta; page: number; total: num
       <button type="button" className="reader__toc-toggle rt-tbtn" title="Focus: just the page (F)" onClick={() => setReaderFocus(true)}>
         Focus
       </button>
-    </>
-  );
-}
-
-/** The registered desk and ink tools in the quiet reader's dock, after its own buttons. */
-export function DockTools({ labels }: { labels: boolean }) {
-  const tools = useReaderTools('clean', ['desk', 'ink']).filter((t) => !t.noDock);
-  let group = '';
-  return (
-    <>
-      {tools.map((t) => {
-        const sep = group !== t.group;
-        group = t.group;
-        const on = t.isOn?.();
-        return (
-          <span key={t.id} className="qr-dock__extra">
-            {sep && <span className="qr-dock__sep" aria-hidden="true" />}
-            <button
-              type="button"
-              className={'qr-dock__btn' + (on ? ' qr-dock__btn--on' : '')}
-              aria-pressed={t.isOn ? !!on : undefined}
-              aria-label={t.label}
-              title={toolTitle(t)}
-              onClick={() => t.run()}
-            >
-              {t.icon}
-              {labels && <span>{t.label}</span>}
-            </button>
-          </span>
-        );
-      })}
     </>
   );
 }

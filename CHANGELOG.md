@@ -4,6 +4,14 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.77.0 — 2026-10-10
+
+- **The dock shows icons.** Every tool now fits in the reader's dock, however narrow the window: each one is an icon,
+  and the one under the pointer opens to its name and key. A running Pomodoro still shows its countdown.
+- **Settings → Reader → Dock** brings back the named dock: Names labels each tool when there is room and scrolls
+  sideways when there isn't (the dock until now).
+- The Timer sheet opens above the Timer button wherever the dock puts it.
+
 ## v0.76.0 — 2026-10-10
 
 - **Piles beside PDF pages.** The margin strip beside PDF pages piles cards the way the reader's margins do: rest a

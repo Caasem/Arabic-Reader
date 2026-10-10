@@ -122,6 +122,8 @@ export interface ReaderPreferences {
   cleanReaderEnabled: boolean;
   /** The redesigned reader (src/quietReader): clean text, one dock, the dictionary in the margin. Off: the readers above. */
   quietReaderEnabled: boolean;
+  /** The reader dock: icons that show their name on hover (fits every tool), or names that scroll when the window is narrow. */
+  dockStyle: 'icons' | 'labels';
   /** Press D in either reader to search the dictionary. */
   dictionarySearchEnabled: boolean;
   /** How the D-key search is laid out; touch screens always get the sheet. */

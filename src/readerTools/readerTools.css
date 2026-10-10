@@ -138,11 +138,6 @@
   height: 18px;
 }
 
-/* The quiet reader's dock: each registered tool (with its separator) sits in the dock's own row. */
-.qr-dock__extra {
-  display: contents;
-}
-
 /* The PDF pages' top bar: the shared tools. */
 .rt-tbtn {
   display: inline-flex;

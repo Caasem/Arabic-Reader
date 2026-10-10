@@ -41,6 +41,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   shamelaEnabled: false,
   cleanReaderEnabled: false,
   quietReaderEnabled: true,
+  dockStyle: 'icons',
   dictionarySearchEnabled: true,
   dictionarySearchStyle: 'floating',
   bookSearchEnabled: true,

@@ -21,8 +21,16 @@ export interface ReaderTool {
   order: number;
   readers: ReaderKind[];
   icon: ReactNode;
-  /** Left out of the quiet reader's dock, which has little room (still in the PDF bar and the Focus rail). */
+  /** The name screen readers hear, when it differs from the label ("Pomodoro timer"). */
+  ariaLabel?: string;
+  /** Starts a new cluster inside its group: the dock draws a thin line before it (Display, Levels). */
+  cluster?: boolean;
+  /** Left out of the dock, which has little room (still in the Focus rail). */
   noDock?: boolean;
+  /** Left out of the Focus rail (Focus itself). */
+  noRail?: boolean;
+  /** Text the dock shows even as icons, while it says something (a running timer's countdown). */
+  live?(): string | null;
   /** A switch (Margins, Write) says whether it is on. */
   isOn?(): boolean;
   run(): void;
