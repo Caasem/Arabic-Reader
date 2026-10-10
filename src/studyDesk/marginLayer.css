@@ -427,10 +427,7 @@ body.sd-margins--left .qr-stage--all .qr-column {
   margin-left: auto;
 }
 
-/* Margins / Document (DeskSwitch.tsx): in the dock's slot, or beside the Focus pill. */
-.qr-dock__extra {
-  display: contents;
-}
+/* Margins / Document (DeskSwitch.tsx): beside the Focus pill. */
 .sd-switch-pill {
   position: fixed;
   z-index: 6;

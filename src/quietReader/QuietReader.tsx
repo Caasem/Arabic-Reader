@@ -7,7 +7,7 @@ import { VocabularyEditModal } from '../components/reader/VocabularyEditModal';
 import { useHoverPreview } from '../components/reader/hooks/useHoverPreview';
 import { useWordLookups } from '../components/reader/hooks/useWordLookups';
 import { chapterHtml } from '../cleanReader/chapterHtml';
-import { registerReaderTool, refreshReaderTools, setFocusWhere, setReaderFocus, useReaderFocus } from '../readerTools';
+import { dockButtonX, ReaderDock, readToolId, setFocusWhere, setReaderFocus, useReaderFocus, useReadTools, type ReadToolId } from '../readerTools';
 import { loadCleanPosition, saveCleanPosition } from '../cleanReader/cleanPosition';
 import { elementAsDocument } from '../cleanReader/elementAsDocument';
 import { parseCleanEpub } from '../cleanReader/parseCleanEpub';
@@ -26,7 +26,7 @@ import type { BookMeta, Highlight, HighlightColor, VocabularyItem } from '../typ
 import { vocabularyService } from '../vocabulary';
 import { BookDrawer, type BookmarkRow, type ChapterRow, type DrawerTab, type HighlightRow } from './BookDrawer';
 import { buildBookModel, type BookModel } from './bookModel';
-import { Dock, DOCK_ITEMS, Header, ProgressRail, TurnButtons, type DockAction } from './Chrome';
+import { Header, ProgressRail, TurnButtons } from './Chrome';
 import { searchForms, searchTexts } from './cleanSearch';
 import { normalizeForSearch } from '../reader/tokenizer/arabicTokenizer';
 import { DisplaySheet } from './DisplaySheet';
@@ -198,6 +198,8 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   const setLevels = useCallback((open: boolean) => (onLevelsOpenChange ? onLevelsOpenChange(open) : setLevelsOwn(open)), [onLevelsOpenChange]);
   const [drawer, setDrawer] = useState<DrawerTab | null>(null);
   const [sheet, setSheet] = useState<'display' | 'timer' | null>(null);
+  /** Where the Timer button is, so its sheet opens above it. */
+  const [timerX, setTimerX] = useState<number | null>(null);
   const [selection, setSelection] = useState<(Located & { text: string; rect: ViewportRect }) | null>(null);
   const [note, setNote] = useState<{ chapter: number; index: number; rect: ViewportRect } | null>(null);
   const [editingNote, setEditingNote] = useState<string | null>(null);
@@ -909,10 +911,12 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
     setFocus(true);
   }
 
-  function onDock(action: DockAction) {
+  function onDock(action: ReadToolId) {
     if (action === 'contents' || action === 'search' || action === 'marks' || action === 'words') setDrawer((d) => (d === action ? null : action));
-    else if (action === 'display' || action === 'timer') setSheet((s) => (s === action ? null : action));
-    else if (action === 'levels') setLevels(!levels);
+    else if (action === 'display' || action === 'timer') {
+      if (action === 'timer') setTimerX(dockButtonX(readToolId('timer'), rootRef.current));
+      setSheet((s) => (s === action ? null : action));
+    } else if (action === 'levels') setLevels(!levels);
     else enterFocus();
   }
 
@@ -1021,26 +1025,21 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
 
   const noteData = note && model ? model.book.chapters[note.chapter]?.notes?.[note.index] : undefined;
   const noteTarget = noteData?.text ? findText(noteData.text.slice(0, 40).trim()) : null;
-  const timerLabel = snapshot ? formatClock(remainingMs(snapshot)) : 'Timer';
+  const timerLabel = snapshot ? formatClock(remainingMs(snapshot)) : null;
   const savedColor = SAVED_WORD_COLOR[resolvedTheme === 'dark' ? 'dark' : 'light'];
-  const dockActive = new Set<DockAction>();
+  const dockActive = new Set<ReadToolId>();
   if (drawer) dockActive.add(drawer);
   if (sheet) dockActive.add(sheet);
   if (levels) dockActive.add('levels');
 
-  // The dock's own buttons are reading tools in the shared list (src/readerTools), so the Focus rail has them
-  // too; the pill says where the reader is.
-  const onDockRef = useRef(onDock);
-  onDockRef.current = onDock;
-  const activeRef = useRef<ReadonlySet<DockAction>>(dockActive);
-  activeRef.current = dockActive;
-  useEffect(() => {
-    const offs = DOCK_ITEMS.filter((i) => i.id !== 'focus').map((item, order) =>
-      registerReaderTool({ id: `qr:${item.id}`, label: item.label, title: item.title, group: 'read', order, readers: ['clean'], icon: item.icon, isOn: () => activeRef.current.has(item.id), run: () => onDockRef.current(item.id) })
-    );
-    return () => offs.forEach((off) => off());
-  }, []);
-  useEffect(() => refreshReaderTools(), [drawer, sheet, levels]);
+  // The dock's reading tools are in the shared list (src/readerTools), so the PDF pages have the same dock and the
+  // Focus rail has them too; the pill says where the reader is.
+  useReadTools('clean', {
+    has: ['contents', 'search', 'marks', 'words', 'display', 'levels', 'timer', 'focus'],
+    isOn: (id) => dockActive.has(id),
+    run: onDock,
+    timer: timerLabel,
+  });
   useEffect(() => setFocusWhere(whereLabel), [whereLabel]);
 
   const articleStyle = {
@@ -1124,7 +1123,7 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
               {hintLabel}
             </div>
           )}
-          <Dock active={dockActive} labels={labels} timerLabel={timerLabel} center={dockCenter} onAction={onDock} />
+          <ReaderDock reader="clean" center={dockCenter} roomy={labels} />
         </>
       )}
 
@@ -1143,7 +1142,7 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
           onClose={() => setSheet(null)}
         />
       )}
-      {sheet === 'timer' && <TimerPopover book={book} center={dockCenter + (labels ? 220 : 90)} onClose={() => setSheet(null)} />}
+      {sheet === 'timer' && <TimerPopover book={book} center={timerX ?? dockCenter} onClose={() => setSheet(null)} />}
 
       {popup && (
         <DictionaryPopup

@@ -1,4 +1,4 @@
-/* Shared Focus (src/readerTools): the pill, the tool rail, and the PDF pages without their bar and footer. */
+/* Shared Focus (src/readerTools): the pill and the tool rail. */
 :root {
   --rt-chrome: color-mix(in srgb, var(--bg-elevated) 94%, transparent);
   --rt-shadow: 0 18px 48px rgba(28, 27, 25, 0.13), 0 2px 6px rgba(28, 27, 25, 0.06);
@@ -136,32 +136,6 @@
 .rt-rail__btn svg {
   width: 18px;
   height: 18px;
-}
-
-/* The quiet reader's dock: each registered tool (with its separator) sits in the dock's own row. */
-.qr-dock__extra {
-  display: contents;
-}
-
-/* The PDF pages' top bar: the shared tools. */
-.rt-tbtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.rt-tbtn svg {
-  width: 15px;
-  height: 15px;
-}
-.rt-tbtn--on {
-  background: var(--accent-soft) !important;
-  color: var(--rt-primary) !important;
-}
-
-/* PDF pages in Focus: no top bar, no footer; the page gets the room. */
-body.rt-focus--pdf .pdfp .reader__topbar,
-body.rt-focus--pdf .pdfp .reader__footer {
-  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -284,7 +284,7 @@ async function openScan(page: Page) {
   await page.setInputFiles('.library__actions input[type=file]', { name: 'scan.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf([{ image: true }, { image: true }])) });
   await expect(page.locator('.book-card')).toHaveCount(1, { timeout: 30000 });
   await page.locator('.book-card__open').first().click();
-  await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 2', { timeout: 20000 });
   // The margin beside the pages is there from the start; the pages fit beside it.
   await expect(page.locator('.sd-pdfmargin__area')).toBeVisible();
   // Page 1 drawn at its new width.
@@ -381,7 +381,7 @@ test.describe('capture trip', () => {
     await expect(pull.getByRole('button', { name: 'Right margin' })).toHaveAttribute('aria-pressed', 'true');
     await pull.getByText('Go to another book…').click();
     await pull.locator('.dsearch__entry', { hasText: 'scan' }).click();
-    await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+    await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 2', { timeout: 20000 });
     const bar = page.getByRole('region', { name: 'Capture trip' });
     await expect(bar).toBeVisible();
     return bar;
@@ -416,7 +416,7 @@ test.describe('capture trip', () => {
     const pull = page.getByRole('dialog', { name: 'Pull in' }).or(page.getByRole('complementary', { name: 'Pull in' }));
     await pull.getByText('Go to another book…').click();
     await pull.locator('.dsearch__entry', { hasText: 'scan' }).click();
-    await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+    await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 2', { timeout: 20000 });
     const bar = page.getByRole('region', { name: 'Capture trip' });
     await bar.getByRole('button', { name: 'Capture Alt X', exact: true }).click();
     const r = (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!;
@@ -456,7 +456,7 @@ test.describe('capture trip', () => {
     const pull = page.getByRole('dialog', { name: 'Pull in' }).or(page.getByRole('complementary', { name: 'Pull in' }));
     await expect(pull.locator('[role=option][aria-selected=true]')).toContainText('Back to');
     await page.keyboard.press('Enter');
-    await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+    await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 2', { timeout: 20000 });
     await expect(page.getByRole('region', { name: 'Capture trip' })).toContainText('right margin');
   });
 
