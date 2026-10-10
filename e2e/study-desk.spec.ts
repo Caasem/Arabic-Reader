@@ -324,6 +324,52 @@ test('a region captured on a scanned PDF page is boxed on the page with a card b
   await expect(doc.locator('.desk-embed', { hasText: 'The diagram of the spheres' })).toHaveCount(1);
 });
 
+test('the Highlighter lets the page show through its fill, and can be outline only', async ({ page }) => {
+  await openScan(page);
+  const frame = page.locator('.pdfp-page[data-page="1"]');
+  const r = (await frame.boundingBox())!;
+  await page.keyboard.press('Alt+x');
+  await page.mouse.move(r.x + r.width * 0.2, r.y + 60);
+  await page.mouse.down();
+  await page.mouse.move(r.x + r.width * 0.6, r.y + 160, { steps: 6 });
+  await page.mouse.up();
+  await page.getByRole('dialog', { name: 'Capture' }).getByRole('button', { name: /^Send to/ }).click();
+  const box = frame.locator('.sd-pdfbox');
+  await expect(box).toHaveCount(1);
+  await page.mouse.move(5, 5);
+  // One pixel of the screen, read back from a screenshot.
+  const pixel = async (x: number, y: number) => {
+    const png = await page.screenshot({ clip: { x, y, width: 1, height: 1 } });
+    return page.evaluate(async (b64) => {
+      const img = new Image();
+      img.src = 'data:image/png;base64,' + b64;
+      await img.decode();
+      const c = new OffscreenCanvas(1, 1);
+      const ctx = c.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      return Array.from(ctx.getImageData(0, 0, 1, 1).data.slice(0, 3));
+    }, png.toString('base64'));
+  };
+  const b = (await box.boundingBox())!;
+  const paper = await pixel(b.x + b.width / 2, b.y + b.height + 40);
+  const under = await pixel(b.x + b.width / 2, b.y + b.height / 2);
+  // The fill multiplies with the page: never lighter than the page under it (an opaque fill covered it).
+  for (let i = 0; i < 3; i++) expect(under[i]).toBeLessThanOrEqual(paper[i] + 2);
+  expect(under).not.toEqual(paper);
+
+  // Settings → Highlighter: with no outline, turning the fill off brings the outline back, and it cannot then be turned off.
+  await page.click('.navbar__settings');
+  const section = page.locator('.settings-section', { has: page.getByRole('heading', { name: 'Highlighter' }) });
+  await section.scrollIntoViewIfNeeded();
+  await section.getByRole('button', { name: 'Off' }).click();
+  await section.getByRole('checkbox', { name: 'Fill' }).uncheck();
+  await expect(section.getByRole('button', { name: 'Off' })).toHaveCount(0);
+  await expect(section.getByRole('button', { name: 'Always' })).toHaveAttribute('aria-pressed', 'true');
+  const prefs = await page.evaluate(() => Object.entries(localStorage).find(([, v]) => v.includes('pdfHighlightFill'))?.[1] ?? '');
+  expect(prefs).toContain('"pdfHighlightFill":false');
+  expect(prefs).toContain('"pdfHighlightOutline":"always"');
+});
+
 test.describe('margin beside PDF pages', () => {
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVR42mP8z8Dwn4GBgYGJAQoAADUBAf8Ik8gAAAAASUVORK5CYII=', 'base64');
 

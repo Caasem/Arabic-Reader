@@ -4,6 +4,14 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.77.0 — 2026-10-10
+
+- **Highlights on PDF pages no longer hide the words.** The cream fill now lets the page show through (it is
+  translucent and blends with the page), so highlighted text stays readable.
+- **Settings → Reading → Highlighter.** Dragging over a PDF page to highlight is now called the Highlighter, with
+  its own settings: Fill on or off, Fill strength (20-100%, 70% by default), and Outline (Off, When pointed at,
+  Always). With the fill off, highlights show by their outline only, and the outline cannot be turned off.
+
 ## v0.76.0 — 2026-10-10
 
 - **Piles beside PDF pages.** The margin strip beside PDF pages piles cards the way the reader's margins do: rest a
