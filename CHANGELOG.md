@@ -4,6 +4,11 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.78.0 — 2026-10-10
+
+- **Highlighter colour.** Settings → Reading → Highlighter → Colour: cream (still the default), yellow, green, blue,
+  purple, red, or any colour from the custom picker. The outlines follow the colour's hue.
+
 ## v0.77.0 — 2026-10-10
 
 - **Highlights on PDF pages no longer hide the words.** The cream fill now lets the page show through (it is

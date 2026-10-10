@@ -146,6 +146,8 @@ export interface ReaderPreferences {
   pdfConvertToText: boolean;
   /** The Highlighter on PDF pages: a translucent cream fill over a highlighted region (off: outline only). */
   pdfHighlightFill: boolean;
+  /** The Highlighter's colour, #rrggbb (cream by default); its outlines are drawn from the same hue. */
+  pdfHighlightColor: string;
   /** How strong that fill is, 0.2-1. */
   pdfHighlightOpacity: number;
   /** A gold outline around highlights: never, only while one is pointed at or its card is, or always. */

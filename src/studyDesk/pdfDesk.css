@@ -10,8 +10,8 @@
   mix-blend-mode: multiply;
 }
 .sd-pdfbox {
-  /* The Highlighter (Reading Graph's .hl): cream, rounded, 4px of room each side, a gold outline as set in
-     Settings → Highlighter. Paper colours, because PDF pages stay white in every theme. The room is drawn by
+  /* The Highlighter (Reading Graph's .hl): cream by default, rounded, 4px of room each side, an outline in the
+     same hue; colour, strength and outline are set in Settings → Highlighter (PdfDeskLayer passes them in). Paper colours, because PDF pages stay white in every theme. The room is drawn by
      ::before, so the box itself keeps the region's exact edges (other code places things against them). */
   position: absolute;
 }
@@ -20,17 +20,17 @@
   position: absolute;
   inset: 0 -4px;
   border-radius: 6px;
-  background: rgb(246 234 208 / var(--sd-hl-alpha, 0.7));
+  background: var(--sd-hl-fill, rgb(246 234 208 / 0.7));
   outline: 2px solid transparent;
   outline-offset: 1px;
   transition: outline-color 0.15s;
 }
 .sd-pdfdesk--outline-always .sd-pdfbox::before {
-  outline-color: #c9a85a;
+  outline-color: var(--sd-hl-rest, #c9a85a);
 }
 .sd-pdfdesk--outline-hover .sd-pdfbox--on::before,
 .sd-pdfdesk--outline-always .sd-pdfbox--on::before {
-  outline-color: #7d5a14;
+  outline-color: var(--sd-hl-lit, #7d5a14);
 }
 /* A highlight with a gloss written in the margin carries Reading Graph's teal dot. */
 .sd-pdfbox--noted::after {
