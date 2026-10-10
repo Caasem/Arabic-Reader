@@ -3,9 +3,12 @@ import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta } from '../types';
 import { carriesFiles, imageIn } from './marginImages';
 import { Gloss, MarginSettings } from './MarginLayer';
+import { PileFan } from './PileFan';
+import { fromOtherBooks, groupOf, groupPiles, isBeneath } from './piles';
+import { usePileGestures } from './usePileGestures';
 import { MarginRing, marginActions, useRingTrigger, type DeskCommands, type RingState } from './MarginRing';
 import { pdfLevelAt } from './pageGeometry';
-import { pdfMarks, setPdfDeskFocus, setPdfDeskHover, setPdfDeskTie, stackTops, usePdfDesk, type PdfMark } from './pdfDesk';
+import { pdfMarks, setPdfDeskFocus, setPdfDeskHover, setPdfDeskTie, usePdfDesk, type PdfMark } from './pdfDesk';
 import { capture, type DeskData } from './useDesk';
 import './pdfDesk.css';
 
@@ -14,7 +17,8 @@ import './pdfDesk.css';
  * `sd-pdf-margin`, pdfDesk.css) and the pages fit the rest, so no card covers a page. In it: a card per
  * captured region (the boxes PdfDeskLayer draws), level with its box, and margin notes. Double-tap the strip
  * to write a note tied to that height of the page; drop an image file on it for a screenshot note. Notes are
- * the same cards as in the quiet reader's margins (Gloss). Works from the pages view's DOM only
+ * the same cards as in the quiet reader's margins (Gloss), and they pile the same way (usePileGestures.ts): rest a
+ * dragged card on another to pile it, drop sooner to move it to that height. Works from the pages view's DOM only
  * (`.pdfp__stage`, `.pdfp-page[data-page]`).
  */
 
@@ -72,7 +76,8 @@ interface Placed {
 interface Props {
   book: BookMeta;
   data: DeskData;
-  onToast(m: string): void;
+  /** With `undo`, the message offers Undo (piles made, cards taken off one, cards deleted). */
+  onToast(m: string, undo?: () => Promise<void>): void;
   onOpenDocument(itemId?: string): void;
   /** For the right-click ring (MarginRing.tsx). */
   commands: DeskCommands;
@@ -107,7 +112,9 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
     return () => document.body.classList.remove('sd-pdf-margin');
   }, [on]);
 
-  const marks = useMemo(() => pdfMarks(data.items, book.id), [data.items, book.id]);
+  // Piles (piles.ts): only a pile's top card is placed; the rest show in its fan.
+  const piles = useMemo(() => groupPiles(data.items), [data.items]);
+  const marks = useMemo(() => pdfMarks(data.items, book.id).filter((m) => !isBeneath(m.item, piles)), [data.items, book.id, piles]);
   const placed = useMemo<Placed[]>(() => {
     if (!on || !stage) return [];
     const out: Placed[] = [];
@@ -126,30 +133,55 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [on, stage, marks, tick]);
 
+  // --- piles, shared with the quiet reader's margins: one margin (right), drops land at a height of a page ---
+  const { fan, fanGroup, naming, setNaming, sel, lassoBox, lassoed, hoverPile, enterFan, leaveFan, closeFan, pinFan, namePile, deleteCards, onLayerPointerDown, startLasso } = usePileGestures({
+    bookId: book.id,
+    items: data.items,
+    desks: data.desks,
+    piles,
+    onToast,
+    layerRef,
+    cards: '.sd-pdfmargin > [data-gloss]',
+    placeOf: (top) => {
+      if (!placed.some((p) => p.mark.item.id === top.id)) return null;
+      const location = top.pin?.bookId === book.id ? top.pin.location : top.source?.location;
+      return location ? { bookId: book.id, location, side: 'right' } : null;
+    },
+    sideAt: (x) => (stage && x >= stage.right - 4 && x <= stage.right + PDF_STRIP ? 'right' : null),
+    placeAt: (y) => pdfLevelAt(y),
+  });
+
   // Stack the cards beside their places and draw the lines (after render, once heights are known).
   useLayoutEffect(() => {
     const layer = layerRef.current;
     const svg = svgRef.current;
     if (!layer || !svg || !stage) return;
-    const cards = placed.map((p) => layer.querySelector<HTMLElement>(`[data-gloss="${p.mark.item.id}"]`));
-    const tops = stackTops(
-      placed.map((p) => Math.max(p.sy - 16, stage.top + 30)),
-      cards.map((c) => c?.offsetHeight ?? 0),
-      10
-    );
     const gx = stage.right + GAP;
     const paths: string[] = [];
-    placed.forEach((p, i) => {
-      const card = cards[i];
+    let bottom = stage.top + 30;
+    placed.forEach((p) => {
+      const card = layer.querySelector<HTMLElement>(`.sd-pdfmargin > [data-gloss="${p.mark.item.id}"]`);
       if (!card) return;
-      card.style.top = `${tops[i]}px`;
-      const gy = tops[i] + 16;
+      // Room above a pile's colour tab and below its stacked edges, as in the quiet reader's margins.
+      const tabbed = card.classList.contains('sd-gloss--tabbed') ? 22 : 0;
+      const top = Math.max(p.sy - 16, bottom + tabbed);
+      card.style.top = `${top}px`;
+      bottom = top + card.offsetHeight + 10 + (card.classList.contains('sd-gloss--pile') ? 10 : 0);
+      const gy = top + 16;
       const mx = (p.sx + gx) / 2;
       const id = p.mark.item.id;
       const cls = (id === hover || id === focusId ? 'on' : '') + (p.mark.h > 0 ? '' : ' free');
       paths.push(`<g class="${cls}"><path d="M${p.sx} ${p.sy} C${mx} ${p.sy} ${mx} ${gy} ${gx} ${gy}"/><circle cx="${p.sx}" cy="${p.sy}" r="2.4"/></g>`);
     });
     svg.innerHTML = paths.join('');
+    // The fan opens where its pile is, moved up as far as needed to stay on screen (scrolling inside if taller).
+    const fanEl = layer.querySelector<HTMLElement>('.sd-fan');
+    if (fanEl && fanGroup) {
+      const anchor = layer.querySelector<HTMLElement>(`.sd-pdfmargin > [data-gloss="${fanGroup[0].id}"]`);
+      fanEl.style.maxHeight = `${window.innerHeight - 24}px`;
+      const want = (anchor ? parseFloat(anchor.style.top) : stage.top) - 40;
+      fanEl.style.top = `${Math.max(12, Math.min(want, window.innerHeight - 12 - fanEl.offsetHeight))}px`;
+    }
   });
 
   // The card of the box (or card) pointed at is lit.
@@ -184,17 +216,25 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
   const width = PDF_STRIP - GAP * 2;
 
   return (
-    <div ref={layerRef} className="sd-pdfmargin" aria-label="Margin beside the pages">
+    <div ref={layerRef} className="sd-pdfmargin" aria-label="Margin beside the pages" onPointerDown={onLayerPointerDown}>
       <svg ref={svgRef} className="sd-pdfdesk__lines" aria-hidden="true" />
       <div
         className={'sd-margins__area sd-pdfmargin__area' + (dropping ? ' sd-margins__area--drop' : '')}
         style={{ left: stage.right, width: PDF_STRIP, top: stage.top, height: stage.height }}
         onContextMenu={(e) => e.target === e.currentTarget && stripRing.onContextMenu(e)}
-        onPointerDown={stripRing.onPointerDown}
+        onPointerDown={(e) => {
+          stripRing.onPointerDown(e);
+          startLasso(e);
+        }}
         onPointerMove={stripRing.onPointerMove}
         onPointerUp={(e) => {
           stripRing.onPointerUp();
           if (e.target !== e.currentTarget) return;
+          if (lassoed.current) {
+            lassoed.current = false;
+            lastTap.current = null;
+            return;
+          }
           const now = Date.now();
           const last = lastTap.current;
           if (last && now - last.t < 420 && Math.abs(last.y - e.clientY) < 24) {
@@ -221,29 +261,94 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
       >
         <span className="sd-margins__hint">{dropping ? 'Drop the image here' : 'Double-tap to write'}</span>
       </div>
-      {placed.map((p) => (
-        <Gloss
-          key={p.mark.item.id}
-          item={p.mark.item}
-          side="right"
-          left={left}
-          width={width}
-          book={book}
-          docMode={prefs.studyDeskMarginsInDocument}
-          toInbox={prefs.studyDeskMarginsToInbox}
-          autoFocus={p.mark.item.id === focusId || p.mark.item.id === focus}
-          canTie={!!p.mark.item.fromMargin}
-          onTie={() => {
-            setPdfDeskTie(p.mark.item.id);
-            onToast('Drag over the words on the page this note belongs to');
-          }}
-          onFocused={(f) => setFocusId(f ? p.mark.item.id : null)}
-          onHover={(h) => setPdfDeskHover(h ? p.mark.item.id : null)}
-          onToast={onToast}
-          onOpenDocument={onOpenDocument}
-          onRing={setRing}
+      {placed.map((p) => {
+        const group = groupOf(p.mark.item, piles);
+        const pileId = group.length > 1 ? p.mark.item.pile!.id : null;
+        return (
+          <Gloss
+            key={p.mark.item.id}
+            item={p.mark.item}
+            side="right"
+            left={left}
+            width={width}
+            book={book}
+            docMode={prefs.studyDeskMarginsInDocument}
+            toInbox={prefs.studyDeskMarginsToInbox}
+            autoFocus={p.mark.item.id === focusId || p.mark.item.id === focus}
+            canTie={!!p.mark.item.fromMargin}
+            onTie={() => {
+              setPdfDeskTie(p.mark.item.id);
+              onToast('Drag over the words on the page this note belongs to');
+            }}
+            onFocused={(f) => setFocusId(f ? p.mark.item.id : null)}
+            onHover={(h) => {
+              setPdfDeskHover(h ? p.mark.item.id : null);
+              if (pileId) hoverPile(pileId, h);
+            }}
+            onToast={onToast}
+            onOpenDocument={onOpenDocument}
+            onRing={setRing}
+            selected={sel.has(p.mark.item.id)}
+            showSource={!!pileId}
+            pile={
+              pileId
+                ? { count: group.length, name: p.mark.item.pile?.name, color: p.mark.item.pile?.color, others: fromOtherBooks(group, book.id), onOpen: () => pinFan(pileId) }
+                : undefined
+            }
+            fanned={!!pileId && fan?.id === pileId}
+          />
+        );
+      })}
+      {fan && fanGroup && placed.some((p) => p.mark.item.id === fanGroup[0].id) && (
+        <PileFan
+          key={fan.id}
+          pileId={fan.id}
+          group={fanGroup}
+          left={left - 8}
+          width={width + 16}
+          pinned={fan.pinned}
+          naming={naming === fan.id}
+          onEnter={enterFan}
+          onLeave={leaveFan}
+          onClose={closeFan}
+          onStartNaming={() => (pinFan(fan.id), setNaming(fan.id))}
+          onCancelNaming={() => setNaming(null)}
+          onName={(name, color) => void namePile(fanGroup, name, color)}
+          renderCard={(m) => (
+            <Gloss
+              key={m.id}
+              item={m}
+              side="right"
+              left={0}
+              width={0}
+              inline
+              showSource
+              book={book}
+              docMode={prefs.studyDeskMarginsInDocument}
+              toInbox={prefs.studyDeskMarginsToInbox}
+              autoFocus={false}
+              onFocused={() => {}}
+              onHover={(h) => setPdfDeskHover(h ? m.id : null)}
+              onToast={onToast}
+              onOpenDocument={onOpenDocument}
+              onRing={setRing}
+              onRemove={() => void deleteCards([m])}
+            />
+          )}
         />
-      ))}
+      )}
+      {lassoBox && <div className="sd-lasso" style={lassoBox} aria-hidden="true" />}
+      {sel.size > 0 && (
+        <div className="sd-selbar" role="status" style={{ top: stage.top + 6, left: stage.right + PDF_STRIP / 2 }}>
+          {sel.size > 1 ? (
+            <>
+              {sel.size} chosen · <kbd>P</kbd> piles them · <kbd>Del</kbd> deletes · <kbd>Esc</kbd> lets go
+            </>
+          ) : (
+            <>1 chosen · Shift-click or drag over the margin to add more</>
+          )}
+        </div>
+      )}
       <button type="button" className="sd-margins__set" style={{ left: stage.right + PDF_STRIP - 130, top: stage.top + 4 }} onClick={() => setSettingsOpen((v) => !v)}>
         Margin settings
       </button>

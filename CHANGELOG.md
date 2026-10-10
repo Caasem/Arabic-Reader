@@ -4,6 +4,16 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.76.0 — 2026-10-10
+
+- **Piles beside PDF pages.** The margin strip beside PDF pages piles cards the way the reader's margins do: rest a
+  dragged card on another for a moment to put it underneath, drop sooner to move it to that height of the page, drop
+  more cards on a pile to add them at the bottom. Point at a pile to spread it out in the strip, click to keep it
+  open, Esc closes; drag a card out to take it off, double-click to name a pile and give it a colour tab; drag over
+  empty strip (or Shift-click) then P piles the chosen cards, Delete deletes them. Undo in the message, or Ctrl+Z.
+- Cards beside PDF pages can now be dragged, to the strip at another height.
+- A captured region keeps its highlighted box on the page when its card goes into a pile.
+
 ## v0.75.0 — 2026-10-10
 
 - **PDFs open as their pages.** Adding a PDF no longer tries to convert it: the app keeps the PDF, counts its pages

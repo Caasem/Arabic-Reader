@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import type { PdfPageContext } from '../pdf/pages/extensions';
-import { pdfMarks, publishOpenedPdf, usePdfDesk } from './pdfDesk';
+import { pdfBoxMarks, publishOpenedPdf, usePdfDesk } from './pdfDesk';
 import './pdfDesk.css';
 
 /**
@@ -12,8 +12,8 @@ export function PdfDeskLayer({ book, opened, page, width, height }: PdfPageConte
   const { items, hover } = usePdfDesk();
   // Scanned pages are read from the PDF itself when a drag snaps to words (pdfSnap.ts).
   useEffect(() => publishOpenedPdf(opened), [opened]);
-  // Margin notes sit at a level (no height) and get no box.
-  const marks = pdfMarks(items, book.id, page).filter((m) => m.h > 0);
+  // Margin notes sit at a level (no height) and get no box; a region keeps its box when its card is in a pile.
+  const marks = pdfBoxMarks(items, book.id, page);
   if (!marks.length) return null;
   return (
     <div className="sd-pdfdesk" aria-hidden="true">
