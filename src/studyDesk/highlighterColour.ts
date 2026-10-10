@@ -21,16 +21,16 @@ function rgbOf(hex: string): [number, number, number] {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
-function hueSat(hex: string): [number, number] {
+function hueSat(hex: string): [number, number, number] {
   const [r, g, b] = rgbOf(hex).map((v) => v / 255);
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
   const d = max - min;
-  if (d === 0) return [0, 0];
   const l = (max + min) / 2;
+  if (d === 0) return [0, 0, l];
   const s = d / (1 - Math.abs(2 * l - 1));
   const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
-  return [Math.round(((h * 60) + 360) % 360), s];
+  return [Math.round(((h * 60) + 360) % 360), s, l];
 }
 
 /** The fill, as an rgb() with the strength as its alpha. */
@@ -45,4 +45,17 @@ export function highlighterOutlines(hex: string): { rest: string; lit: string } 
   const grey = s < 0.08;
   const sat = (min: number) => (grey ? 0 : Math.round(Math.max(s, min) * 100));
   return { rest: `hsl(${h} ${sat(0.45)}% 57%)`, lit: `hsl(${h} ${sat(0.5)}% 28%)` };
+}
+
+/**
+ * Night pages (Display → Pages → Night) show the page inverted: dark paper, light print. There the layer screens
+ * instead of multiplying (pdfDesk.css), with the colour's dark twin (its lightness turned over), so the paper under
+ * a highlight warms up and the light print stays light. Outlines are lighter than the paper, not darker.
+ */
+export function highlighterNight(hex: string, strength: number): { fill: string; rest: string; lit: string } {
+  const [h, s, l] = hueSat(hex);
+  const grey = s < 0.08;
+  const sat = (min: number) => (grey ? 0 : Math.round(Math.max(s, min) * 100));
+  const dark = Math.round(Math.min(0.32, Math.max(0.14, 1 - l)) * 100);
+  return { fill: `hsl(${h} ${sat(0.35)}% ${dark}% / ${strength})`, rest: `hsl(${h} ${sat(0.35)}% 42%)`, lit: `hsl(${h} ${sat(0.5)}% 70%)` };
 }

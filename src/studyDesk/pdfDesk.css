@@ -9,6 +9,10 @@
      would find nothing to blend with. The fill is translucent too, so the text shows even where blending fails. */
   mix-blend-mode: multiply;
 }
+/* Night pages are dark paper with light print: screening lifts the paper under a highlight and leaves the print. */
+.sd-pdfdesk--night {
+  mix-blend-mode: screen;
+}
 .sd-pdfbox {
   /* The Highlighter (Reading Graph's .hl): cream by default, rounded, 4px of room each side, an outline in the
      same hue; colour, strength and outline are set in Settings → Highlighter (PdfDeskLayer passes them in). Paper colours, because PDF pages stay white in every theme. The room is drawn by

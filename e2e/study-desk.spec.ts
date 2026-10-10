@@ -357,6 +357,20 @@ test('the Highlighter lets the page show through its fill, takes a colour, and c
   for (let i = 0; i < 3; i++) expect(under[i]).toBeLessThanOrEqual(paper[i] + 2);
   expect(under).not.toEqual(paper);
 
+  // Night pages (dark paper, light print): the highlight lifts the paper instead, never darkening it.
+  await page.locator('.qr-dock').getByRole('button', { name: 'Display', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Display' }).getByRole('group', { name: 'Pages' }).getByRole('button', { name: 'Night' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.sd-pdfdesk--night')).toHaveCount(1);
+  await page.mouse.move(5, 5);
+  const nightPaper = await pixel(b.x + b.width / 2, b.y + b.height + 40);
+  const nightUnder = await pixel(b.x + b.width / 2, b.y + b.height / 2);
+  for (let i = 0; i < 3; i++) expect(nightUnder[i]).toBeGreaterThanOrEqual(nightPaper[i] - 2);
+  expect(nightUnder).not.toEqual(nightPaper);
+  await page.locator('.qr-dock').getByRole('button', { name: 'Display', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Display' }).getByRole('group', { name: 'Pages' }).getByRole('button', { name: 'Paper' }).click();
+  await page.keyboard.press('Escape');
+
   // Settings → Highlighter: with no outline, turning the fill off brings the outline back, and it cannot then be turned off.
   await page.click('.navbar__settings');
   const section = page.locator('.settings-section', { has: page.getByRole('heading', { name: 'Highlighter' }) });

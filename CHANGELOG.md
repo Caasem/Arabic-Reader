@@ -4,6 +4,13 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.82.0 — 2026-10-10
+
+- **Highlights show on Night pages.** With Display → Pages → Night, a highlight was all but invisible (the page is
+  inverted, and the Highlighter darkens what is under it). On Night pages it now lifts the dark paper with a deep
+  version of its colour instead, so it shows as a warm patch and the light print stays light. Outlines are lighter
+  than the paper there.
+
 ## v0.81.0 — 2026-10-10
 
 - **Highlighter colour.** Settings → Reading → Highlighter → Colour: cream (still the default), yellow, green, blue,
