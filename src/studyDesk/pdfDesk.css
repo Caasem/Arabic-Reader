@@ -7,19 +7,22 @@
 }
 .sd-pdfbox {
   /* The Reading Graph highlight (.hl): soft gold, rounded, 4px of room each side, a gold outline when lit.
-     Paper colours, because PDF pages stay white in every theme. */
+     Paper colours, because PDF pages stay white in every theme. The room is drawn by ::before, so the box
+     itself keeps the region's exact edges (other code places things against them). */
   position: absolute;
-  box-sizing: content-box;
-  margin-left: -4px;
-  padding: 0 4px;
+  mix-blend-mode: multiply;
+}
+.sd-pdfbox::before {
+  content: '';
+  position: absolute;
+  inset: 0 -4px;
   border-radius: 6px;
   background: #f6ead0;
-  mix-blend-mode: multiply;
-  transition: outline-color 0.15s;
   outline: 2px solid transparent;
   outline-offset: 1px;
+  transition: outline-color 0.15s;
 }
-.sd-pdfbox--on {
+.sd-pdfbox--on::before {
   outline-color: #7d5a14;
 }
 /* A highlight with a gloss written in the margin carries Reading Graph's teal dot. */
@@ -27,7 +30,7 @@
   content: '';
   position: absolute;
   top: -3px;
-  left: -3px;
+  left: -7px;
   width: 7px;
   height: 7px;
   border-radius: 50%;
