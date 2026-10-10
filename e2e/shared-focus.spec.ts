@@ -43,7 +43,7 @@ test('F enters Focus in the reader; Alt twice opens a rail with every tool, whic
   await expect(page.locator('.qr-dock')).toBeVisible();
 });
 
-test('PDF pages: the top bar has the shared tools and Focus; Focus hides the bar and the rail writes on the page', async ({ page }) => {
+test('PDF pages: the dock has the shared tools and Focus; Focus hides the dock and the rail writes on the page', async ({ page }) => {
   await page.goto('/');
   await page.waitForSelector('.navbar__settings', { timeout: 15000 });
   await page.setInputFiles('.library__actions input[type=file]', { name: 'reading.pdf', mimeType: 'application/pdf', buffer: Buffer.from(sampleArabicBookPdf()) });

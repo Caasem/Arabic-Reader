@@ -2,7 +2,7 @@ import { useSyncExternalStore, type ReactNode } from 'react';
 
 /**
  * One list of reader tools, shared by every place that shows them: the quiet reader's dock, the PDF pages'
- * top bar and the Focus tool rail (FocusHost). A feature registers its tools once, when it mounts, instead
+ * dock and the Focus tool rail (FocusHost). A feature registers its tools once, when it mounts, instead
  * of finding its own way into each reader's chrome.
  */
 export type ReaderKind = 'clean' | 'pdf';

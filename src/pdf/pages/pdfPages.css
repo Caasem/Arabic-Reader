@@ -35,6 +35,13 @@
   backdrop-filter: blur(8px);
 }
 
+.pdfp--compact .qr-where--right {
+  bottom: 84px;
+}
+.pdfp--compact .qr-where--left {
+  display: none;
+}
+
 .pdfp .qr-turn {
   box-shadow: var(--qr-shadow);
 }
@@ -43,6 +50,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.pdfp__reading {
+  padding: 24px;
 }
 
 .qr-display__hint {

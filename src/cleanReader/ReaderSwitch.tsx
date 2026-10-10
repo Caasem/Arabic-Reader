@@ -62,6 +62,9 @@ export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: 
           onShowText={props.book.pdf.reflow === 'ok' ? () => setPdfView('text') : undefined}
           onOpenSettings={onOpenSettings}
           initialLocation={props.initialCfiOverride}
+          onOpenBookAt={props.onOpenBookAt}
+          levelsOpen={props.vocabPanelOpen}
+          onLevelsOpenChange={props.onVocabPanelOpenChange}
         />
         {hosts}
         <FocusHost reader="pdf" onChromeHidden={onFocusChromeChange} />

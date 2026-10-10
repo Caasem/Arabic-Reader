@@ -41,9 +41,12 @@ export function MarginLevels({
   savedItems,
   onJump,
   onClose,
+  indexKey = book.id,
 }: {
   book: BookMeta;
   model: BookModel;
+  /** Which cached word index this model is (PDF pages keep theirs apart from the book's reflowed text). */
+  indexKey?: string;
   savedItems: VocabularyItem[];
   onJump(word: string, occurrence: CleanVocabWord['occurrences'][number]): void;
   onClose(): void;
@@ -64,13 +67,13 @@ export function MarginLevels({
   useEffect(() => {
     if (!ready) return;
     let stale = false;
-    cleanVocabIndex(book.id, model)
+    cleanVocabIndex(indexKey, model)
       .catch(() => [] as CleanVocabWord[])
       .then((words) => !stale && setIndex(words));
     return () => {
       stale = true;
     };
-  }, [ready, book.id, model]);
+  }, [ready, indexKey, model]);
 
   const words = useMemo(() => (index ?? []).filter((w) => tierOf(w.rarity.tier) === tier), [index, tier]);
   const visible = words.slice(0, shown);

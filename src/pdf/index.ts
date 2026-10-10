@@ -13,7 +13,7 @@
  *     pages/          Original pages view: PdfPagesReader, view switch and positions (pdfView.ts),
  *                     tapped words (wordAtPoint.ts), the pdf.js document for pages (pdfjsLoader.ts),
  *                     and extensions.ts, the registry later features attach to (page overlays such
- *                     as highlights, a second source of tapped words such as OCR, top-bar controls)
+ *                     as highlights, a second source of tapped words such as OCR, header controls)
  *     ocr/            tap a word on a scanned page: crop, pluggable text-recognition engines (the OS's,
  *                     the app's, addresses the reader adds), settings; registered by pagesEntry.ts
  *     pagesEntry.ts   what the app loads for the pages view: the view plus the features that attach to it

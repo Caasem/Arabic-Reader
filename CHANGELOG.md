@@ -4,6 +4,22 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.79.0 — 2026-10-10
+
+- **The whole dock on PDF pages.** Contents, Search, Marks, Words and Levels now work on PDF pages too, so the PDF
+  dock has the same twelve tools in the same order as the reader.
+- **Contents** shows the PDF's own table of contents when it has one (and the entry you are in, in the header), else
+  its pages.
+- **Search** looks through the text of the pages (this page, the book, your library or the dictionary) and marks the
+  match on the page.
+- **Words** lists the words saved from the book; the jump opens the page a word was saved on and flashes it.
+  **Levels** groups the pages' words by how common they are, each a jump to the page.
+- **Marks** lists the pages you bookmarked.
+- Alt+S and Alt+V results open their page on PDF pages.
+- Search keeps the result you picked when the page changes (it used to go back to the first result after moving to
+  another chapter in the reader too).
+- Scanned pages have no text to search or count; tapping a word on them still reads it with text recognition.
+
 ## v0.78.0 — 2026-10-10
 
 - **PDF pages look like the reader.** The same header (Library, title, bookmark, settings), the same dock at the

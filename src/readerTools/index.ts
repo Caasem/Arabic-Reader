@@ -1,5 +1,5 @@
 /**
- * Shared reader tools and Focus (docs/shared-focus-changes.md): one tool list for the dock, the PDF top bar
+ * Shared reader tools and Focus (docs/shared-focus-changes.md): one tool list for the dock (the reader's and the PDF pages')
  * and the Focus rail, and one Focus for the quiet reader and the PDF pages.
  */
 export { FocusHost } from './FocusHost';

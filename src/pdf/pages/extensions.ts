@@ -1,7 +1,7 @@
 /**
  * Where later PDF features attach to the pages view without editing it: page overlays (highlights,
  * OCR boxes, search hits), a second source of tapped words (OCR of a selected crop, for pages that
- * have no text layer), and extra buttons in the top bar. An extension registers once, when its own
+ * have no text layer), and extra controls in the header. An extension registers once, when its own
  * module loads, and the reader asks the registry each time it draws.
  */
 import type { ComponentType } from 'react';
@@ -38,7 +38,7 @@ export interface PdfPageExtension {
    * open it in the dictionary popup, or null. This is where OCR of a selected region plugs in.
    */
   wordAt?(tap: PdfWordTap): Promise<PointedWord | null>;
-  /** Extra controls in the pages view's top bar. */
+  /** Extra controls in the pages view's header, before the bookmark (kept mounted, hidden, in Focus). */
   Toolbar?: ComponentType<{ book: BookMeta; page: number; total: number; opened: OpenedPdf }>;
 }
 

@@ -10,7 +10,7 @@ import { logDiagnostic } from '../../diagnostics/diagnosticsLog';
 import { persistenceService } from '../../persistence';
 import { ReadingSessionTracker } from '../../reader/session';
 import { usePreferences } from '../../state/PreferencesContext';
-import type { BookMeta } from '../../types';
+import type { BookMeta, Bookmark, Highlight, VocabularyItem } from '../../types';
 import { openPdfPages, type OpenedPdf, type PDFPageProxy } from './pdfjsLoader';
 import { rememberCorrection } from '../ocr/corrections';
 import { pdfPageExtensions, type PdfWordTap } from './extensions';
@@ -20,6 +20,17 @@ import { Header, ProgressRail, TurnButtons } from '../../quietReader/Chrome';
 import { formatClock, remainingMs, usePomodoroSnapshot } from '../../quietReader/pomodoroClock';
 import { TimerPopover } from '../../quietReader/TimerPopover';
 import { useMarks } from '../../quietReader/useMarks';
+import { BookDrawer, type BookmarkRow, type ChapterRow, type DrawerTab, type HighlightRow } from '../../quietReader/BookDrawer';
+import { MarginLevels } from '../../quietReader/MarginLevels';
+import { useReaderSearch, type SearchHit } from '../../quietReader/searchState';
+import { searchForms, searchTexts } from '../../quietReader/cleanSearch';
+import { clearPaint, flash, paintSearchMatch } from '../../quietReader/paint';
+import { formatCleanLocation } from '../../quietReader/location';
+import { normalize } from '../../reader/tokenizer/arabicTokenizer';
+import { registerBookNavigator, type LocationHint } from '../../readerChords';
+import { vocabularyService } from '../../vocabulary';
+import { outlineEntryAt, usePdfOutline, type PdfOutlineEntry } from './pdfOutline';
+import { pdfPageText, pdfTextModel, rangeInTextLayer, textLayerOf, usePdfTextModel } from './pdfText';
 import '../../quietReader/quietReader.css';
 import { dockButtonX, ReaderDock, readToolId, setFocusWhere, setReaderFocus, useReaderFocus, useReadTools, type ReadToolId } from '../../readerTools';
 import { PdfDisplaySheet, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP } from './PdfDisplaySheet';
@@ -123,6 +134,17 @@ const PdfPage = memo(function PdfPage({ book, opened, number, width, active, onW
 
 const NARROW_PX = 760;
 const HEADER_PX = 64;
+/** Narrower than this (the desk margin or a panel takes room), where you are sits above the dock, not beside it. */
+const COMPACT_PX = 980;
+const LEVELS_WIDTH = 372;
+/** The least room the pages keep when Levels opens beside them. */
+const MIN_PAGES_PX = 720;
+const DRAWER_WIDTH = 404;
+/** Contents without an outline: every page, or every tenth in a long book. */
+const pageEntries = (total: number): PdfOutlineEntry[] => {
+  const every = total > 400 ? 10 : 1;
+  return Array.from({ length: Math.ceil(total / every) }, (_, i) => ({ title: `Page ${i * every + 1}`, page: i * every + 1, depth: 0 }));
+};
 /** Room at each side for the page-turn buttons, when they show. */
 const GUTTER_PX = 88;
 
@@ -140,6 +162,11 @@ interface Props {
   onOpenSettings?(group?: string): void;
   /** A place to open at instead of the saved page: `pdf:page=N`. */
   initialLocation?: string;
+  /** Opens another book at a place (Search, Library scope). */
+  onOpenBookAt?(book: BookMeta, location?: string): void;
+  /** The app's Vocab Levels tab opens the levels margin. */
+  levelsOpen?: boolean;
+  onLevelsOpenChange?(open: boolean): void;
 }
 
 /**
@@ -149,7 +176,7 @@ interface Props {
  * PDF's own text layer (or an extension, such as text recognition on a scanned page) and go to the same
  * dictionary popup as in the reader.
  */
-export function PdfPagesReader({ book, onBack, onShowText, onOpenSettings, initialLocation }: Props) {
+export function PdfPagesReader({ book, onBack, onShowText, onOpenSettings, initialLocation, onOpenBookAt, levelsOpen, onLevelsOpenChange }: Props) {
   const { prefs } = usePreferences();
   const prefsRef = useRef(prefs);
   useLayoutEffect(() => {
@@ -174,6 +201,14 @@ export function PdfPagesReader({ book, onBack, onShowText, onOpenSettings, initi
   const [frameW, setFrameW] = useState(0);
   const [sheet, setSheet] = useState<'display' | 'timer' | null>(null);
   const [timerX, setTimerX] = useState<number | null>(null);
+  const [drawer, setDrawer] = useState<DrawerTab | null>(null);
+  const [levelsOwn, setLevelsOwn] = useState(false);
+  const levels = levelsOpen ?? levelsOwn;
+  const setLevels = useCallback((open: boolean) => (onLevelsOpenChange ? onLevelsOpenChange(open) : setLevelsOwn(open)), [onLevelsOpenChange]);
+  const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [savedItems, setSavedItems] = useState<VocabularyItem[] | null>(null);
+  const [savedVersion, setSavedVersion] = useState(0);
+  const bumpSaved = useCallback(() => setSavedVersion((v) => v + 1), []);
   const marks = useMarks(book);
   const snapshot = usePomodoroSnapshot();
 
@@ -325,8 +360,12 @@ export function PdfPagesReader({ book, onBack, onShowText, onOpenSettings, initi
       else if (e.key === 'PageDown') goTo(pageRef.current + 1);
       else if (e.key === 'PageUp') goTo(pageRef.current - 1);
       else if (e.key === 'Escape') {
-        if (sheet) setSheet(null);
-        else lookups.closeAll();
+        if (lookups.popup || lookups.editing) lookups.closeAll();
+        else if (sheet) setSheet(null);
+        else if (lookups.bubble) lookups.closeBubble();
+        else if (drawer) setDrawer(null);
+        else if (levels) setLevels(false);
+        else return;
       } else return;
       e.preventDefault();
     }
@@ -372,7 +411,99 @@ export function PdfPagesReader({ book, onBack, onShowText, onOpenSettings, initi
     [lookups.openPopup, opened, book]
   );
 
-  // --- Bookmarks: one per page ------------------------------------------------------------------------
+  // --- The PDF's text and contents, for the drawer and the margin -------------------------------------
+  const outline = usePdfOutline(opened);
+  const pdfText = usePdfTextModel(opened, book.title, drawer === 'search' || drawer === 'words' || levels);
+  const pdfTextRef = useRef(pdfText);
+  pdfTextRef.current = pdfText;
+  const search = useReaderSearch({
+    book,
+    model: pdfText?.model ?? null,
+    chapter: page - 1,
+    liveSearch: prefs.liveSearchEnabled,
+    history: prefs.searchHistoryEnabled,
+  });
+
+  /** Goes to page `n` and, once its text layer is drawn, marks letters [start, end) of its text. */
+  const showOnPage = useCallback(
+    async (n: number, start?: number, end?: number) => {
+      goTo(n);
+      if (!opened || start === undefined || end === undefined || end <= start) return;
+      const [layer, text] = await Promise.all([textLayerOf(stageRef.current, n), pdfPageText(opened, n)]);
+      const range = layer && rangeInTextLayer(layer, text, start, end);
+      if (!range) return;
+      // The page is already at the top; zoomed in, the word may still be out of sight.
+      range.startContainer.parentElement?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      flash(range);
+    },
+    [goTo, opened]
+  );
+
+  /** Where a saved word is: the page it was saved on, else its first page in the text; with the word on it. */
+  const locateWord = useCallback(
+    async (item: VocabularyItem): Promise<{ page: number; start?: number; end?: number } | null> => {
+      if (!opened) return null;
+      const forms = new Set([normalize(item.surfaceForm)]);
+      const saved = pageOfLocation(item.chapterHref) ?? pageOfLocation(item.location);
+      if (saved) {
+        const hit = searchForms([(await pdfPageText(opened, saved)).text], forms)[0];
+        return { page: saved, start: hit?.start, end: hit?.end };
+      }
+      const { model } = await pdfTextModel(opened, book.title);
+      const hit = searchForms(model.texts, forms)[0];
+      return hit ? { page: hit.chapter + 1, start: hit.start, end: hit.end } : null;
+    },
+    [opened, book.title]
+  );
+
+  // Alt+S and Alt+V (src/readerChords) jump to `pdf:page=N` places, onto the word when they say which.
+  useEffect(
+    () =>
+      registerBookNavigator((target: string, hint?: LocationHint) => {
+        const n = pageOfLocation(target);
+        if (!n || !opened) return false;
+        if (!hint?.text) return void goTo(n);
+        void pdfPageText(opened, n).then((text) => {
+          const hit = searchTexts([text.text], hint.text!, 'phrase')[0];
+          void showOnPage(n, hit?.start, hit?.end);
+        });
+      }),
+    [opened, goTo, showOnPage]
+  );
+
+  // Saved words for the Words tab and Levels, refreshed when a word is saved or removed.
+  useEffect(() => {
+    if (drawer !== 'words' && !levels) return;
+    let stale = false;
+    void vocabularyService.listForBook(book.id).then((list) => !stale && setSavedItems(list));
+    return () => {
+      stale = true;
+    };
+  }, [book.id, drawer, levels, popup?.saved, savedVersion, lookups.touchToast, lookups.quickAddToast]);
+
+  // The active search match, drawn while the Search tab is open.
+  const activeHit = drawer === 'search' ? search.hits?.[search.active] : undefined;
+  useEffect(() => {
+    if (!activeHit || activeHit.chapter < 0 || activeHit.book.id !== book.id || !opened) return paintSearchMatch(null);
+    let stale = false;
+    const n = activeHit.chapter + 1;
+    void Promise.all([textLayerOf(stageRef.current, n), pdfPageText(opened, n)]).then(([layer, text]) => {
+      if (!stale) paintSearchMatch(layer && rangeInTextLayer(layer, text, activeHit.start, activeHit.end));
+    });
+    return () => {
+      stale = true;
+    };
+  }, [activeHit, book.id, opened]);
+  useEffect(() => () => clearPaint(), []);
+
+  function pickHit(hit: SearchHit) {
+    if (hit.chapter < 0) return;
+    if (hit.book.id !== book.id) return onOpenBookAt?.(hit.book, formatCleanLocation(hit));
+    void showOnPage(hit.chapter + 1, hit.start, hit.end);
+    if (narrow) setDrawer(null);
+  }
+
+  // --- Marks: bookmarks, one per page -----------------------------------------------------------------
   const percent = total ? (page - 1) / total : 0;
   const pct = Math.round(percent * 100);
   const pageBookmarks = marks.bookmarks.filter((b) => pageOfLocation(b.cfi) === page);
@@ -382,15 +513,61 @@ export function PdfPagesReader({ book, onBack, onShowText, onOpenSettings, initi
       for (const b of pageBookmarks) await marks.removeBookmark(b.id);
       return;
     }
-    await marks.addBookmark({ location: `pdf:page=${page}`, percent, pageLabel: `Page ${page}`, chapterHref: `pdf:page=${page}`, chapterLabel: '' });
+    const entry = outlineEntryAt(outline, page);
+    await marks.addBookmark({ location: `pdf:page=${page}`, percent, pageLabel: `Page ${page}`, chapterHref: `pdf:page=${page}`, chapterLabel: entry?.title ?? '' });
   }
+
+  const bookmarkRows: BookmarkRow[] = marks.bookmarks
+    .map((b) => ({ b, n: pageOfLocation(b.cfi) }))
+    .filter((x): x is { b: Bookmark; n: number } => x.n !== null)
+    .sort((x, y) => x.n - y.n)
+    .map(({ b, n }) => ({
+      id: b.id,
+      label: b.chapterLabel || `Page ${n}`,
+      where: `Page ${n}${n === page ? ' · this page' : ''}`,
+      open: () => goTo(n),
+      remove: () => void marks.removeBookmark(b.id),
+    }));
+
+  const highlightRows: HighlightRow[] = marks.highlights
+    .map((h) => ({ h, n: pageOfLocation(h.cfiRange) }))
+    .filter((x): x is { h: Highlight; n: number } => x.n !== null)
+    .sort((x, y) => x.n - y.n)
+    .map(({ h, n }) => ({
+      highlight: h,
+      open: () => goTo(n),
+      recolor: (color) => void marks.recolor(h, color),
+      saveNote: (text) => void marks.setNote(h, text),
+      remove: () => void marks.removeHighlight(h.id),
+    }));
+
+  // --- Contents: the PDF's own outline, else its pages ------------------------------------------------
+  const chapterRows: ChapterRow[] = (() => {
+    const entries = outline.length ? outline : pageEntries(total);
+    return entries.map((e, i) => {
+      const next = entries.slice(i + 1).find((x) => x.depth <= e.depth)?.page ?? total + 1;
+      const last = Math.max(e.page, next - 1);
+      const current = page >= e.page && page <= last && outlineEntryAt(entries, page) === e;
+      return {
+        title: ' '.repeat(e.depth) + e.title,
+        meta: current ? `Reading now · page ${page}` : last > e.page ? `Pages ${e.page}–${last}` : `Page ${e.page}`,
+        read: page > last ? 1 : page < e.page ? 0 : (page - e.page + 1) / (last - e.page + 1),
+        current,
+        go: () => goTo(e.page),
+      };
+    });
+  })();
+  const chapterTitle = outlineEntryAt(outline, page)?.title;
+  const ticks = total ? outline.filter((e) => e.depth === 0 && e.page > 1).map((e) => (e.page - 1) / total) : [];
 
   // --- The dock ---------------------------------------------------------------------------------------
   function onDock(id: ReadToolId) {
-    if (id === 'display' || id === 'timer') {
+    if (id === 'contents' || id === 'search' || id === 'marks' || id === 'words') setDrawer((d) => (d === id ? null : id));
+    else if (id === 'display' || id === 'timer') {
       if (id === 'timer') setTimerX(dockButtonX(readToolId('timer'), frameRef.current));
       setSheet((s) => (s === id ? null : id));
-    } else if (id === 'focus') {
+    } else if (id === 'levels') setLevels(!levels);
+    else if (id === 'focus') {
       setSheet(null);
       lookups.closeAll();
       setReaderFocus(true);
@@ -398,11 +575,16 @@ export function PdfPagesReader({ book, onBack, onShowText, onOpenSettings, initi
   }
   const timerLabel = snapshot ? formatClock(remainingMs(snapshot)) : null;
   useReadTools('pdf', {
-    has: ['display', 'timer', 'focus'],
-    isOn: (id) => sheet === id,
+    has: ['contents', 'search', 'marks', 'words', 'display', 'levels', 'timer', 'focus'],
+    isOn: (id) => sheet === id || drawer === id || (id === 'levels' && levels),
     run: onDock,
     timer: timerLabel,
-    titles: { display: 'Zoom and display', focus: 'Focus: just the pages (Esc to leave)' },
+    titles: {
+      contents: 'Contents: the PDF’s own, else its pages',
+      search: 'Search the text of these pages, your library or the dictionary',
+      display: 'Zoom and display',
+      focus: 'Focus: just the pages (Esc to leave)',
+    },
   });
 
   const whereLabel = total ? `Page ${page} of ${total} · ${pct}%` : `Page ${page}`;
@@ -413,14 +595,22 @@ export function PdfPagesReader({ book, onBack, onShowText, onOpenSettings, initi
   }, [focus]);
 
   const dockCenter = frameW / 2;
+  const padR = !narrow && drawer ? DRAWER_WIDTH : 0;
+  // Levels pushes the pages aside only when that leaves them room (the study desk's margin takes some too);
+  // otherwise it floats over them.
+  const padL = !narrow && levels && size.w - padR - (LEVELS_WIDTH + 48) >= MIN_PAGES_PX ? LEVELS_WIDTH + 48 : 0;
   // Extensions' header controls (the text-recognition chip; the ink's page report) stay mounted in Focus, hidden.
   const extensionBar = opened && pdfPageExtensions().map((ext) => ext.Toolbar && <ext.Toolbar key={ext.id} book={book} page={page} total={total} opened={opened} />);
 
   return (
-    <div ref={rootRef} className={`qr pdfp pdfp--${prefs.pdfPageTint}` + (narrow ? ' qr--narrow' : '') + (focus ? ' qr--focus' : '')}>
+    <div
+      ref={rootRef}
+      className={`qr pdfp pdfp--${prefs.pdfPageTint}` + (narrow ? ' qr--narrow' : '') + (frameW < COMPACT_PX ? ' pdfp--compact' : '') + (focus ? ' qr--focus' : '')}
+    >
       {chrome ? (
         <Header
           bookTitle={book.title}
+          chapterTitle={chapterTitle}
           bookmarked={bookmarked}
           onBack={onBack}
           onToggleBookmark={() => void toggleBookmark()}
@@ -433,7 +623,7 @@ export function PdfPagesReader({ book, onBack, onShowText, onOpenSettings, initi
         </span>
       )}
 
-      <div className="pdfp__body" style={{ top: chrome ? HEADER_PX : 0 }}>
+      <div className="pdfp__body" style={{ top: chrome ? HEADER_PX : 0, left: padL, right: padR }}>
         <div ref={frameRef} className="pdfp__frame">
           {/* Fit to width never scrolls sideways (a page that fits to the pixel can still raise the bar); zoomed in does. */}
           <div className="pdfp__stage" ref={stageRef} tabIndex={-1} onScroll={handleScroll} onWheel={onWheel} style={{ overflowX: zoom > 1 ? 'auto' : 'hidden' }}>
@@ -487,7 +677,52 @@ export function PdfPagesReader({ book, onBack, onShowText, onOpenSettings, initi
         </div>
       </div>
 
-      <ProgressRail percent={percent} ticks={[]} />
+      <ProgressRail percent={percent} ticks={ticks} />
+
+      {levels &&
+        (pdfText ? (
+          <MarginLevels
+            book={book}
+            model={pdfText.model}
+            indexKey={`pdf:${book.id}`}
+            savedItems={savedItems ?? []}
+            onJump={(_, occ) => void showOnPage(occ.chapter + 1, occ.start, occ.end)}
+            onClose={() => setLevels(false)}
+          />
+        ) : (
+          <aside className="qr-margin" aria-label="Vocab levels">
+            <p className="qr-empty pdfp__reading">Reading the text of the pages…</p>
+          </aside>
+        ))}
+
+      {drawer && (
+        <BookDrawer
+          bookTitle={book.title}
+          author={book.author}
+          tab={drawer}
+          onTab={setDrawer}
+          onClose={() => setDrawer(null)}
+          contents={{ pageLabel: total ? `Page ${page} of ${total}` : '', percent, chapters: chapterRows }}
+          search={search}
+          onPickHit={pickHit}
+          marks={{
+            bookmarked,
+            onToggleBookmark: () => void toggleBookmark(),
+            bookmarks: bookmarkRows,
+            highlights: highlightRows,
+            editing: editingNote,
+            setEditing: setEditingNote,
+            highlightsEmpty: 'To mark words on a PDF page, drag over them: they go to the study desk.',
+          }}
+          words={{
+            items: savedItems,
+            onJump: (item) => {
+              void locateWord(item).then((at) => at && showOnPage(at.page, at.start, at.end));
+              if (narrow) setDrawer(null);
+            },
+          }}
+        />
+      )}
 
       {popup && (
         <DictionaryPopup
@@ -501,7 +736,7 @@ export function PdfPagesReader({ book, onBack, onShowText, onOpenSettings, initi
           wordRect={popup.wordRect}
           sizePct={prefs.dictionaryPopupSizePct}
           onClose={lookups.closePopup}
-          onSave={() => void lookups.togglePopupSave()}
+          onSave={() => void lookups.togglePopupSave().then(bumpSaved)}
           onSaveEntry={(entry) => lookups.savePopupEntry(entry)}
           onUnsaveEntry={(id) => lookups.unsavePopupEntry(id)}
           onSaveSelection={(entry, text) => void lookups.savePopupSelection(entry, text)}
@@ -527,7 +762,7 @@ export function PdfPagesReader({ book, onBack, onShowText, onOpenSettings, initi
           fallbackMeaning={editing.result?.entries[0]?.senses[0] ? senseText(editing.result.entries[0].senses[0]) : ''}
           fallbackSentence={editing.instance?.sentence}
           onCancel={lookups.cancelEditing}
-          onSave={lookups.saveEdit}
+          onSave={(patch) => lookups.saveEdit(patch).then(bumpSaved)}
         />
       )}
 

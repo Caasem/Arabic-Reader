@@ -131,3 +131,27 @@ test('by default a text PDF is added as its pages without converting, and opens 
   await expect(page.getByRole('button', { name: 'Reflowed text' })).toHaveCount(0);
   await tapFirstWord(page);
 });
+
+test('PDF pages have the reader’s dock in the same order; Contents and Search work on the pages', async ({ page }) => {
+  await addPdf(page, 'reading.pdf', sampleArabicBookPdf());
+  const card = page.locator('.book-card', { hasText: 'كتاب القراءة' });
+  await expect(card).toHaveCount(1, { timeout: 30000 });
+  await card.locator('.book-card__open').click();
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 3', { timeout: 20000 });
+
+  const dock = page.locator('.pdfp .qr-dock');
+  const names = await dock.locator('button').evaluateAll((buttons) => buttons.map((b) => b.getAttribute('aria-label')));
+  expect(names).toEqual(['Contents', 'Search', 'Marks', 'Words', 'Display', 'Levels', 'Pomodoro timer', 'Focus', 'Margins', 'Document', 'Write', 'Sketch']);
+
+  await dock.getByRole('button', { name: 'Contents', exact: true }).click();
+  const drawer = page.locator('.qr-drawer');
+  await expect(drawer).toContainText('Reading now · page 1');
+  await drawer.getByRole('button', { name: /^Page 3/ }).click();
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 3 of 3');
+
+  await drawer.getByRole('tab', { name: 'Search' }).click();
+  await drawer.locator('input').fill('الحديقة');
+  await expect(drawer).toContainText('3 matches', { timeout: 10000 });
+  await drawer.locator('.qr-result').first().click();
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 3');
+});
