@@ -166,3 +166,63 @@ test('a sketch goes to the margin as a picture card that opens its sheet again',
   await card.getByRole('button', { name: 'Open sketch' }).click();
   await expect(page.getByRole('complementary', { name: 'Sketch' }).locator('.sk-node')).toHaveText('Group feeling');
 });
+
+test('writing in a margin makes an ink card: strokes close together join it, Undo takes one back, and it folds', async ({ page }) => {
+  await openSample(page);
+  const area = page.locator('.sd-margins__area').last();
+  await expect(area).toBeVisible();
+  const a = (await area.boundingBox())!;
+  const lineY = await page.evaluate(() => {
+    const r = document.querySelector('.qr-chapter p .ar-word')!.getBoundingClientRect();
+    return r.top + r.height / 2;
+  });
+  await page.keyboard.press('Alt+w');
+  await scribble(page, a.x + 30, lineY, 120);
+  const card = page.locator('.sd-gloss', { has: page.locator('.sd-mink') });
+  await expect(card).toHaveCount(1);
+  await expect(card.locator('.sd-mink path')).toHaveCount(1);
+  await expect(card).toContainText('Ink');
+  // A second stroke just under the first joins the same card.
+  await scribble(page, a.x + 30, lineY + 14, 100);
+  await expect(card.locator('.sd-mink path')).toHaveCount(2);
+  // Undo takes it back.
+  await page.keyboard.press('Control+z');
+  await expect(card.locator('.sd-mink path')).toHaveCount(1);
+
+  // The text column still takes page ink, not a card.
+  const col = (await page.locator('.qr-column').boundingBox())!;
+  await scribble(page, col.x + col.width / 2 - 60, lineY + 40, 80);
+  await expect(page.locator('.ink-clean path.ink-stroke:not(:last-child), .ink-clean g:not(:last-child) path')).not.toHaveCount(0);
+  await expect(page.locator('.sd-gloss', { has: page.locator('.sd-mink') })).toHaveCount(1);
+
+  // After a pause, a stroke further down starts a second card.
+  await page.waitForTimeout(2700);
+  await scribble(page, a.x + 30, lineY + 160, 100);
+  await expect(page.locator('.sd-gloss', { has: page.locator('.sd-mink') })).toHaveCount(2);
+
+  // Done: the ink cards fold like any card, showing a picture of the handwriting.
+  await page.keyboard.press('Escape');
+  await page.mouse.click(5, 300);
+  await page.keyboard.press('[');
+  await expect(page.locator('.sd-gloss--chip .sd-chip__thumb')).toHaveCount(2);
+  await page.keyboard.press(']');
+  await expect(page.locator('.sd-mink')).toHaveCount(2);
+});
+
+test('writing in the strip beside PDF pages makes an ink card there', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('.navbar__settings', { timeout: 15000 });
+  await page.setInputFiles('.library__actions input[type=file]', { name: 'book.pdf', mimeType: 'application/pdf', buffer: Buffer.from(sampleArabicBookPdf()) });
+  await expect(page.locator('.book-card')).toHaveCount(1, { timeout: 30000 });
+  await page.locator('.book-card__open').first().click();
+  const strip = page.locator('.sd-pdfmargin__area');
+  await expect(strip).toBeVisible({ timeout: 20000 });
+  await page.keyboard.press('Alt+w');
+  const s = (await strip.boundingBox())!;
+  await scribble(page, s.x + 40, s.y + 200, 140);
+  await expect(page.locator('.sd-pdfmargin .sd-gloss .sd-mink path')).toHaveCount(1);
+  // It is a desk item: the document lists it with a picture of the ink.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.sd-pdfmargin .sd-gloss')).toContainText('Ink');
+});
+

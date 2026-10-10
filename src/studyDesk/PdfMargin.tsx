@@ -7,6 +7,7 @@ import { PileFan } from './PileFan';
 import { fromOtherBooks, groupOf, groupPiles, isBeneath } from './piles';
 import { usePileGestures } from './usePileGestures';
 import { foldActions, foldKeys } from './folding';
+import { useMarginInk } from './marginInk';
 import { MarginRing, marginActions, useRingTrigger, type DeskCommands, type RingState } from './MarginRing';
 import { pdfLevelAt } from './pageGeometry';
 import { pdfMarks, setPdfDeskFocus, setPdfDeskHover, setPdfDeskTie, usePdfDesk, type PdfMark } from './pdfDesk';
@@ -134,6 +135,11 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [on, stage, marks, tick]);
 
+  // Writing straight in the strip: ink cards (marginInk.tsx).
+  const ink = useMarginInk(book, data.deskId, (x) =>
+    stage && x >= stage.right - 4 && x <= stage.right + PDF_STRIP ? { side: 'right', left: stage.right + GAP, width: PDF_STRIP - GAP * 2, place: (y) => pdfLevelAt(y) } : null
+  );
+
   // Folding every card on screen: the cards placed, and the cards of their piles.
   const placedRef = useRef(placed);
   placedRef.current = placed;
@@ -224,8 +230,9 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
   const width = PDF_STRIP - GAP * 2;
 
   return (
-    <div ref={layerRef} className="sd-pdfmargin" aria-label="Margin beside the pages" onPointerDown={onLayerPointerDown}>
+    <div ref={layerRef} className="sd-pdfmargin" aria-label="Margin beside the pages" onPointerDown={onLayerPointerDown} onPointerDownCapture={ink.onPointerDownCapture}>
       <svg ref={svgRef} className="sd-pdfdesk__lines" aria-hidden="true" />
+      {ink.overlay}
       <div
         className={'sd-margins__area sd-pdfmargin__area' + (dropping ? ' sd-margins__area--drop' : '')}
         style={{ left: stage.right, width: PDF_STRIP, top: stage.top, height: stage.height }}

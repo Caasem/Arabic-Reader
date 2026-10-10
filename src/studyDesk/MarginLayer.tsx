@@ -15,6 +15,7 @@ import { fromOtherBooks, groupOf, groupPiles, isBeneath } from './piles';
 import { PileFan } from './PileFan';
 import { usePileGestures, type Side } from './usePileGestures';
 import { foldActions, foldKeys } from './folding';
+import { InkView, useMarginInk, type InkColumn } from './marginInk';
 import './marginLayer.css';
 
 /**
@@ -225,6 +226,13 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
   });
   const fanTop = fanGroup ? placed.find((p) => p.item.id === fanGroup[0].id) : undefined;
 
+  // Writing straight in a margin: ink cards (marginInk.tsx).
+  const ink = useMarginInk(book, data.deskId, (x): InkColumn | null => {
+    const side = sideAt(x);
+    const s = side ? sides?.[side] : null;
+    return side && s ? { side, left: s.from, width: s.to - s.from, place: (y) => cleanLocationNearY(y, 36) } : null;
+  });
+
   // Folding every card on screen: the cards placed, and the cards of their piles.
   const placedRef = useRef(placed);
   placedRef.current = placed;
@@ -321,8 +329,9 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
   const hovered = placed.find((p) => p.item.id === hoverId || p.item.id === focusId);
 
   return (
-    <div ref={layerRef} className="sd-margins" aria-label="Margins" onPointerDown={onLayerPointerDown}>
+    <div ref={layerRef} className="sd-margins" aria-label="Margins" onPointerDown={onLayerPointerDown} onPointerDownCapture={ink.onPointerDownCapture}>
       <svg ref={svgRef} className="sd-margins__lines" aria-hidden="true" />
+      {ink.overlay}
       {hovered?.rects.map((r, i) => (
         <div key={i} className="sd-margins__mark" style={{ left: r.left - 2, top: r.top - 1, width: r.width + 4, height: r.height + 2 }} />
       ))}
@@ -593,7 +602,7 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
       requestAnimationFrame(() => ref.current?.focus());
     }
     // An empty note left behind (the page was closed before typing) is cleared the next time it shows.
-    else if (item.fromMargin && !item.body && !item.text && !item.imageHash && Date.now() - item.createdAt > 5000) void deleteItem(item.id);
+    else if (item.fromMargin && !item.body && !item.text && !item.imageHash && !item.ink && Date.now() - item.createdAt > 5000) void deleteItem(item.id);
     // Once, when the card appears.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoFocus]);
@@ -631,7 +640,7 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
     window.clearTimeout(timer.current);
     pending.current = null;
     const text = body.trim();
-    if (item.fromMargin && !text && !item.text && !item.imageHash) {
+    if (item.fromMargin && !text && !item.text && !item.imageHash && !item.ink) {
       await deleteItem(item.id);
       return;
     }
@@ -726,7 +735,9 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
     ? item.type === 'capture'
       ? 'Sketch'
       : 'From sketch'
-    : item.fromMargin
+    : item.ink && plain
+      ? 'Ink'
+      : item.fromMargin
       ? plain
         ? pile || inline
           ? 'Note'
@@ -931,7 +942,8 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
           <span>Front</span> {item.text}
         </div>
       )}
-      {img && (
+      {item.ink && <InkView item={item} />}
+      {img && !item.ink && (
         <button
           type="button"
           className="sd-frame"
@@ -961,7 +973,7 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
         dir="auto"
         rows={1}
         value={body}
-        placeholder={item.fromMargin ? 'Write…' : 'Write a gloss…'}
+        placeholder={item.ink ? 'Add words…' : item.fromMargin ? 'Write…' : 'Write a gloss…'}
         aria-label={item.fromMargin ? 'Margin note' : 'Gloss'}
         onChange={(e) => edit(e.target.value)}
         onPaste={(e) => {

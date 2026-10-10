@@ -4,6 +4,17 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.85.0 — 2026-10-10
+
+- **Write straight in the margin.** With Write on (Alt+W), writing in a margin (the quiet reader's, or the strip
+  beside PDF pages) makes an **ink card** level with where you write, instead of ink on the page. Strokes written
+  close together, without a long pause, join the same card; a stroke started on a card's handwriting always joins
+  it. A stylus writes in the margin even without Write on; a mouse or finger keeps the margin's usual gestures.
+- Ink cards are ordinary margin cards: they fold (showing a picture of the handwriting), pile, move, take words
+  under the ink, go to the inbox and the desk document, and export with a picture of the ink.
+- Undo and Redo (Ctrl+Z, Ctrl+Shift+Z while writing) take margin strokes back too; the eraser rubs out strokes on
+  an ink card, and an ink card with nothing left on it goes away.
+
 ## v0.84.0 — 2026-10-10
 
 - **Fold margin cards to one line.** Every card in the margins (the quiet reader's and the strip beside PDF pages)

@@ -955,3 +955,44 @@ body.sd-dragging-card * {
   right: 32px;
 }
 
+/* Ink cards (marginInk.tsx): handwriting written straight in a margin. */
+.sd-mink {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 2px 0 2px;
+  overflow: visible;
+  touch-action: none;
+}
+.sd-mink__s,
+.sd-mink-live__s {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.sd-mink__s--marker {
+  stroke-opacity: 0.35;
+}
+.sd-mink--erase {
+  cursor: cell;
+}
+.sd-mink-live {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 8;
+}
+/* While writing (Alt+W) the page's ink layer covers the reader; the margins stay on top of it so writing in a
+   margin makes an ink card, and the text column keeps the page ink. */
+body.ink-writing .sd-margins,
+body.ink-writing .sd-pdfmargin {
+  z-index: 21;
+}
+body.ink-writing .sd-margins__area,
+body.ink-writing .sd-pdfmargin__area {
+  cursor: crosshair;
+  touch-action: none;
+}

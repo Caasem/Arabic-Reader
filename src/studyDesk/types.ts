@@ -36,6 +36,23 @@ export interface DeskPile {
   color?: string;
 }
 
+/** One stroke of a margin ink card, in the card's own units (CSS pixels at the width it was written at). */
+export interface DeskInkStroke {
+  color: 'ink' | 'brown' | 'teal' | 'red';
+  width: number;
+  /** x, y and pen pressure. */
+  pts: [number, number, number][];
+  /** Written with the marker: drawn see-through. */
+  marker?: boolean;
+}
+
+/** Handwriting on a margin card (marginInk.tsx): a box `w` × `h` the strokes sit in, scaled to the card's width. */
+export interface DeskInk {
+  w: number;
+  h: number;
+  strokes: DeskInkStroke[];
+}
+
 export interface DeskItem {
   id: string;
   deskId: string;
@@ -62,6 +79,8 @@ export interface DeskItem {
   reviewId?: string;
   /** Sent from a sketch sheet (src/annotate): the sheet's id, so the card can open it again. */
   sketchId?: string;
+  /** Handwriting written straight in the margin (an ink card); `imageHash` holds a picture of it. */
+  ink?: DeskInk;
   /** Folded to a one-line chip in the margin (true), or open (false). Unset follows Margin settings → Cards. */
   collapsed?: boolean;
   /** In a pile in the margin. A pile of one is no pile and is shown as a lone card. */
