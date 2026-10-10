@@ -261,7 +261,7 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
     [data.items, data.deskId]
   );
   // What the right-click ring in the margins can do (MarginRing.tsx).
-  // Margins, Document and Capture in the shared tool list: the dock, the PDF top bar and the Focus rail.
+  // Margins, Document and Capture in the shared tool list: the dock (reader and PDF pages) and the Focus rail.
   useDeskTools({ marginsOn: prefs.studyDeskMargins !== 'off', onToggleMargins: toggleMargins, onDocument: () => openDocument(), onCapture: () => startCapture(false) });
 
   const commands: DeskCommands = {

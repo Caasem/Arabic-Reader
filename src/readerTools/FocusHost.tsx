@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { BookMeta } from '../types';
-import type { OpenedPdf } from '../pdf/pages/pdfjsLoader';
-import { registerPdfPageExtension } from '../pdf/pages/extensions';
-import { readerFocus, setFocusRail, setFocusReader, setFocusWhere, setReaderFocus, useReaderFocus } from './focus';
+import { readerFocus, setFocusRail, setFocusReader, setReaderFocus, useReaderFocus } from './focus';
 import { toolTitle, useReaderTools, type ReaderKind, type ReaderTool } from './tools';
 import './readerTools.css';
 
@@ -15,7 +12,7 @@ const isTyping = (t: EventTarget | null) => {
 /**
  * Focus for every reader that has it: the F key, the pill at the top (where you are, Tools, Leave focus; it
  * fades while you read), the tool rail (Alt twice) built from the shared tool list, and Esc. The quiet reader
- * hides its own header and dock; the PDF pages lose their top bar and footer through a body class.
+ * and the PDF pages hide their own header and dock.
  * Mounted once beside the reader by ReaderSwitch; `reader` is null for the original epub layout (no Focus).
  */
 export function FocusHost({ reader, onChromeHidden }: { reader: ReaderKind | null; onChromeHidden?(hidden: boolean): void }) {
@@ -28,9 +25,6 @@ export function FocusHost({ reader, onChromeHidden }: { reader: ReaderKind | nul
     setFocusReader(reader);
     return () => setFocusReader(null);
   }, [reader]);
-
-  // The PDF pages' top bar shows the shared tools and a Focus button; it also says which page is open.
-  useEffect(() => registerPdfPageExtension({ id: 'reader-tools', Toolbar: PdfToolsBar }), []);
 
   // Body classes: the PDF view hides its bar and footer, every reader can style itself for Focus.
   useEffect(() => {
@@ -129,7 +123,7 @@ export function FocusHost({ reader, onChromeHidden }: { reader: ReaderKind | nul
 }
 
 function FocusRail({ reader }: { reader: ReaderKind }) {
-  const tools = useReaderTools(reader);
+  const tools = useReaderTools(reader).filter((t) => !t.noRail);
   let group = '';
   return (
     <nav className="rt-rail" aria-label="Reader tools">
@@ -155,63 +149,5 @@ function RailButton({ tool }: { tool: ReaderTool }) {
       <span>{tool.label}</span>
       {tool.keys && <kbd>{tool.keys}</kbd>}
     </button>
-  );
-}
-
-/** In the PDF pages' top bar: the desk and ink tools, then Focus. Also publishes the page for the pill. */
-function PdfToolsBar({ page, total }: { book: BookMeta; page: number; total: number; opened: OpenedPdf }) {
-  const tools = useReaderTools('pdf', ['desk', 'ink']);
-  useEffect(() => setFocusWhere(total ? `Page ${page} of ${total}` : `Page ${page}`), [page, total]);
-  useEffect(() => () => setFocusWhere(''), []);
-  return (
-    <>
-      {tools.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          className={'reader__toc-toggle rt-tbtn' + (t.isOn?.() ? ' rt-tbtn--on' : '')}
-          aria-pressed={t.isOn ? !!t.isOn() : undefined}
-          title={toolTitle(t)}
-          onClick={() => t.run()}
-        >
-          {t.icon}
-          {t.label}
-        </button>
-      ))}
-      <button type="button" className="reader__toc-toggle rt-tbtn" title="Focus: just the page (F)" onClick={() => setReaderFocus(true)}>
-        Focus
-      </button>
-    </>
-  );
-}
-
-/** The registered desk and ink tools in the quiet reader's dock, after its own buttons. */
-export function DockTools({ labels }: { labels: boolean }) {
-  const tools = useReaderTools('clean', ['desk', 'ink']).filter((t) => !t.noDock);
-  let group = '';
-  return (
-    <>
-      {tools.map((t) => {
-        const sep = group !== t.group;
-        group = t.group;
-        const on = t.isOn?.();
-        return (
-          <span key={t.id} className="qr-dock__extra">
-            {sep && <span className="qr-dock__sep" aria-hidden="true" />}
-            <button
-              type="button"
-              className={'qr-dock__btn' + (on ? ' qr-dock__btn--on' : '')}
-              aria-pressed={t.isOn ? !!on : undefined}
-              aria-label={t.label}
-              title={toolTitle(t)}
-              onClick={() => t.run()}
-            >
-              {t.icon}
-              {labels && <span>{t.label}</span>}
-            </button>
-          </span>
-        );
-      })}
-    </>
   );
 }

@@ -56,6 +56,8 @@ interface Props {
     highlights: HighlightRow[];
     editing: string | null;
     setEditing(id: string | null): void;
+    /** What the empty Highlights list says (PDF pages highlight through the study desk). */
+    highlightsEmpty?: string;
   };
   words: { items: VocabularyItem[] | null; onJump(item: VocabularyItem): void };
 }
@@ -261,7 +263,7 @@ function SearchTab({ search, onPickHit }: { search: ReaderSearch; onPickHit(hit:
 
 const COLORS: HighlightColor[] = ['yellow', 'green', 'blue', 'purple', 'red'];
 
-function MarksTab({ bookmarked, onToggleBookmark, bookmarks, highlights, editing, setEditing }: Props['marks']) {
+function MarksTab({ bookmarked, onToggleBookmark, bookmarks, highlights, editing, setEditing, highlightsEmpty }: Props['marks']) {
   return (
     <>
       <button type="button" className="qr-btn qr-btn--wide qr-btn--soft" onClick={onToggleBookmark}>
@@ -284,7 +286,7 @@ function MarksTab({ bookmarked, onToggleBookmark, bookmarks, highlights, editing
         </div>
       ))}
       <div className="qr-label qr-label--spaced">Highlights</div>
-      {highlights.length === 0 && <p className="qr-empty">Select text in the book to highlight it.</p>}
+      {highlights.length === 0 && <p className="qr-empty">{highlightsEmpty ?? 'Select text in the book to highlight it.'}</p>}
       {highlights.map((row) => (
         <HighlightCard key={row.highlight.id} row={row} editing={editing === row.highlight.id} setEditing={setEditing} />
       ))}

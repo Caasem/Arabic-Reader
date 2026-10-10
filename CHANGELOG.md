@@ -4,18 +4,53 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
-## v0.78.0 — 2026-10-10
+## v0.81.0 — 2026-10-10
 
 - **Highlighter colour.** Settings → Reading → Highlighter → Colour: cream (still the default), yellow, green, blue,
   purple, red, or any colour from the custom picker. The outlines follow the colour's hue.
 
-## v0.77.0 — 2026-10-10
+## v0.80.0 — 2026-10-10
 
 - **Highlights on PDF pages no longer hide the words.** The cream fill now lets the page show through (it is
   translucent and blends with the page), so highlighted text stays readable.
 - **Settings → Reading → Highlighter.** Dragging over a PDF page to highlight is now called the Highlighter, with
   its own settings: Fill on or off, Fill strength (20-100%, 70% by default), and Outline (Off, When pointed at,
   Always). With the fill off, highlights show by their outline only, and the outline cannot be turned off.
+
+## v0.79.0 — 2026-10-10
+
+- **The whole dock on PDF pages.** Contents, Search, Marks, Words and Levels now work on PDF pages too, so the PDF
+  dock has the same twelve tools in the same order as the reader.
+- **Contents** shows the PDF's own table of contents when it has one (and the entry you are in, in the header), else
+  its pages.
+- **Search** looks through the text of the pages (this page, the book, your library or the dictionary) and marks the
+  match on the page.
+- **Words** lists the words saved from the book; the jump opens the page a word was saved on and flashes it.
+  **Levels** groups the pages' words by how common they are, each a jump to the page.
+- **Marks** lists the pages you bookmarked.
+- Alt+S and Alt+V results open their page on PDF pages.
+- Search keeps the result you picked when the page changes (it used to go back to the first result after moving to
+  another chapter in the reader too).
+- Scanned pages have no text to search or count; tapping a word on them still reads it with text recognition.
+
+## v0.78.0 — 2026-10-10
+
+- **PDF pages look like the reader.** The same header (Library, title, bookmark, settings), the same dock at the
+  bottom, page-turn buttons at the sides, where you are ("Page 12 of 300 · 4%") on a chip, and the progress line
+  along the bottom. The old top bar and footer are gone.
+- **The PDF dock**: Display, Timer and Focus, then Margins, Document, Write and Sketch, in the reader's order.
+- **Display for PDF pages**: zoom (−, +, Fit to width), Pages tinted Paper, Sepia or Night, the theme, page-turn
+  direction, and the switch to the reflowed text when the book has one.
+- **Bookmark a PDF page** from the header; the arrow keys turn pages the way the side buttons do (Display → Page turns).
+- Focus on PDF pages hides the header and dock the same way the reader does.
+
+## v0.77.0 — 2026-10-10
+
+- **The dock shows icons.** Every tool now fits in the reader's dock, however narrow the window: each one is an icon,
+  and the one under the pointer opens to its name and key. A running Pomodoro still shows its countdown.
+- **Settings → Reader → Dock** brings back the named dock: Names labels each tool when there is room and scrolls
+  sideways when there isn't (the dock until now).
+- The Timer sheet opens above the Timer button wherever the dock puts it.
 
 ## v0.76.0 — 2026-10-10
 

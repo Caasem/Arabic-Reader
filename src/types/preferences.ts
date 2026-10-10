@@ -122,6 +122,8 @@ export interface ReaderPreferences {
   cleanReaderEnabled: boolean;
   /** The redesigned reader (src/quietReader): clean text, one dock, the dictionary in the margin. Off: the readers above. */
   quietReaderEnabled: boolean;
+  /** The reader dock: icons that show their name on hover (fits every tool), or names that scroll when the window is narrow. */
+  dockStyle: 'icons' | 'labels';
   /** Press D in either reader to search the dictionary. */
   dictionarySearchEnabled: boolean;
   /** How the D-key search is laid out; touch screens always get the sheet. */
@@ -152,6 +154,8 @@ export interface ReaderPreferences {
   pdfHighlightOpacity: number;
   /** A gold outline around highlights: never, only while one is pointed at or its card is, or always. */
   pdfHighlightOutline: 'off' | 'hover' | 'always';
+  /** How PDF pages are drawn: as printed, warmer (sepia), or dark with light text (night). */
+  pdfPageTint: 'paper' | 'sepia' | 'night';
   /** Ink and sketches (src/annotate): write on the page (Alt+W) and a sketch sheet beside it (Alt+K). */
   annotateEnabled: boolean;
   /** Show a verb's form (I-X) and its root's other verbs in the dictionary popup (src/verbForms). */

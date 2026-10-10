@@ -3,7 +3,7 @@ import { refreshReaderTools, registerReaderTool } from '../readerTools';
 
 /**
  * The study desk's tools in the shared tool list (src/readerTools): Margins (on or off, Alt+M), Document (D)
- * and Capture (Alt+X). The quiet reader's dock, the PDF pages' top bar and the Focus rail all show them.
+ * and Capture (Alt+X). The dock (reader and PDF pages) and the Focus rail show them.
  */
 
 const IconMargins = () => (
