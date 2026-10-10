@@ -324,7 +324,7 @@ test('a region captured on a scanned PDF page is boxed on the page with a card b
   await expect(doc.locator('.desk-embed', { hasText: 'The diagram of the spheres' })).toHaveCount(1);
 });
 
-test('the Highlighter lets the page show through its fill, and can be outline only', async ({ page }) => {
+test('the Highlighter lets the page show through its fill, takes a colour, and can be outline only', async ({ page }) => {
   await openScan(page);
   const frame = page.locator('.pdfp-page[data-page="1"]');
   const r = (await frame.boundingBox())!;
@@ -361,6 +361,16 @@ test('the Highlighter lets the page show through its fill, and can be outline on
   await page.click('.navbar__settings');
   const section = page.locator('.settings-section', { has: page.getByRole('heading', { name: 'Highlighter' }) });
   await section.scrollIntoViewIfNeeded();
+  // A colour: the fill and the outlines follow it.
+  const fillOf = () => page.evaluate(() => getComputedStyle(document.querySelector('.sd-pdfbox')!, '::before').backgroundColor);
+  expect(await fillOf()).toBe('rgba(246, 234, 208, 0.7)');
+  await expect(section.getByRole('button', { name: 'Cream' })).toHaveAttribute('aria-pressed', 'true');
+  await section.getByRole('button', { name: 'Blue' }).click();
+  await expect(section.getByRole('button', { name: 'Blue' })).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(fillOf).toBe('rgba(111, 163, 201, 0.7)');
+  await section.getByLabel('Custom colour').fill('#ff8800');
+  await expect.poll(fillOf).toBe('rgba(255, 136, 0, 0.7)');
+  await expect(section.locator('.hl-colours__custom')).toHaveAttribute('data-on', 'true');
   await section.getByRole('button', { name: 'Off' }).click();
   await section.getByRole('checkbox', { name: 'Fill' }).uncheck();
   await expect(section.getByRole('button', { name: 'Off' })).toHaveCount(0);

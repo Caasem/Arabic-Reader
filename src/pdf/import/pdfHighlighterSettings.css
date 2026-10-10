@@ -1,0 +1,54 @@
+/* Settings → Highlighter: the colour swatches and the custom colour beside them. */
+.hl-colours {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.hl-colours__swatch,
+.hl-colours__custom {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  padding: 0;
+  cursor: pointer;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+.hl-colours__swatch[aria-pressed='true'],
+.hl-colours__custom[data-on] {
+  outline-color: var(--accent);
+}
+.hl-colours__swatch:focus-visible,
+.hl-colours__custom:focus-within {
+  outline-color: var(--accent);
+}
+/* The custom colour: a rainbow ring around the colour input, which fills the middle. */
+.hl-colours__custom {
+  position: relative;
+  overflow: hidden;
+  background: conic-gradient(#e66, #ec6, #6c6, #6cc, #66e, #c6c, #e66);
+}
+.hl-colours__custom input {
+  position: absolute;
+  inset: 4px;
+  width: calc(100% - 8px);
+  height: calc(100% - 8px);
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+}
+.hl-colours__custom input::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.hl-colours__custom input::-webkit-color-swatch {
+  border: 0;
+  border-radius: 50%;
+}
+.hl-colours__custom input::-moz-color-swatch {
+  border: 0;
+  border-radius: 50%;
+}

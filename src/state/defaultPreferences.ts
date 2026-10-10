@@ -55,6 +55,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   annotateEnabled: true,
   pdfConvertToText: false,
   pdfHighlightFill: true,
+  pdfHighlightColor: '#f6ead0',
   pdfHighlightOpacity: 0.7,
   pdfHighlightOutline: 'hover',
   pdfPageTint: 'paper',
