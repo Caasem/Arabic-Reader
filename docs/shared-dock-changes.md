@@ -2,9 +2,9 @@
 
 From the dock options page ([artifact](https://claude.ai/artifact/Jkj2CBoZr2VCR9YG6zcmh2), Option A chosen). Branch `feat/shared-reader-dock`, on top of v0.76.0.
 
-**To reverse:** each phase is one commit. Revert newest first: `git revert <phase 3> <phase 2> <phase 1>`. Phase 3 alone can go (PDF pages keep Display, Timer and Focus); phase 2 needs phase 3 gone first; phase 1 needs both gone. No database changes. Two preferences are added (`dockStyle`, `pdfPageTint`); after a revert they are ignored. Page bookmarks made on PDF pages (`pdf:page=N`) stay in the bookmarks table and list in the Highlights page as before.
+**To reverse:** each phase is one commit. Revert newest first: `git revert c1c82a4 5716d92 dcae856`. Phase 3 alone can go (PDF pages keep Display, Timer and Focus); phase 2 needs phase 3 gone first; phase 1 needs both gone. No database changes. Two preferences are added (`dockStyle`, `pdfPageTint`); after a revert they are ignored. Page bookmarks made on PDF pages (`pdf:page=N`) stay in the bookmarks table and list in the Highlights page as before.
 
-## Phase 1: one shared dock, icons by default (0.77.0)
+## Phase 1: one shared dock, icons by default (0.77.0, commit `dcae856`)
 
 | # | What changed | Before | After | Why | Files | To reverse just this row |
 |---|---|---|---|---|---|---|
@@ -16,7 +16,7 @@ From the dock options page ([artifact](https://claude.ai/artifact/Jkj2CBoZr2VCR9
 | 6 | Timer sheet | Opened at a guessed offset from the dock's centre | Opens above the Timer button (`dockButtonX`) | Buttons move with the dock style | `src/readerTools/Dock.tsx`, `QuietReader.tsx` | — |
 | 7 | Dead CSS | `.qr-dock__extra` in readerTools.css and marginLayer.css | Removed | Nothing uses it | `src/readerTools/readerTools.css`, `src/studyDesk/marginLayer.css` | — |
 
-## Phase 2: PDF pages in the reader's frame (0.78.0)
+## Phase 2: PDF pages in the reader's frame (0.78.0, commit `5716d92`)
 
 | # | What changed | Before | After | Why | Files | To reverse just this row |
 |---|---|---|---|---|---|---|
@@ -32,7 +32,7 @@ From the dock options page ([artifact](https://claude.ai/artifact/Jkj2CBoZr2VCR9
 | 17 | Focus on PDF pages | Body class hid `.reader__topbar` and `.reader__footer` | The reader hides its header and dock itself, like the quiet reader; extension controls stay mounted, hidden | One way for both | `PdfPagesReader.tsx`, `src/readerTools/readerTools.css` (rules removed) | — |
 | 18 | Tests | e2e looked for `.reader__footer`, `.reader__topbar`, Zoom in and Reflowed text in the top bar | `.pdfp .qr-where--right`, `.pdfp .qr-dock`, Zoom in and Reflowed text in Display | Follow rows 8–12 | `e2e/annotate.spec.ts`, `pdf-ocr.spec.ts`, `pdf-pages.spec.ts`, `shared-focus.spec.ts`, `study-desk.spec.ts`, `study-desk-piles.spec.ts` | Revert with the commit |
 
-## Phase 3: Contents, Search, Marks, Words and Levels on PDF pages (0.79.0)
+## Phase 3: Contents, Search, Marks, Words and Levels on PDF pages (0.79.0, commit `c1c82a4`)
 
 | # | What changed | Before | After | Why | Files | To reverse just this row |
 |---|---|---|---|---|---|---|
