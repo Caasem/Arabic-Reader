@@ -4,6 +4,14 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.74.0 — 2026-10-10
+
+- **Send a sketch to the margin.** "To margin" in the sketch panel puts the sheet beside its page (PDF) or the first
+  line of its passage (reader) as a study desk card: the whole sheet as a picture (drawn again whenever the sheet
+  changes), the whole sheet as an outline (each node a line, arrows indented under it), or just the selected node as
+  a margin note. The card is labelled Sketch or From sketch and has Open sketch, which opens the sheet again.
+- Sketch cards are ordinary desk items: they appear in the desk document and its export like screenshots and notes.
+
 ## v0.73.0 — 2026-10-10
 
 - **One Focus for both readers.** F enters and leaves Focus in the reader and on PDF pages (the dock's Focus button

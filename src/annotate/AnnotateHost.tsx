@@ -57,6 +57,19 @@ function Active({ book }: { book: BookMeta }) {
   }, []);
   useEffect(() => refreshReaderTools(), [ui.inking, ui.sketch]);
 
+  // A margin card sent from a sketch opens its sheet (studyDesk/MarginLayer.tsx dispatches this).
+  useEffect(() => {
+    const open = (e: Event) => {
+      const id = (e as CustomEvent<{ sketchId?: string }>).detail?.sketchId;
+      if (id) setInkUi({ sketch: true, openSketch: id });
+    };
+    window.addEventListener('annotate:open-sketch', open);
+    return () => window.removeEventListener('annotate:open-sketch', open);
+  }, []);
+  useEffect(() => {
+    if (!ui.sketch) setInkUi({ openSketch: null });
+  }, [ui.sketch]);
+
   useChordHotkey('KeyW', true, () => setInkUi({ inking: !inkUi().inking }));
   useChordHotkey('KeyK', true, () => setInkUi({ sketch: !inkUi().sketch, full: false }));
 

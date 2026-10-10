@@ -1073,7 +1073,17 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
   const shownInDoc = shownInDocument(item, docMode);
   const plain = item.fromMargin && item.type === 'line';
   // In piles every card names its kind, plain notes too.
-  const kind = item.fromMargin ? (plain ? (pile || inline ? 'Note' : null) : TYPE_LABEL[item.type]) : TYPE_LABEL[item.type];
+  const kind = item.sketchId
+    ? item.type === 'capture'
+      ? 'Sketch'
+      : 'From sketch'
+    : item.fromMargin
+      ? plain
+        ? pile || inline
+          ? 'Note'
+          : null
+        : TYPE_LABEL[item.type]
+      : TYPE_LABEL[item.type];
   const elsewhere = showSource && item.source && item.source.bookId !== book.id ? item.source.bookTitle || 'another book' : null;
 
   return (
@@ -1147,6 +1157,17 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
           )}
           {!item.fromMargin && item.source?.chapterLabel && <span>{item.source.chapterLabel}</span>}
           {item.type === 'card' && <span className="sd-gloss__due">Review · due today</span>}
+          {item.sketchId && (
+            // The sketch panel (src/annotate) listens for this and opens the sheet.
+            <button
+              type="button"
+              className="sd-gloss__open"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => window.dispatchEvent(new CustomEvent('annotate:open-sketch', { detail: { sketchId: item.sketchId } }))}
+            >
+              Open sketch
+            </button>
+          )}
         </div>
       )}
       {item.text && item.type !== 'card' && (
