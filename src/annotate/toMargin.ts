@@ -1,22 +1,26 @@
 import type { BookMeta } from '../types';
 import { formatCleanLocation, parseCleanLocation } from '../quietReader/location';
-import { bookDeskId, listItems } from '../studyDesk/deskStore';
+import { bookDeskId, listItems, updateItem } from '../studyDesk/deskStore';
 import { attachImage } from '../studyDesk/marginImages';
-import { formatPdfLocation } from '../studyDesk/pageGeometry';
+import { formatPdfLocation, parsePdfLocation } from '../studyDesk/pageGeometry';
 import { capture } from '../studyDesk/useDesk';
-import { borderPoint, contentBox, pathD } from './geometry';
+import { addInk, inkBlob } from '../studyDesk/marginInk';
+import type { DeskInk, DeskItem } from '../studyDesk/types';
+import { borderPoint, contentBox, pathD, r1 } from './geometry';
 import { PAPER_COLORS } from './inkUi';
 import type { Sketch } from './types';
 
 /**
  * A sketch sent to the margin becomes a study desk item pinned beside the place the sheet belongs to, so it
  * behaves like every other margin card (leader line, document, export):
- * - picture: a screenshot card of the sheet; it is drawn again whenever the sheet changes;
+ * - picture: a card with the sheet as an SVG (sharp at any size, in the card and its large preview); it is drawn
+ *   again whenever the sheet changes. Word export turns it into a PNG (docxExport.ts);
  * - outline: a margin note whose lines are the diagram (each arrow's target indented under its node);
- * - node: one node's words as a margin note.
+ * - node: one node's words as a margin note;
+ * - ink: the sheet's handwriting as an ink card (studyDesk/marginInk.tsx), sized to the margin.
  * Each carries `sketchId`, so the card can open its sheet again.
  */
-export type SendHow = 'picture' | 'outline' | 'node';
+export type SendHow = 'picture' | 'outline' | 'node' | 'ink';
 
 /** The diagram as lines of text: roots first, each arrow's target indented under it with "→". */
 export function sketchOutline(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): string {
@@ -33,7 +37,7 @@ export function sketchOutline(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): s
     const n = s.nodes.find((x) => x.id === id);
     if (!n || seen.has(id)) return;
     seen.add(id);
-    lines.push((depth ? '  '.repeat(depth - 1) + '→ ' : '') + n.text);
+    lines.push((depth ? '  '.repeat(depth - 1) + '→ ' : '') + (n.text || (n.image ? '[picture]' : '')));
     for (const k of kids.get(id) ?? []) walk(k, depth + 1);
   };
   for (const n of s.nodes) if (!hasParent.has(n.id)) walk(n.id, 0);
@@ -43,8 +47,21 @@ export function sketchOutline(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): s
   return lines.join('\n');
 }
 
-/** Where the card sits: the sheet's PDF page (near its top) or the first line of the passage it was started on. */
-export function sketchPin(s: Pick<Sketch, 'key' | 'location'>): string | null {
+/**
+ * Where the card sits: level with the sheet's first quote on its own page or chapter (the highest on the sheet),
+ * else its PDF page near the top, or the first line of the passage it was started on.
+ */
+export function sketchPin(s: Pick<Sketch, 'key' | 'location'> & { nodes?: Sketch['nodes'] }): string | null {
+  const quoted = (s.nodes ?? [])
+    .filter((n) => n.location)
+    .sort((a, b) => a.y - b.y)
+    .map((n) => n.location!);
+  for (const at of quoted) {
+    const box = parsePdfLocation(at);
+    if (box && s.key === `pdf:${box.page}`) return formatPdfLocation(box.page, 0, box.y, 1, 0);
+    const clean = parseCleanLocation(at);
+    if (clean && s.key === `clean:${clean.chapter}`) return formatCleanLocation({ chapter: clean.chapter, start: clean.start, end: clean.start + 1 });
+  }
   if (s.key.startsWith('pdf:')) {
     const page = Number(s.key.slice(4));
     return Number.isInteger(page) && page > 0 ? formatPdfLocation(page, 0, 0.1, 1, 0) : null;
@@ -53,7 +70,42 @@ export function sketchPin(s: Pick<Sketch, 'key' | 'location'>): string | null {
   return at ? formatCleanLocation({ chapter: at.chapter, start: at.start, end: at.start + 1 }) : null;
 }
 
+/** A #rrggbb colour mixed with white: `amount` of the colour. */
+function mix(hex: string, amount: number): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return '#ffffff';
+  const n = parseInt(m[1], 16);
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(255 + (v - 255) * amount));
+  return `rgb(${c.join(' ')})`;
+}
+
 const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+
+/**
+ * A node's words in lines that fit its box (an estimate: an image cannot measure text), the last one ending in
+ * "…" when they do not all fit. Words longer than a line are cut.
+ */
+export function wrapLines(text: string, width: number, size: number, height: number): string[] {
+  const per = Math.max(4, Math.floor((width - 16) / (size * 0.55)));
+  const max = Math.max(1, Math.floor((height - 8) / (size * 1.3)));
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.replace(/\s+/g, ' ').trim().split(' ')) {
+    const w = word.length > per ? word.slice(0, per - 1) + '…' : word;
+    if (!line) line = w;
+    else if (line.length + 1 + w.length <= per) line += ' ' + w;
+    else {
+      lines.push(line);
+      line = w;
+    }
+  }
+  if (line) lines.push(line);
+  if (lines.length <= max) return lines;
+  const kept = lines.slice(0, max);
+  const last = kept[max - 1];
+  kept[max - 1] = (last.length >= per ? last.slice(0, per - 1) : last) + '…';
+  return kept;
+}
 
 /** The sheet as a standalone SVG on paper (fixed colours, as an image cannot read the theme). */
 export function sketchSvg(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): { svg: string; w: number; h: number } {
@@ -74,31 +126,77 @@ export function sketchSvg(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): { svg
     body += `<path d="M${p1[0]} ${p1[1]}L${p2[0]} ${p2[1]}" fill="none" stroke="#6b6560" stroke-width="1.6"${e.dir ? ' marker-end="url(#a)"' : ''}/>`;
   }
   for (const n of s.nodes) {
-    const fill = n.kind === 'quote' ? '#f6ead0' : '#ffffff';
+    const fill = n.color ? mix(n.color, 0.45) : n.kind === 'quote' ? '#f6ead0' : '#ffffff';
     const stroke = n.kind === 'note' ? '#2e7d74' : n.kind === 'quote' ? '#f6ead0' : '#d9d2c5';
-    const text = n.text.length > 40 ? n.text.slice(0, 38) + '…' : n.text;
+    if (n.image) {
+      body += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="14" fill="#ffffff" stroke="#d9d2c5" stroke-width="1.2"/>`;
+      body += `<image href="${esc(n.image)}" x="${n.x + 8}" y="${n.y + 8}" width="${n.w - 16}" height="${Math.max(10, n.h - 16)}" preserveAspectRatio="xMidYMid meet"/>`;
+      continue;
+    }
+    const size = n.kind === 'quote' ? 16 : 14;
+    const lines = wrapLines(n.text, n.w, size, n.h);
+    const lh = size * 1.3;
+    const y0 = n.y + n.h / 2 - ((lines.length - 1) * lh) / 2;
     body += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="14" fill="${fill}" stroke="${stroke}" stroke-width="1.2"/>`;
-    body += `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2}" text-anchor="middle" dominant-baseline="central" font-family="'Noto Naskh Arabic','Segoe UI',Tahoma,sans-serif" font-size="${n.kind === 'quote' ? 16 : 14}" fill="${n.kind === 'quote' ? '#7d5a14' : '#1c1b19'}">${esc(text)}</text>`;
+    body += `<text text-anchor="middle" dominant-baseline="central" direction="${/[؀-ۿ]/.test(n.text) ? 'rtl' : 'ltr'}" font-family="'Noto Naskh Arabic','Segoe UI',Tahoma,sans-serif" font-size="${size}" fill="${n.kind === 'quote' ? '#7d5a14' : '#1c1b19'}">${lines.map((l, i) => `<tspan x="${n.x + n.w / 2}" y="${r1(y0 + i * lh)}">${esc(l)}</tspan>`).join('')}</text>`;
   }
-  for (const st of s.strokes) body += `<path d="${pathD(st.pts)}" fill="none" stroke="${PAPER_COLORS[st.color]}" stroke-width="${st.width}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  for (const st of s.strokes) body += `<path d="${pathD(st.pts)}" fill="none" stroke="${PAPER_COLORS[st.color]}" stroke-width="${st.width}" stroke-linecap="round" stroke-linejoin="round"${st.marker ? ' stroke-opacity="0.35"' : ''}/>`;
   return { svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x0} ${y0} ${w} ${h}" width="${w}" height="${h}">${body}</svg>`, w, h };
 }
 
-/** The sheet as a PNG, at most 1000 pixels wide. */
-export async function sketchPng(s: Sketch): Promise<Blob> {
-  const { svg, w, h } = sketchSvg(s);
-  const scale = Math.min(2, 1000 / w);
-  const img = new Image();
-  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-  await img.decode();
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(w * scale);
-  canvas.height = Math.round(h * scale);
-  canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('No image'))), 'image/png'));
+/** The sheet as an SVG file: what picture cards show. */
+export function sketchSvgBlob(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): Blob {
+  return new Blob([sketchSvg(s).svg], { type: 'image/svg+xml' });
 }
 
-export async function sendSketchToMargin(book: BookMeta, sketch: Sketch, how: SendHow, nodeId?: string | null): Promise<void> {
+/**
+ * How many pixels per sheet pixel a PNG of a w×h sheet gets: never below 2 (sharp on high-density screens),
+ * and as much as fits 4096 pixels on the long side, so a large sheet keeps its fine lines and small writing.
+ */
+export function pngScale(w: number, h: number): number {
+  return Math.max(2, Math.min(4, 4096 / Math.max(w, h, 1)));
+}
+
+/** Any SVG image as a PNG (for Word, which takes no SVG), at `pngScale`. */
+export async function svgToPng(svg: Blob): Promise<Blob> {
+  const url = URL.createObjectURL(svg);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const w = img.naturalWidth || 800;
+    const h = img.naturalHeight || 600;
+    const scale = pngScale(w, h);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+    canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return await new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('No image'))), 'image/png'));
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** The sheet as a PNG (export), sharp at `pngScale`. */
+export function sketchPng(s: Sketch): Promise<Blob> {
+  return svgToPng(sketchSvgBlob(s));
+}
+
+/** A margin card's width for handwriting: the sheet's strokes, scaled down to fit it if wider. */
+const INK_CARD_W = 240;
+
+/** The sheet's freehand strokes as an ink card's ink, scaled to fit a margin card. */
+export function sketchInk(s: Pick<Sketch, 'strokes'>): DeskInk | null {
+  const box = contentBox(s.strokes, []);
+  if (!box) return null;
+  const k = Math.min(1, INK_CARD_W / Math.max(1, box.w + 16));
+  let ink: DeskInk | undefined;
+  for (const st of s.strokes)
+    ink = addInk(ink, { color: st.color, width: r1(st.width * k), pts: st.pts.map(([x, y, p]) => [r1((x - box.x) * k), r1((y - box.y) * k), p]), ...(st.marker ? { marker: true } : {}) }, INK_CARD_W);
+  return ink ?? null;
+}
+
+export async function sendSketchToMargin(book: BookMeta, sketch: Sketch, how: SendHow, nodeId?: string | null, name?: string): Promise<void> {
   const location = sketchPin(sketch);
   if (!location) throw new Error('No place for this sheet');
   const base = {
@@ -108,21 +206,67 @@ export async function sendSketchToMargin(book: BookMeta, sketch: Sketch, how: Se
     pin: { bookId: book.id, location, side: 'right' as const },
     source: { bookId: book.id, bookTitle: book.title, location },
     sketchId: sketch.id,
+    ...(name ? { sketchTitle: name } : {}),
   };
   const deskId = bookDeskId(book.id);
-  if (how === 'picture') await capture(book, deskId, { ...base, type: 'capture', body: '' }, await sketchPng(sketch));
-  else if (how === 'outline') await capture(book, deskId, { ...base, type: 'line', body: sketchOutline(sketch) });
+  if (how === 'ink') {
+    const ink = sketchInk(sketch);
+    if (!ink) throw new Error('Only handwriting makes an ink card: draw in Freehand first');
+    await capture(book, deskId, { ...base, type: 'line', body: '', ink }, inkBlob(ink));
+    return;
+  }
+  if (how === 'picture') await capture(book, deskId, { ...base, type: 'capture', body: '' }, sketchSvgBlob(sketch));
+  else if (how === 'outline') {
+    const body = sketchOutline(sketch);
+    await capture(book, deskId, { ...base, type: 'line', body, sketchPart: 'outline', sketchSent: body });
+  }
   else {
     const node = sketch.nodes.find((n) => n.id === nodeId);
     if (!node) throw new Error('Select a node first');
-    await capture(book, deskId, { ...base, type: 'line', body: node.text });
+    await capture(book, deskId, { ...base, type: 'line', body: node.text, sketchPart: node.id, sketchSent: node.text });
   }
 }
 
-/** Draws again every picture card of this sheet (outlines and single nodes are notes of their own and stay). */
-export async function refreshSketchCards(sketch: Sketch): Promise<void> {
-  const cards = (await listItems()).filter((i) => i.sketchId === sketch.id && i.type === 'capture');
+/** What a note made from part of a sheet should say now: the outline, or its node's words (null: the node is gone). */
+export function partText(sketch: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>, part: string): string | null {
+  if (part === 'outline') return sketchOutline(sketch);
+  return sketch.nodes.find((n) => n.id === part)?.text ?? null;
+}
+
+/**
+ * What to do with a note made from part of a sheet when the sheet changes: follow it while the note still says
+ * what was last taken from the sheet; once edited by hand, only say the sheet changed (its Refresh takes the new
+ * words). Null: nothing to do.
+ */
+export function followPart(item: Pick<DeskItem, 'body' | 'sketchSent' | 'sketchStale'>, fresh: string | null): Partial<DeskItem> | null {
+  if (fresh === null || fresh === item.sketchSent) return item.sketchStale && fresh === item.body ? { sketchStale: false } : null;
+  if ((item.body ?? '') === (item.sketchSent ?? '')) return { body: fresh, sketchSent: fresh, sketchStale: false };
+  return item.sketchStale ? null : { sketchStale: true };
+}
+
+/**
+ * When a sheet is saved: its picture cards are drawn again, its outline and node notes follow it (followPart),
+ * and every card from it takes the sheet's name. Ink cards are handwriting of their own and stay.
+ */
+export async function refreshSketchCards(sketch: Sketch, name = sketch.title): Promise<void> {
+  const cards = (await listItems()).filter((i) => i.sketchId === sketch.id);
   if (!cards.length) return;
-  const png = await sketchPng(sketch);
-  for (const c of cards) await attachImage(c, png);
+  const svg = cards.some((c) => c.type === 'capture') ? sketchSvgBlob(sketch) : null;
+  for (const c of cards) {
+    if (c.type === 'capture' && svg) await attachImage(c, svg);
+    const follow = c.sketchPart && !c.ink ? followPart(c, partText(sketch, c.sketchPart)) : null;
+    const patch = { ...(follow ?? {}), ...(name && c.sketchTitle !== name ? { sketchTitle: name } : {}) };
+    if (Object.keys(patch).length) await updateItem(c.id, patch);
+  }
+}
+
+/** A note's Refresh: the sheet's words now (the panel is not needed). */
+export async function refreshPart(itemId: string): Promise<void> {
+  const { getItem } = await import('../studyDesk/deskStore');
+  const { getSketch } = await import('./inkStore');
+  const item = await getItem(itemId);
+  const sketch = item?.sketchId ? await getSketch(item.sketchId) : undefined;
+  const fresh = item?.sketchPart && sketch ? partText(sketch, item.sketchPart) : null;
+  if (!item || fresh === null) return;
+  await updateItem(item.id, { body: fresh, sketchSent: fresh, sketchStale: false });
 }

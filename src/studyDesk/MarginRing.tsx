@@ -29,8 +29,8 @@ export interface DeskCommands {
   goToBook?(): void;
 }
 
-/** The ring for empty margin space: write here, then the desk's shortcuts. */
-export function marginActions(c: DeskCommands, write: () => void, settings: () => void): RingAction[] {
+/** The ring for empty margin space: write here, then the desk's shortcuts (and the margin's own `extra`). */
+export function marginActions(c: DeskCommands, write: () => void, settings: () => void, extra: RingAction[] = []): RingAction[] {
   return [
     { id: 'write', label: 'Write a note here', keys: 'Double-tap', run: write },
     { id: 'capture', label: 'Capture a region', keys: 'Alt X', run: c.capture },
@@ -38,6 +38,7 @@ export function marginActions(c: DeskCommands, write: () => void, settings: () =
     { id: 'inbox', label: 'Inbox', keys: 'Alt I', run: c.inbox },
     { id: 'doc', label: 'Document', keys: 'D', run: () => c.document() },
     ...(c.goToBook ? [{ id: 'go', label: 'Go to another book', run: c.goToBook }] : []),
+    ...extra,
     { id: 'settings', label: 'Margin settings', run: settings },
     { id: 'hide', label: 'Hide margins', keys: 'Alt M', run: c.hideMargins },
   ];
@@ -58,8 +59,10 @@ export function MarginRing({ x, y, title, actions, onClose }: { x: number; y: nu
   const [active, setActive] = useState<number | null>(null);
   const first = useRef<HTMLButtonElement>(null);
 
+  // More buttons, a wider ring, so they never overlap.
+  const radius = Math.max(RADIUS, Math.round((actions.length * (BUTTON + 6)) / (2 * Math.PI)));
   // Keep the whole ring on screen.
-  const pad = RADIUS + BUTTON / 2 + 8;
+  const pad = radius + BUTTON / 2 + 8;
   const cx = Math.min(Math.max(x, pad), window.innerWidth - pad);
   const cy = Math.min(Math.max(y, pad), window.innerHeight - pad);
 
@@ -117,7 +120,7 @@ export function MarginRing({ x, y, title, actions, onClose }: { x: number; y: nu
               type="button"
               role="menuitem"
               className={'sd-ring__btn' + (a.danger ? ' sd-ring__btn--danger' : '') + (active === i ? ' sd-ring__btn--on' : '')}
-              style={{ left: Math.cos(angle) * RADIUS, top: Math.sin(angle) * RADIUS, width: BUTTON, height: BUTTON }}
+              style={{ left: Math.cos(angle) * radius, top: Math.sin(angle) * radius, width: BUTTON, height: BUTTON }}
               title={a.keys ? `${a.label} (${a.keys})` : a.label}
               aria-keyshortcuts={a.keys}
               onMouseEnter={() => setActive(i)}

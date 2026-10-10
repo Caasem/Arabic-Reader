@@ -54,6 +54,10 @@ export async function bookSketches(bookId: string): Promise<Sketch[]> {
   return inkDb().sketches.where('bookId').equals(bookId).sortBy('createdAt');
 }
 
+export async function getSketch(id: string): Promise<Sketch | undefined> {
+  return inkDb().sketches.get(id);
+}
+
 export async function saveSketch(sketch: Sketch): Promise<void> {
   await inkDb().sketches.put({ ...sketch, updatedAt: Date.now() });
   changed();

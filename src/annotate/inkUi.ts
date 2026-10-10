@@ -20,6 +20,8 @@ export interface InkUi {
   full: boolean;
   /** A sheet to show instead of the one for the page on screen (a margin card's Open sketch). */
   openSketch: string | null;
+  /** A new blank sheet was asked for (Alt+Shift+K): the time it was asked, 0 once the panel has made it. */
+  newSheet: number;
   /** The PDF page being read (published by the pages view's toolbar), for the sketch panel. */
   pdfPage: number | null;
   /** A stylus has been used: from then on fingers scroll and only the pen writes (palm rejection). */
@@ -29,7 +31,7 @@ export interface InkUi {
   redo: number;
 }
 
-let state: InkUi = { inking: false, tool: 'pen', color: 'ink', width: 2.5, sketch: false, full: false, openSketch: null, pdfPage: null, penSeen: false, undo: 0, redo: 0 };
+let state: InkUi = { inking: false, tool: 'pen', color: 'ink', width: 2.5, sketch: false, full: false, openSketch: null, newSheet: 0, pdfPage: null, penSeen: false, undo: 0, redo: 0 };
 const listeners = new Set<() => void>();
 const subscribe = (l: () => void) => {
   listeners.add(l);

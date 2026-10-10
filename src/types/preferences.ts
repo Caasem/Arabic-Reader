@@ -142,6 +142,8 @@ export interface ReaderPreferences {
   studyDeskMargins: 'both' | 'right' | 'left' | 'off';
   /** Which margin notes appear in the desk document. */
   studyDeskMarginsInDocument: 'all' | 'chosen' | 'none';
+  /** Margin cards with no choice of their own show open or folded to a one-line chip. */
+  studyDeskCards: 'open' | 'folded';
   /** Margin notes go to the inbox when you leave them (auto) or only when you send them (ask). */
   studyDeskMarginsToInbox: 'ask' | 'auto';
   /** Adding a PDF reads its text and reflows it into a book (off: it is added as its pages, without trying). */

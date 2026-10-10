@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sketchOutline, sketchPin, sketchSvg } from './toMargin';
+import { followPart, partText, pngScale, sketchOutline, sketchPin, sketchSvg, wrapLines } from './toMargin';
 
 const node = (id: string, text: string, x = 0, y = 0) => ({ id, x, y, w: 100, h: 40, text, kind: 'plain' as const });
 
@@ -34,3 +34,46 @@ describe('sketchSvg', () => {
     expect(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true);
   });
 });
+
+describe('picture cards', () => {
+  it("wraps a node's words over lines instead of cutting them", () => {
+    expect(wrapLines('one two three four five six seven', 100, 14, 100)).toEqual(['one two', 'three four', 'five six', 'seven']);
+    // Too many lines for the box: the last kept line ends in an ellipsis.
+    const short = wrapLines('one two three four five six seven', 100, 14, 46);
+    expect(short).toHaveLength(2);
+    expect(short[1].endsWith('…')).toBe(true);
+    expect(sketchSvg({ nodes: [node('a', 'a long sentence that will not fit on one line of the box', 0, 0)], edges: [], strokes: [] }).svg).toContain('<tspan');
+  });
+
+  it('keeps PNGs sharp: at least twice the sheet, up to 4096 pixels on the long side', () => {
+    expect(pngScale(300, 200)).toBe(4);
+    expect(pngScale(1500, 600)).toBeCloseTo(4096 / 1500);
+    expect(pngScale(5000, 800)).toBe(2);
+  });
+});
+
+describe('cards that follow their sheet', () => {
+  it('sit level with the first quote on the sheet\'s own page', () => {
+    const nodes = [
+      { ...node('a', 'low', 0, 300), location: 'pdf:4:0.1000:0.6000:0.3000:0.0500' },
+      { ...node('b', 'high', 0, 10), location: 'pdf:4:0.1000:0.2500:0.3000:0.0500' },
+      { ...node('c', 'other page', 0, 0), location: 'pdf:5:0.1000:0.0500:0.3000:0.0500' },
+    ];
+    expect(sketchPin({ key: 'pdf:4', location: 'pdf:4', nodes })).toBe('pdf:4:0.0000:0.2500:1.0000:0.0000');
+    expect(sketchPin({ key: 'clean:2', location: 'clean:2:0:50', nodes: [{ ...node('q', 'q'), location: 'clean:2:300:340' }] })).toBe('clean:2:300:301');
+  });
+
+  it('follow the sheet until edited by hand, then only say it changed', () => {
+    const s = { nodes: [node('a', 'Group feeling')], edges: [], strokes: [] };
+    expect(partText(s, 'a')).toBe('Group feeling');
+    expect(partText(s, 'gone')).toBeNull();
+    // Untouched: takes the new words.
+    expect(followPart({ body: 'Old', sketchSent: 'Old' }, 'New')).toEqual({ body: 'New', sketchSent: 'New', sketchStale: false });
+    // Edited: marked, not overwritten.
+    expect(followPart({ body: 'Mine', sketchSent: 'Old' }, 'New')).toEqual({ sketchStale: true });
+    expect(followPart({ body: 'Mine', sketchSent: 'Old', sketchStale: true }, 'New')).toBeNull();
+    // Nothing changed on the sheet.
+    expect(followPart({ body: 'Mine', sketchSent: 'Old' }, 'Old')).toBeNull();
+  });
+});
+

@@ -1,6 +1,6 @@
 import { newId } from '../utils/id';
 import { borderPoint, clamp, contentBox, hitStroke, pathD, pressureWidth, r1 } from './geometry';
-import { setInkUi } from './inkUi';
+import { MARKER_WIDTH, setInkUi } from './inkUi';
 import type { InkColor, InkPoint, Sketch, SketchEdge, SketchNode, SketchNodeKind } from './types';
 
 /**
@@ -9,7 +9,7 @@ import type { InkColor, InkPoint, Sketch, SketchEdge, SketchNode, SketchNodeKind
  * space; panning and zooming change only the view. The panel (SketchPanel.tsx) owns the buttons and calls in.
  */
 
-export type DrawTool = 'pen' | 'eraser' | 'hand';
+export type DrawTool = 'pen' | 'marker' | 'eraser' | 'lasso' | 'hand';
 export type DiagramTool = 'select' | 'link' | 'hand';
 
 export interface SurfaceState {
@@ -21,25 +21,58 @@ export interface SurfaceState {
   selected: boolean;
   /** The selected node, if a node (not a connector) is selected. */
   node: string | null;
+  /** How many nodes are selected (Shift-click or Shift-drag adds more). */
+  nodes: number;
+  /** How many strokes the lasso holds. */
+  strokes: number;
+  /** The colour shared by the selected nodes, if they share one. */
+  nodeColor: string | null;
   /** The selected connector, and whether it has an arrow. */
   edge: { id: string; dir: boolean } | null;
 }
 
 interface Options {
   colors: Record<InkColor, string>;
+  /** A quote's or picture's ↗: go to its place on the page. */
+  onGo?(node: SketchNode): void;
+  /** A word of a selected quote was clicked: look it up. */
+  onWord?(word: string): void;
+  /** The pointer is over a node (or left it), so the panel can draw its line to the page. */
+  onHoverNode?(node: SketchNode | null, el: HTMLElement | null): void;
   /** The sheet changed (content, mode or view); the panel saves it. `content` is false for view-only changes. */
   onChange(sketch: Sketch, content: boolean): void;
   onState(state: SurfaceState): void;
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+/** A quote's words, each one clickable once the quote is selected (it opens the dictionary). */
+const quoteWords = (text: string) =>
+  text
+    .split(/(\s+)/)
+    .map((w) => (/\S/.test(w) ? `<span class="sk-w">${esc(w)}</span>` : w))
+    .join('');
 type Snap = string;
+
+/** Whether (x, y) is inside the polygon (even-odd rule). */
+function inPolygon(x: number, y: number, poly: [number, number][]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi || 1e-9) + xi) inside = !inside;
+  }
+  return inside;
+}
 
 type Act =
   | { k: 'pan'; p0: [number, number]; tx: number; ty: number }
   | { k: 'ink'; pts: InkPoint[]; pen: boolean }
   | { k: 'erase'; pre: Snap; hit: boolean }
-  | { k: 'move'; id: string; el: HTMLElement; p0: [number, number]; x0: number; y0: number; pre: Snap; moved: boolean; wasSel: boolean; touch: boolean }
+  | { k: 'move'; id: string; el: HTMLElement; p0: [number, number]; x0: number; y0: number; pre: Snap; moved: boolean; wasSel: boolean; touch: boolean; word?: string; group: { id: string; x0: number; y0: number }[] }
+  | { k: 'box'; p0: [number, number]; el: HTMLDivElement }
+  | { k: 'lasso'; pts: [number, number][] }
+  | { k: 'smove'; p0: [number, number]; pre: Snap; orig: Map<string, InkPoint[]>; moved: boolean }
+  | { k: 'sscale'; p0: [number, number]; pre: Snap; orig: Map<string, { pts: InkPoint[]; width: number }>; box: { x: number; y: number; w: number; h: number }; moved: boolean }
   | { k: 'resize'; id: string; el: HTMLElement; p0: [number, number]; w0: number; h0: number; pre: Snap; moved: boolean }
   | { k: 'link'; from: string };
 
@@ -53,6 +86,10 @@ export class SketchSurface {
   private color: InkColor = 'ink';
   private width = 2.5;
   private sel: string | null = null;
+  /** Nodes selected besides `sel` (Shift-click, Shift-drag). */
+  private multi = new Set<string>();
+  /** Strokes the lasso holds (Freehand): moved, resized or deleted together. */
+  private held = new Set<string>();
   private selEdge: string | null = null;
   private linkFrom: string | null = null;
   private editing: string | null = null;
@@ -93,6 +130,8 @@ export class SketchSurface {
     host.addEventListener('pointercancel', this.onUp);
     host.addEventListener('wheel', this.onWheel, { passive: false });
     host.addEventListener('dblclick', this.onDbl);
+    host.addEventListener('mouseover', this.onOver);
+    host.addEventListener('mouseleave', this.onLeave);
     window.addEventListener('keyup', this.onKeyUp);
   }
 
@@ -105,6 +144,8 @@ export class SketchSurface {
     host.removeEventListener('pointercancel', this.onUp);
     host.removeEventListener('wheel', this.onWheel);
     host.removeEventListener('dblclick', this.onDbl);
+    host.removeEventListener('mouseover', this.onOver);
+    host.removeEventListener('mouseleave', this.onLeave);
     window.removeEventListener('keyup', this.onKeyUp);
     host.classList.remove('sk-surface', 'sk-surface--diagram', 'sk-surface--hand', 'sk-surface--erase');
     host.innerHTML = '';
@@ -117,6 +158,8 @@ export class SketchSurface {
     this.undoStack = [];
     this.redoStack = [];
     this.sel = this.selEdge = this.linkFrom = null;
+    this.multi.clear();
+    this.held.clear();
     this.act = null;
     this.render();
   }
@@ -138,7 +181,7 @@ export class SketchSurface {
   }
   private apply(s: Snap): void {
     Object.assign(this.sketch, JSON.parse(s));
-    this.sel = this.selEdge = null;
+    this.clearSel();
     this.changed();
   }
   undo(): void {
@@ -168,10 +211,13 @@ export class SketchSurface {
     this.commitEdit();
     this.sketch.mode = mode;
     this.sel = this.selEdge = this.linkFrom = null;
+    this.multi.clear();
+    this.held.clear();
     this.render();
     this.opts.onChange(this.sketch, false);
   }
   setTool(tool: DrawTool): void {
+    if (tool !== 'lasso') this.release();
     this.tool = tool;
     this.renderCursor();
   }
@@ -200,16 +246,30 @@ export class SketchSurface {
     this.renderCursor();
     this.emitState();
   }
+  /** Every selected node. */
+  private selected(): string[] {
+    return [...new Set([...(this.sel ? [this.sel] : []), ...this.multi])].filter((id) => this.node(id));
+  }
+  private clearSel(): void {
+    this.sel = this.selEdge = null;
+    this.multi.clear();
+    this.held.clear();
+  }
   private emitState(): void {
     const e = this.selEdge ? this.sketch.edges.find((x) => x.id === this.selEdge) : undefined;
+    const ids = this.selected();
+    const colors = new Set(ids.map((id) => this.node(id)?.color ?? ''));
     this.opts.onState({
       mode: this.sketch.mode,
       canUndo: this.undoStack.length > 0,
       canRedo: this.redoStack.length > 0,
       zoom: this.sketch.view.s,
       empty: !this.sketch.strokes.length && !this.sketch.nodes.length,
-      selected: !!(this.sel || this.selEdge),
+      selected: !!(this.sel || this.selEdge || this.multi.size || this.held.size),
       node: this.sel,
+      nodes: ids.length,
+      strokes: this.held.size,
+      nodeColor: colors.size === 1 ? [...colors][0] || null : null,
       edge: e ? { id: e.id, dir: e.dir } : null,
     });
   }
@@ -230,9 +290,41 @@ export class SketchSurface {
     this.emitState();
   }
   private renderInk(): void {
-    this.inkG.innerHTML = this.sketch.strokes
-      .map((s) => `<path class="ink-stroke" d="${pathD(s.pts)}" style="stroke:${this.opts.colors[s.color]};stroke-width:${s.width}"/>`)
-      .join('');
+    this.inkG.innerHTML =
+      this.sketch.strokes
+        .map((s) => `<path class="ink-stroke${s.marker ? ' ink-stroke--marker' : ''}${this.held.has(s.id) ? ' sk-held' : ''}" d="${pathD(s.pts)}" style="stroke:${this.opts.colors[s.color]};stroke-width:${s.width}"/>`)
+        .join('') + this.heldBoxSvg();
+  }
+  /** The box around the strokes the lasso holds, in sheet units, with its resize handle. */
+  private heldBox(): { x: number; y: number; w: number; h: number } | null {
+    if (!this.held.size) return null;
+    const strokes = this.sketch.strokes.filter((s) => this.held.has(s.id));
+    const b = contentBox(strokes, []);
+    if (!b) return null;
+    const pad = 6;
+    return { x: b.x - pad, y: b.y - pad, w: b.w + pad * 2, h: b.h + pad * 2 };
+  }
+  private heldBoxSvg(): string {
+    const b = this.heldBox();
+    if (!b) return '';
+    const k = 1 / this.sketch.view.s;
+    return `<rect class="sk-heldbox" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" style="stroke-width:${k}"/><rect class="sk-heldbox__h" x="${b.x + b.w - 5 * k}" y="${b.y + b.h - 5 * k}" width="${10 * k}" height="${10 * k}"/>`;
+  }
+  /** Lets go of the lasso's strokes. */
+  private release(): void {
+    if (!this.held.size) return;
+    this.held.clear();
+    this.renderInk();
+    this.emitState();
+  }
+  /** Deletes the strokes the lasso holds. */
+  deleteHeld(): boolean {
+    if (!this.held.size) return false;
+    this.checkpoint();
+    this.sketch.strokes = this.sketch.strokes.filter((s) => !this.held.has(s.id));
+    this.held.clear();
+    this.changed();
+    return true;
   }
   private edgePath(e: SketchEdge): string | null {
     const a = this.node(e.a);
@@ -258,9 +350,11 @@ export class SketchSurface {
     this.nodesEl.innerHTML = this.sketch.nodes
       .map(
         (n) =>
-          `<div class="sk-node sk-node--${n.kind}${this.sel === n.id ? ' sk-node--sel' : ''}${this.linkFrom === n.id ? ' sk-node--from' : ''}" data-id="${n.id}" style="left:${n.x}px;top:${n.y}px;width:${n.w}px;min-height:${n.h}px">` +
-          (n.kind === 'quote' ? '<span class="sk-node__tag">Quote</span>' : '') +
-          `<div class="sk-node__text" dir="auto">${esc(n.text)}</div><span class="sk-port" title="Drag to connect"></span><span class="sk-resize"></span></div>`
+          `<div class="sk-node sk-node--${n.kind}${this.sel === n.id || this.multi.has(n.id) ? ' sk-node--sel' : ''}${this.linkFrom === n.id ? ' sk-node--from' : ''}${n.color ? ' sk-node--tinted' : ''}" data-id="${n.id}" style="left:${n.x}px;top:${n.y}px;width:${n.w}px;min-height:${n.h}px${n.color ? `;--node-c:${esc(n.color)}` : ''}">` +
+          (n.kind === 'quote' ? '<span class="sk-node__tag">Quote</span>' : n.kind === 'image' ? '<span class="sk-node__tag">Picture</span>' : '') +
+          (n.location ? '<button type="button" class="sk-node__go" title="Go to it on the page" aria-label="Go to it on the page">↗</button>' : '') +
+          (n.image ? `<img class="sk-node__img" src="${esc(n.image)}" alt="" draggable="false">` : '') +
+          `<div class="sk-node__text" dir="auto">${n.kind === 'quote' ? quoteWords(n.text) : esc(n.text)}</div><span class="sk-port" title="Drag to connect"></span><span class="sk-resize"></span></div>`
       )
       .join('');
     // Connectors meet a node's real edge, so take the height its text needs.
@@ -309,18 +403,18 @@ export class SketchSurface {
   }
 
   // --- diagram actions ----------------------------------------------------------------------------------
-  addNode(at?: [number, number], text = '', kind: SketchNodeKind = 'plain', location?: string): void {
+  addNode(at?: [number, number], text = '', kind: SketchNodeKind = 'plain', location?: string, extra: Partial<SketchNode> = {}): void {
     this.commitEdit();
     const c = at ?? this.centre();
     const k = this.sketch.nodes.length % 6;
-    const w = kind === 'quote' ? 190 : 160;
+    const w = kind === 'image' ? 210 : kind === 'quote' ? 190 : 160;
     this.checkpoint();
     const id = newId('node');
-    this.sketch.nodes.push({ id, x: r1(c[0] - w / 2 + (at ? 0 : k * 12)), y: r1(c[1] - 26 + (at ? 0 : k * 12)), w, h: 52, text, kind, ...(location ? { location } : {}) });
+    this.sketch.nodes.push({ id, x: r1(c[0] - w / 2 + (at ? 0 : k * 12)), y: r1(c[1] - 26 + (at ? 0 : k * 12)), w, h: 52, text, kind, ...(location ? { location } : {}), ...extra });
     this.sel = id;
     this.selEdge = null;
     this.changed();
-    if (!text) this.startEdit(id, true);
+    if (!text && kind !== 'image') this.startEdit(id, true);
   }
   deleteSelection(): void {
     if (this.selEdge) {
@@ -328,15 +422,92 @@ export class SketchSurface {
       this.sketch.edges = this.sketch.edges.filter((e) => e.id !== this.selEdge);
       this.selEdge = null;
       this.changed();
-    } else if (this.sel) {
-      const id = this.sel;
+    } else if (this.sel || this.multi.size) {
+      const ids = new Set(this.selected());
       this.checkpoint();
-      this.sketch.nodes = this.sketch.nodes.filter((n) => n.id !== id);
-      this.sketch.edges = this.sketch.edges.filter((e) => e.a !== id && e.b !== id);
-      this.sel = null;
+      this.sketch.nodes = this.sketch.nodes.filter((n) => !ids.has(n.id));
+      this.sketch.edges = this.sketch.edges.filter((e) => !ids.has(e.a) && !ids.has(e.b));
+      this.clearSel();
       this.changed();
     }
   }
+  /** Tints every selected node (null: the plain box). */
+  setNodeColor(color: string | null): void {
+    const ids = this.selected();
+    if (!ids.length) return;
+    this.checkpoint();
+    for (const id of ids) {
+      const n = this.node(id)!;
+      if (color) n.color = color;
+      else delete n.color;
+    }
+    this.changed();
+  }
+
+  /**
+   * Lays the diagram out as a tree, top to bottom: nodes nothing points to first, then each connector's other end
+   * a row lower (in the order of their parents), every row centred; loose nodes in a last row.
+   */
+  tidy(): void {
+    const nodes = this.sketch.nodes;
+    if (!nodes.length) return;
+    this.checkpoint();
+    const kids = new Map<string, string[]>();
+    const incoming = new Set<string>();
+    for (const e of this.sketch.edges) {
+      if (!kids.has(e.a)) kids.set(e.a, []);
+      kids.get(e.a)!.push(e.b);
+      incoming.add(e.b);
+    }
+    const linked = new Set(this.sketch.edges.flatMap((e) => [e.a, e.b]));
+    const byX = (a: string, b: string) => this.node(a)!.x - this.node(b)!.x;
+    let row = nodes.filter((n) => linked.has(n.id) && !incoming.has(n.id)).map((n) => n.id).sort(byX);
+    if (!row.length && linked.size) row = [nodes.find((n) => linked.has(n.id))!.id];
+    const placed = new Set<string>();
+    const rows: string[][] = [];
+    while (row.length) {
+      row = row.filter((id) => !placed.has(id));
+      row.forEach((id) => placed.add(id));
+      if (row.length) rows.push(row);
+      row = row.flatMap((id) => kids.get(id) ?? []).filter((id, i, all) => !placed.has(id) && all.indexOf(id) === i);
+    }
+    const rest = nodes.filter((n) => !placed.has(n.id)).map((n) => n.id).sort(byX);
+    if (rest.length) rows.push(rest);
+    const cx = this.centre()[0];
+    let y = Math.min(...nodes.map((n) => n.y));
+    for (const r of rows) {
+      const ws = r.map((id) => this.node(id)!.w);
+      const total = ws.reduce((a, b) => a + b, 0) + (r.length - 1) * 36;
+      let x = cx - total / 2;
+      let tallest = 0;
+      r.forEach((id) => {
+        const n = this.node(id)!;
+        n.x = r1(x);
+        n.y = r1(y);
+        x += n.w + 36;
+        tallest = Math.max(tallest, n.h);
+      });
+      y += tallest + 64;
+    }
+    this.changed();
+    this.fit();
+  }
+
+  /** Adds a ready-made diagram (a template) around the middle of the view; its first node is selected. */
+  addTemplate(nodes: { text: string; kind?: SketchNodeKind; x: number; y: number }[], edges: [number, number][]): void {
+    this.commitEdit();
+    if (this.sketch.mode !== 'diagram') this.setMode('diagram');
+    this.checkpoint();
+    const c = this.centre();
+    const ids = nodes.map(() => newId('node'));
+    nodes.forEach((n, i) => this.sketch.nodes.push({ id: ids[i], x: r1(c[0] + n.x - 80), y: r1(c[1] + n.y - 26), w: 160, h: 52, text: n.text, kind: n.kind ?? 'plain' }));
+    for (const [a, b] of edges) this.sketch.edges.push({ id: newId('edge'), a: ids[a], b: ids[b], dir: true });
+    this.clearSel();
+    this.sel = ids[0];
+    this.changed();
+    this.fit();
+  }
+
   toggleArrow(): void {
     const e = this.sketch.edges.find((x) => x.id === this.selEdge);
     if (!e) return;
@@ -416,6 +587,14 @@ export class SketchSurface {
   private onDown = (e: PointerEvent): void => {
     const target = e.target as Element;
     if (target.closest('.sk-zoom')) return;
+    const go = target.closest<HTMLElement>('.sk-node__go');
+    if (go) {
+      e.preventDefault();
+      e.stopPropagation();
+      const n = this.node(go.closest<HTMLElement>('.sk-node')?.dataset.id ?? '');
+      if (n) this.opts.onGo?.(n);
+      return;
+    }
     if (this.editing && target.closest('.sk-node--editing')) return;
     this.commitEdit();
     if (e.pointerType === 'pen' && !this.penSeen) {
@@ -452,13 +631,23 @@ export class SketchSurface {
       if (hit) {
         this.selEdge = hit.dataset.id ?? null;
         this.sel = null;
+        this.multi.clear();
         this.renderNodes();
         this.renderEdges();
         this.emitState();
         return;
       }
-      if (this.sel || this.selEdge || this.linkFrom) {
+      if (e.shiftKey && this.dtool === 'select') {
+        // Shift-drag on the sheet: a box that selects the nodes it touches.
+        const el = document.createElement('div');
+        el.className = 'sk-marquee';
+        this.host.appendChild(el);
+        this.act = { k: 'box', p0: p, el };
+        return;
+      }
+      if (this.sel || this.selEdge || this.linkFrom || this.multi.size) {
         this.sel = this.selEdge = this.linkFrom = null;
+        this.multi.clear();
         this.renderNodes();
         this.renderEdges();
         this.emitState();
@@ -470,11 +659,39 @@ export class SketchSurface {
       this.host.classList.add('sk-surface--panning');
       return;
     }
-    if (this.tool === 'pen') {
+    // The lasso's strokes: drag inside their box to move them, its corner to resize them.
+    const held = this.heldBox();
+    if (held) {
       const w = this.toWorld(p);
+      const k = 1 / v.s;
+      const onHandle = Math.abs(w[0] - (held.x + held.w)) < 9 * k && Math.abs(w[1] - (held.y + held.h)) < 9 * k;
+      const inside = w[0] >= held.x && w[0] <= held.x + held.w && w[1] >= held.y && w[1] <= held.y + held.h;
+      const strokes = this.sketch.strokes.filter((s) => this.held.has(s.id));
+      if (onHandle) {
+        this.act = { k: 'sscale', p0: w, pre: this.snap(), orig: new Map(strokes.map((s) => [s.id, { pts: s.pts.map((q) => [...q] as InkPoint), width: s.width }])), box: held, moved: false };
+        return;
+      }
+      if (inside) {
+        this.act = { k: 'smove', p0: w, pre: this.snap(), orig: new Map(strokes.map((s) => [s.id, s.pts.map((q) => [...q] as InkPoint)])), moved: false };
+        return;
+      }
+      this.release();
+    }
+    if (this.tool === 'lasso') {
+      this.act = { k: 'lasso', pts: [this.toWorld(p)] };
+      this.live.style.stroke = 'var(--accent)';
+      this.live.style.strokeWidth = String(1.2 / v.s);
+      this.live.setAttribute('class', 'ink-stroke sk-lasso-line');
+      this.live.setAttribute('d', pathD(this.act.pts));
+      return;
+    }
+    if (this.tool === 'pen' || this.tool === 'marker') {
+      const w = this.toWorld(p);
+      const marker = this.tool === 'marker';
       this.act = { k: 'ink', pts: [[w[0], w[1], e.pressure || 0.5]], pen: e.pointerType === 'pen' };
+      this.live.setAttribute('class', 'ink-stroke' + (marker ? ' ink-stroke--marker' : ''));
       this.live.style.stroke = this.opts.colors[this.color];
-      this.live.style.strokeWidth = String(this.width);
+      this.live.style.strokeWidth = String(marker ? MARKER_WIDTH : this.width);
       this.live.setAttribute('d', pathD(this.act.pts));
       this.host.classList.add('sk-surface--writing');
     } else if (this.tool === 'eraser') {
@@ -508,16 +725,36 @@ export class SketchSurface {
       this.act = { k: 'resize', id, el, p0: p, w0: n.w, h0: n.h, pre, moved: false };
       return;
     }
-    const wasSel = this.sel === id;
+    // Shift-click adds the node to the selection, or takes it out.
+    if (e.shiftKey) {
+      if (this.sel === id || this.multi.has(id)) {
+        this.multi.delete(id);
+        if (this.sel === id) this.sel = [...this.multi][0] ?? null;
+        if (this.sel) this.multi.delete(this.sel);
+      } else if (this.sel) this.multi.add(id);
+      else this.sel = id;
+      this.selEdge = null;
+      this.renderNodes();
+      this.renderEdges();
+      this.emitState();
+      return;
+    }
+    const wasSel = this.sel === id || this.multi.has(id);
     if (!wasSel) {
       this.sel = id;
       this.selEdge = null;
+      this.multi.clear();
       this.nodesEl.querySelectorAll('.sk-node--sel').forEach((x) => x.classList.remove('sk-node--sel'));
       el.classList.add('sk-node--sel');
       this.renderEdges();
       this.emitState();
     }
-    this.act = { k: 'move', id, el, p0: p, x0: n.x, y0: n.y, pre, moved: false, wasSel, touch: e.pointerType !== 'mouse' };
+    // Dragging one of several selected nodes moves them all.
+    const group = this.selected()
+      .filter((x) => x !== id)
+      .map((x) => ({ id: x, x0: this.node(x)!.x, y0: this.node(x)!.y }));
+    const word = n.kind === 'quote' ? target.closest<HTMLElement>('.sk-w')?.textContent ?? undefined : undefined;
+    this.act = { k: 'move', id, el, p0: p, x0: n.x, y0: n.y, pre, moved: false, wasSel: this.sel === id && wasSel, touch: e.pointerType !== 'mouse', word, group };
   }
 
   private onMove = (e: PointerEvent): void => {
@@ -563,11 +800,61 @@ export class SketchSurface {
         if (!a.moved && Math.hypot(p[0] - a.p0[0], p[1] - a.p0[1]) < 3) return;
         a.moved = true;
         const n = this.node(a.id)!;
-        n.x = r1(a.x0 + (p[0] - a.p0[0]) / v.s);
-        n.y = r1(a.y0 + (p[1] - a.p0[1]) / v.s);
+        const dx = (p[0] - a.p0[0]) / v.s;
+        const dy = (p[1] - a.p0[1]) / v.s;
+        n.x = r1(a.x0 + dx);
+        n.y = r1(a.y0 + dy);
         a.el.style.left = `${n.x}px`;
         a.el.style.top = `${n.y}px`;
+        for (const g of a.group) {
+          const m = this.node(g.id);
+          const gel = this.nodesEl.querySelector<HTMLElement>(`[data-id="${g.id}"]`);
+          if (!m) continue;
+          m.x = r1(g.x0 + dx);
+          m.y = r1(g.y0 + dy);
+          if (gel) {
+            gel.style.left = `${m.x}px`;
+            gel.style.top = `${m.y}px`;
+          }
+        }
         this.renderEdges();
+        break;
+      }
+      case 'lasso': {
+        a.pts.push(this.toWorld(p));
+        this.live.setAttribute('d', pathD(a.pts) + 'Z');
+        break;
+      }
+      case 'smove': {
+        const w = this.toWorld(p);
+        const dx = w[0] - a.p0[0];
+        const dy = w[1] - a.p0[1];
+        if (!a.moved && Math.hypot(dx, dy) * v.s < 2) break;
+        a.moved = true;
+        for (const s of this.sketch.strokes) {
+          const o = a.orig.get(s.id);
+          if (o) s.pts = o.map(([x, y, q]) => [r1(x + dx), r1(y + dy), q]);
+        }
+        this.renderInk();
+        break;
+      }
+      case 'sscale': {
+        const w = this.toWorld(p);
+        const f = Math.max(0.2, Math.min((w[0] - a.box.x) / Math.max(1, a.box.w), (w[1] - a.box.y) / Math.max(1, a.box.h)));
+        a.moved = true;
+        for (const s of this.sketch.strokes) {
+          const o = a.orig.get(s.id);
+          if (!o) continue;
+          s.pts = o.pts.map(([x, y, q]) => [r1(a.box.x + (x - a.box.x) * f), r1(a.box.y + (y - a.box.y) * f), q]);
+          s.width = Math.round(o.width * f * 1000) / 1000;
+        }
+        this.renderInk();
+        break;
+      }
+      case 'box': {
+        const x = Math.min(a.p0[0], p[0]);
+        const y = Math.min(a.p0[1], p[1]);
+        Object.assign(a.el.style, { left: `${x}px`, top: `${y}px`, width: `${Math.abs(p[0] - a.p0[0])}px`, height: `${Math.abs(p[1] - a.p0[1])}px` });
         break;
       }
       case 'resize': {
@@ -607,21 +894,60 @@ export class SketchSurface {
       case 'pan':
         this.opts.onChange(this.sketch, false);
         break;
-      case 'ink':
+      case 'ink': {
         this.live.setAttribute('d', '');
         this.checkpoint();
-        this.sketch.strokes.push({ id: newId('sks'), color: this.color, width: pressureWidth(this.width, a.pts, a.pen), pts: a.pts });
+        const marker = this.tool === 'marker';
+        this.sketch.strokes.push({ id: newId('sks'), color: this.color, width: marker ? MARKER_WIDTH : pressureWidth(this.width, a.pts, a.pen), pts: a.pts, ...(marker ? { marker: true } : {}) });
         this.changed();
+        break;
+      }
+      case 'lasso': {
+        this.live.setAttribute('d', '');
+        this.live.setAttribute('class', 'ink-stroke');
+        // Strokes with most of their points inside the loop.
+        const poly = a.pts;
+        this.held = new Set(this.sketch.strokes.filter((s) => s.pts.filter((q) => inPolygon(q[0], q[1], poly)).length * 2 >= s.pts.length).map((s) => s.id));
+        this.renderInk();
+        this.emitState();
+        break;
+      }
+      case 'smove':
+      case 'sscale':
+        if (a.moved) {
+          this.pushUndo(a.pre);
+          this.changed();
+        }
         break;
       case 'erase':
         if (a.hit) this.changed();
         break;
+      case 'box': {
+        const r = a.el.getBoundingClientRect();
+        a.el.remove();
+        const hits = [...this.nodesEl.children as HTMLCollectionOf<HTMLElement>]
+          .filter((el) => {
+            const b = el.getBoundingClientRect();
+            return b.right > r.left && b.left < r.right && b.bottom > r.top && b.top < r.bottom;
+          })
+          .map((el) => el.dataset.id!);
+        if (hits.length) {
+          if (!this.sel) this.sel = hits.shift()!;
+          hits.forEach((id) => id !== this.sel && this.multi.add(id));
+          this.selEdge = null;
+          this.renderNodes();
+          this.renderEdges();
+          this.emitState();
+        }
+        break;
+      }
       case 'move':
       case 'resize':
         if (a.moved) {
           this.pushUndo(a.pre);
           this.changed();
-        } else if (a.k === 'move' && a.wasSel && a.touch) this.startEdit(a.id, false);
+        } else if (a.k === 'move' && a.wasSel && a.word) this.opts.onWord?.(a.word);
+        else if (a.k === 'move' && a.wasSel && a.touch) this.startEdit(a.id, false);
         break;
       case 'link': {
         const over = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>('.sk-node');
@@ -634,6 +960,7 @@ export class SketchSurface {
 
   private abort(): void {
     if (this.act?.k === 'ink') this.live.setAttribute('d', '');
+    if (this.act?.k === 'box') this.act.el.remove();
     this.act = null;
     this.host.classList.remove('sk-surface--panning', 'sk-surface--writing');
   }
@@ -672,6 +999,20 @@ export class SketchSurface {
       const w = this.toWorld(this.local(e));
       this.addNode([w[0] + 80, w[1]]);
     }
+  };
+
+  private hovered: string | null = null;
+  private onOver = (e: MouseEvent): void => {
+    const el = (e.target as Element).closest<HTMLElement>('.sk-node');
+    const id = el?.dataset.id ?? null;
+    if (id === this.hovered) return;
+    this.hovered = id;
+    this.opts.onHoverNode?.(id ? this.node(id) ?? null : null, el ?? null);
+  };
+  private onLeave = (): void => {
+    if (!this.hovered) return;
+    this.hovered = null;
+    this.opts.onHoverNode?.(null, null);
   };
 
   private onKeyUp = (e: KeyboardEvent): void => {

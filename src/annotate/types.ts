@@ -37,9 +37,11 @@ export interface SketchStroke {
   color: InkColor;
   width: number;
   pts: InkPoint[];
+  /** Written with the marker: wide and see-through. */
+  marker?: boolean;
 }
 
-export type SketchNodeKind = 'plain' | 'note' | 'quote';
+export type SketchNodeKind = 'plain' | 'note' | 'quote' | 'image';
 
 export interface SketchNode {
   id: string;
@@ -49,8 +51,14 @@ export interface SketchNode {
   h: number;
   text: string;
   kind: SketchNodeKind;
-  /** A quote's place in the book (a clean or PDF place, as highlights store them). */
+  /** A quote's (or picture's) place in the book (a clean or PDF place, as highlights store them). */
   location?: string;
+  /** The study desk item it was quoted from (a highlight on a PDF page), which shows it is in a sketch. */
+  deskItemId?: string;
+  /** A picture node: the region of the page, as a data URL. */
+  image?: string;
+  /** A tint for the box (a #rrggbb colour), unset for the plain box. */
+  color?: string;
 }
 
 export interface SketchEdge {
@@ -60,6 +68,9 @@ export interface SketchEdge {
   /** An arrow from a to b; otherwise a plain line. */
   dir: boolean;
 }
+
+/** What a sheet belongs to: the place it was started at, a range of pages (PDF) or chapters (reader), or the book. */
+export type SketchScope = { kind: 'place' } | { kind: 'range'; from: number; to: number } | { kind: 'book' };
 
 /**
  * A sketch sheet: freehand strokes and a diagram of nodes and connectors on one surface. Coordinates are the
@@ -73,6 +84,14 @@ export interface Sketch {
   /** The place it was started at: "pdf:<page>" or a clean place "clean:<chapter>:<start>:<end>" (the passage then on screen). */
   location: string;
   mode: 'draw' | 'diagram';
+  /** Its name on its tab ("Sheet 2" until renamed). */
+  title?: string;
+  /** Unset: the place it was started at. */
+  scope?: SketchScope;
+  /** Closed: not a tab any more, still in All sheets. */
+  hidden?: boolean;
+  /** Its place among the tabs; unset sorts by when it was made. */
+  order?: number;
   view: { tx: number; ty: number; s: number };
   strokes: SketchStroke[];
   nodes: SketchNode[];

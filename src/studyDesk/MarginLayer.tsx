@@ -14,6 +14,8 @@ import { MarginRing, marginActions, useRingTrigger, type DeskCommands, type Ring
 import { fromOtherBooks, groupOf, groupPiles, isBeneath } from './piles';
 import { PileFan } from './PileFan';
 import { usePileGestures, type Side } from './usePileGestures';
+import { foldActions, foldKeys } from './folding';
+import { InkView, useMarginInk, type InkColumn } from './marginInk';
 import './marginLayer.css';
 
 /**
@@ -149,7 +151,7 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
   const [ring, setRing] = useState<RingState | null>(null);
   const areaRing = useRingTrigger((x, y, el) => {
     const side = (el.dataset.side as Side) || 'right';
-    setRing({ x, y, title: 'Margin', actions: marginActions(commands, () => void startNote(side, y), () => setSettingsOpen(true)) });
+    setRing({ x, y, title: 'Margin', actions: marginActions(commands, () => void startNote(side, y), () => setSettingsOpen(true), foldActions(onScreen, (i) => isFolded(i, prefs.studyDeskCards))) });
   });
   const layerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -224,6 +226,19 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
   });
   const fanTop = fanGroup ? placed.find((p) => p.item.id === fanGroup[0].id) : undefined;
 
+  // Writing straight in a margin: ink cards (marginInk.tsx).
+  const ink = useMarginInk(book, data.deskId, (x): InkColumn | null => {
+    const side = sideAt(x);
+    const s = side ? sides?.[side] : null;
+    return side && s ? { side, left: s.from, width: s.to - s.from, place: (y) => cleanLocationNearY(y, 36) } : null;
+  });
+
+  // Folding every card on screen: the cards placed, and the cards of their piles.
+  const placedRef = useRef(placed);
+  placedRef.current = placed;
+  const onScreen = useCallback(() => placedRef.current.flatMap((p) => groupOf(p.item, piles)), [piles]);
+  useEffect(() => (mode === 'off' ? undefined : foldKeys(onScreen)), [mode, onScreen]);
+
   // Pointing at the words an item belongs to lights its card (and the line to it), as hovering the card lights the words.
   const fromText = useRef(false);
   useEffect(() => {
@@ -257,15 +272,16 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
       const el = layer.querySelector<HTMLElement>(`.sd-margins > [data-gloss="${p.item.id}"]`);
       if (!el) continue;
       const tabbed = el.classList.contains('sd-gloss--tabbed') ? 22 : 0;
-      const top = Math.max(p.y - 16, bottoms[p.side] + tabbed);
+      const chip = el.classList.contains('sd-gloss--chip');
+      const top = Math.max(p.y - (chip ? 13 : 16), bottoms[p.side] + tabbed);
       el.style.top = `${top}px`;
       bottoms[p.side] = top + el.offsetHeight + 10 + (el.classList.contains('sd-gloss--pile') ? 10 : 0);
       const sx = p.side === 'right' ? geo.column.right + 6 : geo.column.left - 6;
       const r = el.getBoundingClientRect();
       const gx = p.side === 'right' ? r.left + 1 : r.right - 1;
-      const gy = top + 16;
+      const gy = top + (chip ? 13 : 16);
       const mx = (sx + gx) / 2;
-      const cls = (p.item.id === hoverId || p.item.id === focusId ? 'on' : '') + (p.item.fromMargin && !p.item.text ? ' free' : '');
+      const cls = (p.item.id === hoverId || p.item.id === focusId ? 'on' : '') + (p.item.fromMargin && !p.item.text ? ' free' : '') + (chip ? ' folded' : '');
       paths.push(`<g class="${cls}"><path d="M${sx} ${p.y} C${mx} ${p.y} ${mx} ${gy} ${gx} ${gy}"/><circle cx="${sx}" cy="${p.y}" r="2.4"/></g>`);
     }
     svg.innerHTML = paths.join('');
@@ -313,8 +329,9 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
   const hovered = placed.find((p) => p.item.id === hoverId || p.item.id === focusId);
 
   return (
-    <div ref={layerRef} className="sd-margins" aria-label="Margins" onPointerDown={onLayerPointerDown}>
+    <div ref={layerRef} className="sd-margins" aria-label="Margins" onPointerDown={onLayerPointerDown} onPointerDownCapture={ink.onPointerDownCapture}>
       <svg ref={svgRef} className="sd-margins__lines" aria-hidden="true" />
+      {ink.overlay}
       {hovered?.rects.map((r, i) => (
         <div key={i} className="sd-margins__mark" style={{ left: r.left - 2, top: r.top - 1, width: r.width + 4, height: r.height + 2 }} />
       ))}
@@ -466,8 +483,9 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
   );
 }
 
-const SETS: { key: 'studyDeskMargins' | 'studyDeskMarginsInDocument' | 'studyDeskMarginsToInbox'; label: string; options: [string, string][] }[] = [
+const SETS: { key: 'studyDeskMargins' | 'studyDeskMarginsInDocument' | 'studyDeskMarginsToInbox' | 'studyDeskCards'; label: string; options: [string, string][] }[] = [
   { key: 'studyDeskMargins', label: 'Margins', options: [['both', 'Both sides'], ['right', 'Right only'], ['left', 'Left only'], ['off', 'Hidden']] },
+  { key: 'studyDeskCards', label: 'Cards', options: [['open', 'Open'], ['folded', 'Folded']] },
   { key: 'studyDeskMarginsInDocument', label: 'Margin notes in the document', options: [['all', 'All'], ['chosen', 'Only chosen'], ['none', 'None']] },
   { key: 'studyDeskMarginsToInbox', label: 'Send margin notes to the inbox', options: [['ask', 'When I choose'], ['auto', 'Automatically']] },
 ];
@@ -561,6 +579,11 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
   const [body, setBody] = useState(item.body ?? '');
   const [focused, setFocused] = useState(false);
   const [preview, setPreview] = useState<'hover' | 'pinned' | null>(null);
+  const { prefs } = usePreferences();
+  /** A folded card shows its whole card beside the chip while pointed at. */
+  const [peek, setPeek] = useState(false);
+  const peekTimer = useRef(0);
+  const chipDown = useRef<{ x: number; y: number } | null>(null);
   const ref = useRef<HTMLTextAreaElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const timer = useRef(0);
@@ -579,7 +602,7 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
       requestAnimationFrame(() => ref.current?.focus());
     }
     // An empty note left behind (the page was closed before typing) is cleared the next time it shows.
-    else if (item.fromMargin && !item.body && !item.text && !item.imageHash && Date.now() - item.createdAt > 5000) void deleteItem(item.id);
+    else if (item.fromMargin && !item.body && !item.text && !item.imageHash && !item.ink && Date.now() - item.createdAt > 5000) void deleteItem(item.id);
     // Once, when the card appears.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoFocus]);
@@ -597,6 +620,7 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
     () => () => {
       window.clearTimeout(timer.current);
       window.clearTimeout(hoverTimer.current);
+      window.clearTimeout(peekTimer.current);
       if (pending.current !== null) void updateItem(item.id, { body: pending.current });
     },
     [item.id]
@@ -616,7 +640,7 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
     window.clearTimeout(timer.current);
     pending.current = null;
     const text = body.trim();
-    if (item.fromMargin && !text && !item.text && !item.imageHash) {
+    if (item.fromMargin && !text && !item.text && !item.imageHash && !item.ink) {
       await deleteItem(item.id);
       return;
     }
@@ -708,10 +732,10 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
   const plain = item.fromMargin && item.type === 'line';
   // In piles every card names its kind, plain notes too.
   const kind = item.sketchId
-    ? item.type === 'capture'
-      ? 'Sketch'
-      : 'From sketch'
-    : item.fromMargin
+    ? (item.type === 'capture' ? 'Sketch' : item.ink ? 'Ink from sketch' : 'From sketch') + (item.sketchTitle ? ` · ${item.sketchTitle}` : '')
+    : item.ink && plain
+      ? 'Ink'
+      : item.fromMargin
       ? plain
         ? pile || inline
           ? 'Note'
@@ -719,6 +743,93 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
         : TYPE_LABEL[item.type]
       : TYPE_LABEL[item.type];
   const elsewhere = showSource && item.source && item.source.bookId !== book.id ? item.source.bookTitle || 'another book' : null;
+
+  // Folded: one line at the card's place (its kind, a thumbnail or its first words). Click (or Enter) opens it,
+  // and the ▾ in an open card's corner folds it again; pointing at the chip shows the whole card beside it.
+  const folded = isFolded(item, prefs.studyDeskCards) && !focused && !autoFocus && !inline;
+  if (folded) {
+    const summary = cardSummary(item);
+    const open = () => void updateItem(item.id, { collapsed: false });
+    return (
+      <div
+        ref={boxRef}
+        data-gloss={item.id}
+        className={
+          'sd-gloss sd-gloss--chip sd-gloss--' + side + (pile ? ' sd-gloss--pile' : '') + (pile?.name || pile?.color ? ' sd-gloss--tabbed' : '') + (selected ? ' sd-gloss--sel' : '') + (fanned ? ' sd-gloss--fanned' : '')
+        }
+        style={{ left, width, ...(pile?.color ? ({ '--tab': pile.color } as React.CSSProperties) : {}) }}
+        onContextMenu={(e) => outsideText(e) && cardRing.onContextMenu(e)}
+        onPointerDown={(e) => {
+          chipDown.current = { x: e.clientX, y: e.clientY };
+          if (outsideText(e)) cardRing.onPointerDown(e);
+        }}
+        onPointerMove={cardRing.onPointerMove}
+        onPointerUp={cardRing.onPointerUp}
+        onMouseEnter={() => {
+          onHover(true);
+          window.clearTimeout(peekTimer.current);
+          peekTimer.current = window.setTimeout(() => setPeek(true), 350);
+        }}
+        onMouseLeave={() => {
+          onHover(false);
+          window.clearTimeout(peekTimer.current);
+          setPeek(false);
+        }}
+      >
+        {pile && (
+          <>
+            <span className="sd-pile__under sd-pile__under--1" aria-hidden="true" />
+            {(pile.name || pile.color) && <span className="sd-pile__tab">{pile.name}</span>}
+            <button type="button" className="sd-pile__count" aria-label={`Open the pile of ${pile.count}`} onMouseDown={(e) => e.preventDefault()} onClick={pile.onOpen}>
+              {pile.count}
+            </button>
+          </>
+        )}
+        <div
+          className="sd-chip"
+          role="button"
+          tabIndex={0}
+          aria-expanded={false}
+          aria-label={`Open the card: ${kind ?? 'Note'}${summary ? `, ${summary}` : ''}`}
+          title="Click to open · Enter"
+          onClick={(e) => {
+            const d = chipDown.current;
+            // A drag (onto a pile, to another line) is not a click.
+            if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 5) return;
+            open();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              open();
+            }
+          }}
+        >
+          <span className="sd-chip__k">{kind ?? 'Note'}</span>
+          {img && <img className="sd-chip__thumb" src={img} alt="" />}
+          <span className="sd-chip__t" dir="auto">
+            {summary}
+          </span>
+        </div>
+        {peek && (
+          <div className={'sd-chip__peek sd-chip__peek--' + side} aria-hidden="true">
+            {kind && <div className="sd-gloss__k">{kind}</div>}
+            {item.text && (
+              <div className={'sd-gloss__q' + (item.ar ? ' sd-gloss__q--ar' : '')} dir="auto">
+                {item.text}
+              </div>
+            )}
+            {img && <img src={img} alt="" />}
+            {body.trim() && (
+              <div className="sd-chip__body" dir="auto">
+                {body}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -776,6 +887,21 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
           </button>
         </>
       )}
+      {!inline && (
+        <button
+          type="button"
+          className="sd-gloss__fold"
+          aria-label="Fold this card"
+          title="Fold to one line"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            (document.activeElement as HTMLElement | null)?.blur?.();
+            void updateItem(item.id, { collapsed: true });
+          }}
+        >
+          ▾
+        </button>
+      )}
       {onRemove && (
         <button type="button" className="sd-gloss__x" aria-label="Delete this card" title="Delete (Undo in the message)" onMouseDown={(e) => e.preventDefault()} onClick={onRemove}>
           ×
@@ -791,6 +917,28 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
           )}
           {!item.fromMargin && item.source?.chapterLabel && <span>{item.source.chapterLabel}</span>}
           {item.type === 'card' && <span className="sd-gloss__due">Review · due today</span>}
+          {item.inSketch && !item.sketchId && (
+            <button
+              type="button"
+              className="sd-gloss__open"
+              title="Quoted in a sketch sheet"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => window.dispatchEvent(new CustomEvent('annotate:open-sketch', { detail: { sketchId: item.inSketch } }))}
+            >
+              In sketch ↗
+            </button>
+          )}
+          {item.sketchStale && (
+            <button
+              type="button"
+              className="sd-gloss__open sd-gloss__stale"
+              title="The sheet has changed since this note was edited: take its words now"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => void import('../annotate/toMargin').then((m) => m.refreshPart(item.id)).then(() => onToast('Note refreshed from the sheet'))}
+            >
+              Sheet changed · Refresh
+            </button>
+          )}
           {item.sketchId && (
             // The sketch panel (src/annotate) listens for this and opens the sheet.
             <button
@@ -814,7 +962,8 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
           <span>Front</span> {item.text}
         </div>
       )}
-      {img && (
+      {item.ink && <InkView item={item} />}
+      {img && !item.ink && (
         <button
           type="button"
           className="sd-frame"
@@ -844,7 +993,7 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
         dir="auto"
         rows={1}
         value={body}
-        placeholder={item.fromMargin ? 'Write…' : 'Write a gloss…'}
+        placeholder={item.ink ? 'Add words…' : item.fromMargin ? 'Write…' : 'Write a gloss…'}
         aria-label={item.fromMargin ? 'Margin note' : 'Gloss'}
         onChange={(e) => edit(e.target.value)}
         onPaste={(e) => {
@@ -903,6 +1052,12 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
         <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => onOpenDocument(item.id)}>
           Show in document
         </button>
+        {item.ink && (
+          // The sketch panel (src/annotate) makes a sheet of the ink and opens it.
+          <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => window.dispatchEvent(new CustomEvent('annotate:ink-to-sheet', { detail: { itemId: item.id } }))}>
+            Open as sheet
+          </button>
+        )}
         {item.fromMargin && (
           <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => void deleteItem(item.id)}>
             Delete
@@ -955,4 +1110,16 @@ function QuickLook({ src, side, anchor, pinned, caption, onClose }: { src: strin
       </div>
     </div>
   );
+}
+
+/** Whether a margin card shows folded: its own choice, else Margin settings → Cards. */
+export function isFolded(item: Pick<DeskItem, 'collapsed'>, cards: 'open' | 'folded'): boolean {
+  return item.collapsed ?? cards === 'folded';
+}
+
+/** A folded card's line: its quoted words, else the first line written on it. */
+export function cardSummary(item: Pick<DeskItem, 'text' | 'body'>): string {
+  const first = (item.text || item.body || '').split('\n').find((l) => l.trim()) ?? '';
+  const t = first.replace(/\s+/g, ' ').trim();
+  return t.length > 60 ? t.slice(0, 58) + '…' : t;
 }

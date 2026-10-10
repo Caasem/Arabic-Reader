@@ -52,6 +52,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   studyDeskMargins: 'both',
   studyDeskMarginsInDocument: 'all',
   studyDeskMarginsToInbox: 'ask',
+  studyDeskCards: 'open',
   annotateEnabled: true,
   pdfConvertToText: false,
   pdfHighlightFill: true,

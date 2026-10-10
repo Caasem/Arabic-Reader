@@ -1,7 +1,7 @@
 import { useEffect, type CSSProperties } from 'react';
 import type { PdfPageContext } from '../pdf/pages/extensions';
 import { usePreferences } from '../state/PreferencesContext';
-import { highlighterFill, highlighterOutlines } from './highlighterColour';
+import { highlighterFill, highlighterNight, highlighterOutlines } from './highlighterColour';
 import { pdfBoxMarks, publishOpenedPdf, usePdfDesk } from './pdfDesk';
 import './pdfDesk.css';
 
@@ -21,21 +21,26 @@ export function PdfDeskLayer({ book, opened, page, width, height }: PdfPageConte
   // The Highlighter's look (Settings → Highlighter). With no fill the outline always shows, so a highlight never vanishes.
   const fill = prefs.pdfHighlightFill;
   const outline = !fill && prefs.pdfHighlightOutline === 'off' ? 'always' : prefs.pdfHighlightOutline;
-  const lines = highlighterOutlines(prefs.pdfHighlightColor);
+  const night = prefs.pdfPageTint === 'night';
+  const look = night
+    ? highlighterNight(prefs.pdfHighlightColor, prefs.pdfHighlightOpacity)
+    : { fill: highlighterFill(prefs.pdfHighlightColor, prefs.pdfHighlightOpacity), ...highlighterOutlines(prefs.pdfHighlightColor) };
   const style = {
-    '--sd-hl-fill': fill ? highlighterFill(prefs.pdfHighlightColor, prefs.pdfHighlightOpacity) : 'transparent',
-    '--sd-hl-rest': lines.rest,
-    '--sd-hl-lit': lines.lit,
+    '--sd-hl-fill': fill ? look.fill : 'transparent',
+    '--sd-hl-rest': look.rest,
+    '--sd-hl-lit': look.lit,
   } as CSSProperties;
   return (
-    <div className={`sd-pdfdesk sd-pdfdesk--outline-${outline}`} style={style} aria-hidden="true">
+    <div className={`sd-pdfdesk sd-pdfdesk--outline-${outline}` + (night ? ' sd-pdfdesk--night' : '')} style={style} aria-hidden="true">
       {marks.map((m) => (
         <div
           key={m.item.id}
           className={'sd-pdfbox' + (hover === m.item.id ? ' sd-pdfbox--on' : '') + (m.item.body?.trim() ? ' sd-pdfbox--noted' : '')}
           data-item={m.item.id}
           style={{ left: m.x * width, top: m.y * height, width: m.w * width, height: m.h * height }}
-        />
+        >
+          {m.item.inSketch && <span className="sd-pdfbox__sk" title="In a sketch sheet" />}
+        </div>
       ))}
     </div>
   );

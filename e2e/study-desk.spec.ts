@@ -145,6 +145,50 @@ test.describe('margins', () => {
     await expect(doc.locator('.desk-embed', { hasText: 'Why does he go home?' })).toHaveCount(1);
   });
 
+  test('cards fold to one line and open again: the ▾, a click, [ and ], and the Cards setting', async ({ page }) => {
+    await openSample(page);
+    const area = page.locator('.sd-margins__area').last();
+    const box = (await area.boundingBox())!;
+    await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 1));
+    await expect(page.getByRole('textbox', { name: 'Margin note' })).toBeFocused();
+    await page.keyboard.type('A note to fold away');
+    await page.keyboard.press('Escape');
+    const card = page.locator('.sd-gloss--m');
+    await expect(card).toHaveCount(1);
+
+    // The ▾ folds it to a chip with its first words; pointing at the chip shows the whole card.
+    await card.hover();
+    await card.getByRole('button', { name: 'Fold this card' }).click();
+    const chip = page.getByRole('button', { name: /^Open the card: Note, A note to fold away/ });
+    await expect(chip).toBeVisible();
+    await page.mouse.move(5, 5);
+    await chip.hover();
+    await expect(page.locator('.sd-chip__peek')).toContainText('A note to fold away');
+    // A click opens it again.
+    await chip.click();
+    await expect(page.getByRole('textbox', { name: 'Margin note' })).toHaveValue('A note to fold away');
+
+    // [ folds every card on screen, ] opens them.
+    await page.mouse.move(5, 5);
+    await page.mouse.click(5, 300);
+    await page.keyboard.press('[');
+    await expect(page.locator('.sd-gloss--chip')).toHaveCount(1);
+    await page.keyboard.press(']');
+    await expect(page.locator('.sd-gloss--chip')).toHaveCount(0);
+
+    // Margin settings → Cards: Folded folds cards that have no choice of their own; a new note opens to be written.
+    await page.getByRole('button', { name: 'Margin settings' }).click();
+    await page.getByRole('group', { name: 'Cards' }).getByRole('button', { name: 'Folded' }).click();
+    await page.keyboard.press('Escape');
+    await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 3));
+    await expect(page.locator('.sd-gloss__body:focus')).toHaveCount(1);
+    await page.keyboard.type('Second');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('button', { name: /^Open the card: Note, Second/ })).toBeVisible();
+    // The first card was opened by hand (]), so it stays open.
+    await expect(page.locator('.sd-gloss--m:not(.sd-gloss--chip)')).toHaveCount(1);
+  });
+
   test('a margin note becomes a flashcard in review; Alt+M hides the margins', async ({ page }) => {
     await openSample(page);
     const area = page.locator('.sd-margins__area').last();
@@ -357,6 +401,20 @@ test('the Highlighter lets the page show through its fill, takes a colour, and c
   for (let i = 0; i < 3; i++) expect(under[i]).toBeLessThanOrEqual(paper[i] + 2);
   expect(under).not.toEqual(paper);
 
+  // Night pages (dark paper, light print): the highlight lifts the paper instead, never darkening it.
+  await page.locator('.qr-dock').getByRole('button', { name: 'Display', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Display' }).getByRole('group', { name: 'Pages' }).getByRole('button', { name: 'Night' }).click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.sd-pdfdesk--night')).toHaveCount(1);
+  await page.mouse.move(5, 5);
+  const nightPaper = await pixel(b.x + b.width / 2, b.y + b.height + 40);
+  const nightUnder = await pixel(b.x + b.width / 2, b.y + b.height / 2);
+  for (let i = 0; i < 3; i++) expect(nightUnder[i]).toBeGreaterThanOrEqual(nightPaper[i] - 2);
+  expect(nightUnder).not.toEqual(nightPaper);
+  await page.locator('.qr-dock').getByRole('button', { name: 'Display', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Display' }).getByRole('group', { name: 'Pages' }).getByRole('button', { name: 'Paper' }).click();
+  await page.keyboard.press('Escape');
+
   // Settings → Highlighter: with no outline, turning the fill off brings the outline back, and it cannot then be turned off.
   await page.click('.navbar__settings');
   const section = page.locator('.settings-section', { has: page.getByRole('heading', { name: 'Highlighter' }) });
@@ -382,6 +440,20 @@ test('the Highlighter lets the page show through its fill, takes a colour, and c
 
 test.describe('margin beside PDF pages', () => {
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVR42mP8z8Dwn4GBgYGJAQoAADUBAf8Ik8gAAAAASUVORK5CYII=', 'base64');
+
+  test('the strip folds away while the sketch panel is open, so the pages are never covered', async ({ page }) => {
+    await openScan(page);
+    await expect(page.locator('.sd-pdfmargin__area')).toBeVisible();
+    await page.keyboard.press('Alt+k');
+    const panel = page.getByRole('complementary', { name: 'Sketch' });
+    await expect(panel).toBeVisible();
+    await expect(page.locator('.sd-pdfmargin__area')).toHaveCount(0);
+    const p = (await panel.boundingBox())!;
+    await expect.poll(async () => (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!.x + (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!.width).toBeLessThanOrEqual(p.x + 1);
+    await page.keyboard.press('Escape');
+    await expect(panel).toHaveCount(0);
+    await expect(page.locator('.sd-pdfmargin__area')).toBeVisible();
+  });
 
   test('double-tap writes a note tied to that height of the page', async ({ page }) => {
     await openScan(page);
@@ -835,6 +907,31 @@ test.describe('highlighting on scanned PDF pages', () => {
     await page.keyboard.type('the big school');
     // No dictionary popup from the drag's closing click.
     await expect(page.locator('.dict-popup')).toHaveCount(0);
+  });
+
+  test('Quote in sketch: the words go into the open sheet, linked both ways', async ({ page }) => {
+    await twoWordEngine(page);
+    await openScan(page);
+    await page.keyboard.press('Alt+k');
+    const panel = page.getByRole('complementary', { name: 'Sketch' });
+    await expect(panel).toBeVisible();
+    await dragOnPage(page, [0.2, 0.1], [0.7, 0.2]);
+    const bar = page.getByRole('dialog', { name: 'Highlight on the page' });
+    await expect(bar).toContainText('المدرسة الكبيرة');
+    await bar.getByRole('button', { name: 'Quote in sketch' }).click();
+    // A quote node with its way back to the words.
+    const quote = panel.locator('.sk-node--quote');
+    await expect(quote).toContainText('المدرسة الكبيرة');
+    await expect(quote.getByRole('button', { name: 'Go to it on the page' })).toBeVisible();
+    await expect(panel.locator('.sk-foot [role=status]')).toContainText('Quoted in the sheet');
+    // The highlight on the page says it is in a sketch.
+    await expect(page.locator('.pdfp-page[data-page="1"] .sd-pdfbox .sd-pdfbox__sk')).toHaveCount(1);
+    // Pointing at the quote draws its line to the page; ↗ goes there and flashes the words.
+    await quote.hover();
+    await expect(panel.locator('.sk-lead path')).toHaveCount(1);
+    await page.locator('.pdfp__stage').evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+    await quote.getByRole('button', { name: 'Go to it on the page' }).click();
+    await expect(page.locator('.sk-flash')).not.toHaveCount(0);
   });
 
   test('with snapping off the drag stays an image region', async ({ page }) => {

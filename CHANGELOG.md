@@ -4,6 +4,115 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.93.0 — 2026-10-10
+
+- **Search your sheets.** All sheets has a search box: it finds sheets by name and by the words on them (Arabic
+  without its short vowels), and shows the words that matched.
+
+## v0.92.0 — 2026-10-10
+
+- **Ink on Night pages.** Writing on a PDF page (Alt+W) is now turned with the page on Night pages, so dark ink
+  reads as light print instead of disappearing into the dark paper; coloured ink keeps its hue.
+
+## v0.91.0 — 2026-10-10
+
+- **Notes sent from a sheet follow it.** An outline or a single node sent To margin now changes with the sheet,
+  as picture cards always did, as long as you have not edited the note. Once you have, the note keeps your words
+  and shows *Sheet changed · Refresh* when the sheet changes; Refresh takes the sheet's words.
+- **A sheet's cards sit by its first quote.** Cards sent from a sheet with quotes on its own page now sit level
+  with the highest quote, rather than near the top of the page.
+
+## v0.90.0 — 2026-10-10
+
+- **Marker on sketch sheets** (M): wide, see-through strokes, as on the page.
+- **Lasso** (S) in Freehand: circle strokes to hold them, then drag inside their box to move them, drag its corner
+  to resize them, or press Delete. Undo takes each change back.
+- Ink cards made from a sheet keep marker strokes see-through.
+
+## v0.89.0 — 2026-10-10
+
+- **Coloured boxes in diagrams.** Select a box (or several) and pick a colour from the row that appears: cream,
+  yellow, green, blue, purple or red, or none. Pictures of the sheet keep the colours.
+- **Select several boxes:** Shift-click boxes, or Shift-drag a box around them on the sheet. Drag one to move them
+  all; Delete removes them all.
+- **Tidy** lays the diagram out as a tree: what nothing points to on top, each arrow's end a row lower.
+- **Templates** for study: a root and the words made from it, the i‘rāb of a sentence, and an argument map
+  (claim, reasons, evidence, objection, reply). Write over the placeholders.
+
+## v0.88.0 — 2026-10-10
+
+- **The sketch panel and the PDF margin no longer fight for room.** Both used the right of the screen, so with the
+  sketch open the margin's cards slid under the panel (or the panel covered the pages). The margin beside PDF
+  pages now folds away while the sketch panel is open and comes back, cards and all, when it closes.
+
+## v0.87.0 — 2026-10-10
+
+- **Quote in sketch from the Highlighter.** With the sketch panel open, the Highlighter's bar on a PDF page has
+  *Quote in sketch*: the words dragged over (read by text recognition on scanned pages) go into the sheet as a
+  quote, and the highlight is kept on the page like *Gloss in the margin*. A region with no words read goes in as a
+  picture of that part of the page. The panel's Quote button uses the words waiting in the bar too, and says what
+  to do when nothing is selected.
+- **Quotes lead back to the page.** A quote (or picture) remembers exactly where it came from: its ↗ goes there
+  and briefly rings the words, and pointing at it draws a line to them while they are on screen. Quotes made from
+  a selection in the reader keep their exact place too.
+- **Both ways:** a highlight quoted in a sheet shows a small mark on the page, and its margin card has *In sketch ↗*,
+  which opens the sheet.
+- **Look words up from a quote:** click a word of a selected quote to open it in the dictionary.
+
+## v0.86.0 — 2026-10-10
+
+- **Several sketch sheets per page, as tabs.** The sketch panel shows a tab for every sheet that belongs where you
+  are; **+** (or Alt+Shift+K) starts a new one, kept once something is on it. Double-click a tab to rename it;
+  Ctrl+Tab and Ctrl+Shift+Tab switch between them. The tab you used last on a page opens there again.
+- **A tab's ⋯ menu:** keep the sheet with this page only, a range of pages (or chapters in the reader), or the whole
+  book, so it is a tab wherever that is; duplicate it; move it to another page; export it as SVG, PNG or Markdown
+  (the diagram as an outline); or delete it (Undo in the panel's footer).
+- **✕ closes a tab** without losing the sheet: **All sheets** (the list button) shows every sheet in the book with
+  a picture of it, where it belongs and when it changed, and opens any of them again.
+- **The pin** keeps the sheet on screen while you read on.
+- **The Sketch button counts the sheets** that belong where you are, so they are not forgotten.
+- **Ink cards and sheets go both ways:** an ink card's *Open as sheet* makes a sheet of its handwriting, and To
+  margin → *Handwriting, as an ink card* puts a sheet's freehand strokes in the margin. Cards sent from a sheet
+  carry its name ("Sketch · Grammar").
+- Margin strokes can be undone straight away, and ink cards stay notes when their picture is redrawn.
+
+## v0.85.0 — 2026-10-10
+
+- **Write straight in the margin.** With Write on (Alt+W), writing in a margin (the quiet reader's, or the strip
+  beside PDF pages) makes an **ink card** level with where you write, instead of ink on the page. Strokes written
+  close together, without a long pause, join the same card; a stroke started on a card's handwriting always joins
+  it. A stylus writes in the margin even without Write on; a mouse or finger keeps the margin's usual gestures.
+- Ink cards are ordinary margin cards: they fold (showing a picture of the handwriting), pile, move, take words
+  under the ink, go to the inbox and the desk document, and export with a picture of the ink.
+- Undo and Redo (Ctrl+Z, Ctrl+Shift+Z while writing) take margin strokes back too; the eraser rubs out strokes on
+  an ink card, and an ink card with nothing left on it goes away.
+
+## v0.84.0 — 2026-10-10
+
+- **Fold margin cards to one line.** Every card in the margins (the quiet reader's and the strip beside PDF pages)
+  has a ▾ in its corner that folds it to a chip: its kind, a thumbnail if it has a picture, and its first words.
+  Click the chip (or Enter) to open it; point at it to see the whole card beside it. Its line to the page stays,
+  fainter. Each card remembers whether it is folded.
+- **Fold or open every card on screen** with [ and ], or from the margin's right-click ring (Fold all cards / Open
+  all cards). Piles fold with their top card, keep their count, and can still be dragged and fanned.
+- **Margin settings → Cards: Open or Folded** sets how cards you have not folded or opened yourself are shown. A
+  note you are writing always shows open.
+- The margin ring grows wider when it has more buttons, so they never overlap.
+
+## v0.83.0 — 2026-10-10
+
+- **Sharp sketch pictures in the margin.** A sketch sent To margin as a picture is now kept as an SVG, so it is
+  sharp in the card and in its large preview at any size (it was a PNG of at most 1000 pixels, so big sheets came
+  out blurred). A node's words wrap over several lines in the picture instead of being cut after 40 characters.
+- Word export turns these pictures into PNGs at two to four times their size.
+
+## v0.82.0 — 2026-10-10
+
+- **Highlights show on Night pages.** With Display → Pages → Night, a highlight was all but invisible (the page is
+  inverted, and the Highlighter darkens what is under it). On Night pages it now lifts the dark paper with a deep
+  version of its colour instead, so it shows as a warm patch and the light print stays light. Outlines are lighter
+  than the paper there.
+
 ## v0.81.0 — 2026-10-10
 
 - **Highlighter colour.** Settings → Reading → Highlighter → Colour: cream (still the default), yellow, green, blue,

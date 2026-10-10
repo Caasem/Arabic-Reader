@@ -76,6 +76,14 @@ function pictureXml(pic: Picture, n: number): string {
   );
 }
 
+/** Word takes PNG and JPEG: an SVG (a sketch sheet's card) is drawn into a PNG first, in the browser. */
+async function wordImage(blob: Blob | undefined): Promise<Blob | undefined> {
+  if (!blob || blob.type !== 'image/svg+xml') return blob;
+  if (typeof document === 'undefined') return undefined;
+  const { svgToPng } = await import('../annotate/toMargin');
+  return svgToPng(blob).catch(() => undefined);
+}
+
 const MAX_WIDTH_EMU = 5486400; // 6 inches, the text width of a letter or A4 page with normal margins
 
 async function sizeOf(blob: Blob): Promise<{ w: number; h: number }> {
@@ -117,7 +125,7 @@ export async function toDocx(title: string, blocks: Block[], image: (hash: strin
     else if (item.type === 'concept' || item.type === 'card') out.push(paraXml({ runs: [{ text: t, b: true }, ...(bodyText ? [{ text: ` — ${bodyText}` }] : [])] }));
     else if (!(item.type === 'capture' && /^Region of page \d+$/.test(t))) out.push(paraXml({ runs: [{ text: t }] }));
     if (item.imageHash) {
-      const data = await image(item.imageHash);
+      const data = await wordImage(await image(item.imageHash));
       if (data) {
         const { w, h } = await sizeOf(data);
         const cx = Math.min(MAX_WIDTH_EMU, w * 9525);
