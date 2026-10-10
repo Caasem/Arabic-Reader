@@ -34,6 +34,11 @@
   pointer-events: none;
   overflow: visible;
 }
+/* Night pages show the page inverted (pdfPages.css): the ink is turned the same way, so dark ink reads as light
+   print instead of vanishing into the dark paper, and coloured ink keeps its hue. */
+.pdfp--night .ink-page {
+  filter: invert(0.9) hue-rotate(180deg);
+}
 .ink-page--on {
   pointer-events: auto;
   touch-action: none;

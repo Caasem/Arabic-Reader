@@ -458,3 +458,21 @@ test('a node sent to the margin follows its sheet, until the note is edited: the
   await card.getByRole('button', { name: 'Sheet changed · Refresh' }).click();
   await expect(card.getByRole('textbox')).toHaveValue('Group cohesion');
 });
+
+test('ink on a PDF page stays readable on Night pages', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('.navbar__settings', { timeout: 15000 });
+  await page.setInputFiles('.library__actions input[type=file]', { name: 'reading.pdf', mimeType: 'application/pdf', buffer: Buffer.from(sampleArabicBookPdf()) });
+  await page.locator('.book-card__open').first().click();
+  await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 3', { timeout: 20000 });
+  await page.getByRole('button', { name: 'Write', exact: true }).click();
+  const f = (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!;
+  await scribble(page, f.x + f.width * 0.3, f.y + f.height * 0.5, f.width * 0.3);
+  await expect(page.locator('.pdfp-page[data-page="1"] .ink-page path.ink-stroke')).not.toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await page.locator('.qr-dock').getByRole('button', { name: 'Display', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Display' }).getByRole('group', { name: 'Pages' }).getByRole('button', { name: 'Night' }).click();
+  await page.keyboard.press('Escape');
+  // Turned like the page: dark ink shows light on the dark paper.
+  await expect.poll(() => page.locator('.pdfp-page[data-page="1"] .ink-page').evaluate((el) => getComputedStyle(el).filter)).toContain('invert');
+});

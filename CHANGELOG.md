@@ -4,6 +4,11 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.92.0 — 2026-10-10
+
+- **Ink on Night pages.** Writing on a PDF page (Alt+W) is now turned with the page on Night pages, so dark ink
+  reads as light print instead of disappearing into the dark paper; coloured ink keeps its hue.
+
 ## v0.91.0 — 2026-10-10
 
 - **Notes sent from a sheet follow it.** An outline or a single node sent To margin now changes with the sheet,
