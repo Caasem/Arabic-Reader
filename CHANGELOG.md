@@ -4,6 +4,14 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.80.0 — 2026-10-10
+
+- **Highlights on PDF pages no longer hide the words.** The cream fill now lets the page show through (it is
+  translucent and blends with the page), so highlighted text stays readable.
+- **Settings → Reading → Highlighter.** Dragging over a PDF page to highlight is now called the Highlighter, with
+  its own settings: Fill on or off, Fill strength (20-100%, 70% by default), and Outline (Off, When pointed at,
+  Always). With the fill off, highlights show by their outline only, and the outline cannot be turned off.
+
 ## v0.79.0 — 2026-10-10
 
 - **The whole dock on PDF pages.** Contents, Search, Marks, Words and Levels now work on PDF pages too, so the PDF

@@ -32,6 +32,7 @@ import { SyncSettings } from './settings/SyncSettings';
 import { StorageSettings } from './settings/StorageSettings';
 import { QuietReaderSettings } from '../../quietReader/QuietReaderSettings';
 import { PdfOcrSettings } from '../../pdf/ocr';
+import { PdfHighlighterSettings } from '../../pdf/import/PdfHighlighterSettings';
 import { PdfImportSettings } from '../../pdf/import/PdfImportSettings';
 import './SettingsPanel.css';
 
@@ -70,6 +71,7 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
       <SearchSettings key="search" />,
       <PomodoroSettings key="pomodoro" />,
       <PdfImportSettings key="pdfimport" />,
+      <PdfHighlighterSettings key="pdfhighlighter" />,
       <PdfOcrSettings key="pdfocr" />,
     ],
   },

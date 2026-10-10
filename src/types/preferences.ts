@@ -146,6 +146,12 @@ export interface ReaderPreferences {
   studyDeskMarginsToInbox: 'ask' | 'auto';
   /** Adding a PDF reads its text and reflows it into a book (off: it is added as its pages, without trying). */
   pdfConvertToText: boolean;
+  /** The Highlighter on PDF pages: a translucent cream fill over a highlighted region (off: outline only). */
+  pdfHighlightFill: boolean;
+  /** How strong that fill is, 0.2-1. */
+  pdfHighlightOpacity: number;
+  /** A gold outline around highlights: never, only while one is pointed at or its card is, or always. */
+  pdfHighlightOutline: 'off' | 'hover' | 'always';
   /** How PDF pages are drawn: as printed, warmer (sepia), or dark with light text (night). */
   pdfPageTint: 'paper' | 'sepia' | 'night';
   /** Ink and sketches (src/annotate): write on the page (Alt+W) and a sketch sheet beside it (Alt+K). */

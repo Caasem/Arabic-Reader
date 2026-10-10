@@ -9,7 +9,7 @@ import { setSnapEnabled, snapDrag, snapEnabled, type FracBox, type Snapped } fro
 import { capture, looksArabic, type DeskData } from './useDesk';
 
 /**
- * Highlighting straight on PDF pages, without Alt+X. On a scanned page, drag over words with a mouse or pen
+ * The Highlighter: highlighting straight on PDF pages, without Alt+X. On a scanned page, drag over words with a mouse or pen
  * (touch keeps scrolling); on a page with a text layer, select text as usual. The box snaps to the words
  * inside it (pdfSnap.ts) and a bar beside it offers Gloss in the margin, Send to inbox, snapping on or off,
  * and Cancel. While a margin note waits to be tied (Tie to words), the bar ties it instead.

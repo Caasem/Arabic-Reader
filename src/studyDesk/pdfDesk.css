@@ -4,25 +4,32 @@
   inset: 0;
   pointer-events: none;
   z-index: 3;
+  /* The layer as a whole multiplies with the page under it, so the words stay dark through the fill. The blend
+     sits here, not on each box: z-index makes this layer its own stacking context, and a box blending inside it
+     would find nothing to blend with. The fill is translucent too, so the text shows even where blending fails. */
+  mix-blend-mode: multiply;
 }
 .sd-pdfbox {
-  /* The Reading Graph highlight (.hl): soft gold, rounded, 4px of room each side, a gold outline when lit.
-     Paper colours, because PDF pages stay white in every theme. The room is drawn by ::before, so the box
-     itself keeps the region's exact edges (other code places things against them). */
+  /* The Highlighter (Reading Graph's .hl): cream, rounded, 4px of room each side, a gold outline as set in
+     Settings → Highlighter. Paper colours, because PDF pages stay white in every theme. The room is drawn by
+     ::before, so the box itself keeps the region's exact edges (other code places things against them). */
   position: absolute;
-  mix-blend-mode: multiply;
 }
 .sd-pdfbox::before {
   content: '';
   position: absolute;
   inset: 0 -4px;
   border-radius: 6px;
-  background: #f6ead0;
+  background: rgb(246 234 208 / var(--sd-hl-alpha, 0.7));
   outline: 2px solid transparent;
   outline-offset: 1px;
   transition: outline-color 0.15s;
 }
-.sd-pdfbox--on::before {
+.sd-pdfdesk--outline-always .sd-pdfbox::before {
+  outline-color: #c9a85a;
+}
+.sd-pdfdesk--outline-hover .sd-pdfbox--on::before,
+.sd-pdfdesk--outline-always .sd-pdfbox--on::before {
   outline-color: #7d5a14;
 }
 /* A highlight with a gloss written in the margin carries Reading Graph's teal dot. */
