@@ -76,6 +76,10 @@ export function CleanInkLayer({ book }: { book: BookMeta }) {
     const t = window.setInterval(() => setStage((s) => (s && s.isConnected ? s : findStage())), 500);
     return () => window.clearInterval(t);
   }, []);
+  // Turning the pen on looks at once, so the first stroke is never lost to the wait.
+  useEffect(() => {
+    if (ui.inking) setStage((s) => (s && s.isConnected ? s : findStage()));
+  }, [ui.inking]);
 
   const measure = useCallback(() => {
     if (!stage?.isConnected) return;

@@ -4,6 +4,11 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.72.2 — 2026-10-09
+
+- Writing on the page right after a book opens no longer loses the first stroke.
+- PDF highlight boxes keep their exact place on the page; the gold's extra room each side is drawn around them.
+
 ## v0.72.0 — 2026-10-09
 
 - **Highlights look like Reading Graph's.** Highlighted boxes on PDF pages are soft gold with rounded corners and a

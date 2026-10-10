@@ -50,6 +50,7 @@ test('Alt+W writes on the text; the ink stays with its word and lookups come bac
 
   await page.keyboard.press('Alt+w');
   await expect(page.getByRole('toolbar', { name: 'Write on the page' })).toBeVisible();
+  await expect(page.locator('.ink-clean--on')).toBeVisible();
   await scribble(page, box.x + box.width / 2 - 80, box.y + box.height + 2);
   await expect(page.locator('.ink-clean .ink-stroke[d^="M"]')).toHaveCount(1, { timeout: 5000 });
 
