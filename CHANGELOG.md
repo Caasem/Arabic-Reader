@@ -4,6 +4,14 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.91.0 — 2026-10-10
+
+- **Notes sent from a sheet follow it.** An outline or a single node sent To margin now changes with the sheet,
+  as picture cards always did, as long as you have not edited the note. Once you have, the note keeps your words
+  and shows *Sheet changed · Refresh* when the sheet changes; Refresh takes the sheet's words.
+- **A sheet's cards sit by its first quote.** Cards sent from a sheet with quotes on its own page now sit level
+  with the highest quote, rather than near the top of the page.
+
 ## v0.90.0 — 2026-10-10
 
 - **Marker on sketch sheets** (M): wide, see-through strokes, as on the page.

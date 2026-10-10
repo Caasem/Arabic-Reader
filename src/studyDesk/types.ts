@@ -83,6 +83,12 @@ export interface DeskItem {
   sketchTitle?: string;
   /** Quoted in a sketch sheet (its id): the highlight and its card say so and open the sheet. */
   inSketch?: string;
+  /** A note made from part of a sheet: 'outline' (the whole diagram) or the id of one node. */
+  sketchPart?: string;
+  /** The words last taken from the sheet: while the note still says them, it follows the sheet. */
+  sketchSent?: string;
+  /** The sheet changed after the note was edited by hand: it offers Refresh instead of overwriting. */
+  sketchStale?: boolean;
   /** Handwriting written straight in the margin (an ink card); `imageHash` holds a picture of it. */
   ink?: DeskInk;
   /** Folded to a one-line chip in the margin (true), or open (false). Unset follows Margin settings → Cards. */

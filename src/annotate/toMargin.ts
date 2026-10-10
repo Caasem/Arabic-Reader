@@ -2,10 +2,10 @@ import type { BookMeta } from '../types';
 import { formatCleanLocation, parseCleanLocation } from '../quietReader/location';
 import { bookDeskId, listItems, updateItem } from '../studyDesk/deskStore';
 import { attachImage } from '../studyDesk/marginImages';
-import { formatPdfLocation } from '../studyDesk/pageGeometry';
+import { formatPdfLocation, parsePdfLocation } from '../studyDesk/pageGeometry';
 import { capture } from '../studyDesk/useDesk';
 import { addInk, inkBlob } from '../studyDesk/marginInk';
-import type { DeskInk } from '../studyDesk/types';
+import type { DeskInk, DeskItem } from '../studyDesk/types';
 import { borderPoint, contentBox, pathD, r1 } from './geometry';
 import { PAPER_COLORS } from './inkUi';
 import type { Sketch } from './types';
@@ -47,8 +47,21 @@ export function sketchOutline(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): s
   return lines.join('\n');
 }
 
-/** Where the card sits: the sheet's PDF page (near its top) or the first line of the passage it was started on. */
-export function sketchPin(s: Pick<Sketch, 'key' | 'location'>): string | null {
+/**
+ * Where the card sits: level with the sheet's first quote on its own page or chapter (the highest on the sheet),
+ * else its PDF page near the top, or the first line of the passage it was started on.
+ */
+export function sketchPin(s: Pick<Sketch, 'key' | 'location'> & { nodes?: Sketch['nodes'] }): string | null {
+  const quoted = (s.nodes ?? [])
+    .filter((n) => n.location)
+    .sort((a, b) => a.y - b.y)
+    .map((n) => n.location!);
+  for (const at of quoted) {
+    const box = parsePdfLocation(at);
+    if (box && s.key === `pdf:${box.page}`) return formatPdfLocation(box.page, 0, box.y, 1, 0);
+    const clean = parseCleanLocation(at);
+    if (clean && s.key === `clean:${clean.chapter}`) return formatCleanLocation({ chapter: clean.chapter, start: clean.start, end: clean.start + 1 });
+  }
   if (s.key.startsWith('pdf:')) {
     const page = Number(s.key.slice(4));
     return Number.isInteger(page) && page > 0 ? formatPdfLocation(page, 0, 0.1, 1, 0) : null;
@@ -203,24 +216,57 @@ export async function sendSketchToMargin(book: BookMeta, sketch: Sketch, how: Se
     return;
   }
   if (how === 'picture') await capture(book, deskId, { ...base, type: 'capture', body: '' }, sketchSvgBlob(sketch));
-  else if (how === 'outline') await capture(book, deskId, { ...base, type: 'line', body: sketchOutline(sketch) });
+  else if (how === 'outline') {
+    const body = sketchOutline(sketch);
+    await capture(book, deskId, { ...base, type: 'line', body, sketchPart: 'outline', sketchSent: body });
+  }
   else {
     const node = sketch.nodes.find((n) => n.id === nodeId);
     if (!node) throw new Error('Select a node first');
-    await capture(book, deskId, { ...base, type: 'line', body: node.text });
+    await capture(book, deskId, { ...base, type: 'line', body: node.text, sketchPart: node.id, sketchSent: node.text });
   }
 }
 
+/** What a note made from part of a sheet should say now: the outline, or its node's words (null: the node is gone). */
+export function partText(sketch: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>, part: string): string | null {
+  if (part === 'outline') return sketchOutline(sketch);
+  return sketch.nodes.find((n) => n.id === part)?.text ?? null;
+}
+
 /**
- * Draws again every picture card of this sheet (outlines, single nodes and ink cards are cards of their own and
- * stay), and gives every card from it the sheet's name.
+ * What to do with a note made from part of a sheet when the sheet changes: follow it while the note still says
+ * what was last taken from the sheet; once edited by hand, only say the sheet changed (its Refresh takes the new
+ * words). Null: nothing to do.
+ */
+export function followPart(item: Pick<DeskItem, 'body' | 'sketchSent' | 'sketchStale'>, fresh: string | null): Partial<DeskItem> | null {
+  if (fresh === null || fresh === item.sketchSent) return item.sketchStale && fresh === item.body ? { sketchStale: false } : null;
+  if ((item.body ?? '') === (item.sketchSent ?? '')) return { body: fresh, sketchSent: fresh, sketchStale: false };
+  return item.sketchStale ? null : { sketchStale: true };
+}
+
+/**
+ * When a sheet is saved: its picture cards are drawn again, its outline and node notes follow it (followPart),
+ * and every card from it takes the sheet's name. Ink cards are handwriting of their own and stay.
  */
 export async function refreshSketchCards(sketch: Sketch, name = sketch.title): Promise<void> {
   const cards = (await listItems()).filter((i) => i.sketchId === sketch.id);
   if (!cards.length) return;
-  const svg = sketchSvgBlob(sketch);
+  const svg = cards.some((c) => c.type === 'capture') ? sketchSvgBlob(sketch) : null;
   for (const c of cards) {
-    if (c.type === 'capture') await attachImage(c, svg);
-    if (name && c.sketchTitle !== name) await updateItem(c.id, { sketchTitle: name });
+    if (c.type === 'capture' && svg) await attachImage(c, svg);
+    const follow = c.sketchPart && !c.ink ? followPart(c, partText(sketch, c.sketchPart)) : null;
+    const patch = { ...(follow ?? {}), ...(name && c.sketchTitle !== name ? { sketchTitle: name } : {}) };
+    if (Object.keys(patch).length) await updateItem(c.id, patch);
   }
+}
+
+/** A note's Refresh: the sheet's words now (the panel is not needed). */
+export async function refreshPart(itemId: string): Promise<void> {
+  const { getItem } = await import('../studyDesk/deskStore');
+  const { getSketch } = await import('./inkStore');
+  const item = await getItem(itemId);
+  const sketch = item?.sketchId ? await getSketch(item.sketchId) : undefined;
+  const fresh = item?.sketchPart && sketch ? partText(sketch, item.sketchPart) : null;
+  if (!item || fresh === null) return;
+  await updateItem(item.id, { body: fresh, sketchSent: fresh, sketchStale: false });
 }

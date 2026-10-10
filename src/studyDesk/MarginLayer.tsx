@@ -928,6 +928,17 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
               In sketch ↗
             </button>
           )}
+          {item.sketchStale && (
+            <button
+              type="button"
+              className="sd-gloss__open sd-gloss__stale"
+              title="The sheet has changed since this note was edited: take its words now"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => void import('../annotate/toMargin').then((m) => m.refreshPart(item.id)).then(() => onToast('Note refreshed from the sheet'))}
+            >
+              Sheet changed · Refresh
+            </button>
+          )}
           {item.sketchId && (
             // The sketch panel (src/annotate) listens for this and opens the sheet.
             <button

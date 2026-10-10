@@ -415,3 +415,46 @@ test('freehand: the marker, and the lasso moves and deletes strokes', async ({ p
   await page.keyboard.press('Control+z');
   await expect(panel.locator('.sk-ink path.ink-stroke')).toHaveCount(3);
 });
+
+test('a node sent to the margin follows its sheet, until the note is edited: then it offers Refresh', async ({ page }) => {
+  await openSample(page);
+  await page.keyboard.press('Alt+k');
+  let panel = page.getByRole('complementary', { name: 'Sketch' });
+  await panel.getByRole('button', { name: 'Diagram' }).click();
+  await panel.getByRole('button', { name: 'Add a node (N)' }).click();
+  await page.keyboard.type('Group feeling');
+  await page.keyboard.press('Enter');
+  await panel.locator('.sk-node').click();
+  await panel.getByRole('button', { name: /To margin/ }).click();
+  await panel.getByRole('menuitem', { name: /Selected node only/ }).click();
+  await expect(panel.locator('.sk-foot [role=status]')).toContainText('Node sent to the margin');
+
+  const renameNode = async (text: string) => {
+    await page.keyboard.press('Alt+k');
+    panel = page.getByRole('complementary', { name: 'Sketch' });
+    await panel.locator('.sk-node').click();
+    await page.keyboard.press('Enter');
+    await page.keyboard.type(text);
+    await page.keyboard.press('Enter');
+    await expect(panel).toContainText('Saved on this device');
+    await page.keyboard.press('Escape');
+    await expect(panel).toHaveCount(0);
+  };
+  await page.keyboard.press('Escape');
+  const card = page.locator('.sd-gloss', { hasText: 'From sketch' });
+  await expect(card.getByRole('textbox')).toHaveValue('Group feeling');
+
+  // The sheet changes: the untouched note follows.
+  await renameNode('Asabiyya');
+  await expect(card.getByRole('textbox')).toHaveValue('Asabiyya');
+
+  // Edited by hand, it is not overwritten: it says the sheet changed, and Refresh takes the new words.
+  await card.getByRole('textbox').click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' (my note)');
+  await page.keyboard.press('Escape');
+  await renameNode('Group cohesion');
+  await expect(card.getByRole('textbox')).toHaveValue('Asabiyya (my note)');
+  await card.getByRole('button', { name: 'Sheet changed · Refresh' }).click();
+  await expect(card.getByRole('textbox')).toHaveValue('Group cohesion');
+});

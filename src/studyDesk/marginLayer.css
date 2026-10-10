@@ -996,3 +996,9 @@ body.ink-writing .sd-pdfmargin__area {
   cursor: crosshair;
   touch-action: none;
 }
+
+/* A note from a sheet that has changed since the note was edited (toMargin.ts followPart). */
+.sd-gloss__stale {
+  color: var(--accent);
+  font-weight: 600;
+}
