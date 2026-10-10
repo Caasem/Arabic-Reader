@@ -1,9 +1,11 @@
 import type { BookMeta } from '../types';
 import { formatCleanLocation, parseCleanLocation } from '../quietReader/location';
-import { bookDeskId, listItems } from '../studyDesk/deskStore';
+import { bookDeskId, listItems, updateItem } from '../studyDesk/deskStore';
 import { attachImage } from '../studyDesk/marginImages';
 import { formatPdfLocation } from '../studyDesk/pageGeometry';
 import { capture } from '../studyDesk/useDesk';
+import { addInk, inkBlob } from '../studyDesk/marginInk';
+import type { DeskInk } from '../studyDesk/types';
 import { borderPoint, contentBox, pathD, r1 } from './geometry';
 import { PAPER_COLORS } from './inkUi';
 import type { Sketch } from './types';
@@ -14,10 +16,11 @@ import type { Sketch } from './types';
  * - picture: a card with the sheet as an SVG (sharp at any size, in the card and its large preview); it is drawn
  *   again whenever the sheet changes. Word export turns it into a PNG (docxExport.ts);
  * - outline: a margin note whose lines are the diagram (each arrow's target indented under its node);
- * - node: one node's words as a margin note.
+ * - node: one node's words as a margin note;
+ * - ink: the sheet's handwriting as an ink card (studyDesk/marginInk.tsx), sized to the margin.
  * Each carries `sketchId`, so the card can open its sheet again.
  */
-export type SendHow = 'picture' | 'outline' | 'node';
+export type SendHow = 'picture' | 'outline' | 'node' | 'ink';
 
 /** The diagram as lines of text: roots first, each arrow's target indented under it with "→". */
 export function sketchOutline(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): string {
@@ -152,7 +155,21 @@ export function sketchPng(s: Sketch): Promise<Blob> {
   return svgToPng(sketchSvgBlob(s));
 }
 
-export async function sendSketchToMargin(book: BookMeta, sketch: Sketch, how: SendHow, nodeId?: string | null): Promise<void> {
+/** A margin card's width for handwriting: the sheet's strokes, scaled down to fit it if wider. */
+const INK_CARD_W = 240;
+
+/** The sheet's freehand strokes as an ink card's ink, scaled to fit a margin card. */
+export function sketchInk(s: Pick<Sketch, 'strokes'>): DeskInk | null {
+  const box = contentBox(s.strokes, []);
+  if (!box) return null;
+  const k = Math.min(1, INK_CARD_W / Math.max(1, box.w + 16));
+  let ink: DeskInk | undefined;
+  for (const st of s.strokes)
+    ink = addInk(ink, { color: st.color, width: r1(st.width * k), pts: st.pts.map(([x, y, p]) => [r1((x - box.x) * k), r1((y - box.y) * k), p]) }, INK_CARD_W);
+  return ink ?? null;
+}
+
+export async function sendSketchToMargin(book: BookMeta, sketch: Sketch, how: SendHow, nodeId?: string | null, name?: string): Promise<void> {
   const location = sketchPin(sketch);
   if (!location) throw new Error('No place for this sheet');
   const base = {
@@ -162,8 +179,15 @@ export async function sendSketchToMargin(book: BookMeta, sketch: Sketch, how: Se
     pin: { bookId: book.id, location, side: 'right' as const },
     source: { bookId: book.id, bookTitle: book.title, location },
     sketchId: sketch.id,
+    ...(name ? { sketchTitle: name } : {}),
   };
   const deskId = bookDeskId(book.id);
+  if (how === 'ink') {
+    const ink = sketchInk(sketch);
+    if (!ink) throw new Error('Only handwriting makes an ink card: draw in Freehand first');
+    await capture(book, deskId, { ...base, type: 'line', body: '', ink }, inkBlob(ink));
+    return;
+  }
   if (how === 'picture') await capture(book, deskId, { ...base, type: 'capture', body: '' }, sketchSvgBlob(sketch));
   else if (how === 'outline') await capture(book, deskId, { ...base, type: 'line', body: sketchOutline(sketch) });
   else {
@@ -173,10 +197,16 @@ export async function sendSketchToMargin(book: BookMeta, sketch: Sketch, how: Se
   }
 }
 
-/** Draws again every picture card of this sheet (outlines and single nodes are notes of their own and stay). */
-export async function refreshSketchCards(sketch: Sketch): Promise<void> {
-  const cards = (await listItems()).filter((i) => i.sketchId === sketch.id && i.type === 'capture');
+/**
+ * Draws again every picture card of this sheet (outlines, single nodes and ink cards are cards of their own and
+ * stay), and gives every card from it the sheet's name.
+ */
+export async function refreshSketchCards(sketch: Sketch, name = sketch.title): Promise<void> {
+  const cards = (await listItems()).filter((i) => i.sketchId === sketch.id);
   if (!cards.length) return;
   const svg = sketchSvgBlob(sketch);
-  for (const c of cards) await attachImage(c, svg);
+  for (const c of cards) {
+    if (c.type === 'capture') await attachImage(c, svg);
+    if (name && c.sketchTitle !== name) await updateItem(c.id, { sketchTitle: name });
+  }
 }

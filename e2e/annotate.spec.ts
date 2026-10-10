@@ -177,6 +177,7 @@ test('writing in a margin makes an ink card: strokes close together join it, Und
     return r.top + r.height / 2;
   });
   await page.keyboard.press('Alt+w');
+  await expect(page.locator('body.ink-writing')).toHaveCount(1);
   await scribble(page, a.x + 30, lineY, 120);
   const card = page.locator('.sd-gloss', { has: page.locator('.sd-mink') });
   await expect(card).toHaveCount(1);
@@ -224,5 +225,96 @@ test('writing in the strip beside PDF pages makes an ink card there', async ({ p
   // It is a desk item: the document lists it with a picture of the ink.
   await page.keyboard.press('Escape');
   await expect(page.locator('.sd-pdfmargin .sd-gloss')).toContainText('Ink');
+});
+
+test('sheets are tabs: + adds one, a name sticks, ✕ closes to All sheets, Ctrl+Tab switches, the dock counts them', async ({ page }) => {
+  await openSample(page);
+  await page.keyboard.press('Alt+k');
+  const panel = page.getByRole('complementary', { name: 'Sketch' });
+  const tabs = panel.getByRole('tab');
+  const draw = async (dy = 0) => {
+    const sheet = (await panel.locator('.sk-surface').boundingBox())!;
+    await scribble(page, sheet.x + 60, sheet.y + 80 + dy);
+  };
+  await draw();
+  await expect(tabs).toHaveCount(1);
+  await expect(tabs.first()).toHaveText('Sheet 1');
+
+  // + opens a second sheet; it is kept once something is on it.
+  await panel.getByRole('button', { name: /^New sheet/ }).click();
+  await expect(tabs).toHaveCount(2);
+  await expect(panel.locator('.sk-ink path')).toHaveCount(0);
+  await draw(40);
+  await draw(80);
+  await expect(panel.locator('.sk-ink path')).toHaveCount(2);
+  await expect(panel).toContainText('Saved on this device');
+
+  // Double-click renames.
+  await tabs.nth(1).dblclick();
+  await panel.getByRole('textbox', { name: 'Sheet name' }).fill('Grammar');
+  await page.keyboard.press('Enter');
+  await expect(tabs.nth(1)).toHaveText('Grammar');
+
+  // Ctrl+Tab goes to the other sheet.
+  await panel.locator('.sk-surface').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('Control+Tab');
+  await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true');
+  await expect(panel.locator('.sk-ink path')).toHaveCount(1);
+
+  // The dock's Sketch button counts the sheets here.
+  await expect(page.locator('.qr-dock').getByRole('button', { name: /Sketch/ })).toContainText('2');
+
+  // ✕ closes a sheet: no longer a tab, still in All sheets, from where it opens again.
+  await panel.getByRole('button', { name: 'Close Grammar' }).click();
+  await expect(tabs).toHaveCount(1);
+  await panel.getByRole('button', { name: 'All sheets' }).click();
+  const list = panel.getByRole('dialog', { name: 'All sheets' });
+  await expect(list.locator('.sk-list__item')).toHaveCount(2);
+  await expect(list).toContainText('closed');
+  await list.locator('.sk-list__item', { hasText: 'Grammar' }).click();
+  await expect(tabs).toHaveCount(2);
+  await expect(panel.getByRole('tab', { name: 'Grammar' })).toHaveAttribute('aria-selected', 'true');
+
+  // The whole book: the sheet is a tab in every chapter.
+  await panel.getByRole('button', { name: 'More for Grammar' }).click();
+  await panel.getByRole('menuitemradio', { name: 'The whole book' }).click();
+  await expect(panel.getByRole('tab', { name: /Grammar/ })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.locator('.qr-dock').getByRole('button', { name: /Contents/ }).click();
+  await page.locator('.qr-drawer, [role=dialog]').getByText(/الفصل الثالث/).first().click();
+  await page.keyboard.press('Alt+k');
+  await expect(page.getByRole('complementary', { name: 'Sketch' }).getByRole('tab', { name: /Grammar/ })).toBeVisible();
+});
+
+test('an ink card opens as a sheet, and a sheet\'s handwriting goes to the margin as an ink card', async ({ page }) => {
+  await openSample(page);
+  const area = page.locator('.sd-margins__area').last();
+  const a = (await area.boundingBox())!;
+  const lineY = await page.evaluate(() => {
+    const r = document.querySelector('.qr-chapter p .ar-word')!.getBoundingClientRect();
+    return r.top + r.height / 2;
+  });
+  await page.keyboard.press('Alt+w');
+  await expect(page.locator('body.ink-writing')).toHaveCount(1);
+  await scribble(page, a.x + 30, lineY, 120);
+  await page.keyboard.press('Escape');
+  const card = page.locator('.sd-gloss', { has: page.locator('.sd-mink') });
+  await expect(card).toHaveCount(1);
+  // A card's buttons show while it has the focus.
+  await card.getByRole('textbox').click();
+  await card.getByRole('button', { name: 'Open as sheet' }).click();
+  const panel = page.getByRole('complementary', { name: 'Sketch' });
+  await expect(panel.getByRole('tab', { name: 'Margin ink' })).toHaveAttribute('aria-selected', 'true');
+  await expect(panel.locator('.sk-ink path')).toHaveCount(1);
+
+  // And back: the sheet's handwriting as a second ink card, named after the sheet.
+  await panel.getByRole('button', { name: /To margin/ }).click();
+  await panel.getByRole('menuitem', { name: /as an ink card/ }).click();
+  await expect(panel.locator('.sk-foot [role=status]')).toContainText('Ink card in the margin');
+  // The margins have room again once the panel is closed.
+  await page.keyboard.press('Escape');
+  await expect(panel).toHaveCount(0);
+  await expect(page.locator('.sd-gloss', { has: page.locator('.sd-mink') })).toHaveCount(2);
+  await expect(page.locator('.sd-gloss', { hasText: 'Ink from sketch · Margin ink' })).toHaveCount(1);
 });
 

@@ -79,6 +79,8 @@ export interface DeskItem {
   reviewId?: string;
   /** Sent from a sketch sheet (src/annotate): the sheet's id, so the card can open it again. */
   sketchId?: string;
+  /** That sheet's name, shown on the card ("Sketch · Grammar"). */
+  sketchTitle?: string;
   /** Handwriting written straight in the margin (an ink card); `imageHash` holds a picture of it. */
   ink?: DeskInk;
   /** Folded to a one-line chip in the margin (true), or open (false). Unset follows Margin settings → Cards. */

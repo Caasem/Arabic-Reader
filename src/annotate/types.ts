@@ -61,6 +61,9 @@ export interface SketchEdge {
   dir: boolean;
 }
 
+/** What a sheet belongs to: the place it was started at, a range of pages (PDF) or chapters (reader), or the book. */
+export type SketchScope = { kind: 'place' } | { kind: 'range'; from: number; to: number } | { kind: 'book' };
+
 /**
  * A sketch sheet: freehand strokes and a diagram of nodes and connectors on one surface. Coordinates are the
  * sheet's own (CSS pixels at 100%), so the panel's size and zoom never move what is on it.
@@ -73,6 +76,14 @@ export interface Sketch {
   /** The place it was started at: "pdf:<page>" or a clean place "clean:<chapter>:<start>:<end>" (the passage then on screen). */
   location: string;
   mode: 'draw' | 'diagram';
+  /** Its name on its tab ("Sheet 2" until renamed). */
+  title?: string;
+  /** Unset: the place it was started at. */
+  scope?: SketchScope;
+  /** Closed: not a tab any more, still in All sheets. */
+  hidden?: boolean;
+  /** Its place among the tabs; unset sorts by when it was made. */
+  order?: number;
   view: { tx: number; ty: number; s: number };
   strokes: SketchStroke[];
   nodes: SketchNode[];

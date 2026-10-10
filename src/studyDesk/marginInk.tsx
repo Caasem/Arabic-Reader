@@ -180,9 +180,10 @@ export function useMarginInk(book: BookMeta, deskId: string, columnAt: (x: numbe
       const stroke: DeskInkStroke = { color, width: r1(width * k), pts: l.pts.map(([x, y, p]) => [r1((x - r.left) * k), r1((y - r.top) * k), p]), ...(l.marker ? { marker: true } : {}) };
       const before = item.ink;
       const after = addInk(before, stroke, before.w);
-      await saveInk(item, after);
-      last.current = { id, at: Date.now() };
+      // Undo first: the stroke shows as soon as the ink is saved, and Ctrl+Z may come before its picture is.
       recordInk({ undo: () => saveInk(item, before), redo: () => saveInk(item, after) });
+      last.current = { id, at: Date.now() };
+      await saveInk(item, after);
       return;
     }
     // A new card, level with where the writing starts.
@@ -193,7 +194,8 @@ export function useMarginInk(book: BookMeta, deskId: string, columnAt: (x: numbe
     const oy = Math.min(...l.pts.map((p) => p[1])) - PAD;
     const stroke: DeskInkStroke = { color, width: r1(width), pts: l.pts.map(([x, y, p]) => [r1(x - ox), r1(y - oy), p]), ...(l.marker ? { marker: true } : {}) };
     const ink = addInk(undefined, stroke, w);
-    const item = await capture(book, deskId, { type: 'line', text: '', body: '', fromMargin: true, inInbox: false, pin: { bookId: book.id, location, side: l.column.side }, ink }, inkBlob(ink));
+    // The card first, its Undo step at once, then the picture of its ink (the card shows before the picture).
+    const item = await capture(book, deskId, { type: 'line', text: '', body: '', fromMargin: true, inInbox: false, pin: { bookId: book.id, location, side: l.column.side }, ink });
     last.current = { id: item.id, at: Date.now() };
     let gone = item;
     recordInk({
@@ -202,6 +204,7 @@ export function useMarginInk(book: BookMeta, deskId: string, columnAt: (x: numbe
         gone = await capture(book, deskId, { type: 'line', text: '', body: '', fromMargin: true, inInbox: false, pin: item.pin, ink }, inkBlob(ink));
       },
     });
+    await attachImage(item, inkBlob(ink));
   }, [book, deskId]);
 
   const onPointerDownCapture = useCallback(

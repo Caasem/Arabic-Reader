@@ -23,10 +23,11 @@ export function imageIn(data: DataTransfer | null): File | null {
 /** A drag that carries files (their types are only readable on drop). */
 export const carriesFiles = (data: DataTransfer | null): boolean => !!data && Array.from(data.types ?? []).includes('Files');
 
-/** Puts an image on an item, replacing one it had. A plain margin note becomes a screenshot item. */
+/** Puts an image on an item, replacing one it had. A plain margin note becomes a screenshot item (an ink card stays a
+ * note: its image is only the picture of its handwriting). */
 export async function attachImage(item: DeskItem, image: Blob): Promise<void> {
   const store = getBlobStore();
   const ref = await store.put(image, { ns: 'desk', owner: item.id, type: image.type || 'image/png' });
   if (item.imageHash && item.imageHash !== ref.hash) await store.unpin(item.imageHash, 'desk', item.id).catch(() => undefined);
-  await updateItem(item.id, { imageHash: ref.hash, ...(item.type === 'line' ? { type: 'capture' as const } : {}) });
+  await updateItem(item.id, { imageHash: ref.hash, ...(item.type === 'line' && !item.ink ? { type: 'capture' as const } : {}) });
 }

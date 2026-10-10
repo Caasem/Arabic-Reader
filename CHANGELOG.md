@@ -4,6 +4,23 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.86.0 — 2026-10-10
+
+- **Several sketch sheets per page, as tabs.** The sketch panel shows a tab for every sheet that belongs where you
+  are; **+** (or Alt+Shift+K) starts a new one, kept once something is on it. Double-click a tab to rename it;
+  Ctrl+Tab and Ctrl+Shift+Tab switch between them. The tab you used last on a page opens there again.
+- **A tab's ⋯ menu:** keep the sheet with this page only, a range of pages (or chapters in the reader), or the whole
+  book, so it is a tab wherever that is; duplicate it; move it to another page; export it as SVG, PNG or Markdown
+  (the diagram as an outline); or delete it (Undo in the panel's footer).
+- **✕ closes a tab** without losing the sheet: **All sheets** (the list button) shows every sheet in the book with
+  a picture of it, where it belongs and when it changed, and opens any of them again.
+- **The pin** keeps the sheet on screen while you read on.
+- **The Sketch button counts the sheets** that belong where you are, so they are not forgotten.
+- **Ink cards and sheets go both ways:** an ink card's *Open as sheet* makes a sheet of its handwriting, and To
+  margin → *Handwriting, as an ink card* puts a sheet's freehand strokes in the margin. Cards sent from a sheet
+  carry its name ("Sketch · Grammar").
+- Margin strokes can be undone straight away, and ink cards stay notes when their picture is redrawn.
+
 ## v0.85.0 — 2026-10-10
 
 - **Write straight in the margin.** With Write on (Alt+W), writing in a margin (the quiet reader's, or the strip

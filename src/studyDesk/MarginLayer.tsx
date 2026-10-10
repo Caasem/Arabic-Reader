@@ -732,9 +732,7 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
   const plain = item.fromMargin && item.type === 'line';
   // In piles every card names its kind, plain notes too.
   const kind = item.sketchId
-    ? item.type === 'capture'
-      ? 'Sketch'
-      : 'From sketch'
+    ? (item.type === 'capture' ? 'Sketch' : item.ink ? 'Ink from sketch' : 'From sketch') + (item.sketchTitle ? ` · ${item.sketchTitle}` : '')
     : item.ink && plain
       ? 'Ink'
       : item.fromMargin
@@ -1032,6 +1030,12 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
         <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => onOpenDocument(item.id)}>
           Show in document
         </button>
+        {item.ink && (
+          // The sketch panel (src/annotate) makes a sheet of the ink and opens it.
+          <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => window.dispatchEvent(new CustomEvent('annotate:ink-to-sheet', { detail: { itemId: item.id } }))}>
+            Open as sheet
+          </button>
+        )}
         {item.fromMargin && (
           <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => void deleteItem(item.id)}>
             Delete
