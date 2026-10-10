@@ -39,7 +39,7 @@ export interface SketchStroke {
   pts: InkPoint[];
 }
 
-export type SketchNodeKind = 'plain' | 'note' | 'quote';
+export type SketchNodeKind = 'plain' | 'note' | 'quote' | 'image';
 
 export interface SketchNode {
   id: string;
@@ -49,8 +49,12 @@ export interface SketchNode {
   h: number;
   text: string;
   kind: SketchNodeKind;
-  /** A quote's place in the book (a clean or PDF place, as highlights store them). */
+  /** A quote's (or picture's) place in the book (a clean or PDF place, as highlights store them). */
   location?: string;
+  /** The study desk item it was quoted from (a highlight on a PDF page), which shows it is in a sketch. */
+  deskItemId?: string;
+  /** A picture node: the region of the page, as a data URL. */
+  image?: string;
 }
 
 export interface SketchEdge {

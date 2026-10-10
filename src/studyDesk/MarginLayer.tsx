@@ -917,6 +917,17 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
           )}
           {!item.fromMargin && item.source?.chapterLabel && <span>{item.source.chapterLabel}</span>}
           {item.type === 'card' && <span className="sd-gloss__due">Review · due today</span>}
+          {item.inSketch && !item.sketchId && (
+            <button
+              type="button"
+              className="sd-gloss__open"
+              title="Quoted in a sketch sheet"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => window.dispatchEvent(new CustomEvent('annotate:open-sketch', { detail: { sketchId: item.inSketch } }))}
+            >
+              In sketch ↗
+            </button>
+          )}
           {item.sketchId && (
             // The sketch panel (src/annotate) listens for this and opens the sheet.
             <button

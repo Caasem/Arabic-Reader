@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BookMeta } from '../types';
 import { formatCleanLocation } from '../quietReader/location';
 import { saveFile } from '../utils/saveFile';
+import { getReaderMarks } from '../readerChords';
+import { openDictionaryPage } from '../dictionaryPage/events';
+import { updateItem } from '../studyDesk/deskStore';
+import { goToPlace, placeRects } from './placeLinks';
 import { bookSketches, deleteSketch, isEmptySketch, newSketch, onInkChange, saveSketch } from './inkStore';
 import { refreshSketchCards, sendSketchToMargin, sketchOutline, sketchPng, sketchSvgBlob, type SendHow } from './toMargin';
 import { usePreferences } from '../state/PreferencesContext';
@@ -36,6 +40,8 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
   const [pinned, setPinned] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
   const [undoDelete, setUndoDelete] = useState<Sketch | null>(null);
+  /** The line from a pointed-at quote to its words on the page. */
+  const [lead, setLead] = useState<string | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLElement>(null);
   const surface = useRef<SketchSurface | null>(null);
@@ -91,6 +97,27 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
     const s = new SketchSurface(host, {
       colors: THEME_COLORS,
       onState: setState,
+      onGo(node) {
+        // Going to the words moves the reader: the sheet stays (as one opened on purpose does).
+        opened.current = sheet.current?.sketch.id ?? null;
+        if (node.location && !goToPlace(node.location)) setSent('Open the book at its page to go there');
+      },
+      onWord(word) {
+        const w = word.replace(/[^\p{L}\p{M}'-]/gu, '');
+        if (w) openDictionaryPage({ word: w, book });
+      },
+      onHoverNode(node, el) {
+        // A line from the node to its words, when they are on screen.
+        const r = node?.location && el ? placeRects(node.location)[0] : null;
+        if (!r || !el) return setLead(null);
+        const n = el.getBoundingClientRect();
+        const x1 = n.left;
+        const y1 = n.top + Math.min(n.height, 40) / 2;
+        const x2 = r.left + r.width < x1 ? r.right + 2 : r.left - 2;
+        const y2 = r.top + r.height / 2;
+        const mx = (x1 + x2) / 2;
+        setLead(`M${x1} ${y1} C${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`);
+      },
       onChange(sketch) {
         // Only the sheet the panel loaded is ever saved (never the surface's blank placeholder).
         if (!sheet.current || sheet.current.sketch.id !== sketch.id) return;
@@ -105,6 +132,8 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
       s.destroy();
       surface.current = null;
     };
+    // book: for the dictionary; the surface is made once per panel.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flush]);
 
   /** Puts a sheet on the surface (saving the one there first). */
@@ -189,6 +218,25 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
     // Once per request.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ui.newSheet, sketches]);
+
+  // Quotes from the page (the Highlighter's Quote in sketch, PdfSelect.tsx): a quote node, or a picture node for a
+  // region with no words read; the highlight it came from is marked as being in this sheet.
+  useEffect(() => {
+    const onQuote = (e: Event) => {
+      const q = (e as CustomEvent<{ text: string; location: string; deskItemId?: string; image?: string }>).detail;
+      const s = surface.current;
+      const c = sheet.current;
+      if (!q || !s || !c) return;
+      s.setMode('diagram');
+      const text = q.text.length > 160 ? q.text.slice(0, 158) + '…' : q.text;
+      s.addNode(undefined, q.image && !q.text ? '' : text, q.image && !q.text ? 'image' : 'quote', q.location, { ...(q.deskItemId ? { deskItemId: q.deskItemId } : {}), ...(q.image && !q.text ? { image: q.image } : {}) });
+      flush();
+      if (q.deskItemId) void updateItem(q.deskItemId, { inSketch: c.sketch.id });
+      setSent(q.text ? 'Quoted in the sheet' : 'Picture of the region in the sheet');
+    };
+    window.addEventListener('annotate:quote', onQuote);
+    return () => window.removeEventListener('annotate:quote', onQuote);
+  }, [flush]);
 
   useEffect(() => surface.current?.setTool(tool), [tool]);
   useEffect(() => surface.current?.setDiagramTool(dtool), [dtool]);
@@ -362,11 +410,24 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
     return () => window.removeEventListener('keydown', onKey, true);
   }, []);
 
+  /**
+   * Quote: the words selected in the reader (with their exact place, so the quote can go back to them), else a
+   * selection on a PDF page; with words dragged over on a PDF page waiting in the Highlighter's bar, those.
+   */
   const addQuote = () => {
-    const text = window.getSelection()?.toString().replace(/\s+/g, ' ').trim();
-    if (!text) return;
-    surface.current?.setMode('diagram');
-    surface.current?.addNode(undefined, text.length > 120 ? text.slice(0, 118) + '…' : text, 'quote', sheet.current?.sketch.location);
+    const mark = getReaderMarks()?.captureSelection();
+    const text = (mark?.text ?? window.getSelection()?.toString() ?? '').replace(/\s+/g, ' ').trim();
+    if (text) {
+      surface.current?.setMode('diagram');
+      surface.current?.addNode(undefined, text.length > 160 ? text.slice(0, 158) + '…' : text, 'quote', mark?.location ?? sheet.current?.sketch.location);
+      window.getSelection()?.removeAllRanges();
+      return;
+    }
+    if (document.querySelector('.sd-pdfsel__bar')) {
+      window.dispatchEvent(new CustomEvent('desk:quote-pending'));
+      return;
+    }
+    setSent(place?.kind === 'pdf' ? 'Drag over words on the page, then Quote in sketch' : 'Select words on the page first');
   };
 
   const send = (how: SendHow) => {
@@ -706,7 +767,7 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
             type="button"
             className="ink-ib ink-ib--wide"
             aria-label="Add the selected text as a quote"
-            title="Select words on the page first"
+            title={place?.kind === 'pdf' ? 'Drag over words on the page (or select them) first' : 'Select words on the page first'}
             onPointerDown={(e) => e.preventDefault()}
             onClick={addQuote}
           >
@@ -779,6 +840,11 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
         <span className="sk-grow" />
         <span>{pinned ? 'Pinned to this sheet' : shown.length > 1 ? 'Ctrl+Tab: next sheet' : ui.penSeen ? 'Stylus found: fingers move the sheet' : 'Pinch or Ctrl+scroll to zoom'}</span>
       </div>
+      {lead && (
+        <svg className="sk-lead" aria-hidden="true">
+          <path d={lead} />
+        </svg>
+      )}
     </aside>
   );
 }

@@ -27,19 +27,31 @@ export interface SurfaceState {
 
 interface Options {
   colors: Record<InkColor, string>;
+  /** A quote's or picture's ↗: go to its place on the page. */
+  onGo?(node: SketchNode): void;
+  /** A word of a selected quote was clicked: look it up. */
+  onWord?(word: string): void;
+  /** The pointer is over a node (or left it), so the panel can draw its line to the page. */
+  onHoverNode?(node: SketchNode | null, el: HTMLElement | null): void;
   /** The sheet changed (content, mode or view); the panel saves it. `content` is false for view-only changes. */
   onChange(sketch: Sketch, content: boolean): void;
   onState(state: SurfaceState): void;
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+/** A quote's words, each one clickable once the quote is selected (it opens the dictionary). */
+const quoteWords = (text: string) =>
+  text
+    .split(/(\s+)/)
+    .map((w) => (/\S/.test(w) ? `<span class="sk-w">${esc(w)}</span>` : w))
+    .join('');
 type Snap = string;
 
 type Act =
   | { k: 'pan'; p0: [number, number]; tx: number; ty: number }
   | { k: 'ink'; pts: InkPoint[]; pen: boolean }
   | { k: 'erase'; pre: Snap; hit: boolean }
-  | { k: 'move'; id: string; el: HTMLElement; p0: [number, number]; x0: number; y0: number; pre: Snap; moved: boolean; wasSel: boolean; touch: boolean }
+  | { k: 'move'; id: string; el: HTMLElement; p0: [number, number]; x0: number; y0: number; pre: Snap; moved: boolean; wasSel: boolean; touch: boolean; word?: string }
   | { k: 'resize'; id: string; el: HTMLElement; p0: [number, number]; w0: number; h0: number; pre: Snap; moved: boolean }
   | { k: 'link'; from: string };
 
@@ -93,6 +105,8 @@ export class SketchSurface {
     host.addEventListener('pointercancel', this.onUp);
     host.addEventListener('wheel', this.onWheel, { passive: false });
     host.addEventListener('dblclick', this.onDbl);
+    host.addEventListener('mouseover', this.onOver);
+    host.addEventListener('mouseleave', this.onLeave);
     window.addEventListener('keyup', this.onKeyUp);
   }
 
@@ -105,6 +119,8 @@ export class SketchSurface {
     host.removeEventListener('pointercancel', this.onUp);
     host.removeEventListener('wheel', this.onWheel);
     host.removeEventListener('dblclick', this.onDbl);
+    host.removeEventListener('mouseover', this.onOver);
+    host.removeEventListener('mouseleave', this.onLeave);
     window.removeEventListener('keyup', this.onKeyUp);
     host.classList.remove('sk-surface', 'sk-surface--diagram', 'sk-surface--hand', 'sk-surface--erase');
     host.innerHTML = '';
@@ -259,8 +275,10 @@ export class SketchSurface {
       .map(
         (n) =>
           `<div class="sk-node sk-node--${n.kind}${this.sel === n.id ? ' sk-node--sel' : ''}${this.linkFrom === n.id ? ' sk-node--from' : ''}" data-id="${n.id}" style="left:${n.x}px;top:${n.y}px;width:${n.w}px;min-height:${n.h}px">` +
-          (n.kind === 'quote' ? '<span class="sk-node__tag">Quote</span>' : '') +
-          `<div class="sk-node__text" dir="auto">${esc(n.text)}</div><span class="sk-port" title="Drag to connect"></span><span class="sk-resize"></span></div>`
+          (n.kind === 'quote' ? '<span class="sk-node__tag">Quote</span>' : n.kind === 'image' ? '<span class="sk-node__tag">Picture</span>' : '') +
+          (n.location ? '<button type="button" class="sk-node__go" title="Go to it on the page" aria-label="Go to it on the page">↗</button>' : '') +
+          (n.image ? `<img class="sk-node__img" src="${esc(n.image)}" alt="" draggable="false">` : '') +
+          `<div class="sk-node__text" dir="auto">${n.kind === 'quote' ? quoteWords(n.text) : esc(n.text)}</div><span class="sk-port" title="Drag to connect"></span><span class="sk-resize"></span></div>`
       )
       .join('');
     // Connectors meet a node's real edge, so take the height its text needs.
@@ -309,18 +327,18 @@ export class SketchSurface {
   }
 
   // --- diagram actions ----------------------------------------------------------------------------------
-  addNode(at?: [number, number], text = '', kind: SketchNodeKind = 'plain', location?: string): void {
+  addNode(at?: [number, number], text = '', kind: SketchNodeKind = 'plain', location?: string, extra: Partial<SketchNode> = {}): void {
     this.commitEdit();
     const c = at ?? this.centre();
     const k = this.sketch.nodes.length % 6;
-    const w = kind === 'quote' ? 190 : 160;
+    const w = kind === 'image' ? 210 : kind === 'quote' ? 190 : 160;
     this.checkpoint();
     const id = newId('node');
-    this.sketch.nodes.push({ id, x: r1(c[0] - w / 2 + (at ? 0 : k * 12)), y: r1(c[1] - 26 + (at ? 0 : k * 12)), w, h: 52, text, kind, ...(location ? { location } : {}) });
+    this.sketch.nodes.push({ id, x: r1(c[0] - w / 2 + (at ? 0 : k * 12)), y: r1(c[1] - 26 + (at ? 0 : k * 12)), w, h: 52, text, kind, ...(location ? { location } : {}), ...extra });
     this.sel = id;
     this.selEdge = null;
     this.changed();
-    if (!text) this.startEdit(id, true);
+    if (!text && kind !== 'image') this.startEdit(id, true);
   }
   deleteSelection(): void {
     if (this.selEdge) {
@@ -416,6 +434,14 @@ export class SketchSurface {
   private onDown = (e: PointerEvent): void => {
     const target = e.target as Element;
     if (target.closest('.sk-zoom')) return;
+    const go = target.closest<HTMLElement>('.sk-node__go');
+    if (go) {
+      e.preventDefault();
+      e.stopPropagation();
+      const n = this.node(go.closest<HTMLElement>('.sk-node')?.dataset.id ?? '');
+      if (n) this.opts.onGo?.(n);
+      return;
+    }
     if (this.editing && target.closest('.sk-node--editing')) return;
     this.commitEdit();
     if (e.pointerType === 'pen' && !this.penSeen) {
@@ -517,7 +543,8 @@ export class SketchSurface {
       this.renderEdges();
       this.emitState();
     }
-    this.act = { k: 'move', id, el, p0: p, x0: n.x, y0: n.y, pre, moved: false, wasSel, touch: e.pointerType !== 'mouse' };
+    const word = n.kind === 'quote' ? target.closest<HTMLElement>('.sk-w')?.textContent ?? undefined : undefined;
+    this.act = { k: 'move', id, el, p0: p, x0: n.x, y0: n.y, pre, moved: false, wasSel, touch: e.pointerType !== 'mouse', word };
   }
 
   private onMove = (e: PointerEvent): void => {
@@ -621,7 +648,8 @@ export class SketchSurface {
         if (a.moved) {
           this.pushUndo(a.pre);
           this.changed();
-        } else if (a.k === 'move' && a.wasSel && a.touch) this.startEdit(a.id, false);
+        } else if (a.k === 'move' && a.wasSel && a.word) this.opts.onWord?.(a.word);
+        else if (a.k === 'move' && a.wasSel && a.touch) this.startEdit(a.id, false);
         break;
       case 'link': {
         const over = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>('.sk-node');
@@ -672,6 +700,20 @@ export class SketchSurface {
       const w = this.toWorld(this.local(e));
       this.addNode([w[0] + 80, w[1]]);
     }
+  };
+
+  private hovered: string | null = null;
+  private onOver = (e: MouseEvent): void => {
+    const el = (e.target as Element).closest<HTMLElement>('.sk-node');
+    const id = el?.dataset.id ?? null;
+    if (id === this.hovered) return;
+    this.hovered = id;
+    this.opts.onHoverNode?.(id ? this.node(id) ?? null : null, el ?? null);
+  };
+  private onLeave = (): void => {
+    if (!this.hovered) return;
+    this.hovered = null;
+    this.opts.onHoverNode?.(null, null);
   };
 
   private onKeyUp = (e: KeyboardEvent): void => {

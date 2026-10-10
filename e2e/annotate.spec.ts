@@ -318,3 +318,30 @@ test('an ink card opens as a sheet, and a sheet\'s handwriting goes to the margi
   await expect(page.locator('.sd-gloss', { hasText: 'Ink from sketch · Margin ink' })).toHaveCount(1);
 });
 
+test('a quote from the reader goes back to its words, and its words open the dictionary', async ({ page }) => {
+  await openSample(page);
+  await page.keyboard.press('Alt+k');
+  const panel = page.getByRole('complementary', { name: 'Sketch' });
+  await panel.getByRole('button', { name: 'Diagram' }).click();
+  // With nothing selected, Quote says what to do.
+  await panel.getByRole('button', { name: 'Add the selected text as a quote' }).click();
+  await expect(panel.locator('.sk-foot [role=status]')).toContainText('Select words on the page first');
+  await page.evaluate(() => {
+    const words = document.querySelectorAll('.qr-chapter p .ar-word');
+    const range = document.createRange();
+    range.setStartBefore(words[0]);
+    range.setEndAfter(words[2]);
+    const sel = window.getSelection()!;
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
+  await panel.getByRole('button', { name: 'Add the selected text as a quote' }).click();
+  const quote = panel.locator('.sk-node--quote');
+  await expect(quote).toHaveCount(1);
+  await quote.getByRole('button', { name: 'Go to it on the page' }).click();
+  await expect(page.locator('.sk-flash')).not.toHaveCount(0);
+  // Selected (a new quote is), a click on one of its words looks it up.
+  await quote.locator('.sk-w').first().click();
+  await expect(page.locator('.dpage')).toBeVisible();
+});
+

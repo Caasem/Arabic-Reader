@@ -7,6 +7,7 @@ import { formatPdfLocation, pdfRegionInBox } from './pageGeometry';
 import { pdfDeskState, setPdfDeskFocus, setPdfDeskHover, setPdfDeskTie, usePdfDesk } from './pdfDesk';
 import { setSnapEnabled, snapDrag, snapEnabled, type FracBox, type Snapped } from './pdfSnap';
 import { capture, looksArabic, type DeskData } from './useDesk';
+import { useInkUi } from '../annotate/inkUi';
 
 /**
  * The Highlighter: highlighting straight on PDF pages, without Alt+X. On a scanned page, drag over words with a mouse or pen
@@ -44,6 +45,7 @@ function onScreen(frame: HTMLElement, b: FracBox) {
 export function PdfSelect({ book, data, active, commands, onToast }: { book: BookMeta; data: DeskData; active: boolean; commands: DeskCommands; onToast(m: string): void }) {
   const { prefs } = usePreferences();
   const { tie } = usePdfDesk();
+  const sketching = useInkUi().sketch;
   const [pending, setPending] = useState<Pending | null>(null);
   const [live, setLive] = useState<{ frame: HTMLElement; a: { x: number; y: number }; b: { x: number; y: number } } | null>(null);
   const [snap, setSnap] = useState(snapEnabled);
@@ -243,6 +245,48 @@ export function PdfSelect({ book, data, active, commands, onToast }: { book: Boo
     }
   }
 
+  /**
+   * Quote in sketch (with the sketch panel open): the highlight is kept like Gloss in the margin, and the words go
+   * into the sheet as a quote (a region with no words read, as a picture) that can go back to them.
+   */
+  async function quoteInSketch() {
+    const p = pending;
+    if (!p?.snapped || busy) return;
+    setBusy(true);
+    try {
+      const { box, text, via } = p.snapped;
+      const location = formatPdfLocation(p.page, box.x, box.y, box.w, box.h);
+      const s = onScreen(p.frame, box);
+      const image = via === 'text' ? null : (await pdfRegionInBox({ left: s.left, top: s.top, right: s.left + s.width, bottom: s.top + s.height }))?.image ?? null;
+      const item = await capture(
+        book,
+        data.deskId,
+        {
+          type: text ? 'quote' : 'capture',
+          text: text || `Region of page ${p.page}`,
+          ar: looksArabic(text),
+          source: { bookId: book.id, bookTitle: book.title, location, chapterLabel: `Page ${p.page}` },
+          inInbox: prefs.studyDeskMarginsToInbox === 'auto',
+        },
+        image ?? undefined
+      );
+      const picture = !text && image ? await blobToDataUrl(image) : undefined;
+      window.dispatchEvent(new CustomEvent('annotate:quote', { detail: { text, location, deskItemId: item.id, image: picture } }));
+      setPending(null);
+      window.getSelection()?.removeAllRanges();
+    } finally {
+      setBusy(false);
+    }
+  }
+  const quoteRef = useRef(quoteInSketch);
+  quoteRef.current = quoteInSketch;
+  // The sketch panel's Quote button, while words wait here.
+  useEffect(() => {
+    const onAsk = () => void quoteRef.current();
+    window.addEventListener('desk:quote-pending', onAsk);
+    return () => window.removeEventListener('desk:quote-pending', onAsk);
+  }, []);
+
   async function tieHere() {
     const p = pending;
     if (!p?.snapped || !tie) return;
@@ -291,6 +335,11 @@ export function PdfSelect({ book, data, active, commands, onToast }: { book: Boo
                 <button type="button" className="sd-btn" disabled={busy} onClick={() => void keep('inbox')}>
                   Send to inbox
                 </button>
+                {sketching && (
+                  <button type="button" className="sd-btn" disabled={busy} onClick={() => void quoteInSketch()}>
+                    Quote in sketch
+                  </button>
+                )}
               </>
             )}
             {pending.snapped?.via !== 'text' && (
@@ -322,4 +371,13 @@ export function PdfSelect({ book, data, active, commands, onToast }: { book: Boo
       )}
     </>
   );
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
 }

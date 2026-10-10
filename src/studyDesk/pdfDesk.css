@@ -48,6 +48,17 @@
   background: #2e7d74;
   mix-blend-mode: normal;
 }
+/* Quoted in a sketch sheet: a small square of the sheet's paper at the box's top right corner. */
+.sd-pdfbox__sk {
+  position: absolute;
+  top: -4px;
+  right: -9px;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid #7d5a14;
+  border-radius: 2px;
+  background: #fffdf8;
+}
 /* The margin beside the pages: a strip kept free to the right of the stage; the pages fit the rest. */
 body.sd-pdf-margin .pdfp .pdfp__body {
   padding-right: 300px;

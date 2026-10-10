@@ -37,7 +37,7 @@ export function sketchOutline(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): s
     const n = s.nodes.find((x) => x.id === id);
     if (!n || seen.has(id)) return;
     seen.add(id);
-    lines.push((depth ? '  '.repeat(depth - 1) + '→ ' : '') + n.text);
+    lines.push((depth ? '  '.repeat(depth - 1) + '→ ' : '') + (n.text || (n.image ? '[picture]' : '')));
     for (const k of kids.get(id) ?? []) walk(k, depth + 1);
   };
   for (const n of s.nodes) if (!hasParent.has(n.id)) walk(n.id, 0);
@@ -106,6 +106,11 @@ export function sketchSvg(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): { svg
   for (const n of s.nodes) {
     const fill = n.kind === 'quote' ? '#f6ead0' : '#ffffff';
     const stroke = n.kind === 'note' ? '#2e7d74' : n.kind === 'quote' ? '#f6ead0' : '#d9d2c5';
+    if (n.image) {
+      body += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="14" fill="#ffffff" stroke="#d9d2c5" stroke-width="1.2"/>`;
+      body += `<image href="${esc(n.image)}" x="${n.x + 8}" y="${n.y + 8}" width="${n.w - 16}" height="${Math.max(10, n.h - 16)}" preserveAspectRatio="xMidYMid meet"/>`;
+      continue;
+    }
     const size = n.kind === 'quote' ? 16 : 14;
     const lines = wrapLines(n.text, n.w, size, n.h);
     const lh = size * 1.3;

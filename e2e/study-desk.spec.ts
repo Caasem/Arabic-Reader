@@ -895,6 +895,31 @@ test.describe('highlighting on scanned PDF pages', () => {
     await expect(page.locator('.dict-popup')).toHaveCount(0);
   });
 
+  test('Quote in sketch: the words go into the open sheet, linked both ways', async ({ page }) => {
+    await twoWordEngine(page);
+    await openScan(page);
+    await page.keyboard.press('Alt+k');
+    const panel = page.getByRole('complementary', { name: 'Sketch' });
+    await expect(panel).toBeVisible();
+    await dragOnPage(page, [0.2, 0.1], [0.7, 0.2]);
+    const bar = page.getByRole('dialog', { name: 'Highlight on the page' });
+    await expect(bar).toContainText('المدرسة الكبيرة');
+    await bar.getByRole('button', { name: 'Quote in sketch' }).click();
+    // A quote node with its way back to the words.
+    const quote = panel.locator('.sk-node--quote');
+    await expect(quote).toContainText('المدرسة الكبيرة');
+    await expect(quote.getByRole('button', { name: 'Go to it on the page' })).toBeVisible();
+    await expect(panel.locator('.sk-foot [role=status]')).toContainText('Quoted in the sheet');
+    // The highlight on the page says it is in a sketch.
+    await expect(page.locator('.pdfp-page[data-page="1"] .sd-pdfbox .sd-pdfbox__sk')).toHaveCount(1);
+    // Pointing at the quote draws its line to the page; ↗ goes there and flashes the words.
+    await quote.hover();
+    await expect(panel.locator('.sk-lead path')).toHaveCount(1);
+    await page.locator('.pdfp__stage').evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+    await quote.getByRole('button', { name: 'Go to it on the page' }).click();
+    await expect(page.locator('.sk-flash')).not.toHaveCount(0);
+  });
+
   test('with snapping off the drag stays an image region', async ({ page }) => {
     await twoWordEngine(page);
     await openScan(page);

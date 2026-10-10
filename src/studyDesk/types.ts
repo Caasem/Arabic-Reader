@@ -81,6 +81,8 @@ export interface DeskItem {
   sketchId?: string;
   /** That sheet's name, shown on the card ("Sketch · Grammar"). */
   sketchTitle?: string;
+  /** Quoted in a sketch sheet (its id): the highlight and its card say so and open the sheet. */
+  inSketch?: string;
   /** Handwriting written straight in the margin (an ink card); `imageHash` holds a picture of it. */
   ink?: DeskInk;
   /** Folded to a one-line chip in the margin (true), or open (false). Unset follows Margin settings → Cards. */

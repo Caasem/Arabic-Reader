@@ -853,3 +853,69 @@ body.ink-sketching .pdfp .pdfp__body {
   color: var(--ink-faint);
   font-size: 12px;
 }
+
+/* Quotes and pictures that point at the page (sketchSurface.ts, SketchPanel.tsx, placeLinks.ts). */
+.sk-node__go {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--ink-faint);
+  font-size: 13px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.sk-node__go:hover {
+  background: var(--bg-elevated);
+  color: var(--accent);
+}
+.sk-node__img {
+  display: block;
+  width: 100%;
+  margin: 2px 0 4px;
+  border-radius: 6px;
+  background: #fff;
+  pointer-events: none;
+}
+.sk-node--sel .sk-w {
+  cursor: help;
+  border-radius: 3px;
+}
+.sk-node--sel .sk-w:hover {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.sk-lead {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 60;
+}
+.sk-lead path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.4;
+  stroke-dasharray: 3 3;
+}
+.sk-flash {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  border: 2px solid var(--accent);
+  border-radius: 5px;
+  animation: sk-flash 1.6s ease-out forwards;
+}
+@keyframes sk-flash {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

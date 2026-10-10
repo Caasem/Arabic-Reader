@@ -4,6 +4,20 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.87.0 — 2026-10-10
+
+- **Quote in sketch from the Highlighter.** With the sketch panel open, the Highlighter's bar on a PDF page has
+  *Quote in sketch*: the words dragged over (read by text recognition on scanned pages) go into the sheet as a
+  quote, and the highlight is kept on the page like *Gloss in the margin*. A region with no words read goes in as a
+  picture of that part of the page. The panel's Quote button uses the words waiting in the bar too, and says what
+  to do when nothing is selected.
+- **Quotes lead back to the page.** A quote (or picture) remembers exactly where it came from: its ↗ goes there
+  and briefly rings the words, and pointing at it draws a line to them while they are on screen. Quotes made from
+  a selection in the reader keep their exact place too.
+- **Both ways:** a highlight quoted in a sheet shows a small mark on the page, and its margin card has *In sketch ↗*,
+  which opens the sheet.
+- **Look words up from a quote:** click a word of a selected quote to open it in the dictionary.
+
 ## v0.86.0 — 2026-10-10
 
 - **Several sketch sheets per page, as tabs.** The sketch panel shows a tab for every sheet that belongs where you

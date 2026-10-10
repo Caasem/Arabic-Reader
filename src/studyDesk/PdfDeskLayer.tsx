@@ -38,7 +38,9 @@ export function PdfDeskLayer({ book, opened, page, width, height }: PdfPageConte
           className={'sd-pdfbox' + (hover === m.item.id ? ' sd-pdfbox--on' : '') + (m.item.body?.trim() ? ' sd-pdfbox--noted' : '')}
           data-item={m.item.id}
           style={{ left: m.x * width, top: m.y * height, width: m.w * width, height: m.h * height }}
-        />
+        >
+          {m.item.inSketch && <span className="sd-pdfbox__sk" title="In a sketch sheet" />}
+        </div>
       ))}
     </div>
   );
