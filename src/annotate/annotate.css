@@ -196,15 +196,6 @@ body.ink-writing .qr-stage {
   font-weight: 600;
   cursor: pointer;
 }
-.ink-tbtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.ink-tbtn--on {
-  background: var(--accent-soft) !important;
-  color: var(--ink-primary) !important;
-}
 
 /* ---- Sketch panel ------------------------------------------------------------------------------------- */
 body.ink-sketching .qr {

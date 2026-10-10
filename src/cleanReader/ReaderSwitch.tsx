@@ -9,6 +9,7 @@ import { FlashHost } from '../flashCard';
 import { PicksExportHost } from '../picksExport';
 import { DeskHost } from '../studyDesk';
 import { AnnotateHost } from '../annotate';
+import { FocusHost } from '../readerTools';
 import { useReaderView } from '../quietReader/readerView';
 import { saveCleanFocus } from './cleanFocus';
 import { usePdfView } from '../pdf/pages/pdfView';
@@ -61,6 +62,7 @@ export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: 
           onShowText={props.book.pdf.reflow === 'ok' ? () => setPdfView('text') : undefined}
         />
         {hosts}
+        <FocusHost reader="pdf" onChromeHidden={onFocusChromeChange} />
       </>
     );
   }
@@ -81,6 +83,7 @@ export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: 
           onShowPages={props.book.pdf ? () => setPdfView('pages') : undefined}
         />
         {hosts}
+        <FocusHost reader="clean" />
       </>
     );
   }

@@ -7,7 +7,8 @@ import { textInBox } from '../studyDesk/pageGeometry';
 import { parseCleanLocation } from '../quietReader/location';
 import { CleanInkLayer } from './CleanInk';
 import { InkBar } from './InkBar';
-import { InkSwitch } from './InkSwitch';
+import { refreshReaderTools, registerReaderTool } from '../readerTools';
+import { IconPen, IconSketch } from './icons';
 import { inkUi, keyOwner, redoInk, resetInkHistory, setInkUi, undoInk, useInkUi } from './inkUi';
 import { PdfInkLayer, PdfInkToolbar } from './PdfInk';
 import { SketchPanel, type Place } from './SketchPanel';
@@ -45,6 +46,16 @@ function Active({ book }: { book: BookMeta }) {
     resetInkHistory();
     return () => setInkUi({ inking: false, sketch: false, full: false });
   }, [book.id]);
+
+  // Write and Sketch in the shared tool list: the dock, the PDF top bar and the Focus rail.
+  useEffect(() => {
+    const offs = [
+      registerReaderTool({ id: 'ink:write', label: 'Write', title: 'Write on the page', keys: 'Alt+W', group: 'ink', order: 0, readers: ['clean', 'pdf'], icon: <IconPen size={18} />, isOn: () => inkUi().inking, run: () => setInkUi({ inking: !inkUi().inking }) }),
+      registerReaderTool({ id: 'ink:sketch', label: 'Sketch', title: 'Sketch beside the page', keys: 'Alt+K', group: 'ink', order: 1, readers: ['clean', 'pdf'], icon: <IconSketch size={18} />, isOn: () => inkUi().sketch, run: () => setInkUi({ sketch: !inkUi().sketch, full: false }) }),
+    ];
+    return () => offs.forEach((off) => off());
+  }, []);
+  useEffect(() => refreshReaderTools(), [ui.inking, ui.sketch]);
 
   useChordHotkey('KeyW', true, () => setInkUi({ inking: !inkUi().inking }));
   useChordHotkey('KeyK', true, () => setInkUi({ sketch: !inkUi().sketch, full: false }));
@@ -107,7 +118,6 @@ function Active({ book }: { book: BookMeta }) {
   return (
     <>
       <CleanInkLayer book={book} />
-      <InkSwitch />
       {ui.inking && <InkBar where={where} />}
       {ui.sketch && <SketchPanel book={book} place={place} />}
     </>

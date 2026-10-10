@@ -5,7 +5,6 @@ import type { PdfPageContext } from '../pdf/pages/extensions';
 import { hitStroke, pathD, r1 } from './geometry';
 import { PAPER_COLORS, setInkUi, useBookStrokes, useInkUi } from './inkUi';
 import { useInkDraw, type InkSurface } from './useInkDraw';
-import { IconPen, IconSketch } from './icons';
 
 /** Page units: a PDF page is this wide at every zoom, so strokes stay where they were written. */
 const PAGE_UNITS = 1000;
@@ -61,31 +60,10 @@ export function PdfInkLayer({ book, page, width, height }: PdfPageContext) {
   );
 }
 
-/** Write and Sketch in the pages view's top bar; also tells the sketch panel which page is being read. */
+/** Tells the sketch panel which PDF page is being read (a pages-view toolbar extension that draws nothing; the
+ * Write and Sketch buttons come from the shared tool list, src/readerTools). */
 export function PdfInkToolbar({ page }: { book: BookMeta; page: number; total: number; opened: OpenedPdf }) {
-  const ui = useInkUi();
   useEffect(() => setInkUi({ pdfPage: page }), [page]);
   useEffect(() => () => setInkUi({ pdfPage: null }), []);
-  return (
-    <>
-      <button
-        type="button"
-        className={'reader__toc-toggle ink-tbtn' + (ui.inking ? ' ink-tbtn--on' : '')}
-        aria-pressed={ui.inking}
-        onClick={() => setInkUi({ inking: !ui.inking })}
-        title="Write on the page (Alt+W)"
-      >
-        <IconPen /> Write
-      </button>
-      <button
-        type="button"
-        className={'reader__toc-toggle ink-tbtn' + (ui.sketch ? ' ink-tbtn--on' : '')}
-        aria-pressed={ui.sketch}
-        onClick={() => setInkUi({ sketch: !ui.sketch })}
-        title="Sketch beside this page (Alt+K)"
-      >
-        <IconSketch /> Sketch
-      </button>
-    </>
-  );
+  return null;
 }

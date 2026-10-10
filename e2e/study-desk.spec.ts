@@ -873,7 +873,7 @@ test.describe('right-click ring in the margins', () => {
 });
 
 test.describe('dock switch and lit cards', () => {
-  test('Margins and Document in the dock, and beside the Focus pill', async ({ page }) => {
+  test('Margins and Document in the dock, and in the Focus tool rail', async ({ page }) => {
     await openSample(page);
     const dock = page.locator('.qr-dock');
     const margins = dock.getByRole('button', { name: 'Margins' });
@@ -885,13 +885,13 @@ test.describe('dock switch and lit cards', () => {
     await expect(page.locator('.sd-margins__area').first()).toBeVisible();
 
     await dock.getByRole('button', { name: 'Focus' }).click();
-    const pill = page.getByRole('group', { name: 'Desk' });
-    await expect(pill).toContainText('Margins stay');
     await expect(page.locator('.sd-margins__area').first()).toBeVisible();
-    await pill.getByRole('button', { name: 'Margins' }).click();
+    await page.getByRole('group', { name: 'Focus' }).getByRole('button', { name: 'Tools' }).click();
+    const rail = page.getByRole('navigation', { name: 'Reader tools' });
+    await rail.getByRole('button', { name: /^Margins/ }).click();
     await expect(page.locator('.sd-margins')).toHaveCount(0);
-    await pill.getByRole('button', { name: 'Margins' }).click();
-    await pill.getByRole('button', { name: 'Document' }).click();
+    await rail.getByRole('button', { name: /^Margins/ }).click();
+    await rail.getByRole('button', { name: /^Document/ }).click();
     await expect(page.getByRole('dialog', { name: 'Desk document' })).toBeVisible();
   });
 
