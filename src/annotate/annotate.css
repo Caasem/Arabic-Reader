@@ -971,3 +971,20 @@ body.ink-sketching .pdfp .pdfp__body {
   fill: color-mix(in srgb, var(--accent) 8%, transparent);
   stroke-dasharray: 3 3;
 }
+
+.sk-list__find {
+  margin: 8px 10px 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 13px var(--font-ui);
+}
+.sk-list__hit {
+  color: var(--ink-soft) !important;
+  font-size: 12.5px !important;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

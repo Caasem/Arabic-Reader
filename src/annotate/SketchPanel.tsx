@@ -13,7 +13,7 @@ import { refreshSketchCards, sendSketchToMargin, sketchOutline, sketchPng, sketc
 import { usePreferences } from '../state/PreferencesContext';
 import { COLOR_NAMES, inkUi, keyOwner, PEN_WIDTHS, setInkUi, THEME_COLORS, useInkUi } from './inkUi';
 import { SketchSurface, type DiagramTool, type DrawTool, type SurfaceState } from './sketchSurface';
-import { covers, nextTitle, placeKey, rangeScope, recallTab, rememberTab, scopeLabel, scopeOf, sheetName, sheetUnit, tabsAt, type Place } from './sheets';
+import { covers, nextTitle, placeKey, searchSheets, rangeScope, recallTab, rememberTab, scopeLabel, scopeOf, sheetName, sheetUnit, tabsAt, type Place } from './sheets';
 import type { InkColor, Sketch } from './types';
 import { IconArrow, IconClose, IconEraser, IconExpand, IconHand, IconLasso, IconLink, IconMarker, IconNode, IconPen, IconQuote, IconRedo, IconSelect, IconTrash, IconUndo } from './icons';
 
@@ -37,6 +37,7 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
   const [templates, setTemplates] = useState(false);
   const [tabMenu, setTabMenu] = useState(false);
   const [listOpen, setListOpen] = useState(false);
+  const [find, setFind] = useState('');
   const [renaming, setRenaming] = useState<string | null>(null);
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const [moveTo, setMoveTo] = useState<string | null>(null);
@@ -690,8 +691,9 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
               <IconClose />
             </button>
           </div>
+          <input className="sk-list__find" type="search" placeholder="Search names and words on the sheets" aria-label="Search the sheets" value={find} onChange={(e) => setFind(e.target.value)} />
           <ul>
-            {all.map((s) => (
+            {searchSheets(all, find).map(({ sketch: s, snippet }) => (
               <li key={s.id}>
                 <button
                   type="button"
@@ -708,6 +710,11 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
                       {scopeLabel(s)}
                       {s.hidden ? ' · closed' : ''} · {new Date(s.updatedAt).toLocaleDateString()}
                     </span>
+                    {snippet && (
+                      <span className="sk-list__hit" dir="auto">
+                        {snippet}
+                      </span>
+                    )}
                   </span>
                 </button>
               </li>

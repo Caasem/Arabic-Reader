@@ -4,6 +4,11 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.93.0 — 2026-10-10
+
+- **Search your sheets.** All sheets has a search box: it finds sheets by name and by the words on them (Arabic
+  without its short vowels), and shows the words that matched.
+
 ## v0.92.0 — 2026-10-10
 
 - **Ink on Night pages.** Writing on a PDF page (Alt+W) is now turned with the page on Night pages, so dark ink

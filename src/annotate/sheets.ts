@@ -1,4 +1,5 @@
 import { parseCleanLocation } from '../quietReader/location';
+import { normalizeForSearch } from '../reader/tokenizer/arabicTokenizer';
 import type { Sketch, SketchScope } from './types';
 
 /**
@@ -96,3 +97,23 @@ export function rememberTab(bookId: string, p: Place, sketchId: string): void {
 export function recallTab(bookId: string, p: Place): string | undefined {
   return readTabs()[`${bookId}|${placeKey(p)}`];
 }
+
+/**
+ * Sheets whose name or words match a search (All sheets), with the words that matched. Arabic is matched without
+ * its short vowels, as the book search does; other text without case.
+ */
+export function searchSheets(sketches: readonly Sketch[], query: string): { sketch: Sketch; snippet: string | null }[] {
+  const q = fold(query.trim());
+  if (!q) return sketches.map((sketch) => ({ sketch, snippet: null }));
+  const out: { sketch: Sketch; snippet: string | null }[] = [];
+  for (const s of sketches) {
+    if (fold(s.title ?? '').includes(q)) out.push({ sketch: s, snippet: null });
+    else {
+      const node = s.nodes.find((n) => fold(n.text).includes(q));
+      if (node) out.push({ sketch: s, snippet: node.text });
+    }
+  }
+  return out;
+}
+
+const fold = (t: string) => normalizeForSearch(t).normalized.toLowerCase();

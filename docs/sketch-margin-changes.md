@@ -17,3 +17,14 @@ Everything discussed on 2026-10-10 about the Highlighter, sketches beside PDF pa
 | 9 | Freehand marker and lasso | 0.90.0 | Pen, eraser and hand only | Marker (M, `marker` on strokes); Lasso (S): loop selects strokes with most points inside, box to move, corner to resize, Delete; pictures keep marker see-through | Matches the page ink tools; fixes misplaced strokes without redrawing | `src/annotate/sketchSurface.ts` (`held`, lasso/smove/sscale, `deleteHeld`, `inPolygon`), `SketchPanel.tsx`, `toMargin.ts`, `types.ts`, `icons.tsx` (`IconLasso`), `annotate.css`; `e2e/annotate.spec.ts` | Revert; marker strokes then draw as plain strokes |
 | 10 | Cards that follow their sheet | 0.91.0 | Outline and node notes were copies that never changed; cards sat 10% down the page | Notes remember what they took (`sketchPart`, `sketchSent`): they follow the sheet until edited, then show *Sheet changed · Refresh* (`sketchStale`); cards pin level with the sheet's first quote on its own page or chapter | Copies went stale silently; cards sat away from what they were about | `src/annotate/toMargin.ts` (`followPart`, `partText`, `refreshPart`, `sketchPin`) and test, `inkStore.ts` (`getSketch`); `src/studyDesk/types.ts`, `MarginLayer.tsx`, `marginLayer.css`; `e2e/annotate.spec.ts` | Revert; notes become plain copies again |
 | 11 | Page ink on Night pages | 0.92.0 | Dark ink on the inverted (dark) page was invisible | The PDF ink layer takes the page's own night filter | Night pages are dark paper with light print | `src/annotate/annotate.css` (`.pdfp--night .ink-page`); `e2e/annotate.spec.ts` | Revert |
+| 12 | Search the sheets | 0.93.0 | Sheets could only be found by going to their page | All sheets has a search box over names and node words (`searchSheets`, Arabic normalised as in book search) | Finding a thought again | `src/annotate/sheets.ts` and test, `SketchPanel.tsx`, `annotate.css`; `e2e/annotate.spec.ts` | Revert |
+
+## Not done, and why
+
+| Idea | Why not now |
+|---|---|
+| Handwriting turned into text (ink cards, sheet strokes) | Needs a handwriting recogniser; the app's text recognition reads printed scans. Ink cards keep a picture, so a recogniser can be added later. |
+| Sheets in the book search palette (Alt+S) and the Highlights page | Both are built around book text and highlights; sheets are searchable from All sheets instead. |
+| Ink, sheets and desk cards on other devices | Ink and sketches still stay on this device until sync covers them (unchanged). |
+| Apple Pencil hover and double-tap, real iPad / Android check | Cannot be tested here; pen input is handled as before (stylus writes, fingers scroll). |
+| Notion / Obsidian export | Still parked at your request; sheets export to SVG, PNG and Markdown now. |

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { covers, nextTitle, rangeScope, scopeLabel, sheetName, tabsAt } from './sheets';
+import { covers, nextTitle, rangeScope, scopeLabel, searchSheets, sheetName, tabsAt } from './sheets';
 import type { Sketch } from './types';
 
 const sheet = (id: string, key: string, location: string, extra: Partial<Sketch> = {}): Sketch => ({
@@ -52,3 +52,16 @@ describe('sheets at a place', () => {
     expect(rangeScope(sheet('s', 'pdf:3', 'pdf:3'), 5, 8)).toEqual({ kind: 'range', from: 3, to: 8 });
   });
 });
+
+describe('searching sheets', () => {
+  it('matches names and the words on a sheet, Arabic without its vowels', () => {
+    const node = (text: string) => ({ id: text, x: 0, y: 0, w: 100, h: 40, text, kind: 'plain' as const });
+    const all = [sheet('s1', 'pdf:1', 'pdf:1', { title: 'Grammar' }), sheet('s2', 'pdf:2', 'pdf:2', { nodes: [node('عَصَبِيَّة')] })];
+    expect(searchSheets(all, 'gram').map((r) => r.sketch.id)).toEqual(['s1']);
+    const hit = searchSheets(all, 'عصبية');
+    expect(hit.map((r) => r.sketch.id)).toEqual(['s2']);
+    expect(hit[0].snippet).toBe('عَصَبِيَّة');
+    expect(searchSheets(all, '')).toHaveLength(2);
+  });
+});
+

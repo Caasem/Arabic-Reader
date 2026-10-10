@@ -271,6 +271,10 @@ test('sheets are tabs: + adds one, a name sticks, ✕ closes to All sheets, Ctrl
   const list = panel.getByRole('dialog', { name: 'All sheets' });
   await expect(list.locator('.sk-list__item')).toHaveCount(2);
   await expect(list).toContainText('closed');
+  // The list searches names and the words on the sheets.
+  await list.getByRole('searchbox', { name: 'Search the sheets' }).fill('gram');
+  await expect(list.locator('.sk-list__item')).toHaveCount(1);
+  await list.getByRole('searchbox', { name: 'Search the sheets' }).fill('');
   await list.locator('.sk-list__item', { hasText: 'Grammar' }).click();
   await expect(tabs).toHaveCount(2);
   await expect(panel.getByRole('tab', { name: 'Grammar' })).toHaveAttribute('aria-selected', 'true');
