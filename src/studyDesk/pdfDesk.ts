@@ -69,6 +69,24 @@ export function pdfMarks(items: DeskItem[], bookId: string, page?: number): PdfM
   return out.sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x);
 }
 
+/**
+ * The boxes to draw on a page: an item's own region. A card moved into a pile takes the pile's place as its pin,
+ * so the box comes from the pin only while the pin is a box, and otherwise from where the item was captured.
+ */
+export function pdfBoxMarks(items: DeskItem[], bookId: string, page: number): PdfMark[] {
+  const out: PdfMark[] = [];
+  for (const item of items) {
+    if (item.hidden && !item.pin) continue;
+    const box = (location?: string) => {
+      const at = parsePdfLocation(location);
+      return at && at.page === page && at.w > 0 && at.h > 0 ? at : null;
+    };
+    const at = (item.pin?.bookId === bookId ? box(item.pin.location) : null) ?? (item.source?.bookId === bookId ? box(item.source.location) : null);
+    if (at) out.push({ item, ...at });
+  }
+  return out;
+}
+
 /** Card tops (px), each level with its region where room allows, never overlapping. */
 export function stackTops(wanted: number[], heights: number[], gap = 8): number[] {
   let bottom = -Infinity;

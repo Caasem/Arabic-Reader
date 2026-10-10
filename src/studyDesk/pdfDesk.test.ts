@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pdfMarks, stackTops } from './pdfDesk';
+import { pdfBoxMarks, pdfMarks, stackTops } from './pdfDesk';
 import type { DeskItem } from './types';
 
 const item = (id: string, extra: Partial<DeskItem>): DeskItem => ({ id, deskId: 'd', type: 'capture', text: '', inInbox: true, createdAt: 0, updatedAt: 0, ...extra });
@@ -23,5 +23,23 @@ describe('PDF page marks', () => {
 
   it('stacks cards level with their regions without overlapping', () => {
     expect(stackTops([10, 20, 200], [50, 30, 20])).toEqual([10, 68, 200]);
+  });
+});
+
+describe('PDF page boxes', () => {
+  it('keeps a region’s box when its card is pinned to a pile’s level elsewhere', () => {
+    const items = [
+      // In a pile: pinned to the pile's level, captured as a box.
+      item('a', { source: { bookId: 'b', location: 'pdf:2:0.1:0.5:0.2:0.1' }, pin: { bookId: 'b', location: 'pdf:2:0:0.3:1:0', side: 'right' } }),
+      // Pinned as a box itself.
+      item('b', { pin: { bookId: 'b', location: 'pdf:2:0.3:0.2:0.2:0.1', side: 'right' } }),
+      // A margin note: a level only, no box.
+      item('c', { type: 'line', fromMargin: true, pin: { bookId: 'b', location: 'pdf:2:0:0.4:1:0', side: 'right' } }),
+    ];
+    expect(pdfBoxMarks(items, 'b', 2).map((m) => [m.item.id, m.y])).toEqual([
+      ['a', 0.5],
+      ['b', 0.2],
+    ]);
+    expect(pdfBoxMarks(items, 'b', 3)).toEqual([]);
   });
 });

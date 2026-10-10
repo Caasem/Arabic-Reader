@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { makePdf } from '../src/pdf/testPdf';
 
 /**
  * Piles in the quiet reader's margins (src/studyDesk/piles.ts, MarginLayer.tsx, PileFan.tsx): rest a dragged card
@@ -168,5 +169,85 @@ test.describe('piles in the margins', () => {
     await expect(page.locator('.sd-toast')).toContainText('Deleted 3 cards');
     await page.keyboard.press('Control+z');
     await expect(page.locator('.sd-margins > .sd-gloss--pile .sd-pile__count')).toHaveText('3');
+  });
+});
+
+test.describe('piles beside PDF pages', () => {
+  /** Three margin notes in the strip beside page 1 of a scanned PDF. */
+  async function threePdfNotes(page: Page) {
+    await page.goto('/');
+    await page.waitForSelector('.navbar__settings', { timeout: 15000 });
+    await page.setInputFiles('.library__actions input[type=file]', { name: 'scan.pdf', mimeType: 'application/pdf', buffer: Buffer.from(makePdf([{ image: true }, { image: true }])) });
+    await expect(page.locator('.book-card')).toHaveCount(1, { timeout: 30000 });
+    await page.locator('.book-card__open').first().click();
+    await expect(page.locator('.reader__footer')).toContainText('Page 1 of 2', { timeout: 20000 });
+    const area = page.locator('.sd-pdfmargin__area');
+    await expect(area).toBeVisible();
+    const a = (await area.boundingBox())!;
+    const frame = (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!;
+    for (const [i, text] of ['First note', 'Second note', 'Third note'].entries()) {
+      await page.mouse.dblclick(a.x + a.width / 2, frame.y + 120 + i * 140);
+      await expect(page.getByRole('textbox', { name: 'Margin note' }).last()).toBeFocused();
+      await page.keyboard.type(text);
+      await page.keyboard.press('Escape');
+    }
+    await expect(page.locator('.sd-pdfmargin > .sd-gloss')).toHaveCount(3);
+  }
+  async function centreOfPdf(page: Page, text: string) {
+    return page.evaluate((t) => {
+      const el = Array.from(document.querySelectorAll<HTMLElement>('.sd-pdfmargin > .sd-gloss, .sd-fan .sd-gloss')).find((g) => g.querySelector('textarea')?.value === t);
+      const r = el!.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + Math.min(r.height / 2, 18) };
+    }, text);
+  }
+  async function dragOntoPdf(page: Page, from: string, onto: string, hold: number) {
+    const a = await centreOfPdf(page, from);
+    const b = await centreOfPdf(page, onto);
+    await page.mouse.move(a.x, a.y);
+    await page.mouse.down();
+    await page.mouse.move(a.x + 10, a.y + 10, { steps: 2 });
+    await page.mouse.move(b.x, b.y, { steps: 8 });
+    await page.waitForTimeout(hold);
+    await page.mouse.up();
+  }
+
+  test('resting on a card piles it; the pile fans out in the strip; a card dragged out comes off; Undo', async ({ page }) => {
+    await threePdfNotes(page);
+    await dragOntoPdf(page, 'First note', 'Second note', 500);
+    const pile = page.locator('.sd-pdfmargin > .sd-gloss--pile');
+    await expect(pile).toHaveCount(1);
+    await expect(pile.locator('.sd-pile__count')).toHaveText('2');
+    await expect(page.locator('.sd-pdfmargin > .sd-gloss')).toHaveCount(2);
+    await expect(page.locator('.sd-toast')).toContainText('Piled');
+
+    // The fan opens inside the strip beside the pages.
+    await pile.locator('.sd-pile__count').click();
+    const fan = page.locator('.sd-fan');
+    await expect(fan).toBeVisible();
+    const strip = (await page.locator('.sd-pdfmargin__area').boundingBox())!;
+    const f = (await fan.boundingBox())!;
+    expect(f.x).toBeGreaterThanOrEqual(strip.x - 1);
+    await page.keyboard.press('Escape');
+    await expect(fan).toHaveCount(0);
+
+    // Undo takes the pile apart.
+    await page.mouse.move(10, 10);
+    await dragOntoPdf(page, 'Third note', 'Second note', 500);
+    await expect(pile.locator('.sd-pile__count')).toHaveText('3');
+    await page.locator('.sd-toast').getByRole('button', { name: /Undo/ }).click();
+    await expect(pile.locator('.sd-pile__count')).toHaveText('2');
+  });
+
+  test('a quick drop moves a note to that height of the page', async ({ page }) => {
+    await threePdfNotes(page);
+    const before = (await page.locator('.sd-pdfmargin > .sd-gloss', { has: page.locator('textarea') }).first().boundingBox())!.y;
+    const a = await centreOfPdf(page, 'First note');
+    await page.mouse.move(a.x, a.y);
+    await page.mouse.down();
+    await page.mouse.move(a.x, a.y + 10, { steps: 2 });
+    await page.mouse.move(a.x, a.y + 320, { steps: 8 });
+    await page.mouse.up();
+    await expect(page.locator('.sd-gloss--pile')).toHaveCount(0);
+    await expect.poll(async () => (await centreOfPdf(page, 'First note')).y).toBeGreaterThan(before + 200);
   });
 });
