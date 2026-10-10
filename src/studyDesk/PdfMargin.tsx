@@ -8,6 +8,7 @@ import { fromOtherBooks, groupOf, groupPiles, isBeneath } from './piles';
 import { usePileGestures } from './usePileGestures';
 import { foldActions, foldKeys } from './folding';
 import { useMarginInk } from './marginInk';
+import { useInkUi } from '../annotate/inkUi';
 import { MarginRing, marginActions, useRingTrigger, type DeskCommands, type RingState } from './MarginRing';
 import { pdfLevelAt } from './pageGeometry';
 import { pdfMarks, setPdfDeskFocus, setPdfDeskHover, setPdfDeskTie, usePdfDesk, type PdfMark } from './pdfDesk';
@@ -105,7 +106,11 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const on = !!stage && wide && prefs.studyDeskMargins !== 'off';
+  // The sketch panel docks where the strip is: while it is open the strip folds away (its cards come back when the
+  // panel closes, or in full size), rather than both squeezing the pages.
+  const ink = useInkUi();
+  const sketching = ink.sketch && !ink.full;
+  const on = !!stage && wide && prefs.studyDeskMargins !== 'off' && !sketching;
 
   // Keep the strip free beside the pages.
   useEffect(() => {
@@ -136,7 +141,7 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
   }, [on, stage, marks, tick]);
 
   // Writing straight in the strip: ink cards (marginInk.tsx).
-  const ink = useMarginInk(book, data.deskId, (x) =>
+  const inkCards = useMarginInk(book, data.deskId, (x) =>
     stage && x >= stage.right - 4 && x <= stage.right + PDF_STRIP ? { side: 'right', left: stage.right + GAP, width: PDF_STRIP - GAP * 2, place: (y) => pdfLevelAt(y) } : null
   );
 
@@ -230,9 +235,9 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
   const width = PDF_STRIP - GAP * 2;
 
   return (
-    <div ref={layerRef} className="sd-pdfmargin" aria-label="Margin beside the pages" onPointerDown={onLayerPointerDown} onPointerDownCapture={ink.onPointerDownCapture}>
+    <div ref={layerRef} className="sd-pdfmargin" aria-label="Margin beside the pages" onPointerDown={onLayerPointerDown} onPointerDownCapture={inkCards.onPointerDownCapture}>
       <svg ref={svgRef} className="sd-pdfdesk__lines" aria-hidden="true" />
-      {ink.overlay}
+      {inkCards.overlay}
       <div
         className={'sd-margins__area sd-pdfmargin__area' + (dropping ? ' sd-margins__area--drop' : '')}
         style={{ left: stage.right, width: PDF_STRIP, top: stage.top, height: stage.height }}

@@ -441,6 +441,20 @@ test('the Highlighter lets the page show through its fill, takes a colour, and c
 test.describe('margin beside PDF pages', () => {
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAFklEQVR42mP8z8Dwn4GBgYGJAQoAADUBAf8Ik8gAAAAASUVORK5CYII=', 'base64');
 
+  test('the strip folds away while the sketch panel is open, so the pages are never covered', async ({ page }) => {
+    await openScan(page);
+    await expect(page.locator('.sd-pdfmargin__area')).toBeVisible();
+    await page.keyboard.press('Alt+k');
+    const panel = page.getByRole('complementary', { name: 'Sketch' });
+    await expect(panel).toBeVisible();
+    await expect(page.locator('.sd-pdfmargin__area')).toHaveCount(0);
+    const p = (await panel.boundingBox())!;
+    await expect.poll(async () => (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!.x + (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!.width).toBeLessThanOrEqual(p.x + 1);
+    await page.keyboard.press('Escape');
+    await expect(panel).toHaveCount(0);
+    await expect(page.locator('.sd-pdfmargin__area')).toBeVisible();
+  });
+
   test('double-tap writes a note tied to that height of the page', async ({ page }) => {
     await openScan(page);
     const area = page.locator('.sd-pdfmargin__area');

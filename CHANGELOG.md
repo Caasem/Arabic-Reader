@@ -4,6 +4,12 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.88.0 — 2026-10-10
+
+- **The sketch panel and the PDF margin no longer fight for room.** Both used the right of the screen, so with the
+  sketch open the margin's cards slid under the panel (or the panel covered the pages). The margin beside PDF
+  pages now folds away while the sketch panel is open and comes back, cards and all, when it closes.
+
 ## v0.87.0 — 2026-10-10
 
 - **Quote in sketch from the Highlighter.** With the sketch panel open, the Highlighter's bar on a PDF page has
