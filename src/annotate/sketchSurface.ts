@@ -1,6 +1,6 @@
 import { newId } from '../utils/id';
 import { borderPoint, clamp, contentBox, hitStroke, pathD, pressureWidth, r1 } from './geometry';
-import { setInkUi } from './inkUi';
+import { MARKER_WIDTH, setInkUi } from './inkUi';
 import type { InkColor, InkPoint, Sketch, SketchEdge, SketchNode, SketchNodeKind } from './types';
 
 /**
@@ -9,7 +9,7 @@ import type { InkColor, InkPoint, Sketch, SketchEdge, SketchNode, SketchNodeKind
  * space; panning and zooming change only the view. The panel (SketchPanel.tsx) owns the buttons and calls in.
  */
 
-export type DrawTool = 'pen' | 'eraser' | 'hand';
+export type DrawTool = 'pen' | 'marker' | 'eraser' | 'lasso' | 'hand';
 export type DiagramTool = 'select' | 'link' | 'hand';
 
 export interface SurfaceState {
@@ -23,6 +23,8 @@ export interface SurfaceState {
   node: string | null;
   /** How many nodes are selected (Shift-click or Shift-drag adds more). */
   nodes: number;
+  /** How many strokes the lasso holds. */
+  strokes: number;
   /** The colour shared by the selected nodes, if they share one. */
   nodeColor: string | null;
   /** The selected connector, and whether it has an arrow. */
@@ -51,12 +53,26 @@ const quoteWords = (text: string) =>
     .join('');
 type Snap = string;
 
+/** Whether (x, y) is inside the polygon (even-odd rule). */
+function inPolygon(x: number, y: number, poly: [number, number][]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi || 1e-9) + xi) inside = !inside;
+  }
+  return inside;
+}
+
 type Act =
   | { k: 'pan'; p0: [number, number]; tx: number; ty: number }
   | { k: 'ink'; pts: InkPoint[]; pen: boolean }
   | { k: 'erase'; pre: Snap; hit: boolean }
   | { k: 'move'; id: string; el: HTMLElement; p0: [number, number]; x0: number; y0: number; pre: Snap; moved: boolean; wasSel: boolean; touch: boolean; word?: string; group: { id: string; x0: number; y0: number }[] }
   | { k: 'box'; p0: [number, number]; el: HTMLDivElement }
+  | { k: 'lasso'; pts: [number, number][] }
+  | { k: 'smove'; p0: [number, number]; pre: Snap; orig: Map<string, InkPoint[]>; moved: boolean }
+  | { k: 'sscale'; p0: [number, number]; pre: Snap; orig: Map<string, { pts: InkPoint[]; width: number }>; box: { x: number; y: number; w: number; h: number }; moved: boolean }
   | { k: 'resize'; id: string; el: HTMLElement; p0: [number, number]; w0: number; h0: number; pre: Snap; moved: boolean }
   | { k: 'link'; from: string };
 
@@ -72,6 +88,8 @@ export class SketchSurface {
   private sel: string | null = null;
   /** Nodes selected besides `sel` (Shift-click, Shift-drag). */
   private multi = new Set<string>();
+  /** Strokes the lasso holds (Freehand): moved, resized or deleted together. */
+  private held = new Set<string>();
   private selEdge: string | null = null;
   private linkFrom: string | null = null;
   private editing: string | null = null;
@@ -141,6 +159,7 @@ export class SketchSurface {
     this.redoStack = [];
     this.sel = this.selEdge = this.linkFrom = null;
     this.multi.clear();
+    this.held.clear();
     this.act = null;
     this.render();
   }
@@ -193,10 +212,12 @@ export class SketchSurface {
     this.sketch.mode = mode;
     this.sel = this.selEdge = this.linkFrom = null;
     this.multi.clear();
+    this.held.clear();
     this.render();
     this.opts.onChange(this.sketch, false);
   }
   setTool(tool: DrawTool): void {
+    if (tool !== 'lasso') this.release();
     this.tool = tool;
     this.renderCursor();
   }
@@ -232,6 +253,7 @@ export class SketchSurface {
   private clearSel(): void {
     this.sel = this.selEdge = null;
     this.multi.clear();
+    this.held.clear();
   }
   private emitState(): void {
     const e = this.selEdge ? this.sketch.edges.find((x) => x.id === this.selEdge) : undefined;
@@ -243,9 +265,10 @@ export class SketchSurface {
       canRedo: this.redoStack.length > 0,
       zoom: this.sketch.view.s,
       empty: !this.sketch.strokes.length && !this.sketch.nodes.length,
-      selected: !!(this.sel || this.selEdge || this.multi.size),
+      selected: !!(this.sel || this.selEdge || this.multi.size || this.held.size),
       node: this.sel,
       nodes: ids.length,
+      strokes: this.held.size,
       nodeColor: colors.size === 1 ? [...colors][0] || null : null,
       edge: e ? { id: e.id, dir: e.dir } : null,
     });
@@ -267,9 +290,41 @@ export class SketchSurface {
     this.emitState();
   }
   private renderInk(): void {
-    this.inkG.innerHTML = this.sketch.strokes
-      .map((s) => `<path class="ink-stroke" d="${pathD(s.pts)}" style="stroke:${this.opts.colors[s.color]};stroke-width:${s.width}"/>`)
-      .join('');
+    this.inkG.innerHTML =
+      this.sketch.strokes
+        .map((s) => `<path class="ink-stroke${s.marker ? ' ink-stroke--marker' : ''}${this.held.has(s.id) ? ' sk-held' : ''}" d="${pathD(s.pts)}" style="stroke:${this.opts.colors[s.color]};stroke-width:${s.width}"/>`)
+        .join('') + this.heldBoxSvg();
+  }
+  /** The box around the strokes the lasso holds, in sheet units, with its resize handle. */
+  private heldBox(): { x: number; y: number; w: number; h: number } | null {
+    if (!this.held.size) return null;
+    const strokes = this.sketch.strokes.filter((s) => this.held.has(s.id));
+    const b = contentBox(strokes, []);
+    if (!b) return null;
+    const pad = 6;
+    return { x: b.x - pad, y: b.y - pad, w: b.w + pad * 2, h: b.h + pad * 2 };
+  }
+  private heldBoxSvg(): string {
+    const b = this.heldBox();
+    if (!b) return '';
+    const k = 1 / this.sketch.view.s;
+    return `<rect class="sk-heldbox" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" style="stroke-width:${k}"/><rect class="sk-heldbox__h" x="${b.x + b.w - 5 * k}" y="${b.y + b.h - 5 * k}" width="${10 * k}" height="${10 * k}"/>`;
+  }
+  /** Lets go of the lasso's strokes. */
+  private release(): void {
+    if (!this.held.size) return;
+    this.held.clear();
+    this.renderInk();
+    this.emitState();
+  }
+  /** Deletes the strokes the lasso holds. */
+  deleteHeld(): boolean {
+    if (!this.held.size) return false;
+    this.checkpoint();
+    this.sketch.strokes = this.sketch.strokes.filter((s) => !this.held.has(s.id));
+    this.held.clear();
+    this.changed();
+    return true;
   }
   private edgePath(e: SketchEdge): string | null {
     const a = this.node(e.a);
@@ -604,11 +659,39 @@ export class SketchSurface {
       this.host.classList.add('sk-surface--panning');
       return;
     }
-    if (this.tool === 'pen') {
+    // The lasso's strokes: drag inside their box to move them, its corner to resize them.
+    const held = this.heldBox();
+    if (held) {
       const w = this.toWorld(p);
+      const k = 1 / v.s;
+      const onHandle = Math.abs(w[0] - (held.x + held.w)) < 9 * k && Math.abs(w[1] - (held.y + held.h)) < 9 * k;
+      const inside = w[0] >= held.x && w[0] <= held.x + held.w && w[1] >= held.y && w[1] <= held.y + held.h;
+      const strokes = this.sketch.strokes.filter((s) => this.held.has(s.id));
+      if (onHandle) {
+        this.act = { k: 'sscale', p0: w, pre: this.snap(), orig: new Map(strokes.map((s) => [s.id, { pts: s.pts.map((q) => [...q] as InkPoint), width: s.width }])), box: held, moved: false };
+        return;
+      }
+      if (inside) {
+        this.act = { k: 'smove', p0: w, pre: this.snap(), orig: new Map(strokes.map((s) => [s.id, s.pts.map((q) => [...q] as InkPoint)])), moved: false };
+        return;
+      }
+      this.release();
+    }
+    if (this.tool === 'lasso') {
+      this.act = { k: 'lasso', pts: [this.toWorld(p)] };
+      this.live.style.stroke = 'var(--accent)';
+      this.live.style.strokeWidth = String(1.2 / v.s);
+      this.live.setAttribute('class', 'ink-stroke sk-lasso-line');
+      this.live.setAttribute('d', pathD(this.act.pts));
+      return;
+    }
+    if (this.tool === 'pen' || this.tool === 'marker') {
+      const w = this.toWorld(p);
+      const marker = this.tool === 'marker';
       this.act = { k: 'ink', pts: [[w[0], w[1], e.pressure || 0.5]], pen: e.pointerType === 'pen' };
+      this.live.setAttribute('class', 'ink-stroke' + (marker ? ' ink-stroke--marker' : ''));
       this.live.style.stroke = this.opts.colors[this.color];
-      this.live.style.strokeWidth = String(this.width);
+      this.live.style.strokeWidth = String(marker ? MARKER_WIDTH : this.width);
       this.live.setAttribute('d', pathD(this.act.pts));
       this.host.classList.add('sk-surface--writing');
     } else if (this.tool === 'eraser') {
@@ -737,6 +820,37 @@ export class SketchSurface {
         this.renderEdges();
         break;
       }
+      case 'lasso': {
+        a.pts.push(this.toWorld(p));
+        this.live.setAttribute('d', pathD(a.pts) + 'Z');
+        break;
+      }
+      case 'smove': {
+        const w = this.toWorld(p);
+        const dx = w[0] - a.p0[0];
+        const dy = w[1] - a.p0[1];
+        if (!a.moved && Math.hypot(dx, dy) * v.s < 2) break;
+        a.moved = true;
+        for (const s of this.sketch.strokes) {
+          const o = a.orig.get(s.id);
+          if (o) s.pts = o.map(([x, y, q]) => [r1(x + dx), r1(y + dy), q]);
+        }
+        this.renderInk();
+        break;
+      }
+      case 'sscale': {
+        const w = this.toWorld(p);
+        const f = Math.max(0.2, Math.min((w[0] - a.box.x) / Math.max(1, a.box.w), (w[1] - a.box.y) / Math.max(1, a.box.h)));
+        a.moved = true;
+        for (const s of this.sketch.strokes) {
+          const o = a.orig.get(s.id);
+          if (!o) continue;
+          s.pts = o.pts.map(([x, y, q]) => [r1(a.box.x + (x - a.box.x) * f), r1(a.box.y + (y - a.box.y) * f), q]);
+          s.width = Math.round(o.width * f * 1000) / 1000;
+        }
+        this.renderInk();
+        break;
+      }
       case 'box': {
         const x = Math.min(a.p0[0], p[0]);
         const y = Math.min(a.p0[1], p[1]);
@@ -780,11 +894,30 @@ export class SketchSurface {
       case 'pan':
         this.opts.onChange(this.sketch, false);
         break;
-      case 'ink':
+      case 'ink': {
         this.live.setAttribute('d', '');
         this.checkpoint();
-        this.sketch.strokes.push({ id: newId('sks'), color: this.color, width: pressureWidth(this.width, a.pts, a.pen), pts: a.pts });
+        const marker = this.tool === 'marker';
+        this.sketch.strokes.push({ id: newId('sks'), color: this.color, width: marker ? MARKER_WIDTH : pressureWidth(this.width, a.pts, a.pen), pts: a.pts, ...(marker ? { marker: true } : {}) });
         this.changed();
+        break;
+      }
+      case 'lasso': {
+        this.live.setAttribute('d', '');
+        this.live.setAttribute('class', 'ink-stroke');
+        // Strokes with most of their points inside the loop.
+        const poly = a.pts;
+        this.held = new Set(this.sketch.strokes.filter((s) => s.pts.filter((q) => inPolygon(q[0], q[1], poly)).length * 2 >= s.pts.length).map((s) => s.id));
+        this.renderInk();
+        this.emitState();
+        break;
+      }
+      case 'smove':
+      case 'sscale':
+        if (a.moved) {
+          this.pushUndo(a.pre);
+          this.changed();
+        }
         break;
       case 'erase':
         if (a.hit) this.changed();

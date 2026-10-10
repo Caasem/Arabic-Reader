@@ -75,6 +75,8 @@ export const IconNode = ({ size = 16 }: { size?: number }) =>
   );
 export const IconArrow = ({ size = 16 }: { size?: number }) => svg(size, <path d="M4 12h15M13 6l6 6-6 6" />);
 export const IconQuote = ({ size = 16 }: { size?: number }) => svg(size, <path d="M7 7h4v4c0 3-2 5-4 6M14 7h4v4c0 3-2 5-4 6" />);
+export const IconLasso = ({ size = 16 }: { size?: number }) =>
+  svg(size, <path d="M12 4c4.4 0 8 2.2 8 5s-3.6 5-8 5-8-2.2-8-5 3.6-5 8-5zM7 13c-1 2-1 4 1 5s3 3 1 3" strokeDasharray="2.5 2.5" />);
 export const IconTrash = ({ size = 16 }: { size?: number }) => svg(size, <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />);
 export const IconExpand = ({ size = 16 }: { size?: number }) => svg(size, <path d="M4 9V4h5M20 15v5h-5M15 4h5v5M9 20H4v-5" />);
 export const IconClose = ({ size = 16 }: { size?: number }) => svg(size, <path d="M9 6l6 6-6 6" />);

@@ -4,6 +4,13 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.90.0 — 2026-10-10
+
+- **Marker on sketch sheets** (M): wide, see-through strokes, as on the page.
+- **Lasso** (S) in Freehand: circle strokes to hold them, then drag inside their box to move them, drag its corner
+  to resize them, or press Delete. Undo takes each change back.
+- Ink cards made from a sheet keep marker strokes see-through.
+
 ## v0.89.0 — 2026-10-10
 
 - **Coloured boxes in diagrams.** Select a box (or several) and pick a colour from the row that appears: cream,

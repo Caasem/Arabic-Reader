@@ -946,3 +946,23 @@ body.ink-sketching .pdfp .pdfp__body {
 .sk-swatch--none {
   background: repeating-linear-gradient(45deg, var(--bg-elevated) 0 3px, var(--border) 3px 5px);
 }
+
+/* Freehand lasso (sketchSurface.ts): the strokes it holds, their box and its resize corner. */
+.sk-held {
+  filter: drop-shadow(0 0 1.5px var(--accent));
+}
+.sk-heldbox {
+  fill: none;
+  stroke: var(--accent);
+  stroke-dasharray: 4 3;
+  vector-effect: non-scaling-stroke;
+}
+.sk-heldbox__h {
+  fill: var(--bg-elevated);
+  stroke: var(--accent);
+  vector-effect: non-scaling-stroke;
+}
+.sk-lasso-line {
+  fill: color-mix(in srgb, var(--accent) 8%, transparent);
+  stroke-dasharray: 3 3;
+}

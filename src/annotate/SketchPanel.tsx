@@ -15,7 +15,7 @@ import { COLOR_NAMES, inkUi, keyOwner, PEN_WIDTHS, setInkUi, THEME_COLORS, useIn
 import { SketchSurface, type DiagramTool, type DrawTool, type SurfaceState } from './sketchSurface';
 import { covers, nextTitle, placeKey, rangeScope, recallTab, rememberTab, scopeLabel, scopeOf, sheetName, sheetUnit, tabsAt, type Place } from './sheets';
 import type { InkColor, Sketch } from './types';
-import { IconArrow, IconClose, IconEraser, IconExpand, IconHand, IconLink, IconNode, IconPen, IconQuote, IconRedo, IconSelect, IconTrash, IconUndo } from './icons';
+import { IconArrow, IconClose, IconEraser, IconExpand, IconHand, IconLasso, IconLink, IconMarker, IconNode, IconPen, IconQuote, IconRedo, IconSelect, IconTrash, IconUndo } from './icons';
 
 export type { Place } from './sheets';
 
@@ -399,8 +399,9 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
         return;
       }
       if (mode === 'draw') {
-        const t2 = ({ KeyP: 'pen', KeyE: 'eraser', KeyH: 'hand' } as Record<string, DrawTool>)[e.code];
+        const t2 = ({ KeyP: 'pen', KeyM: 'marker', KeyE: 'eraser', KeyS: 'lasso', KeyH: 'hand' } as Record<string, DrawTool>)[e.code];
         if (t2) return take(), setTool(t2);
+        if ((e.key === 'Delete' || e.key === 'Backspace') && s.deleteHeld()) return take();
       } else {
         const t2 = ({ KeyV: 'select', KeyL: 'link', KeyH: 'hand' } as Record<string, DiagramTool>)[e.code];
         if (t2) return take(), setDtool(t2);
@@ -720,7 +721,9 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
           {(
             [
               ['pen', 'Pen', 'P', IconPen],
+              ['marker', 'Marker', 'M', IconMarker],
               ['eraser', 'Eraser', 'E', IconEraser],
+              ['lasso', 'Lasso: circle strokes to move, resize or delete them', 'S', IconLasso],
               ['hand', 'Move the sheet', 'H', IconHand],
             ] as const
           ).map(([id, label, key, Icon]) => (
@@ -737,7 +740,7 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
               style={{ background: THEME_COLORS[c] }}
               aria-pressed={ui.color === c}
               aria-label={`Colour: ${COLOR_NAMES[c]}`}
-              onClick={() => (setInkUi({ color: c }), setTool('pen'))}
+              onClick={() => (setInkUi({ color: c }), setTool(tool === 'marker' ? 'marker' : 'pen'))}
             />
           ))}
           <span className="ink-sep" aria-hidden="true" />
@@ -746,6 +749,11 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
               <i style={{ width: 3 + i * 4, height: 3 + i * 4 }} />
             </button>
           ))}
+          {!!state?.strokes && (
+            <button type="button" className="ink-ib" aria-label="Delete the strokes in the lasso (Delete)" title="Delete · Del" onClick={() => surface.current?.deleteHeld()}>
+              <IconTrash />
+            </button>
+          )}
           <span className="sk-grow" />
           <UndoRedo onUndo={() => surface.current?.undo()} onRedo={() => surface.current?.redo()} state={state} />
         </div>

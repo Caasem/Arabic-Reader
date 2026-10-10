@@ -127,7 +127,7 @@ export function sketchSvg(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): { svg
     body += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="14" fill="${fill}" stroke="${stroke}" stroke-width="1.2"/>`;
     body += `<text text-anchor="middle" dominant-baseline="central" direction="${/[؀-ۿ]/.test(n.text) ? 'rtl' : 'ltr'}" font-family="'Noto Naskh Arabic','Segoe UI',Tahoma,sans-serif" font-size="${size}" fill="${n.kind === 'quote' ? '#7d5a14' : '#1c1b19'}">${lines.map((l, i) => `<tspan x="${n.x + n.w / 2}" y="${r1(y0 + i * lh)}">${esc(l)}</tspan>`).join('')}</text>`;
   }
-  for (const st of s.strokes) body += `<path d="${pathD(st.pts)}" fill="none" stroke="${PAPER_COLORS[st.color]}" stroke-width="${st.width}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  for (const st of s.strokes) body += `<path d="${pathD(st.pts)}" fill="none" stroke="${PAPER_COLORS[st.color]}" stroke-width="${st.width}" stroke-linecap="round" stroke-linejoin="round"${st.marker ? ' stroke-opacity="0.35"' : ''}/>`;
   return { svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${x0} ${y0} ${w} ${h}" width="${w}" height="${h}">${body}</svg>`, w, h };
 }
 
@@ -179,7 +179,7 @@ export function sketchInk(s: Pick<Sketch, 'strokes'>): DeskInk | null {
   const k = Math.min(1, INK_CARD_W / Math.max(1, box.w + 16));
   let ink: DeskInk | undefined;
   for (const st of s.strokes)
-    ink = addInk(ink, { color: st.color, width: r1(st.width * k), pts: st.pts.map(([x, y, p]) => [r1((x - box.x) * k), r1((y - box.y) * k), p]) }, INK_CARD_W);
+    ink = addInk(ink, { color: st.color, width: r1(st.width * k), pts: st.pts.map(([x, y, p]) => [r1((x - box.x) * k), r1((y - box.y) * k), p]), ...(st.marker ? { marker: true } : {}) }, INK_CARD_W);
   return ink ?? null;
 }
 

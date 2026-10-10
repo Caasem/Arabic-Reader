@@ -383,3 +383,35 @@ test('diagram: a template, tinted boxes, Shift to select more, and Tidy lays it 
   await page.keyboard.up('Shift');
   await expect(colours).toContainText('6 boxes');
 });
+
+test('freehand: the marker, and the lasso moves and deletes strokes', async ({ page }) => {
+  await openSample(page);
+  await page.keyboard.press('Alt+k');
+  const panel = page.getByRole('complementary', { name: 'Sketch' });
+  const sheet = (await panel.locator('.sk-surface').boundingBox())!;
+  await scribble(page, sheet.x + 40, sheet.y + 80, 100);
+  await scribble(page, sheet.x + 40, sheet.y + 260, 100);
+  await panel.getByRole('button', { name: 'Marker (M)' }).click();
+  await scribble(page, sheet.x + 40, sheet.y + 170, 100);
+  await expect(panel.locator('.sk-ink path.ink-stroke--marker')).toHaveCount(1);
+
+  // A loop round the first stroke holds it; dragging inside the box moves it; Delete removes it.
+  await panel.getByRole('button', { name: /^Lasso/ }).click();
+  const loop = [[20, 50], [170, 50], [170, 115], [20, 115], [20, 52]];
+  await page.mouse.move(sheet.x + loop[0][0], sheet.y + loop[0][1]);
+  await page.mouse.down();
+  for (const [x, y] of loop.slice(1)) await page.mouse.move(sheet.x + x, sheet.y + y, { steps: 4 });
+  await page.mouse.up();
+  await expect(panel.locator('.sk-ink path.sk-held')).toHaveCount(1);
+  const before = await panel.locator('.sk-ink path.sk-held').getAttribute('d');
+  await page.mouse.move(sheet.x + 90, sheet.y + 80);
+  await page.mouse.down();
+  await page.mouse.move(sheet.x + 140, sheet.y + 110, { steps: 5 });
+  await page.mouse.up();
+  expect(await panel.locator('.sk-ink path.sk-held').getAttribute('d')).not.toBe(before);
+  await page.keyboard.press('Delete');
+  await expect(panel.locator('.sk-ink path.ink-stroke')).toHaveCount(2);
+  // Undo brings it back.
+  await page.keyboard.press('Control+z');
+  await expect(panel.locator('.sk-ink path.ink-stroke')).toHaveCount(3);
+});

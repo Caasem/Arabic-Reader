@@ -37,6 +37,8 @@ export interface SketchStroke {
   color: InkColor;
   width: number;
   pts: InkPoint[];
+  /** Written with the marker: wide and see-through. */
+  marker?: boolean;
 }
 
 export type SketchNodeKind = 'plain' | 'note' | 'quote' | 'image';
