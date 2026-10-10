@@ -145,6 +145,50 @@ test.describe('margins', () => {
     await expect(doc.locator('.desk-embed', { hasText: 'Why does he go home?' })).toHaveCount(1);
   });
 
+  test('cards fold to one line and open again: the ▾, a click, [ and ], and the Cards setting', async ({ page }) => {
+    await openSample(page);
+    const area = page.locator('.sd-margins__area').last();
+    const box = (await area.boundingBox())!;
+    await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 1));
+    await expect(page.getByRole('textbox', { name: 'Margin note' })).toBeFocused();
+    await page.keyboard.type('A note to fold away');
+    await page.keyboard.press('Escape');
+    const card = page.locator('.sd-gloss--m');
+    await expect(card).toHaveCount(1);
+
+    // The ▾ folds it to a chip with its first words; pointing at the chip shows the whole card.
+    await card.hover();
+    await card.getByRole('button', { name: 'Fold this card' }).click();
+    const chip = page.getByRole('button', { name: /^Open the card: Note, A note to fold away/ });
+    await expect(chip).toBeVisible();
+    await page.mouse.move(5, 5);
+    await chip.hover();
+    await expect(page.locator('.sd-chip__peek')).toContainText('A note to fold away');
+    // A click opens it again.
+    await chip.click();
+    await expect(page.getByRole('textbox', { name: 'Margin note' })).toHaveValue('A note to fold away');
+
+    // [ folds every card on screen, ] opens them.
+    await page.mouse.move(5, 5);
+    await page.mouse.click(5, 300);
+    await page.keyboard.press('[');
+    await expect(page.locator('.sd-gloss--chip')).toHaveCount(1);
+    await page.keyboard.press(']');
+    await expect(page.locator('.sd-gloss--chip')).toHaveCount(0);
+
+    // Margin settings → Cards: Folded folds cards that have no choice of their own; a new note opens to be written.
+    await page.getByRole('button', { name: 'Margin settings' }).click();
+    await page.getByRole('group', { name: 'Cards' }).getByRole('button', { name: 'Folded' }).click();
+    await page.keyboard.press('Escape');
+    await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 3));
+    await expect(page.locator('.sd-gloss__body:focus')).toHaveCount(1);
+    await page.keyboard.type('Second');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('button', { name: /^Open the card: Note, Second/ })).toBeVisible();
+    // The first card was opened by hand (]), so it stays open.
+    await expect(page.locator('.sd-gloss--m:not(.sd-gloss--chip)')).toHaveCount(1);
+  });
+
   test('a margin note becomes a flashcard in review; Alt+M hides the margins', async ({ page }) => {
     await openSample(page);
     const area = page.locator('.sd-margins__area').last();

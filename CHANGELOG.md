@@ -4,6 +4,18 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.84.0 — 2026-10-10
+
+- **Fold margin cards to one line.** Every card in the margins (the quiet reader's and the strip beside PDF pages)
+  has a ▾ in its corner that folds it to a chip: its kind, a thumbnail if it has a picture, and its first words.
+  Click the chip (or Enter) to open it; point at it to see the whole card beside it. Its line to the page stays,
+  fainter. Each card remembers whether it is folded.
+- **Fold or open every card on screen** with [ and ], or from the margin's right-click ring (Fold all cards / Open
+  all cards). Piles fold with their top card, keep their count, and can still be dragged and fanned.
+- **Margin settings → Cards: Open or Folded** sets how cards you have not folded or opened yourself are shown. A
+  note you are writing always shows open.
+- The margin ring grows wider when it has more buttons, so they never overlap.
+
 ## v0.83.0 — 2026-10-10
 
 - **Sharp sketch pictures in the margin.** A sketch sent To margin as a picture is now kept as an SVG, so it is

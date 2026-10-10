@@ -62,6 +62,8 @@ export interface DeskItem {
   reviewId?: string;
   /** Sent from a sketch sheet (src/annotate): the sheet's id, so the card can open it again. */
   sketchId?: string;
+  /** Folded to a one-line chip in the margin (true), or open (false). Unset follows Margin settings → Cards. */
+  collapsed?: boolean;
   /** In a pile in the margin. A pile of one is no pile and is shown as a lone card. */
   pile?: DeskPile;
   createdAt: number;

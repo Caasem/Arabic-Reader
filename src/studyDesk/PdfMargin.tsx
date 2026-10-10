@@ -2,10 +2,11 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta } from '../types';
 import { carriesFiles, imageIn } from './marginImages';
-import { Gloss, MarginSettings } from './MarginLayer';
+import { Gloss, isFolded, MarginSettings } from './MarginLayer';
 import { PileFan } from './PileFan';
 import { fromOtherBooks, groupOf, groupPiles, isBeneath } from './piles';
 import { usePileGestures } from './usePileGestures';
+import { foldActions, foldKeys } from './folding';
 import { MarginRing, marginActions, useRingTrigger, type DeskCommands, type RingState } from './MarginRing';
 import { pdfLevelAt } from './pageGeometry';
 import { pdfMarks, setPdfDeskFocus, setPdfDeskHover, setPdfDeskTie, usePdfDesk, type PdfMark } from './pdfDesk';
@@ -93,7 +94,7 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
   const [dropping, setDropping] = useState(false);
   // Right-click (or long-press) the strip: the ring of shortcuts.
   const [ring, setRing] = useState<RingState | null>(null);
-  const stripRing = useRingTrigger((x, y) => setRing({ x, y, title: 'Margin', actions: marginActions(commands, () => void newNote(y), () => setSettingsOpen(true)) }));
+  const stripRing = useRingTrigger((x, y) => setRing({ x, y, title: 'Margin', actions: marginActions(commands, () => void newNote(y), () => setSettingsOpen(true), foldActions(onScreen, (i) => isFolded(i, prefs.studyDeskCards))) }));
   const layerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -133,6 +134,12 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [on, stage, marks, tick]);
 
+  // Folding every card on screen: the cards placed, and the cards of their piles.
+  const placedRef = useRef(placed);
+  placedRef.current = placed;
+  const onScreen = useCallback(() => placedRef.current.flatMap((p) => groupOf(p.mark.item, piles)), [piles]);
+  useEffect(() => (on ? foldKeys(onScreen) : undefined), [on, onScreen]);
+
   // --- piles, shared with the quiet reader's margins: one margin (right), drops land at a height of a page ---
   const { fan, fanGroup, naming, setNaming, sel, lassoBox, lassoed, hoverPile, enterFan, leaveFan, closeFan, pinFan, namePile, deleteCards, onLayerPointerDown, startLasso } = usePileGestures({
     bookId: book.id,
@@ -164,13 +171,14 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
       if (!card) return;
       // Room above a pile's colour tab and below its stacked edges, as in the quiet reader's margins.
       const tabbed = card.classList.contains('sd-gloss--tabbed') ? 22 : 0;
-      const top = Math.max(p.sy - 16, bottom + tabbed);
+      const chip = card.classList.contains('sd-gloss--chip');
+      const top = Math.max(p.sy - (chip ? 13 : 16), bottom + tabbed);
       card.style.top = `${top}px`;
       bottom = top + card.offsetHeight + 10 + (card.classList.contains('sd-gloss--pile') ? 10 : 0);
-      const gy = top + 16;
+      const gy = top + (chip ? 13 : 16);
       const mx = (p.sx + gx) / 2;
       const id = p.mark.item.id;
-      const cls = (id === hover || id === focusId ? 'on' : '') + (p.mark.h > 0 ? '' : ' free');
+      const cls = (id === hover || id === focusId ? 'on' : '') + (p.mark.h > 0 ? '' : ' free') + (chip ? ' folded' : '');
       paths.push(`<g class="${cls}"><path d="M${p.sx} ${p.sy} C${mx} ${p.sy} ${mx} ${gy} ${gx} ${gy}"/><circle cx="${p.sx}" cy="${p.sy}" r="2.4"/></g>`);
     });
     svg.innerHTML = paths.join('');
