@@ -1,23 +1,11 @@
 # Refactor pass: change matrix
 
-The plan from 2026-10-10, revised 2026-10-11: tidy the repo, put the readers that stay on one shared core, retire the
-others, and replace hand-wired feature switches with a registry. One phase per branch and worktree, one PR each, green CI before merge.
+The plan from 2026-10-10: tidy the repo, put the readers on one shared core, keep only the new reader and PDF pages
+(decided 2026-10-11), and replace hand-wired feature switches with a registry. One phase per branch and worktree, one PR each, green CI before merge.
 Order: **0 → 2a → 1 → 2b → 5**. Phases 3 (dictionaries as packs), 4 (popup split), 6 (routing) and 7 (colour
 tokens) are planned separately.
 
 To undo a phase, revert its merge commit. Each row says what a revert leaves behind.
-
-## Which readers stay (decided 2026-10-11)
-
-| Reader | Where | Decision | Why |
-|---|---|---|---|
-| New reader | `src/quietReader` | **Stays.** Becomes the only way to read a reflowable book, on every device | The default since 0.21.0. Everything new since then (dock, Ḥāshiya, ink, Focus, piles) was built for it |
-| PDF pages | `src/pdf/pages` | **Stays** | The only view for a PDF whose text can't be reflowed |
-| Speed reader | `src/speedReader` | **Stays** | Its own tab, not a book reader |
-| Original layout (epub.js `Reader`) | `src/components/reader/Reader.tsx` | **Removed in 2b** | A second full reader to keep in step. The new reader already resolves highlights made there by their text |
-| Old clean reader | `src/cleanReader/CleanReader.tsx` | **Removed in 2b** | The new reader replaced it in 0.21.0. Until now phones and tablets were still onboarded into it |
-
-The `epubjs` package **stays**. It isn't only a renderer: import (`libraryService`), book search (`bookSearch/engine`, `reader/epub/bookSearch`), the speed reader (`speedReader/tokenStream`), the vocabulary index (`vocabRarity/bookVocabIndex`, `VocabLevels`) and footnotes (`reader/footnotes`) use it to read EPUB files.
 
 ## Phase 0: housekeeping (done)
 
@@ -29,6 +17,19 @@ Branch `refactor/phase0-cleanup`, worktree `Arabic-Reader-refactor`. Nothing use
 | Piles prototype moved out of `src/` | A design file, not app code, sat among the study desk sources; piles shipped in 0.70.0 | `src/studyDesk/piles.prototype.html` | `docs/prototypes/piles.prototype.html`; `docs/features/study-desk.md` updated | None. Not imported by the app | Moves it back |
 | Change matrices grouped in `docs/changes/` | Five `*-changes.md` files crowded the `docs/` root next to governance and privacy docs | `docs/annotate-changes.md`, `shared-dock-`, `shared-focus-`, `sketch-margin-`, `study-desk-changes.md` | `docs/changes/<name>-changes.md` (this file joins them). Links in three `index.ts` headers, the study desk spec and `roadmap.json` updated | None for users. Old links in closed PRs point to the previous paths | Moves them back |
 | Bundle size check in CI | Nothing stopped the app's own code from growing. Data and workers already total about 38 MB | No size check | `scripts/check-bundle-size.mjs` (`npm run size`) runs after the e2e tests. Per-file budgets, plus a 2.85 MB budget for app code (now 2.57 MB) | A PR that makes a file more than about 10% bigger fails CI until it shrinks or the budget is raised in the same commit, with a reason | Removes the script, the npm script and the CI step |
+
+## Which readers stay (decided 2026-10-11)
+
+| Reader | Decision | Why |
+|---|---|---|
+| New reader (`src/quietReader`) | **Keep**, for every book on every device | Every feature since 0.21.0 lives here (dock, Ḥāshiya, ink, shared Focus). It already honours the layout settings, shows footnotes, and finds Original-layout highlights by their text |
+| PDF pages (`src/pdf/pages`) | **Keep** | The only way to read a PDF whose text can't be reflowed |
+| Speed reader (`src/components/speedReader`) | **Keep** | A separate tab, not a reading view. Cheap to maintain |
+| Original layout (epub.js `Reader`) | **Remove** (phase 2b) | Gets no new features. Loses: the book's own styling, images and table layout. 26 e2e specs run in it today and move to the new reader first |
+| Old clean reader (`CleanReader`) | **Remove** (phase 2b) | The phone and tablet onboarding profiles pick it today, yet it has no highlights, bookmarks or search. Phase 2a moves those users to the new reader first |
+
+The `epubjs` package stays for now: import, search, the speed reader, the vocabulary index and footnotes use it to
+read EPUB files. Dropping it is an optional later phase.
 
 ## Phase 2a: new reader on touch devices (done)
 
@@ -50,6 +51,6 @@ Branch `refactor/phase2a-touch-new-reader`, worktree `Arabic-Reader-p2a`. Users 
 
 | Phase | Branch / worktree | Model | Change | Why | Before | After | Impact |
 |---|---|---|---|---|---|---|---|
-| 1. Shared reader core | `refactor/phase1-reader-core`, `Arabic-Reader-p1` | Opus | New `src/readerCore/`: book model, positions, word wrapping, search, painting, sessions. `ReaderSwitch` moves there | The default reader imports six modules from `cleanReader/` and its popup and hooks from `components/reader/`. Deleting any reader breaks the others | Shared code lives inside whichever reader came first | One core used by the new reader and PDF pages | No visible change. Every reader e2e spec has to pass unchanged. Highest regression risk of the pass |
-| 2b. Remove Original layout and the old clean reader | `refactor/phase2b-retire-readers`, `Arabic-Reader-p2b` | Sonnet to port the e2e specs, then Opus to remove the readers | Port the 25 specs that still start in Original layout (2a ported touch-gestures). Delete the epub.js `Reader`, `CleanReader.tsx`, Display → View → Original layout, `quietReaderEnabled`, `cleanReaderEnabled` and 2a's Switch back | Both duplicate the new reader (see "Which readers stay") | Four reader paths | Two: the new reader and PDF pages (plus the speed reader tab) | Saved positions, highlights and bookmarks carry over. **`epubjs` stays** for import, search, the speed reader, the vocabulary index and footnotes |
-| 5. Feature registry | `refactor/phase5-feature-registry`, `Arabic-Reader-p5` | Opus for the design and the first two features, then Sonnet for the rest | Each feature declares `{id, pref, SettingsSection, Host, chords, touchPoints}`. `ReaderSwitch` and `SettingsPanel` loop over the list. Feature code stops calling `localStorage` directly | 23 `*Enabled` flags, overlays and settings groups are wired by hand. 12 files call `localStorage` directly instead of `src/utils/storage.ts` | Adding a feature touches 4 to 6 shared files | One folder plus one registry line. Storage goes through `src/utils/storage.ts` or the preferences repo | No visible change. Values already stored in `localStorage` must be read and migrated, not lost |
+| 1. Shared reader core | `refactor/phase1-reader-core`, `Arabic-Reader-p1` | Opus | New `src/readerCore/` for what the new reader and PDF pages share. `ReaderSwitch` moves there | The new reader imports six modules from `cleanReader/`, a folder that 2b deletes | Shared code lives inside the old clean reader's folder | One core used by the new reader and PDF pages | No visible change. Every reader e2e spec passes unchanged |
+| 2b. Remove Original layout and the old clean reader | `refactor/phase2b-retire-readers`, `Arabic-Reader-p2b` | Sonnet ports the 25 specs still in Original layout (2a ported touch-gestures), then Opus removes the readers | Delete the epub.js `Reader`, `CleanReader`, the `quietReaderEnabled` and `cleanReaderEnabled` settings and Display → View → Original layout | Four reading paths become two | New reader, Original layout, old clean reader, PDF pages | New reader and PDF pages | Books show as clean text only (no book styling or images). Highlights and bookmarks carry over. A minor version bump |
+| 5. Feature registry | `refactor/phase5-feature-registry`, `Arabic-Reader-p5` | Opus for the design and the first two features, then Sonnet for the rest | Each feature declares `{id, pref, SettingsSection, Host, chords, touchPoints}`. `ReaderSwitch` and `SettingsPanel` loop over the list. Feature code stops calling `localStorage` directly | 23 `*Enabled` flags, overlays and settings groups are wired by hand. 12 files call `localStorage` directly instead of `src/utils/storage.ts` | Adding a feature touches 4 to 6 shared files | One folder plus one registry line | No visible change. Values already stored in `localStorage` must be read and migrated, not lost |
