@@ -108,6 +108,22 @@ a card type that points at a sheet. Data class A (user records), synced like oth
 Risk: making the model text look right (font and baseline); judging writing quality is out of scope, only "did the
 recogniser read the same word".
 
+### G. Straight lines (decided 2026-10-11)
+
+A stroke can be made perfectly straight, in two ways that give the same result:
+- **Hold Shift** while drawing (keyboard with a pen, mouse or trackpad). Pressing Shift partway through straightens
+  the **whole stroke from where it started**; releasing Shift before lifting the pen keeps it straight.
+- **Draw and hold** (any device, for iPad and Android without a keyboard): stop moving at the end of a stroke for
+  about half a second and it snaps straight from its start to that point. Moving on after the snap moves the line's
+  end (it stays straight) until the pen lifts.
+
+The line runs from the start point toward the pen, at **any angle**, with a gentle pull to level: within about 5° of
+horizontal or vertical it snaps exactly horizontal or vertical, so underlines under a line of text come out level
+without trying. It is saved as an ordinary stroke (two points, same colour, width, marker, Undo, eraser).
+
+Everywhere ink is drawn: page ink (new reader and PDF pages), sketch sheets (freehand) and Ḥāshiya ink cards.
+A straightened line is **always plain ink, never a gesture** (B), even with Gestures on.
+
 ### F. Foundations (do before or alongside)
 
 - **Sync ink and sketches** (`arabic-reader-ink` into the synced tables, with a schema version and a migration test).
