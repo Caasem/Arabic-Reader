@@ -135,7 +135,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     onDone();
   }
 
-  const useRecommended = () => finish(detected, []);
+  // Recommended: this device's layout, English and Al-Wasīṭ. Skipping takes only the essential dictionary.
+  const useRecommended = () => finish(detected, ['alwasit']);
+  const skip = () => finish(detected, []);
   const toggleDict = (id: OptionalProviderId) =>
     setOptional((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
@@ -250,7 +252,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         {phase === 'setup' && (
           <div className="ob-alt">
             <button type="button" className="ob-btn ob-btn--quiet" disabled={busy} onClick={useRecommended}>Use recommended settings</button>
-            <button type="button" className="ob-btn ob-btn--quiet" disabled={busy} onClick={useRecommended}>Skip for now</button>
+            <button type="button" className="ob-btn ob-btn--quiet" disabled={busy} onClick={skip}>Skip for now</button>
           </div>
         )}
       </section>

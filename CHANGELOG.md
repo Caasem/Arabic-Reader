@@ -10,6 +10,8 @@ release.
   own address (#/library, #/read/..., #/read/.../levels, #/vocabulary, #/highlights, #/review, #/dashboard,
   #/dictionary?q=...). A reading position and the Settings panel are not part of the address. If a book in the
   address is no longer in your Library, you land on the Library.
+- First-run setup: *Use recommended settings* now switches on Al-Muʿjam al-Wasīṭ (Arabic–Arabic) as well as the
+  English dictionary. *Skip for now* still sets up the English dictionary only.
 
 ## v0.96.0 — 2026-10-11
 
