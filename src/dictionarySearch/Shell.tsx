@@ -1,25 +1,12 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import type { ReaderPreferences } from '../types';
+import { loadPos, savePos, type Pos } from './shellPos';
 
 type Style = ReaderPreferences['dictionarySearchStyle'];
 
 const POS_KEY = 'dictionarySearch.floatingPos';
 const FLOAT_WIDTH = 320;
 const MARGIN = 12;
-
-interface Pos {
-  x: number;
-  y: number;
-}
-
-function loadPos(key: string): Pos | null {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as Pos) : null;
-  } catch {
-    return null;
-  }
-}
 
 function clamp(pos: Pos, height: number): Pos {
   return {
@@ -98,11 +85,7 @@ function Floating({ onClose, children, keyHint, label, posKey }: { onClose(): vo
   function onPointerUp() {
     if (!drag.current) return;
     drag.current = null;
-    try {
-      localStorage.setItem(posKey, JSON.stringify(pos));
-    } catch {
-      // Position just won't be remembered.
-    }
+    savePos(posKey, pos);
   }
 
   return (
