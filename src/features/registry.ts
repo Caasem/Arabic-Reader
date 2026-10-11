@@ -13,7 +13,7 @@ import { popupCleanFeature } from '../popupClean';
 import { wasitMatchFeature } from '../wasitMatch';
 import { wasitStructureFeature } from '../wasitStructure';
 import { lookFeature } from '../look';
-import { FontSettings, ReadingFontSync } from '../readerFont';
+import { readerFontFeature } from '../readerFont';
 import { CrowdSettings, CrowdSyncHost } from '../crowdSync';
 
 /** What a reader Host gets: the open book, and a way to open another one at a place (capture trips, links). */
@@ -71,6 +71,6 @@ export const FEATURES: FeatureDescriptor[] = [
   wasitMatchFeature,
   wasitStructureFeature,
   lookFeature,
-  { id: 'readerFont', AppHost: ReadingFontSync, SettingsSection: FontSettings, settingsGroup: 'reading', settingsAfter: 'reading', touchPoints: [] },
+  readerFontFeature,
   { id: 'crowdSync', AppHost: CrowdSyncHost, SettingsSection: CrowdSettings, settingsGroup: 'library', touchPoints: [] },
 ];
