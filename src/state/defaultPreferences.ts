@@ -70,6 +70,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   lookPalette: 'tan',
   lookCustom: {},
   wasitMatchHighlight: true,
+  subEntryScroll: true,
   wasitStructureEnabled: true,
   wasitStructureExamples: 'dim',
   libraryShelves: [],

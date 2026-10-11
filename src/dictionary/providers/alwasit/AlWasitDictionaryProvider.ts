@@ -1,28 +1,7 @@
 import type { DictionaryEntry, DictionaryProvider } from '../../../types';
 import { headwordWindow } from '../../headwords';
-import { foldAlefHamza, normalize } from '../../../reader/tokenizer/arabicTokenizer';
 import { aramorphProvider } from '../aramorph/AramorphDictionaryProvider';
-import { buildLookupKeys } from './lookupKeys';
-
-interface AlWasitRow {
-  id: number;
-  /** Raw headword field -- may list more than one homograph separated by
-   * `|` (e.g. "همز|همزة"), each a valid lookup key for the same entry. */
-  word: string;
-  /** `<br>`-separated sub-entries (distinct derived forms/senses sharing
-   * this root), plain Arabic text otherwise -- no other markup appears in
-   * the source data (verified against the full table before writing this). */
-  meanings: string;
-}
-
-interface AlWasitData {
-  byKey: Map<string, AlWasitRow[]>;
-  /** Same rows as `byKey`, additionally keyed with alef/hamza variants folded
-   * to ا -- lets AraMorph's resolved root/lemma (e.g. مرا for امرأة) find a
-   * headword Al-Wasīṭ spells with hamza-on-alef instead (مرأ). See
-   * lookup()'s use of this as a fallback only, not the primary match. */
-  byFoldedKey: Map<string, AlWasitRow[]>;
-}
+import { findArticles, parseRootArticleTsv, type RootArticleData } from '../rootArticle/rootArticleData';
 
 /**
  * Optional second Arabic-Arabic dictionary: Al-Muʿjam al-Wasīṭ, sourced from
@@ -36,21 +15,24 @@ interface AlWasitData {
  * one can't just normalize-and-match the tapped word directly -- it reuses
  * AraMorph's own morphological analysis (already registered as the app's
  * MorphologyProvider) to resolve the surface form to its root/lemma first,
- * then looks *that* up. See the root/lemma extraction work this data source
- * was proposed alongside for why AraMorph can supply this for free.
+ * then looks *that* up. Its rows have the same shape as the other root-filed
+ * dictionaries' (a headword field that may list homographs as "همز|همزة",
+ * `<br>`-separated sub-entries), so it shares their parsing and lookup in
+ * rootArticleData.ts, including the sub-entry fallback for a word AraMorph
+ * gives no root for.
  */
 export class AlWasitDictionaryProvider implements DictionaryProvider {
   id = 'alwasit';
   name = 'Al-Muʿjam al-Wasīṭ (Arabic-Arabic)';
 
-  private dataPromise: Promise<AlWasitData> | null = null;
+  private dataPromise: Promise<RootArticleData> | null = null;
 
   /** Parses the ~7.8MB dataset only once, and only the first time this
    * provider is actually used -- see the dynamic import below and its
    * vite.config.ts counterpart for why this must not happen at module load. */
-  private async getData(): Promise<AlWasitData> {
+  private async getData(): Promise<RootArticleData> {
     if (!this.dataPromise) {
-      this.dataPromise = import('virtual:alwasit-data').then((mod) => parseAlWasitTsv(mod.default));
+      this.dataPromise = import('virtual:alwasit-data').then((mod) => parseRootArticleTsv(mod.default));
     }
     return this.dataPromise;
   }
@@ -60,7 +42,7 @@ export class AlWasitDictionaryProvider implements DictionaryProvider {
   }
 
   async lookup(word: string): Promise<DictionaryEntry[]> {
-    const { byKey, byFoldedKey } = await this.getData();
+    const data = await this.getData();
 
     // The word, AraMorph's roots and dictionary forms for it, and the weak-letter
     // spellings of those roots (see lookupKeys.ts): AraMorph's قري is Al-Wasit's "قرا|قرو".
@@ -70,19 +52,8 @@ export class AlWasitDictionaryProvider implements DictionaryProvider {
     } catch {
       // AraMorph unavailable -- fall back to matching the raw surface form only.
     }
-    const keys = buildLookupKeys(word, analyses);
 
-    const matched = new Map<number, AlWasitRow>();
-    for (const key of keys) {
-      for (const row of byKey.get(key) ?? []) matched.set(row.id, row);
-    }
-    if (matched.size === 0) {
-      for (const key of keys) {
-        for (const row of byFoldedKey.get(foldAlefHamza(key)) ?? []) matched.set(row.id, row);
-      }
-    }
-
-    return Array.from(matched.values()).map((row) => {
+    return findArticles(data, this.id, word, analyses).map((row) => {
       const headword = row.word.split('|')[0].trim();
       return {
         providerId: this.id,
@@ -107,31 +78,6 @@ export class AlWasitDictionaryProvider implements DictionaryProvider {
       };
     });
   }
-}
-
-function parseAlWasitTsv(raw: string): AlWasitData {
-  const byKey = new Map<string, AlWasitRow[]>();
-  const byFoldedKey = new Map<string, AlWasitRow[]>();
-  const addTo = (map: Map<string, AlWasitRow[]>, key: string, row: AlWasitRow) => {
-    const list = map.get(key);
-    if (list) list.push(row);
-    else map.set(key, [row]);
-  };
-  const lines = raw.split('\n');
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line) continue;
-    const tab = line.indexOf('\t');
-    if (tab === -1) continue;
-    const row: AlWasitRow = { id: i, word: line.slice(0, tab), meanings: line.slice(tab + 1) };
-    for (const part of row.word.split('|')) {
-      const key = normalize(part.trim());
-      if (!key) continue;
-      addTo(byKey, key, row);
-      addTo(byFoldedKey, foldAlefHamza(key), row);
-    }
-  }
-  return { byKey, byFoldedKey };
 }
 
 export const alWasitProvider = new AlWasitDictionaryProvider();

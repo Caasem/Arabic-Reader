@@ -176,8 +176,10 @@ export interface ReaderPreferences {
   lookPalette: string;
   /** Colours the person picked over the preset, by role (hex). */
   lookCustom: Partial<Record<'bg' | 'surface' | 'ink' | 'accent' | 'secondary' | 'highlight' | 'warning', string>>;
-  /** Prototype: colour the Al-Wasit sense matching the looked-up word. */
+  /** Colour the sub-entry of a root dictionary's article that matches the looked-up word (src/wasitMatch). */
   wasitMatchHighlight: boolean;
+  /** Scroll the popup to that sub-entry when it is out of view. */
+  subEntryScroll: boolean;
   /** Prototype: draw Al-Wasit's internal structure in the popup. */
   wasitStructureEnabled: boolean;
   wasitStructureExamples: 'dim' | 'normal';

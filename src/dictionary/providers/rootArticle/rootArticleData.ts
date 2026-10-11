@@ -1,5 +1,8 @@
 import type { DictionaryEntry } from '../../../types';
 import { foldAlefHamza, normalize } from '../../../reader/tokenizer/arabicTokenizer';
+import type { AnalysisLike } from '../../subEntries/match';
+import { findRowsBySubEntry, orderBySubEntry } from '../../subEntries/subEntryIndex';
+import { buildLookupKeys } from '../alwasit/lookupKeys';
 
 /**
  * A dictionary filed by root: one row per root, its sub-entries (lines or
@@ -55,6 +58,17 @@ export function findRows(data: RootArticleData, keys: Iterable<string>): RootArt
     for (const key of keys) for (const row of data.byFoldedKey.get(foldAlefHamza(key)) ?? []) matched.set(row.id, row);
   }
   return Array.from(matched.values());
+}
+
+/**
+ * The articles for a tapped word: those filed under its roots and dictionary forms (see lookupKeys.ts),
+ * the ones holding a sub-entry for the word itself first; when none is, the article(s) the dictionary files
+ * the word under as a sub-entry (a word AraMorph gives no root for: إدام under أدم, قيراط under قرط).
+ */
+export function findArticles(data: RootArticleData, providerId: string, word: string, analyses: AnalysisLike[]): RootArticleRow[] {
+  const rows = findRows(data, buildLookupKeys(word, analyses));
+  if (rows.length) return orderBySubEntry(rows, providerId, word, analyses);
+  return findRowsBySubEntry(data, providerId, word, analyses);
 }
 
 export function rowToEntry(row: RootArticleRow, provider: { id: string; name: string }): DictionaryEntry {
