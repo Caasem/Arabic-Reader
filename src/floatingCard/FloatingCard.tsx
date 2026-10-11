@@ -1,22 +1,9 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { loadPos, savePos, type Pos } from './position';
 import './floatingCard.css';
-
-interface Pos {
-  x: number;
-  y: number;
-}
 
 const MARGIN = 12;
 const NARROW_QUERY = '(max-width: 600px)';
-
-function loadPos(key: string): Pos | null {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as Pos) : null;
-  } catch {
-    return null;
-  }
-}
 
 function clamp(pos: Pos, width: number, height: number): Pos {
   return {
@@ -82,11 +69,7 @@ export function FloatingCard({ label, keyHint, posKey, defaultPos, width = 340, 
   function onPointerUp() {
     if (!drag.current) return;
     drag.current = null;
-    try {
-      localStorage.setItem(posKey, JSON.stringify(pos));
-    } catch {
-      // Position just won't be remembered.
-    }
+    savePos(posKey, pos);
   }
 
   return (
