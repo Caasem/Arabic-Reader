@@ -1,7 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 /**
  * Clean popup layout: the Al-Wasit definition is open by default; pressing its
@@ -18,16 +15,13 @@ test('pressing the Al-Wasit headword folds and unfolds its definition', async ({
   await page.click('text=Try the sample book');
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
-  await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
-  await page.waitForTimeout(2500);
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 30000 });
 
-  const frame = page.frames().find((f) => f !== page.mainFrame())!;
-  const count = await frame.evaluate(() => document.querySelectorAll('p .ar-word').length);
+  const words = page.locator('.qr-chapter p .ar-word');
+  const count = await words.count();
   let found = false;
   for (let i = 0; i < Math.min(count, 40) && !found; i++) {
-    await frame.evaluate((n) => {
-      document.querySelectorAll('p .ar-word')[n].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    }, i);
+    await words.nth(i).click();
     await page.waitForSelector('.dict-popup', { timeout: 8000 });
     await page.waitForTimeout(1500);
     found = (await page.locator('.dict-popup__subentry .dict-popup__sense-add').count()) > 0;
