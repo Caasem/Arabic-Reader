@@ -7,7 +7,7 @@ release.
 ## Summary: 10–11 October 2026 (the refactor pass)
 
 Everything that landed from the evening of 10 October to midday on 11 October, in order. Rows 1–7 are on `main`
-(up to 0.96.0); rows 8–14 are on `refactor/integration`
+(up to 0.96.0); rows 8–15 are on `refactor/integration`
 ([Caasem/Arabic-Reader#73](https://github.com/Caasem/Arabic-Reader/pull/73), 0.97.0), waiting to be tested before
 merging. Per-phase detail and how to revert each one: `docs/changes/refactor-changes.md`.
 
@@ -27,8 +27,15 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 | 12 | 11 Oct 12:45 | #73, fix | The popup stylesheet loads again (phase 4 had dropped its import, so the popup had no backdrop or styling) | Fixes a regression | — | On `refactor/integration` |
 | 13 | 11 Oct 12:49 | #73 | *Use recommended settings* also switches on Al-Wasīṭ; *Skip for now* stays English-only | Yes | 0.97.0 | On `refactor/integration` |
 | 14 | 11 Oct 12:56 | #73 | No scrollbars on any device (before, only the desktop app hid them) | Yes | 0.97.0 | On `refactor/integration` |
+| 15 | 11 Oct | #73, fix | A word with ال whose noun AraMorph lacks (التحاسد) now finds the verb and its root instead of nothing | Yes | 0.97.1 | On `refactor/integration` |
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
+
+## v0.97.1 — 2026-10-11
+
+- Words like التحاسد now show in the dictionary. AraMorph has the verb تَحاسَدَ but not its verbal noun, so the word
+  with ال matched nothing and the Arabic dictionaries had no root to look up. When that happens the lookup now tries
+  again without ال (and any و/ف/ب/ك/ل before it): you get the verb's English gloss and the root's articles (حسد).
 
 ## v0.97.0 — 2026-10-11
 

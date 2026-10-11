@@ -97,6 +97,15 @@ describe('AramorphEngine.lookup', () => {
     expect(results.find((r) => r.def === '[and] write')?.pos).toBe('wa/CONJ+');
   });
 
+  it('drops the article when the noun with ال is unknown, to reach the verb', () => {
+    // The slice has no Al- prefix or noun form of katab, like تحاسد in the real data.
+    const engine = new AramorphEngine();
+    engine.setTables(buildTables());
+    expect(engine.lookup('الكتب')[0]).toMatchObject({ root: 'كتب', lemma: 'كَتَب' });
+    expect(engine.lookup('وبالكتب')[0]).toMatchObject({ root: 'كتب' });
+    expect(engine.lookup('الزززز')).toEqual([]);
+  });
+
   it('returns nothing before tables are loaded or for unknown words', () => {
     const engine = new AramorphEngine();
     expect(engine.lookup('كتب')).toEqual([]);
