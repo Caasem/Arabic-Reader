@@ -7,9 +7,9 @@ Roadmap area: Onboarding · Status: built on `refactor/integration` · Every cha
 
 First-run Onboarding sets the app up; it does not teach it. Two things teach it afterwards, without a tour overlay:
 
-1. **Getting started** (v0.100.0): a card at the top of the Library with seven things to try, each ticking itself when
+1. **Getting started** (v0.101.0): a card at the top of the Library with seven things to try, each ticking itself when
    the person actually does it.
-2. **Start here** (v0.101.0): a short, fully vowelled Arabic starter book whose tasks match the checklist, so the app is
+2. **Start here** (v0.102.0): a short, fully vowelled Arabic starter book whose tasks match the checklist, so the app is
    learned by reading.
 
 ## The checklist

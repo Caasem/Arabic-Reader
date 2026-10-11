@@ -7,7 +7,7 @@ release.
 ## Summary: 10–11 October 2026 (the refactor pass)
 
 Everything that landed from the evening of 10 October to midday on 11 October, in order. Rows 1–7 are on `main`
-(up to 0.96.0); rows 8–15 are on `refactor/integration`
+(up to 0.96.0); rows 8–17 are on `refactor/integration`
 ([Caasem/Arabic-Reader#73](https://github.com/Caasem/Arabic-Reader/pull/73), 0.97.0), waiting to be tested before
 merging. Per-phase detail and how to revert each one: `docs/changes/refactor-changes.md`.
 
@@ -28,10 +28,12 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 | 13 | 11 Oct 12:49 | #73 | *Use recommended settings* also switches on Al-Wasīṭ; *Skip for now* stays English-only | Yes | 0.97.0 | On `refactor/integration` |
 | 14 | 11 Oct 12:56 | #73 | No scrollbars on any device (before, only the desktop app hid them) | Yes | 0.97.0 | On `refactor/integration` |
 | 15 | 11 Oct | #73, fix | A word with ال whose noun AraMorph lacks (التحاسد) now finds the verb and its root instead of nothing | Yes | 0.97.1 | On `refactor/integration` |
+| 16 | 11 Oct | #73 | Form V/VI verbal nouns missing from AraMorph (about 340, e.g. تَحاسُد) are made as hidden entries: they find the root for the Arabic dictionaries but are never shown | Yes | 0.99.1 | On `refactor/integration` |
+| 17 | 11 Oct | #73 | Lane's Lexicon (Arabic–English) added as an optional dictionary, off by default; Hans Wehr listed too but empty because of copyright, with a note on how to add your own copy | Yes | 0.100.0 | On `refactor/integration` |
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
-## v0.101.0 — 2026-10-11
+## v0.102.0 — 2026-10-11
 
 - **"Start here", a small Arabic book that teaches the app.** Every install gets it on the shelf, first: five short
   chapters of simple, fully vowelled Arabic (the market, the house, the family, a long day, what next). Between the
@@ -39,7 +41,7 @@ Not done: phase 3, dictionaries as downloadable packs (dropped).
   started card in the same order, so the card ticks them off as you read. It is an ordinary book: delete it from
   the Library and it stays gone. The checklist's *Show me* now opens it.
 
-## v0.100.0 — 2026-10-11
+## v0.101.0 — 2026-10-11
 
 - **Getting started checklist.** A quiet card at the top of the Library with seven things to try: save a word,
   search the dictionary (Alt+D), write a note (Alt+N), make a flashcard (Alt+F), open the Ḥāshiya (Alt+M), draw or
@@ -48,6 +50,23 @@ Not done: phase 3, dictionaries as downloadable packs (dropped).
   *Hide for good* removes it, and Settings → Library → *Getting started checklist* shows it again or starts over.
   If you already use the app, what is provable from your data starts ticked. The card goes away by itself when all
   seven are done.
+## v0.100.0 — 2026-10-11
+
+- **Lane's Lexicon.** Edward Lane's *Arabic-English Lexicon* (1863–93, public domain) is now available as a dictionary.
+  It is off by default: switch it on under Settings > Dictionaries (or in the first-run dictionary choice). It is filed
+  by root like Al-Ṣiḥāḥ, so tapping a word shows the article for its root, as plain text. It is a big file (about 29 MB),
+  downloaded only the first time you turn it on; it also appears as "Lane · English" in the popup and "Lane" on the
+  dictionary page.
+- **Hans Wehr is listed but empty.** Hans Wehr's dictionary is under copyright, so the app does not include it. Turning it
+  on shows one note saying so. If you have the right to use a copy, you can build your own with the extraction script's
+  `--hanswehr` option; the steps are in `public/hanswehr-data/SOURCE-README.md`. Never commit the file it makes.
+
+## v0.99.1 — 2026-10-11
+
+- Words such as التحاسد, تحاسدهم and بالتحاسد now find their root (حسد) directly, so Al-Wasīṭ, Al-Ṣiḥāḥ and Maqāyīs
+  show the right article. AraMorph lists about 340 Form V and VI verbs (تَفَعَّلَ, تَفاعَلَ) without their verbal noun;
+  the app now makes those nouns itself but keeps them hidden, in case one is wrong. The English line still shows
+  the verb.
 
 ## v0.99.0 — 2026-10-11
 

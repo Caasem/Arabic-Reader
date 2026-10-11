@@ -9,8 +9,8 @@ export const DEVICE_PROFILES: DeviceProfile[] = ['phone', 'tablet', 'desktop'];
 /** Dictionaries the person can add during onboarding, besides the essential
  * offline one (AraMorph), which is always on. Ids are the provider ids. */
 export const ESSENTIAL_PROVIDER_ID = 'aramorph';
-export type OptionalProviderId = 'alwasit' | 'alsihah' | 'almaqayis' | 'baranov';
-export const OPTIONAL_PROVIDER_IDS: OptionalProviderId[] = ['alwasit', 'alsihah', 'almaqayis', 'baranov'];
+export type OptionalProviderId = 'alwasit' | 'alsihah' | 'almaqayis' | 'lane' | 'hanswehr' | 'baranov';
+export const OPTIONAL_PROVIDER_IDS: OptionalProviderId[] = ['alwasit', 'alsihah', 'almaqayis', 'lane', 'hanswehr', 'baranov'];
 
 interface DetectEnv {
   userAgent: string;

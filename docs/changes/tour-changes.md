@@ -3,7 +3,7 @@
 Follows `docs/features/tour.md`. One section per part that has landed. Everything is on `refactor/integration`; each
 row says how to switch it off or take it back out.
 
-## B. Getting started checklist (0.100.0)
+## B. Getting started checklist (0.101.0)
 
 A card at the top of the Library with seven things to try. Each ticks itself when it is done. State is saved on the
 device only (`arabic-reader:gettingStarted`), no sync.
@@ -26,7 +26,7 @@ extends a card that already has ink, so a pulled-in card cannot be drawn on from
 Not done: no spotlight or step-by-step overlay; progress does not sync between devices; the sketch tick fires when a
 sheet is saved with something on it, so opening an empty sheet does not tick.
 
-## D. The "Start here" book (0.101.0)
+## D. The "Start here" book (0.102.0)
 
 A five-chapter graded Arabic book, built by a script from plain-text sources and preloaded like the other starter
 books. It is ordinary EPUB text: no special reader markup and no reader changes. Ticking is done by the checklist's

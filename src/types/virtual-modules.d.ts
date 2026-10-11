@@ -26,6 +26,16 @@ declare module 'virtual:almaqayis-data' {
   export default tsv;
 }
 
+declare module 'virtual:lane-data' {
+  const tsv: string;
+  export default tsv;
+}
+
+declare module 'virtual:hanswehr-data' {
+  const tsv: string;
+  export default tsv;
+}
+
 declare module 'virtual:baranov-data' {
   const text: string;
   export default text;

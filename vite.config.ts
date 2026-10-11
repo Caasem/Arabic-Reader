@@ -128,6 +128,9 @@ export default defineConfig({
     bundledAlWasitDataPlugin(),
     bundledLexiconPlugin('alsihah', 'public/alsihah-data/alsihah.tsv'),
     bundledLexiconPlugin('almaqayis', 'public/almaqayis-data/almaqayis.tsv'),
+    bundledLexiconPlugin('lane', 'public/lane-data/lane.tsv'),
+    // Copyrighted: the committed file is an empty placeholder (see hanswehr-data/SOURCE-README.md).
+    bundledLexiconPlugin('hanswehr', 'public/hanswehr-data/hanswehr.tsv'),
     // Optional Arabic-Russian dictionary (see baranov-data/SOURCE-README.md), off by default.
     bundledLexiconPlugin('baranov', 'baranov-data/russian.txt', true),
     VitePWA({
@@ -157,7 +160,7 @@ export default defineConfig({
         // The optional datasets aren't precached -- most users never enable
         // them -- but are cached on first use so an enabled feature keeps
         // working offline.
-        globIgnores: ['**/_virtual_alwasit-data-*.js', '**/_virtual_alsihah-data-*.js', '**/_virtual_almaqayis-data-*.js', '**/_virtual_baranov-data-*.js', '**/_virtual_vocab-list-data-*.js'],
+        globIgnores: ['**/_virtual_alwasit-data-*.js', '**/_virtual_alsihah-data-*.js', '**/_virtual_almaqayis-data-*.js', '**/_virtual_lane-data-*.js', '**/_virtual_hanswehr-data-*.js', '**/_virtual_baranov-data-*.js', '**/_virtual_vocab-list-data-*.js'],
         runtimeCaching: [
           {
             // pdf.js's character maps and ICC profiles (1.5 MB), needed only by unusual PDFs; cached once used.
@@ -178,7 +181,7 @@ export default defineConfig({
             options: { cacheName: 'ocr-runtime', expiration: { maxEntries: 2 } },
           },
           {
-            urlPattern: /\/assets\/_virtual_(?:alwasit|alsihah|almaqayis|baranov|vocab-list)-data-[\w-]+\.js$/,
+            urlPattern: /\/assets\/_virtual_(?:alwasit|alsihah|almaqayis|lane|hanswehr|baranov|vocab-list)-data-[\w-]+\.js$/,
             handler: 'CacheFirst',
             options: { cacheName: 'optional-datasets', expiration: { maxEntries: 7 } },
           },

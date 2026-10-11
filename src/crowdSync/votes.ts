@@ -5,7 +5,7 @@ import { enqueue } from './queue';
 import { requestFlush } from './scheduler';
 
 /** Dictionaries whose entries are shared. A dictionary the reader loaded themselves never is. */
-const SHAREABLE = new Set(['aramorph', 'alwasit', 'alsihah', 'almaqayis', 'baranov']);
+const SHAREABLE = new Set(['aramorph', 'alwasit', 'alsihah', 'almaqayis', 'lane', 'baranov']);
 
 /** Where the entry stood among its dictionary's entries when it was shown, for position-bias correction (section 8.2). */
 export function positionOf(result: DictionaryLookupResult, entry: DictionaryEntry): number {

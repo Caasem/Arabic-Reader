@@ -1,6 +1,8 @@
 import type { DictionaryLookupResult, DictionaryProvider, MorphologyProvider } from '../types';
 import { aramorphProvider } from './providers/aramorph/AramorphDictionaryProvider';
 import { alWasitProvider } from './providers/alwasit/AlWasitDictionaryProvider';
+import { laneProvider } from './providers/lane/LaneDictionaryProvider';
+import { hansWehrProvider } from './providers/hanswehr/HansWehrDictionaryProvider';
 import { alSihahProvider } from './providers/alsihah/AlSihahDictionaryProvider';
 import { alMaqayisProvider } from './providers/almaqayis/AlMaqayisDictionaryProvider';
 import { personalDictionaryProvider } from './providers/personal/PersonalDictionaryProvider';
@@ -116,6 +118,9 @@ dictionaryManager.registerProvider(aramorphProvider);
 dictionaryManager.registerProvider(alWasitProvider);
 dictionaryManager.registerProvider(alSihahProvider);
 dictionaryManager.registerProvider(alMaqayisProvider);
+// English-language lexicons, also off by default. Hans Wehr is an empty placeholder unless the user adds a copy.
+dictionaryManager.registerProvider(laneProvider);
+dictionaryManager.registerProvider(hansWehrProvider);
 // Off by default, like the other optional dictionaries.
 dictionaryManager.registerProvider(baranovProvider);
 // The user's own dictionary file (Settings > Dictionaries); empty until one is loaded.
