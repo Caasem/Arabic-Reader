@@ -10,7 +10,7 @@ import { TEMPLATES } from './templates';
 import { HIGHLIGHTER_PRESETS } from '../studyDesk/highlighterColour';
 import { bookSketches, deleteSketch, isEmptySketch, newSketch, onInkChange, saveSketch } from './inkStore';
 import { vocabularyService } from '../vocabulary';
-import { cardFromNodes, type SketchCardSpec } from './sketchCards';
+import { cardFromNodes, occlusionCard, occlusionTargets, OCCLUSION_CONFIRM_ABOVE, type SketchCardSpec } from './sketchCards';
 import { refreshSketchCards, sendSketchToMargin, sketchOutline, sketchPng, sketchSvgBlob, type SendHow } from './toMargin';
 import { usePreferences } from '../state/PreferencesContext';
 import { COLOR_NAMES, inkUi, keyOwner, PEN_WIDTHS, setInkUi, THEME_COLORS, useInkUi } from './inkUi';
@@ -478,6 +478,23 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
     if (spec) void saveCards([spec]);
   };
 
+  const sheetLabel = () => {
+    const c = sheet.current;
+    return c ? sheetName(c.sketch, Math.max(0, shown.findIndex((t) => t.id === c.sketch.id))) : '';
+  };
+
+  /** One card per selected node (or every labelled node): the sheet with that label hidden. */
+  const makeOcclusion = () => {
+    setTabMenu(false);
+    const c = sheet.current;
+    if (!c) return;
+    const ids = occlusionTargets(c.sketch, surface.current?.selectedIds() ?? []);
+    if (!ids.length) return setSent('Add nodes with words first');
+    if (ids.length > OCCLUSION_CONFIRM_ABOVE && !window.confirm(`Make ${ids.length} cards, one for each label on this sheet?`)) return;
+    const name = sheetLabel();
+    void saveCards(ids.map((id) => occlusionCard(c.sketch, name, id)).filter((x): x is SketchCardSpec => !!x));
+  };
+
   const undoCards = () => {
     const ids = madeCards;
     setMadeCards(null);
@@ -694,6 +711,12 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
           <button type="button" role="menuitem" onClick={() => (setTabMenu(false), duplicate())}>
             <b>Duplicate</b>
           </button>
+          {current.nodes.length > 0 && (
+            <button type="button" role="menuitem" onClick={makeOcclusion} title="One flashcard per selected box (or every box with words): the sheet with that label hidden">
+              <b>Make occlusion cards</b>
+              <span>{state?.nodes ? `For the ${state.nodes} selected box${state.nodes === 1 ? '' : 'es'}` : 'One for every box with words'}</span>
+            </button>
+          )}
           {pdf && (
             <button type="button" role="menuitem" onClick={() => setMoveTo(String(sheetUnit(current)))}>
               <b>Move to another page…</b>
