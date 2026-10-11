@@ -21,6 +21,8 @@ export interface DictionaryEntry {
   verbForm?: string;
   /** Form I only: the imperfect vowel the dictionary marks (`u`, `a`, `i`, or two when either is used). */
   imperfectVowel?: string;
+  /** The word was written with vowels and every reading in this entry contradicts them; shown after the others, muted. */
+  vowelClash?: boolean;
 }
 
 /** One verb the dictionary lists for a root. */

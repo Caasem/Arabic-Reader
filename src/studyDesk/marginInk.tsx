@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent 
 import type { BookMeta } from '../types';
 import { hitStroke, pathD, pressureWidth, r1 } from '../annotate/geometry';
 import { inkUi, MARKER_WIDTH, PAPER_COLORS, recordInk, setInkUi, THEME_COLORS } from '../annotate/inkUi';
+import { createStraightTracker, straightPoints, type StraightTracker } from '../annotate/straightLine';
 import type { InkPoint } from '../annotate/types';
 import { deleteItem, getItem, updateItem } from './deskStore';
 import { attachImage } from './marginImages';
@@ -141,6 +142,9 @@ interface Live {
   pen: boolean;
   marker: boolean;
   width: number;
+  /** The pen's latest point, and the tracker that says when the stroke is straightened (Shift, or a hold). */
+  cur: [number, number];
+  line: StraightTracker;
 }
 
 /**
@@ -227,7 +231,14 @@ export function useMarginInk(book: BookMeta, deskId: string, columnAt: (x: numbe
       e.preventDefault();
       e.stopPropagation();
       const marker = ui.inking && ui.tool === 'marker';
-      live.current = { id: e.pointerId, column, pts: [[e.clientX, e.clientY, e.pressure || 0.5]], pen: e.pointerType === 'pen', marker, width: marker ? MARKER_WIDTH : ui.width };
+      const line = createStraightTracker({
+        onStraight: () => {
+          const l = live.current;
+          if (l) liveRef.current?.setAttribute('d', pathD(straightPoints(l.pts, l.cur)));
+        },
+      });
+      live.current = { id: e.pointerId, column, pts: [[e.clientX, e.clientY, e.pressure || 0.5]], pen: e.pointerType === 'pen', marker, width: marker ? MARKER_WIDTH : ui.width, cur: [e.clientX, e.clientY], line };
+      line.start(e.clientX, e.clientY);
       const path = liveRef.current;
       if (path) {
         path.setAttribute('d', pathD(live.current.pts));
@@ -240,10 +251,12 @@ export function useMarginInk(book: BookMeta, deskId: string, columnAt: (x: numbe
         if (!l || ev.pointerId !== l.id) return;
         const evs = ev.getCoalescedEvents?.() ?? [];
         for (const c of evs.length ? evs : [ev]) {
+          l.cur = [c.clientX, c.clientY];
+          l.line.move(c.clientX, c.clientY, c.shiftKey || ev.shiftKey);
           const p = l.pts[l.pts.length - 1];
           if (Math.hypot(c.clientX - p[0], c.clientY - p[1]) >= 1.5) l.pts.push([c.clientX, c.clientY, Math.round((c.pressure || 0.5) * 100) / 100]);
         }
-        liveRef.current?.setAttribute('d', pathD(l.pts));
+        liveRef.current?.setAttribute('d', pathD(l.line.straight ? straightPoints(l.pts, l.cur) : l.pts));
       };
       const up = (ev: PointerEvent) => {
         const l = live.current;
@@ -252,6 +265,8 @@ export function useMarginInk(book: BookMeta, deskId: string, columnAt: (x: numbe
         window.removeEventListener('pointermove', move, true);
         window.removeEventListener('pointerup', up, true);
         window.removeEventListener('pointercancel', up, true);
+        if (l.line.straight) l.pts = straightPoints(l.pts, l.cur);
+        l.line.stop();
         void finish(l);
       };
       window.addEventListener('pointermove', move, true);
@@ -262,7 +277,13 @@ export function useMarginInk(book: BookMeta, deskId: string, columnAt: (x: numbe
   );
 
   // Clear a stroke left half-drawn if the margin goes away mid-stroke.
-  useEffect(() => () => void (live.current = null), []);
+  useEffect(
+    () => () => {
+      live.current?.line.stop();
+      live.current = null;
+    },
+    []
+  );
 
   const overlay = (
     <svg className="sd-mink-live" aria-hidden="true">

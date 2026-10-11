@@ -7,7 +7,7 @@ release.
 ## Summary: 10–11 October 2026 (the refactor pass)
 
 Everything that landed from the evening of 10 October to midday on 11 October, in order. Rows 1–7 are on `main`
-(up to 0.96.0); rows 8–19 are on `refactor/integration`
+(up to 0.96.0); rows 8–20 are on `refactor/integration`
 ([Caasem/Arabic-Reader#73](https://github.com/Caasem/Arabic-Reader/pull/73), 0.97.0), waiting to be tested before
 merging. Per-phase detail and how to revert each one: `docs/changes/refactor-changes.md`.
 
@@ -32,8 +32,33 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 | 17 | 11 Oct | #73 | Lane's Lexicon (Arabic–English) added as an optional dictionary, off by default; Hans Wehr listed too but empty because of copyright, with a note on how to add your own copy | Yes | 0.100.0 | On `refactor/integration` |
 | 18 | 11 Oct | #73 | About 6,400 AraMorph entries that had no root get one from their group's verb (e.g. التباعد → بعد, التنافس → نفس), so the Arabic dictionaries and root search find them | Yes | 0.102.1 | On `refactor/integration` |
 | 19 | 11 Oct | #73 | Roots whose و/ي is in doubt are searched under both spellings, led by the one the verb's present tense shows; about 1,000 rootless weak-verb entries get a root, and 2,435 entries under AraMorph's "و or ي" headings (e.g. `nfw/y`) find their articles again | Yes | 0.103.0 | On `refactor/integration` |
+| 20 | 11 Oct | #73 | Dictionary lookup: roots no longer carry AraMorph's homograph numbers (so النور, البشرية, الأحياء find their Arabic articles); Qur'anic and classical spellings are read (هَٰذَا, ٱلْكِتَٰبُ, إِسْمَٰعِيلَ, شاطيء, سليمن); readings that contradict the vowels in the text are sorted last and muted, never removed | Yes | 0.105.0 | On `refactor/integration` |
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
+
+## v0.105.0 — 2026-10-11
+
+- **More words find their dictionary article.** About 95 AraMorph roots carried a homograph number (such as نور(1)),
+  so words like النور, البشرية, الأحياء and الإمكان never matched an Arabic dictionary; the numbers are gone.
+- **Qur'anic and classical spellings are read.** Words with a dagger alif or alif wasla (هَٰذَا, ٱلْكِتَٰبُ,
+  الظَّٰلِمِينَ, إِسْمَٰعِيلَ, سُلَيْمَٰنَ), yaa written before hamza (شاطيء) and spellings that leave out the long ā
+  (إسمعيل, سليمن, الظلمين) used to find nothing; they now do. Where a dagger alif could be silent or an ā, both
+  readings are shown.
+- **The vowels in the text now count.** When you tap a vowelled word, readings that match its vowels come first and
+  also lead the search of the Arabic dictionaries (مِصْرَ is Egypt, not "persistent"). Readings that contradict the
+  vowels are still there, below, muted and marked "doesn't match the vowels in the text". Nothing is removed, and if
+  no reading matches, nothing is marked.
+
+## v0.104.0 — 2026-10-11
+
+- **Straight lines in ink.** Hold Shift while drawing (pen, mouse or trackpad) and the stroke becomes a straight line
+  from where it started to the pen; pressing Shift partway straightens the whole stroke, and letting go before you
+  lift keeps it straight. With no keyboard, draw and hold still for about half a second and the stroke snaps straight;
+  keep moving and the line's end follows.
+- Any angle works, but within about 5 degrees of level or plumb the line snaps exactly level or plumb, so underlines
+  come out flat.
+- Works on reader pages, PDF pages, freehand sketch sheets and Ḥāshiya ink cards. A straight line is an ordinary
+  stroke (Undo and the eraser work as usual), and it is never read as a gesture, even with Gestures on.
 
 ## v0.103.0 — 2026-10-11
 

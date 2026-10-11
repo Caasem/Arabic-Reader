@@ -203,6 +203,8 @@ export class AramorphDictionaryProvider implements DictionaryProvider, Morpholog
       lemma: entries.find((e) => e.lemma && e.lemma !== '---' && e.lemma !== word)?.lemma,
       verbForm: entries.find((e) => e.verbForm)?.verbForm,
       imperfectVowel: entries.find((e) => e.verbForm === 'I' && e.imperfectVowel)?.imperfectVowel,
+      // Readings arrive with the ones that agree with the written vowels first.
+      ...(entries.every((e) => e.vowelClash) ? { vowelClash: true } : {}),
       // `pos` here is AraMorph's raw affix analysis ("+at/PVSUFF_SUBJ:3FS"),
       // not a readable part of speech, so it's not shown; the gloss already
       // spells out the grammatical role in English.
@@ -212,7 +214,10 @@ export class AramorphDictionaryProvider implements DictionaryProvider, Morpholog
 }
 
 function toAnalyses(results: AramorphResult[]): MorphologicalAnalysis[] {
-  return results.slice(0, 5).map((r) => ({
+  // The readings that agree with the written vowels first, so the first five
+  // (and the Arabic dictionaries, which search in this order) lead with them.
+  const ranked = [...results.filter((r) => !r.vowelClash), ...results.filter((r) => r.vowelClash)];
+  return ranked.slice(0, 5).map((r) => ({
     surfaceForm: r.word,
     lemma: r.lemma && r.lemma !== '---' ? r.lemma : r.word,
     root: r.root !== '---' ? r.root : undefined,
