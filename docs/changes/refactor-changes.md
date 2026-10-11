@@ -158,7 +158,7 @@ Branch `refactor/phase7-colour-tokens`, worktree `Arabic-Reader-p7`. Nothing use
 
 | Change | Why | Before | After | Impact | Revert |
 |---|---|---|---|---|---|
-| `src/theme/palette.css` (111 `--c-*` tokens), imported first in `src/index.css` | Hard-coded colours were scattered through 30 component CSS files | `#rgb`, `#rrggbb`, `rgb()` and `rgba()` written inline | Named by role and place (`--c-popup-warn`, `--c-settings-backdrop`), grouped by area, defined once on `:root`. Not per theme, so they never change with the theme | None | Revert the six phase 7 commits |
+| `src/theme/palette.css` (111 `--c-*` tokens), imported first in `src/index.css` | Hard-coded colours were scattered through 26 component CSS files | `#rgb`, `#rrggbb`, `rgb()` and `rgba()` written inline | Named by role and place (`--c-popup-warn`, `--c-settings-backdrop`), grouped by area, defined once on `:root`. Not per theme, so they never change with the theme | None | Revert the six phase 7 commits |
 | Component CSS uses `var(--c-...)` | One place to read and change them | 126 inline literals | 126 `var(--c-...)` uses, nothing else on the line changed. Same literal for the same purpose shares a token; the same value for a different purpose has its own | None | As above |
 
 Left alone: colours in `.ts` / `.tsx`; the theme blocks in `index.css`, `quietReader.css`, `readerTools.css`, `annotate.css`, `onboarding.css`, `BrowseLibraryPanel.css` and the palettes in `src/look/`; literals already inside a `var(--x, #fallback)` fallback; the per-theme `::highlight(qr-hl-yellow)` colours and the theme swatches in `quietReader.css`; the `conic-gradient` colour wheel in `pdfHighlighterSettings.css`.
