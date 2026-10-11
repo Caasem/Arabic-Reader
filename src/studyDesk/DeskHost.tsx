@@ -1,3 +1,4 @@
+import { tourEvents } from '../gettingStarted/events';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Shell } from '../dictionarySearch/Shell';
 import '../dictionarySearch/dictionarySearch.css';
@@ -175,6 +176,7 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
   });
   // Alt+M: margins on and off; back on in the layout they had.
   const toggleMargins = () => {
+    tourEvents.emit('open-hashiya');
     if (prefs.studyDeskMargins !== 'off') {
       rememberLastMargins(prefs.studyDeskMargins);
       updatePrefs({ studyDeskMargins: 'off' });

@@ -31,6 +31,16 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.100.0 — 2026-10-11
+
+- **Getting started checklist.** A quiet card at the top of the Library with seven things to try: save a word,
+  search the dictionary (Alt+D), write a note (Alt+N), make a flashcard (Alt+F), open the Ḥāshiya (Alt+M), draw or
+  sketch, and draw on something from another source. Each ticks itself when you do it; a ring counts them. Each
+  undone one has **Show me**, which opens the right place and leaves a one-line hint. *Collapse* folds the card,
+  *Hide for good* removes it, and Settings → Library → *Getting started checklist* shows it again or starts over.
+  If you already use the app, what is provable from your data starts ticked. The card goes away by itself when all
+  seven are done.
+
 ## v0.99.0 — 2026-10-11
 
 - **Sketches you review.** A diagram sheet can now feed your flashcards.

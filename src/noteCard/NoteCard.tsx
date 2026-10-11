@@ -1,3 +1,4 @@
+import { tourEvents } from '../gettingStarted/events';
 import { useEffect, useRef, useState } from 'react';
 import type { HighlightColor } from '../types';
 import { FloatingCard } from '../floatingCard';
@@ -53,6 +54,7 @@ export function NoteCard({ onClose }: { onClose(): void }) {
     if (!place || !text.trim()) return;
     try {
       await marks.saveNote(place, text.trim(), color);
+      tourEvents.emit('write-note');
       setStatus('saved');
       setText('');
       setTouched(false);

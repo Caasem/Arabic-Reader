@@ -2,6 +2,9 @@ import { libraryService } from '../library/libraryService';
 import { readString, STORAGE_KEYS, writeString } from '../utils/storage';
 import { sidebarStartsCollapsed, type DeviceProfile } from './deviceProfile';
 
+/** The id of the "Start here" tour book on the shelf (the checklist's Show me opens it). */
+export const START_HERE_BOOK_ID = 'starter-start-here';
+
 /** Books every install gets once. `flag` remembers it was added, so removing
  * a book never brings it back; the first keeps its original key. */
 const STARTER_BOOKS = [

@@ -1,3 +1,4 @@
+import { tourEvents } from '../gettingStarted/events';
 import { newId } from '../utils/id';
 import { InkDB } from './db';
 import type { InkStroke, Sketch } from './types';
@@ -33,6 +34,8 @@ export async function addStroke(stroke: Omit<InkStroke, 'id' | 'createdAt' | 'up
   const row: InkStroke = { ...stroke, id: newId('ink'), createdAt: now, updatedAt: now };
   await inkDb().strokes.put(row);
   changed();
+  tourEvents.emit('draw-sketch');
+  if (row.key.startsWith('pdf:')) tourEvents.emit('draw-other-source');
   return row;
 }
 
@@ -61,6 +64,10 @@ export async function getSketch(id: string): Promise<Sketch | undefined> {
 export async function saveSketch(sketch: Sketch): Promise<void> {
   await inkDb().sketches.put({ ...sketch, updatedAt: Date.now() });
   changed();
+  if (!isEmptySketch(sketch)) {
+    tourEvents.emit('draw-sketch');
+    if (sketch.key.startsWith('pdf:')) tourEvents.emit('draw-other-source');
+  }
 }
 
 export async function deleteSketch(id: string): Promise<void> {

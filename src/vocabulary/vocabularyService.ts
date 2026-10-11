@@ -1,3 +1,4 @@
+import { tourEvents } from '../gettingStarted/events';
 import { Rating } from 'ts-fsrs';
 import { rememberAnkiDeletes } from '../anki/deletions';
 import type { BackupData, BookMeta, DictionaryEntry, VocabularyItem, WordInstance } from '../types';
@@ -136,6 +137,7 @@ export class VocabularyService {
       ...freshFsrsFields(now),
     };
     await persistenceService.saveVocabularyItem(item);
+    tourEvents.emit('save-word');
     if (params.wordInstance) {
       await persistenceService.upsertWordInstance({ ...params.wordInstance, saved: true });
     } else {
@@ -180,6 +182,7 @@ export class VocabularyService {
       ...freshFsrsFields(now),
     };
     await persistenceService.saveVocabularyItem(item);
+    if (!params.sketch) tourEvents.emit('make-flashcard');
     // A sheet card's front is not a word of the book: nothing to mark as saved.
     if (!params.sketch) await persistenceService.updateWordInstance(item.bookId, normalize(item.surfaceForm), { saved: true });
     return item;
