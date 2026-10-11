@@ -12,7 +12,7 @@ import { verbFormsFeature } from '../verbForms';
 import { popupCleanFeature } from '../popupClean';
 import { wasitMatchFeature } from '../wasitMatch';
 import { wasitStructureFeature } from '../wasitStructure';
-import { LookSettings, LookSkin } from '../look';
+import { lookFeature } from '../look';
 import { FontSettings, ReadingFontSync } from '../readerFont';
 import { CrowdSettings, CrowdSyncHost } from '../crowdSync';
 
@@ -70,7 +70,7 @@ export const FEATURES: FeatureDescriptor[] = [
   popupCleanFeature,
   wasitMatchFeature,
   wasitStructureFeature,
-  { id: 'look', AppHost: LookSkin, SettingsSection: LookSettings, settingsGroup: 'appearance', touchPoints: [] },
+  lookFeature,
   { id: 'readerFont', AppHost: ReadingFontSync, SettingsSection: FontSettings, settingsGroup: 'reading', settingsAfter: 'reading', touchPoints: [] },
   { id: 'crowdSync', AppHost: CrowdSyncHost, SettingsSection: CrowdSettings, settingsGroup: 'library', touchPoints: [] },
 ];
