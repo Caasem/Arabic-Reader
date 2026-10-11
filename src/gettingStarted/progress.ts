@@ -60,7 +60,7 @@ export interface SeedCounts {
   deskItems: number;
   /** Ink strokes on pages, non-empty sketch sheets and ink margin cards. */
   drawings: number;
-  /** The same, on a PDF page or on a card pulled in from another book. */
+  /** The same, on a PDF page. */
   drawingsElsewhere: number;
 }
 

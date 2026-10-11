@@ -186,7 +186,6 @@ export function useMarginInk(book: BookMeta, deskId: string, columnAt: (x: numbe
       last.current = { id, at: Date.now() };
       await saveInk(item, after);
       tourEvents.emit('draw-sketch');
-      if (item.source?.bookId && item.source.bookId !== book.id) tourEvents.emit('draw-other-source');
       return;
     }
     // A new card, level with where the writing starts.

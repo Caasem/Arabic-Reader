@@ -17,7 +17,7 @@ export interface ItemDef {
 }
 
 export const ITEMS: ItemDef[] = [
-  { id: 'save-word', label: 'Save a word', place: 'book', hint: { desk: 'Tap a word in the book, then press Save in the popup.' } },
+  { id: 'save-word', label: 'Save a word', place: 'book', hint: { desk: 'Tap a word in the book, then press Save Vocabulary in the popup.' } },
   {
     id: 'dictionary-search',
     label: 'Search the dictionary',
@@ -54,13 +54,13 @@ export const ITEMS: ItemDef[] = [
     hint: { desk: 'Press Alt+W to turn Write on and draw on the page, or Alt+K to open a sketch sheet.', touch: 'Turn Write on in the dock and draw on the page, or open a sketch sheet.' },
   },
   {
-    // Definition: ink or a sketch sheet made on a PDF page, or ink written on a Ḥāshiya card pulled in from another book.
+    // Definition: ink or a sketch sheet made on a PDF page (the reader's own book text is not "another source").
     id: 'draw-other-source',
     label: 'Draw on something from another source',
     place: 'library',
     hint: {
-      desk: 'Open a PDF and draw on one of its pages with Write on, or pull a card in from another book (Alt+U) and write on it.',
-      touch: 'Open a PDF and draw on one of its pages with Write on.',
+      desk: 'Add a PDF to your Library, open it, press Alt+W and draw on one of its pages.',
+      touch: 'Add a PDF to your Library, open it, turn Write on and draw on one of its pages.',
     },
   },
 ];

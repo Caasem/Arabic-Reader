@@ -7,7 +7,9 @@ export const START_HERE_BOOK_ID = 'starter-start-here';
 
 /** Books every install gets once. `flag` remembers it was added, so removing
  * a book never brings it back; the first keeps its original key. */
-const STARTER_BOOKS = [
+const STARTER_BOOKS: { file: string; flag: string; first?: boolean }[] = [
+  // The tour book (scripts/build-tour-book.mjs): first, so it lands first on the shelf. Remove this line to drop it.
+  { file: 'start-here.epub', flag: `${STORAGE_KEYS.starterBookAdded}:start-here`, first: true },
   { file: 'narada-kamel-kilani.epub', flag: STORAGE_KEYS.starterBookAdded },
   { file: 'qisas-al-nabiyyin.epub', flag: `${STORAGE_KEYS.starterBookAdded}:qisas-al-nabiyyin` },
   // al-Akhbar al-Tiwal by al-Dinawari, from Shamela.
@@ -49,7 +51,8 @@ export function preloadStarterBooks(): Promise<void> {
 }
 
 async function addStarterBooks(): Promise<void> {
-  for (const book of STARTER_BOOKS) {
+  // The shelf lists the newest first, so the book marked `first` is added last.
+  for (const book of [...STARTER_BOOKS].sort((a, b) => Number(!!a.first) - Number(!!b.first))) {
     if (readString(book.flag) === '1') continue;
     try {
       // BASE_URL, not '/': see the note in Library.loadSample.

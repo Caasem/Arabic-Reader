@@ -31,6 +31,14 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.101.0 — 2026-10-11
+
+- **"Start here", a small Arabic book that teaches the app.** Every install gets it on the shelf, first: five short
+  chapters of simple, fully vowelled Arabic (the market, the house, the family, a long day, what next). Between the
+  sentences, short task paragraphs (مُهِمَّة, with a line of English) walk through the seven things on the Getting
+  started card in the same order, so the card ticks them off as you read. It is an ordinary book: delete it from
+  the Library and it stays gone. The checklist's *Show me* now opens it.
+
 ## v0.100.0 — 2026-10-11
 
 - **Getting started checklist.** A quiet card at the top of the Library with seven things to try: save a word,

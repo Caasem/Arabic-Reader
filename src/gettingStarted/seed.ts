@@ -27,9 +27,7 @@ export async function loadSeedCounts(): Promise<SeedCounts> {
     const { readAllItems } = await import('../studyDesk/deskStore');
     const items = await readAllItems();
     counts.deskItems = items.length;
-    const inked = items.filter((i) => i.ink);
-    counts.drawings += inked.length;
-    counts.drawingsElsewhere += inked.filter((i) => i.source?.bookId && i.source.bookId !== i.pin?.bookId).length;
+    counts.drawings += items.filter((i) => i.ink).length;
   } catch {
     // no desk database yet
   }
