@@ -6,7 +6,7 @@ import { bookVocabFeature } from '../bookVocab';
 import { noteCardFeature } from '../noteCard';
 import { flashCardFeature } from '../flashCard';
 import { picksExportFeature } from '../picksExport';
-import { DeskHost, StudyDeskSettings } from '../studyDesk';
+import { studyDeskFeature } from '../studyDesk';
 import { annotateFeature } from '../annotate';
 import { VerbFormsSettings } from '../verbForms';
 import { PopupCleanSettings } from '../popupClean';
@@ -64,7 +64,7 @@ export const FEATURES: FeatureDescriptor[] = [
   noteCardFeature,
   flashCardFeature,
   picksExportFeature,
-  { id: 'studyDesk', Host: DeskHost, SettingsSection: StudyDeskSettings, settingsGroup: 'dictionary', touchPoints: [] },
+  studyDeskFeature,
   annotateFeature,
   { id: 'verbForms', SettingsSection: VerbFormsSettings, settingsGroup: 'dictionary', touchPoints: [] },
   { id: 'popupClean', SettingsSection: PopupCleanSettings, settingsGroup: 'dictionary', touchPoints: [] },
