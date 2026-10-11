@@ -1,6 +1,7 @@
 import { newId } from '../utils/id';
 import { borderPoint, clamp, contentBox, hitStroke, pathD, pressureWidth, r1 } from './geometry';
 import { MARKER_WIDTH, setInkUi } from './inkUi';
+import { createStraightTracker, straightPoints, type StraightTracker } from './straightLine';
 import type { InkColor, InkPoint, Sketch, SketchEdge, SketchNode, SketchNodeKind } from './types';
 
 /**
@@ -66,7 +67,7 @@ function inPolygon(x: number, y: number, poly: [number, number][]): boolean {
 
 type Act =
   | { k: 'pan'; p0: [number, number]; tx: number; ty: number }
-  | { k: 'ink'; pts: InkPoint[]; pen: boolean }
+  | { k: 'ink'; pts: InkPoint[]; pen: boolean; cur: [number, number]; line: StraightTracker }
   | { k: 'erase'; pre: Snap; hit: boolean }
   | { k: 'move'; id: string; el: HTMLElement; p0: [number, number]; x0: number; y0: number; pre: Snap; moved: boolean; wasSel: boolean; touch: boolean; word?: string; group: { id: string; x0: number; y0: number }[] }
   | { k: 'box'; p0: [number, number]; el: HTMLDivElement }
@@ -136,6 +137,7 @@ export class SketchSurface {
   }
 
   destroy(): void {
+    if (this.act?.k === 'ink') this.act.line.stop();
     this.commitEdit();
     const host = this.host;
     host.removeEventListener('pointerdown', this.onDown);
@@ -692,7 +694,9 @@ export class SketchSurface {
     if (this.tool === 'pen' || this.tool === 'marker') {
       const w = this.toWorld(p);
       const marker = this.tool === 'marker';
-      this.act = { k: 'ink', pts: [[w[0], w[1], e.pressure || 0.5]], pen: e.pointerType === 'pen' };
+      const line = createStraightTracker({ onStraight: () => this.drawLiveInk() });
+      this.act = { k: 'ink', pts: [[w[0], w[1], e.pressure || 0.5]], pen: e.pointerType === 'pen', cur: [w[0], w[1]], line };
+      line.start(e.clientX, e.clientY);
       this.live.setAttribute('class', 'ink-stroke' + (marker ? ' ink-stroke--marker' : ''));
       this.live.style.stroke = this.opts.colors[this.color];
       this.live.style.strokeWidth = String(marker ? MARKER_WIDTH : this.width);
@@ -791,10 +795,12 @@ export class SketchSurface {
         const events = e.getCoalescedEvents?.() ?? [];
         for (const ev of events.length ? events : [e]) {
           const w = this.toWorld(this.local(ev));
+          a.cur = [w[0], w[1]];
+          a.line.move(ev.clientX, ev.clientY, ev.shiftKey || e.shiftKey);
           const last = a.pts[a.pts.length - 1];
           if (Math.hypot(w[0] - last[0], w[1] - last[1]) * v.s >= 1.5) a.pts.push([w[0], w[1], Math.round((ev.pressure || 0.5) * 100) / 100]);
         }
-        this.live.setAttribute('d', pathD(a.pts));
+        this.drawLiveInk();
         break;
       }
       case 'erase':
@@ -900,9 +906,11 @@ export class SketchSurface {
         break;
       case 'ink': {
         this.live.setAttribute('d', '');
+        const pts = a.line.straight ? straightPoints(a.pts, a.cur) : a.pts;
+        a.line.stop();
         this.checkpoint();
         const marker = this.tool === 'marker';
-        this.sketch.strokes.push({ id: newId('sks'), color: this.color, width: marker ? MARKER_WIDTH : pressureWidth(this.width, a.pts, a.pen), pts: a.pts, ...(marker ? { marker: true } : {}) });
+        this.sketch.strokes.push({ id: newId('sks'), color: this.color, width: marker ? MARKER_WIDTH : pressureWidth(this.width, pts, a.pen), pts, ...(marker ? { marker: true } : {}) });
         this.changed();
         break;
       }
@@ -962,8 +970,18 @@ export class SketchSurface {
     }
   };
 
+  /** The live stroke: as drawn so far, or a straight line from its start to the pen. */
+  private drawLiveInk(): void {
+    const a = this.act;
+    if (a?.k !== 'ink') return;
+    this.live.setAttribute('d', pathD(a.line.straight ? straightPoints(a.pts, a.cur) : a.pts));
+  }
+
   private abort(): void {
-    if (this.act?.k === 'ink') this.live.setAttribute('d', '');
+    if (this.act?.k === 'ink') {
+      this.live.setAttribute('d', '');
+      this.act.line.stop();
+    }
     if (this.act?.k === 'box') this.act.el.remove();
     this.act = null;
     this.host.classList.remove('sk-surface--panning', 'sk-surface--writing');
