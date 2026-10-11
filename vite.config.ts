@@ -129,7 +129,7 @@ export default defineConfig({
     bundledLexiconPlugin('alsihah', 'public/alsihah-data/alsihah.tsv'),
     bundledLexiconPlugin('almaqayis', 'public/almaqayis-data/almaqayis.tsv'),
     // Optional Arabic-Russian dictionary (see baranov-data/SOURCE-README.md), off by default.
-    bundledLexiconPlugin('baranov', 'russian.txt', true),
+    bundledLexiconPlugin('baranov', 'baranov-data/russian.txt', true),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],

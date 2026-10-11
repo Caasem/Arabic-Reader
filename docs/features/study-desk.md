@@ -4,7 +4,7 @@ Roadmap id: `study-desk` · Area: Reader experience · Status: in progress (bran
 
 Concept and prototypes: [Study Desk Plan](https://claude.ai/artifact/FjdxN1wKtaYzSTRLTvtKx4), [Reading Graph](https://claude.ai/artifact/A73TgxbGPwqbKnj1Eb6GK5), [Margin Desk](https://claude.ai/artifact/YNXF4CEhopbyMF9L9Q8opA).
 
-Every change is listed, phase by phase, with how to switch it off or revert it, in [docs/study-desk-changes.md](../study-desk-changes.md).
+Every change is listed, phase by phase, with how to switch it off or revert it, in [docs/changes/study-desk-changes.md](../changes/study-desk-changes.md).
 
 ## 1. Purpose
 
@@ -61,7 +61,7 @@ Everything a reader notices while reading becomes an item: a concept they type, 
 - Drag over empty margin to choose cards (Shift adds; Shift-click a card too); P piles them (the highest on the page on top), Delete deletes them, Esc lets go.
 - Piling, taking a card off and deleting say so with Undo in the message; Ctrl+Z does the same while it shows (not while typing, where the note keeps its own undo).
 - Stored on the items themselves (`pile`: id, order, name, colour), so piles go with the desk in the export. Piles are made in the quiet reader's margins; the margin beside PDF pages shows its cards one by one.
-- `src/studyDesk/piles.prototype.html` is the single-file prototype these were built from.
+- `docs/prototypes/piles.prototype.html` is the single-file prototype these were built from.
 
 **Images in the margins**
 - Paste an image into a margin note to make it a screenshot; drop an image file on a margin for a new screenshot note at that height, or on a note to add it there.
