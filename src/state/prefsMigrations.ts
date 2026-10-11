@@ -9,17 +9,9 @@ import type { ReaderPreferences } from '../types';
 type Migration = (prefs: ReaderPreferences) => ReaderPreferences;
 
 const MIGRATIONS: Migration[] = [
-  // 1 (0.95.0): the new reader everywhere. Anyone with it off (by choice, or a phone or tablet set up before 0.95.0)
-  // is moved to it, and the reader shows a one-time notice that can switch back until the old readers go (phase 2b).
-  (prefs) =>
-    prefs.quietReaderEnabled
-      ? prefs
-      : {
-          ...prefs,
-          quietReaderEnabled: true,
-          cleanReaderEnabled: false,
-          newReaderSwitchBack: { cleanReaderEnabled: prefs.cleanReaderEnabled },
-        },
+  // 1 (0.95.0): moved everyone to the new reader, with a notice that could switch back. Since 0.96.0 it is the only
+  // reader and those settings are gone, so there is nothing left to change; the slot stays so the count stays right.
+  (prefs) => prefs,
 ];
 
 export const PREFS_MIGRATIONS_VERSION = MIGRATIONS.length;

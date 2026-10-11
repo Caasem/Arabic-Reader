@@ -9,7 +9,6 @@ import { PicksExportHost } from '../picksExport';
 import { DeskHost } from '../studyDesk';
 import { AnnotateHost } from '../annotate';
 import { FocusHost } from '../readerTools';
-import { NewReaderNotice } from './NewReaderNotice';
 import { usePdfView } from '../pdf/pages/pdfView';
 
 const PdfPagesReader = lazy(() => import('../pdf/pagesEntry').then((m) => ({ default: m.PdfPagesReader })));
@@ -88,7 +87,6 @@ export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: 
       />
       {hosts}
       <FocusHost reader="clean" />
-      <NewReaderNotice />
     </>
   );
 }

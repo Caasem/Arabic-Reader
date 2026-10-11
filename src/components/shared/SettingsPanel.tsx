@@ -10,7 +10,6 @@ import { SearchSettings } from './settings/SearchSettings';
 import { TouchGestureSettings } from './settings/TouchGestureSettings';
 import { AnkiSettings } from './settings/AnkiSettings';
 import { DiagnosticsSettings } from './settings/DiagnosticsSettings';
-import { CleanReaderSettings } from './settings/CleanReaderSettings';
 import { DictionarySearchSettings } from '../../dictionarySearch';
 import { BookSearchSettings } from '../../bookSearch';
 import { BookVocabSettings } from '../../bookVocab';
@@ -66,7 +65,6 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
       <QuietReaderSettings key="quiet" />,
       <ReadingSettings key="reading" />,
       <FontSettings key="font" />,
-      <CleanReaderSettings key="clean" />,
       <TouchGestureSettings key="touch" />,
       <SearchSettings key="search" />,
       <PomodoroSettings key="pomodoro" />,
