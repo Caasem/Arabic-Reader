@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import type { BookMeta, ReaderPreferences } from '../types';
 import { dictionarySearchFeature } from '../dictionarySearch';
-import { BookSearchHost, BookSearchSettings } from '../bookSearch';
+import { bookSearchFeature } from '../bookSearch';
 import { BookVocabHost, BookVocabSettings } from '../bookVocab';
 import { noteCardFeature } from '../noteCard';
 import { FlashHost, FlashSettings } from '../flashCard';
@@ -59,7 +59,7 @@ export interface FeatureDescriptor {
  */
 export const FEATURES: FeatureDescriptor[] = [
   dictionarySearchFeature,
-  { id: 'bookSearch', Host: BookSearchHost, SettingsSection: BookSearchSettings, settingsGroup: 'dictionary', touchPoints: [] },
+  bookSearchFeature,
   { id: 'bookVocab', Host: BookVocabHost, SettingsSection: BookVocabSettings, settingsGroup: 'dictionary', touchPoints: [] },
   noteCardFeature,
   { id: 'flashCard', Host: FlashHost, SettingsSection: FlashSettings, settingsGroup: 'dictionary', touchPoints: [] },
