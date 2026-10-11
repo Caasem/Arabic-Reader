@@ -4,6 +4,7 @@ import {
   buildHiddenMasdars,
   createDictTable,
   createMorphTableFromText,
+  rootFromVerbLemma,
   deserializeTables,
   detransliterate,
   serializeTables,
@@ -87,6 +88,46 @@ describe('createDictTable', () => {
     expect(stems.get('Aktb')[0]).toMatchObject({ lemma: '>akotab', def: 'dictate, make write' });
     // A bare ';' line resets both markers.
     expect(stems.get('qlm')[0]).toMatchObject({ root: '---', lemma: '---', def: 'pen', pos: 'qalam/NOUN' });
+  });
+
+  it('gives a headerless group the root of its verb, and leaves verbless groups alone', () => {
+    const stems = createDictTable(
+      [
+        ';--- bEd',
+        ';; baEud-u_1',
+        'bEd\tbaEud\tPV\tbe far',
+        ';',
+        ';; tabAEad_1',
+        'tbAEd\ttabAEad\tPV\tdiverge',
+        ';; tabAEud_1',
+        'tbAEd\ttabAEud\tNduAt\testrangement',
+        ';',
+        ';; bagol_1',
+        'bgl\tbagol\tN\tmule',
+      ].join('\n'),
+    );
+    expect(stems.get('tbAEd').map((e) => e.root)).toEqual(['bEd', 'bEd']);
+    expect(stems.get('bgl')[0].root).toBe('---');
+  });
+});
+
+describe('rootFromVerbLemma', () => {
+  it('reads the radicals off Forms I-X and quadriliterals, in the headers own spelling', () => {
+    expect(rootFromVerbLemma('jazaE')).toBe('jzE');
+    expect(rootFromVerbLemma('Dar~as')).toBe('Drs');
+    expect(rootFromVerbLemma('>aboraq')).toBe('brq');
+    expect(rootFromVerbLemma('ta>aj~al')).toBe('Ajl');
+    expect(rootFromVerbLemma('{inojaHar')).toBe('jHr');
+    expect(rootFromVerbLemma('{ijotaHar')).toBe('jHr');
+    expect(rootFromVerbLemma('{isotavomar')).toBe('vmr');
+    expect(rootFromVerbLemma('tajarojar')).toBe('jrjr');
+    expect(rootFromVerbLemma('mad~')).toBe('md');
+  });
+
+  it('gives up on weak verbs rather than guess', () => {
+    expect(rootFromVerbLemma('qAl')).toBeNull();
+    expect(rootFromVerbLemma('ramaY')).toBeNull();
+    expect(rootFromVerbLemma('daEA')).toBeNull();
   });
 });
 

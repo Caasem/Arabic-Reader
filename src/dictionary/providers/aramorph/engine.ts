@@ -132,12 +132,52 @@ const POS_TAG = /<pos>([\s\S]*?)<\/pos>/;
 // dropped too, leaving the bare citation-form stem.
 const LEMMA_MARKER_RE = /^;;\s*(\S+?)(?:-([uai]{1,2}))?_\d+\s*$/;
 
+// A radical: any letter but a short vowel, long ا, ى or the other marks.
+const R = '([^aiuoA~{`FNKY])';
+// Verb citation forms whose radicals can be read straight off the letters:
+// Forms I-X and the two quadriliteral forms. Weak verbs whose radicals change
+// (قالَ, رَمَى) don't match, so they get no root rather than a wrong one.
+const VERB_ROOT_PATTERNS = [
+  `^${R}a${R}[aiu]${R}$`, // I     katab
+  `^${R}a${R}~a${R}$`, // II    kat~ab
+  `^${R}A${R}a${R}$`, // III   kAtab
+  `^>a${R}o${R}a${R}$`, // IV    >akotab
+  `^ta${R}a${R}~a${R}$`, // V     takat~ab
+  `^ta${R}A${R}a${R}$`, // VI    takAtab
+  `^\\{ino${R}a${R}a${R}$`, // VII   {inokatab
+  `^\\{i${R}o[tTd]a${R}a${R}$`, // VIII  {ikotatab
+  `^\\{isota${R}o${R}a${R}$`, // X     {isotakotab
+  `^${R}a${R}o${R}a${R}$`, // QI    tarojam
+  `^ta${R}a${R}o${R}a${R}$`, // QII   tatarojam
+].map((p) => new RegExp(p));
+// madd: the data's headers write doubled roots with two letters (md).
+const DOUBLED_FORM_I = new RegExp(`^${R}a${R}~$`);
+
+/** The root of a verb's citation form (Buckwalter), written the way the data's
+ * own root headers write roots (hamza as A, doubled roots with two letters);
+ * null when the pattern is unclear. */
+export function rootFromVerbLemma(lemma: string): string | null {
+  const radicals = [DOUBLED_FORM_I, ...VERB_ROOT_PATTERNS].map((re) => lemma.match(re)).find(Boolean)?.slice(1);
+  return radicals ? radicals.join('').replace(/[>&<}|']/g, 'A') : null;
+}
+
 export function createDictTable(text: string): OptimizedDictArray<MorphEntry> {
   const lines = text.split('\n');
   const table = new OptimizedDictArray<MorphEntry>();
   let root = '---';
   let lemma = '---';
   let lemmaVowel: string | undefined;
+  // About 13,600 stems sit in groups with no `;--- root` header: lone `;`
+  // lines split some roots' blocks, and some roots never got a header. When
+  // such a group has a verb, its root comes from the verb (rootFromVerbLemma)
+  // and goes to every stem in the group.
+  let rootless: MorphEntry[] = [];
+  let inferredRoot: string | null = null;
+  const endGroup = () => {
+    if (inferredRoot) for (const e of rootless) e.root = inferredRoot;
+    rootless = [];
+    inferredRoot = null;
+  };
   for (const line of lines) {
     if (line !== '' && line[0] !== ';') {
       const elems = line.split(/\s/);
@@ -155,11 +195,17 @@ export function createDictTable(text: string): OptimizedDictArray<MorphEntry> {
         pos: (posMatch?.[1] || '').trim(),
       };
       table.addItem(elems[0], def);
+      if (root === '---') {
+        rootless.push(def);
+        if (!inferredRoot && lemma !== '---' && def.morph.startsWith('PV')) inferredRoot = rootFromVerbLemma(lemma);
+      }
     } else if (line !== '' && line.trim() === ';') {
+      endGroup();
       root = '---';
       lemma = '---';
       lemmaVowel = undefined;
     } else if (line !== '' && line.slice(0, 5) === ';--- ') {
+      endGroup();
       root = line.split(/\s/)[1];
       lemma = '---';
       lemmaVowel = undefined;
@@ -171,6 +217,7 @@ export function createDictTable(text: string): OptimizedDictArray<MorphEntry> {
       }
     }
   }
+  endGroup();
   return table;
 }
 

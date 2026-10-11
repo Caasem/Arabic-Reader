@@ -7,7 +7,7 @@ release.
 ## Summary: 10–11 October 2026 (the refactor pass)
 
 Everything that landed from the evening of 10 October to midday on 11 October, in order. Rows 1–7 are on `main`
-(up to 0.96.0); rows 8–17 are on `refactor/integration`
+(up to 0.96.0); rows 8–18 are on `refactor/integration`
 ([Caasem/Arabic-Reader#73](https://github.com/Caasem/Arabic-Reader/pull/73), 0.97.0), waiting to be tested before
 merging. Per-phase detail and how to revert each one: `docs/changes/refactor-changes.md`.
 
@@ -30,8 +30,17 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 | 15 | 11 Oct | #73, fix | A word with ال whose noun AraMorph lacks (التحاسد) now finds the verb and its root instead of nothing | Yes | 0.97.1 | On `refactor/integration` |
 | 16 | 11 Oct | #73 | Form V/VI verbal nouns missing from AraMorph (about 340, e.g. تَحاسُد) are made as hidden entries: they find the root for the Arabic dictionaries but are never shown | Yes | 0.99.1 | On `refactor/integration` |
 | 17 | 11 Oct | #73 | Lane's Lexicon (Arabic–English) added as an optional dictionary, off by default; Hans Wehr listed too but empty because of copyright, with a note on how to add your own copy | Yes | 0.100.0 | On `refactor/integration` |
+| 18 | 11 Oct | #73 | About 6,400 AraMorph entries that had no root get one from their group's verb (e.g. التباعد → بعد, التنافس → نفس), so the Arabic dictionaries and root search find them | Yes | 0.102.1 | On `refactor/integration` |
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
+
+## v0.102.1 — 2026-10-11
+
+- About 6,400 more words now have a root, so Al-Wasīṭ, Al-Ṣiḥāḥ, Maqāyīs and Lane show their article, root search
+  finds them, and vocabulary lists group them with their root. Examples: التباعد (بعد), التنافس (نفس), التباغض (بغض),
+  البرق (برق). AraMorph had filed them with no root; the app now takes the root from the verb listed with them. Words
+  with no verb beside them (loanwords such as باكتيريا, and a few nouns such as بَغْل) still show no root rather than a
+  guessed one. The dictionary rebuilds once on first launch after the update.
 
 ## v0.102.0 — 2026-10-11
 
