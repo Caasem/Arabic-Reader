@@ -107,8 +107,11 @@ export function wrapLines(text: string, width: number, size: number, height: num
   return kept;
 }
 
-/** The sheet as a standalone SVG on paper (fixed colours, as an image cannot read the theme). */
-export function sketchSvg(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): { svg: string; w: number; h: number } {
+/**
+ * The sheet as a standalone SVG on paper (fixed colours, as an image cannot read the theme). `hide`: nodes whose
+ * label is left out, drawn as a blank box (sketch cards and the sheet walk-through, sketchCards.ts).
+ */
+export function sketchSvg(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>, opts: { hide?: ReadonlySet<string> } = {}): { svg: string; w: number; h: number } {
   const box = contentBox(s.strokes, s.nodes) ?? { x: 0, y: 0, w: 200, h: 120 };
   const pad = 20;
   const x0 = box.x - pad;
@@ -134,10 +137,12 @@ export function sketchSvg(s: Pick<Sketch, 'nodes' | 'edges' | 'strokes'>): { svg
       continue;
     }
     const size = n.kind === 'quote' ? 16 : 14;
-    const lines = wrapLines(n.text, n.w, size, n.h);
+    const hidden = !!opts.hide?.has(n.id);
+    const lines = hidden ? [] : wrapLines(n.text, n.w, size, n.h);
     const lh = size * 1.3;
     const y0 = n.y + n.h / 2 - ((lines.length - 1) * lh) / 2;
-    body += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="14" fill="${fill}" stroke="${stroke}" stroke-width="1.2"/>`;
+    body += `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="14" fill="${hidden ? '#e9e3d6' : fill}" stroke="${hidden ? '#b9b1a2' : stroke}" stroke-width="1.2"${hidden ? ' stroke-dasharray="5 4"' : ''}/>`;
+    if (hidden) continue;
     body += `<text text-anchor="middle" dominant-baseline="central" direction="${/[؀-ۿ]/.test(n.text) ? 'rtl' : 'ltr'}" font-family="'Noto Naskh Arabic','Segoe UI',Tahoma,sans-serif" font-size="${size}" fill="${n.kind === 'quote' ? '#7d5a14' : '#1c1b19'}">${lines.map((l, i) => `<tspan x="${n.x + n.w / 2}" y="${r1(y0 + i * lh)}">${esc(l)}</tspan>`).join('')}</text>`;
   }
   for (const st of s.strokes) body += `<path d="${pathD(st.pts)}" fill="none" stroke="${PAPER_COLORS[st.color]}" stroke-width="${st.width}" stroke-linecap="round" stroke-linejoin="round"${st.marker ? ' stroke-opacity="0.35"' : ''}/>`;
