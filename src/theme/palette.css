@@ -43,4 +43,18 @@
   --c-lib-sheet-backdrop: rgba(28, 27, 25, 0.38);
   --c-lib-sheet-shadow: rgba(0, 0, 0, 0.4);
   --c-browse-backdrop: rgba(0, 0, 0, 0.4);
+
+  /* Dictionary popup, vocabulary edit, dictionary search */
+  --c-popup-warn: #b0701c;
+  --c-popup-ok: #2e7d4f;
+  --c-popup-pill-good-bg: rgba(139, 184, 114, 0.22);
+  --c-popup-pill-good-ink: #4c7a35;
+  --c-popup-pill-mid-bg: rgba(231, 198, 91, 0.28);
+  --c-popup-pill-mid-ink: #8a6a12;
+  --c-popup-pill-bad-bg: rgba(201, 122, 109, 0.22);
+  --c-popup-pill-bad-ink: #a4402e;
+  --c-vocab-edit-backdrop: rgba(28, 27, 25, 0.28);
+  --c-dictsearch-backdrop: rgba(28, 27, 25, 0.42);
+  --c-dictsearch-shadow: rgba(28, 27, 25, 0.28);
+  --c-dictsearch-sheet-shadow: rgba(28, 27, 25, 0.25);
 }

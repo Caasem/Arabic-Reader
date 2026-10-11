@@ -2,7 +2,7 @@
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: rgba(28, 27, 25, 0.28);
+  background: var(--c-vocab-edit-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;

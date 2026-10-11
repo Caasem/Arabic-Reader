@@ -180,7 +180,7 @@
 }
 
 .dict-popup__word-text--suspect {
-  text-decoration: underline wavy #b0701c;
+  text-decoration: underline wavy var(--c-popup-warn);
   text-decoration-thickness: 1.5px;
   text-underline-offset: 8px;
 }
@@ -203,11 +203,11 @@
 }
 
 .dict-popup__ocr-note--warn {
-  color: #b0701c;
+  color: var(--c-popup-warn);
 }
 
 .dict-popup__ocr-note--ok {
-  color: #2e7d4f;
+  color: var(--c-popup-ok);
 }
 
 .dict-popup__alts {
@@ -317,19 +317,19 @@
 }
 
 .dict-popup__rarity--beginner {
-  background: rgba(139, 184, 114, 0.22);
-  color: #4c7a35;
+  background: var(--c-popup-pill-good-bg);
+  color: var(--c-popup-pill-good-ink);
 }
 
 .dict-popup__rarity--intermediate {
-  background: rgba(231, 198, 91, 0.28);
-  color: #8a6a12;
+  background: var(--c-popup-pill-mid-bg);
+  color: var(--c-popup-pill-mid-ink);
 }
 
 .dict-popup__rarity--advanced,
 .dict-popup__rarity--unlisted {
-  background: rgba(201, 122, 109, 0.22);
-  color: #a4402e;
+  background: var(--c-popup-pill-bad-bg);
+  color: var(--c-popup-pill-bad-ink);
 }
 
 .dict-popup__loading,

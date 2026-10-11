@@ -15,7 +15,7 @@
   position: fixed;
   inset: 0;
   z-index: 59;
-  background: rgba(28, 27, 25, 0.42);
+  background: var(--c-dictsearch-backdrop);
 }
 .dsearch--floating {
   border-radius: 14px;
@@ -29,7 +29,7 @@
   width: min(600px, calc(100vw - 24px));
   max-height: calc(100vh - 168px);
   border-radius: 16px;
-  box-shadow: 0 24px 60px rgba(28, 27, 25, 0.28);
+  box-shadow: 0 24px 60px var(--c-dictsearch-shadow);
   overflow: hidden;
 }
 .dsearch--drawer {
@@ -46,7 +46,7 @@
   height: min(600px, 75vh);
   border-radius: 20px 20px 0 0;
   border-width: 1px 0 0;
-  box-shadow: 0 -12px 40px rgba(28, 27, 25, 0.25);
+  box-shadow: 0 -12px 40px var(--c-dictsearch-sheet-shadow);
 }
 .dsearch__handle {
   width: 40px;
