@@ -412,6 +412,9 @@ export interface AramorphResult {
   hidden?: boolean;
   /** Another spelling of `root` (و and ي swapped) where scholars or the data differ; `root` leads. */
   altRoot?: string;
+  /** The word was written with vowels and this reading's vowels disagree with
+   * them. Such readings are kept, just sorted after the ones that agree. */
+  vowelClash?: boolean;
 }
 
 // ---------- Spelling variants (Qur'anic and classical orthography) ----------
@@ -463,6 +466,54 @@ export function spellingVariants(word: string): string[][] {
     }
   }
   return groups;
+}
+
+// ---------- Written vowels against a reading's vowels ----------
+interface Unit {
+  vowel: string;
+  shadda: boolean;
+  marked: boolean;
+}
+const VOWEL_MARKS = 'auioFNK';
+
+/** Base letters, each with the marks written after it (Buckwalter). */
+function toUnits(buck: string): Unit[] {
+  const units: Unit[] = [];
+  for (const ch of buck) {
+    if (ch === '`') continue;
+    if (harakaat.includes(ch)) {
+      const u = units[units.length - 1];
+      if (!u) continue;
+      u.marked = true;
+      if (ch === '~') u.shadda = true;
+      else if (VOWEL_MARKS.includes(ch) && !u.vowel) u.vowel = ch;
+    } else {
+      units.push({ vowel: '', shadda: false, marked: false });
+    }
+  }
+  return units;
+}
+
+function unitsClash(a: Unit[], b: Unit[]): boolean {
+  for (let i = 0; i < a.length - 1; i++) {
+    if (a[i].vowel && b[i].vowel && a[i].vowel !== b[i].vowel) return true;
+    if (a[i].shadda !== b[i].shadda && (a[i].shadda ? b[i].marked : a[i].marked)) return true;
+  }
+  return false;
+}
+
+/**
+ * True when the reading's vowels contradict the written ones (both
+ * Buckwalter). Case endings (the last letter) are not compared, and neither
+ * are spellings whose letters don't line up (hamza and alif seats). A written
+ * dagger alif (`) may be a long ā the reading spells out or nothing at all, so
+ * both are tried, and the reading clashes only if every one that lines up does.
+ */
+export function vowelsClash(writtenBuck: string, readingBuck: string): boolean {
+  const b = toUnits(readingBuck);
+  const forms = writtenBuck.includes('`') ? [writtenBuck.replace(/`/g, ''), writtenBuck.replace(/`/g, 'A')] : [writtenBuck];
+  const comparable = forms.map(toUnits).filter((a) => a.length === b.length);
+  return comparable.length > 0 && comparable.every((a) => unitsClash(a, b));
 }
 
 // Form V تَفَعَّلَ and Form VI تَفاعَلَ verbs, whose verbal nouns are تَفَعُّل and
@@ -632,6 +683,21 @@ export class AramorphEngine {
     return candidates;
   }
 
+  /**
+   * When the word is written with vowels, flags the readings whose own vowels
+   * disagree and moves them after the others. Nothing is removed; and if every
+   * reading disagrees (a typo in the text, or a rule that is wrong for this
+   * word) nothing is flagged and the order stays.
+   */
+  private rankByWrittenVowels(word: string, results: AramorphResult[]): AramorphResult[] {
+    const written = transliterate(cleanQuranicMarks(word));
+    if (!harakaat.some((h) => written.includes(h))) return results;
+    const flagged = results.map((r) => vowelsClash(written, transliterate(r.word)));
+    if (flagged.every(Boolean) || !flagged.some(Boolean)) return results;
+    const marked = results.map((r, i) => (flagged[i] ? { ...r, vowelClash: true } : r));
+    return [...marked.filter((r) => !r.vowelClash), ...marked.filter((r) => r.vowelClash)];
+  }
+
   lookup(word: string): AramorphResult[] {
     if (!this.tables) return [];
     const cached = this.lookupCache.get(word);
@@ -665,12 +731,15 @@ export class AramorphEngine {
     }
 
     const seen = new Set<string>();
-    const data = candidates.filter((d) => {
-      const k = d.word + '|' + d.def;
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    });
+    const data = this.rankByWrittenVowels(
+      word,
+      candidates.filter((d) => {
+        const k = d.word + '|' + d.def;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      }),
+    );
 
     if (this.lookupCache.size >= CACHE_SIZE) this.lookupCache.delete(this.lookupCache.keys().next().value!);
     this.lookupCache.set(word, { data, timestamp: Date.now() });

@@ -186,7 +186,8 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
               'dict-popup__entry' +
               (clean && entry.verbForm ? ' dict-popup__entry--tappable' : '') +
               (clean && tokenData ? ' dict-popup__entry--subs' : '') +
-              (exactMatch ? ' dict-popup__entry--best' : '')
+              (exactMatch ? ' dict-popup__entry--best' : '') +
+              (entry.vowelClash ? ' dict-popup__entry--clash' : '')
             }
             data-entry-index={i}
             key={entry.providerId + i}
@@ -260,6 +261,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
               {!clean && <VerbFormMark entry={entry} />}
               {!clean && saveButton}
             </div>
+            {entry.vowelClash && <div className="dict-popup__clash-note">doesn't match the vowels in the text</div>}
             {!clean && <VerbFormInfo entry={entry} />}
             {tokenData ? folded ? null : (
               <div
