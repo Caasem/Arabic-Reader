@@ -53,9 +53,6 @@ export interface FeatureDescriptor {
 /**
  * Every feature, in order. The order is the order Hosts mount in (later ones draw over earlier ones), App hosts mount
  * in, and sections appear in within a Settings group. Adding a feature: its folder, plus one line here.
- *
- * Entries written inline below are features not converted yet (refactor phase 5): the howto moves each into its own
- * index.ts and fills in `pref`, `chords` and `touchPoints`.
  */
 export const FEATURES: FeatureDescriptor[] = [
   dictionarySearchFeature,
