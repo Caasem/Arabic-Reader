@@ -3,6 +3,7 @@ import { libraryService } from '../library/libraryService';
 import type { BookMeta } from '../types';
 import type { DeskTrip } from './trip';
 import { looksArabic } from './useDesk';
+import { pullTarget, rememberPullTarget } from './deskMemory';
 import { filterCandidates, isImageFile, KIND_LABEL, listPullCandidates, pullIn, pullInImage, type PullCandidate, type PullKind, type PullSpot, type PullTarget } from './pullIn';
 
 interface Props {
@@ -24,7 +25,6 @@ interface Props {
   onGoAgain?(): void;
 }
 
-const TARGET_KEY = 'studyDesk.pullTarget';
 const IMAGE = '__image__';
 const GO = '__go__';
 const AGAIN = '__again__';
@@ -36,16 +36,6 @@ const FILTERS: { kind: PullKind | 'all'; label: string }[] = [
   { kind: 'item', label: 'Desk items' },
 ];
 
-function loadTarget(): PullTarget {
-  try {
-    const v = localStorage.getItem(TARGET_KEY);
-    if (v === 'left' || v === 'right' || v === 'inbox') return v;
-  } catch {
-    // The right margin.
-  }
-  return 'right';
-}
-
 /** Where the trip again files its capture: the same place as last time. */
 const againWhere = (t: DeskTrip) => (t.target === 'inbox' || !t.spot ? 'to the inbox' : `to the ${t.target} Ḥāshiya, same place as last time`);
 
@@ -55,7 +45,7 @@ export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGo
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState<PullKind | 'all'>('all');
   const [selected, setSelected] = useState<string | null>(null);
-  const [chosenTarget, setChosenTarget] = useState<PullTarget>(loadTarget);
+  const [chosenTarget, setChosenTarget] = useState<PullTarget>(pullTarget);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const busy = useRef(false);
@@ -110,11 +100,7 @@ export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGo
 
   function chooseTarget(t: PullTarget) {
     setChosenTarget(t);
-    try {
-      localStorage.setItem(TARGET_KEY, t);
-    } catch {
-      // Not remembered.
-    }
+    rememberPullTarget(t);
   }
 
   const placedMessage = (t: PullTarget) => (t === 'inbox' ? 'Added to the inbox and the desk' : `Placed in the ${t} Ḥāshiya`);

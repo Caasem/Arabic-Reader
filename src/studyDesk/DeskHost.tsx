@@ -6,6 +6,7 @@ import { goToBookLocation, useChordHotkey } from '../readerChords';
 import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta, ReaderPreferences } from '../types';
 import type { DeskItem } from './types';
+import { lastMargins, rememberLastMargins } from './deskMemory';
 import { ConceptStrip } from './ConceptStrip';
 import { DeskDocument } from './DeskDocument';
 import { InboxBody } from './InboxBody';
@@ -175,22 +176,11 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
   // Alt+M: margins on and off; back on in the layout they had.
   const toggleMargins = () => {
     if (prefs.studyDeskMargins !== 'off') {
-      try {
-        localStorage.setItem('studyDesk.lastMargins', prefs.studyDeskMargins);
-      } catch {
-        // Comes back as both sides.
-      }
+      rememberLastMargins(prefs.studyDeskMargins);
       updatePrefs({ studyDeskMargins: 'off' });
       say('Ḥāshiya hidden. Alt+M shows it again.');
     } else {
-      let last: ReaderPreferences['studyDeskMargins'] = 'both';
-      try {
-        const v = localStorage.getItem('studyDesk.lastMargins');
-        if (v === 'left' || v === 'right' || v === 'both') last = v;
-      } catch {
-        // Both sides.
-      }
-      updatePrefs({ studyDeskMargins: last });
+      updatePrefs({ studyDeskMargins: lastMargins() ?? 'both' });
     }
   };
   useChordHotkey('KeyM', true, toggleMargins);

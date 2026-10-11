@@ -5,7 +5,8 @@ import { deleteItem, updateItem } from './deskStore';
 import { MarginRing, type DeskCommands, type RingState } from './MarginRing';
 import { formatPdfLocation, pdfRegionInBox } from './pageGeometry';
 import { pdfDeskState, setPdfDeskFocus, setPdfDeskHover, setPdfDeskTie, usePdfDesk } from './pdfDesk';
-import { setSnapEnabled, snapDrag, snapEnabled, type FracBox, type Snapped } from './pdfSnap';
+import { snapDrag, type FracBox, type Snapped } from './pdfSnap';
+import { setSnapEnabled, snapEnabled } from './deskMemory';
 import { capture, looksArabic, type DeskData } from './useDesk';
 import { useInkUi } from '../annotate/inkUi';
 

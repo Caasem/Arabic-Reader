@@ -29,24 +29,6 @@ export interface Snapped {
   via: 'text' | 'ocr' | 'none';
 }
 
-const SNAP_KEY = 'studyDesk.pdfSnap';
-
-export function snapEnabled(): boolean {
-  try {
-    return localStorage.getItem(SNAP_KEY) !== 'off';
-  } catch {
-    return true;
-  }
-}
-
-export function setSnapEnabled(on: boolean): void {
-  try {
-    localStorage.setItem(SNAP_KEY, on ? 'on' : 'off');
-  } catch {
-    // Not remembered: on next time.
-  }
-}
-
 /** The smallest box around all of them. */
 export function unionBox(boxes: FracBox[]): FracBox | null {
   if (!boxes.length) return null;

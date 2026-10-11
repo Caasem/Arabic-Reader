@@ -14,6 +14,7 @@ import { fillEmbed, type EmbedAct } from './docEmbeds';
 import { EMBED_CLASS, embedHtml, EMPTY_DOC, outline, sanitizeDocHtml } from './docHtml';
 import { capture, itemTitle, looksArabic, TYPE_LABEL, useDeskImage, type DeskData } from './useDesk';
 import type { Desk, DeskItem } from './types';
+import { docPanelMinimised, rememberDocPanelMinimised } from './deskMemory';
 
 interface Props {
   book: BookMeta;
@@ -31,8 +32,6 @@ interface Props {
   onGoToSource?(item: DeskItem): void;
   onToast(m: string): void;
 }
-
-const MIN_KEY = 'studyDesk.docPanelMin';
 
 const FORMATS: { cmd: FormatCommand; label: string; title: string; icon: React.ReactNode }[] = [
   { cmd: 'bold', label: 'Bold', title: 'Bold (Ctrl+B)', icon: <b>B</b> },
@@ -58,13 +57,7 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
   const docMode = prefs.studyDeskMarginsInDocument;
   const [desk, setDesk] = useState<Desk | null>(null);
   const [version, setVersion] = useState(0);
-  const [min, setMin] = useState(() => {
-    try {
-      return localStorage.getItem(MIN_KEY) === '1';
-    } catch {
-      return false;
-    }
-  });
+  const [min, setMin] = useState(docPanelMinimised);
   const [filter, setFilter] = useState('');
   const edRef = useRef<HTMLDivElement>(null);
   const known = useRef<Set<string>>(new Set());
@@ -495,11 +488,7 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
 
   function setMinimised(v: boolean) {
     setMin(v);
-    try {
-      localStorage.setItem(MIN_KEY, v ? '1' : '0');
-    } catch {
-      // Not remembered.
-    }
+    rememberDocPanelMinimised(v);
   }
 
   // Tabs: this book's desk, your most recent own desks and the open one; every desk is under All desks.
