@@ -8,7 +8,7 @@ import { persistenceService } from '../../../persistence';
 import type { BookMeta, ReaderPreferences, TocItem } from '../../../types';
 import { logDiagnostic } from '../../../diagnostics/diagnosticsLog';
 import type { ResolvedTheme } from '../../../state/PreferencesContext';
-import { isCleanLocation } from '../../../quietReader/location';
+import { isCleanLocation } from '../../../readerCore/location';
 
 export interface ReaderLocation {
   chapterLabel?: string;

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { NavBar, type ViewName } from './components/shared/NavBar';
 import { Library } from './components/library/Library';
-import { ReaderSwitch } from './cleanReader/ReaderSwitch';
+import { ReaderSwitch } from './readerCore/ReaderSwitch';
 import { BackupReminder } from './components/shared/BackupReminder';
 import { PomodoroNotifier } from './components/pomodoro/PomodoroNotifier';
 import { PreferencesProvider } from './state/PreferencesProvider';

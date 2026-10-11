@@ -1,5 +1,5 @@
 import { spineIndexOfCfi } from '../reader/epub/cfi';
-import type { CleanChapter } from '../cleanReader/parseCleanEpub';
+import type { CleanChapter } from './parseCleanEpub';
 
 /**
  * A place in the clean text. Stored as "clean:<chapter>:<start>:<end>" in the

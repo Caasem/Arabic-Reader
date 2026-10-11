@@ -15,7 +15,7 @@ import { saveCleanFocus } from './cleanFocus';
 import { NewReaderNotice } from './NewReaderNotice';
 import { usePdfView } from '../pdf/pages/pdfView';
 
-const CleanReader = lazy(() => import('./CleanReader').then((m) => ({ default: m.CleanReader })));
+const CleanReader = lazy(() => import('../cleanReader/CleanReader').then((m) => ({ default: m.CleanReader })));
 const PdfPagesReader = lazy(() => import('../pdf/pagesEntry').then((m) => ({ default: m.PdfPagesReader })));
 const QuietReader = lazy(() => import('../quietReader/QuietReader').then((m) => ({ default: m.QuietReader })));
 

@@ -1,4 +1,4 @@
-import { parseCleanLocation } from '../quietReader/location';
+import { parseCleanLocation } from '../readerCore/location';
 import type { InkPoint } from './types';
 
 /** Rounded to a tenth: plenty for strokes, and keeps stored rows small. */

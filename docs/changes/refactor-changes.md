@@ -47,10 +47,31 @@ Branch `refactor/phase2a-touch-new-reader`, worktree `Arabic-Reader-p2a`. Users 
 | Double tap closes what its first tap opened | With the Phone bindings the first tap opened the dictionary, and the double tap left it over the page after saving | `onDoubleTap` closed only the bubble | Closes the bubble and the popup (`lookups.closeAll`), new reader only | A double tap on a phone saves and leaves the page clear | The popup stays open after a double tap again |
 | Old iOS: a note instead of a fallback | The CSS Custom Highlight API needs iOS 17.2+ / Android WebView 105+. Wrapping ranges in `<mark>` would change the text's DOM, which every saved character offset depends on (`paint.ts`) | Highlights silently not drawn | `paintSupported` (exported from `paint.ts`). Where false, the drawer's Marks tab says *Highlights need iOS 17.2 or newer to show on the page. They are saved and listed here.* | Text only, on old devices | The note goes |
 
+## Phase 1: shared reader core (done)
+
+Branch `refactor/phase1-reader-core`, worktree `Arabic-Reader-p1`. Nothing users can see; no version bump. Every move
+is its own commit with only import paths changed, so `git log --follow` keeps each file's history.
+`src/readerCore/README.md` lists what is there and the rules.
+
+| Change | Why | Before | After | Impact | Revert |
+|---|---|---|---|---|---|
+| Clean-text modules moved to `src/readerCore` | 2b deletes `src/cleanReader`, and the new reader imported six modules from it | `chapterHtml`, `cleanPosition`, `cleanFocus`, `elementAsDocument`, `parseCleanEpub` (and its test), `useCleanSavedWords` in `src/cleanReader` | The same files in `src/readerCore`. `cleanReader/` holds only `CleanReader.tsx` and `cleanReader.css` | None. localStorage keys unchanged (`arabic-reader:cleanFocus`, `arabic-reader:cleanPosition:<book>`) | Files go back to `src/cleanReader` |
+| `ReaderSwitch` moved to `src/readerCore` | It chooses between the kept readers, so it belongs with the core | `src/cleanReader/ReaderSwitch.tsx`, with `NewReaderNotice` (and its CSS), which only it mounts | `src/readerCore/ReaderSwitch.tsx`, `NewReaderNotice.tsx`, `newReaderNotice.css`. `_context.md` and the feature prompts in `docs/features/` point to the new path | None | Files and doc paths go back |
+| Text model, search, locations and painting moved from `src/quietReader` | PDF pages reached into the new reader's folder for them | `location`, `paint`, `searchState` in `src/quietReader`, and `bookModel`, `cleanSearch`, `rootSearch` that `searchState` is built on | All six in `src/readerCore`, which never imports from `src/quietReader`. Their tests moved to `readerCore/helpers.test.ts` unchanged | None | Files and tests go back to `src/quietReader` |
+| Chapter markup styles split from `cleanReader.css` | The new reader imported the old reader's whole stylesheet for three rules | `.clean-reader__title`, `__gap`, `__break` in `cleanReader.css`, imported by both readers | Those three in `readerCore/chapterHtml.css`, imported by both. The rest stays in `cleanReader.css`, imported only by `CleanReader` | None: same rules, same order in the new reader | One stylesheet again |
+
+Decisions:
+
+| Question | Choice | Why |
+|---|---|---|
+| `src/reader/tokenizer`, `wordInteraction`, `session`: move or re-export? | **Neither**: they stay in `src/reader/` | Used well beyond the two readers (dictionaries, speed reader, vocabulary, book search), and 2b doesn't delete them. A re-export would add a second import path to the same code |
+| `quietReader/progress`, `textOffsets` | **Stay** in `src/quietReader` | PDF pages count whole pages and map words through the text layer (`pdfText.ts`); neither uses them or should |
+| New reader chrome PDF pages borrows (`Chrome`, `BookDrawer`, `MarginLevels`, `DisplaySheet`, `icons`, `TimerPopover`, `pomodoroClock`, `useMarks`) | **Stays** in `src/quietReader` | It is the new reader's UI, `src/quietReader` stays, and moving it would churn many files for nothing 2b needs |
+| Legacy names (`clean:` locations, `parseCleanEpub`, `.clean-reader__*`, `cleanFocus`) | **Kept** | Renaming changes stored data or every caller, with no change in behaviour |
+
 ## Planned phases
 
 | Phase | Branch / worktree | Model | Change | Why | Before | After | Impact |
 |---|---|---|---|---|---|---|---|
-| 1. Shared reader core | `refactor/phase1-reader-core`, `Arabic-Reader-p1` | Opus | New `src/readerCore/` for what the new reader and PDF pages share. `ReaderSwitch` moves there | The new reader imports six modules from `cleanReader/`, a folder that 2b deletes | Shared code lives inside the old clean reader's folder | One core used by the new reader and PDF pages | No visible change. Every reader e2e spec passes unchanged |
-| 2b. Remove Original layout and the old clean reader | `refactor/phase2b-retire-readers`, `Arabic-Reader-p2b` | Sonnet ports the 25 specs still in Original layout (2a ported touch-gestures), then Opus removes the readers | Delete the epub.js `Reader`, `CleanReader`, the `quietReaderEnabled` and `cleanReaderEnabled` settings and Display → View → Original layout | Four reading paths become two | New reader, Original layout, old clean reader, PDF pages | New reader and PDF pages | Books show as clean text only (no book styling or images). Highlights and bookmarks carry over. A minor version bump |
+| 2b. Remove Original layout and the old clean reader | `refactor/phase2b-retire-readers`, `Arabic-Reader-p2b` | Sonnet ports the 25 specs still in Original layout (2a ported touch-gestures), then Opus removes the readers | Delete the epub.js `Reader`, `src/cleanReader` (since phase 1 only `CleanReader` and its CSS), the `quietReaderEnabled` and `cleanReaderEnabled` settings and Display → View → Original layout | Four reading paths become two | New reader, Original layout, old clean reader, PDF pages | New reader and PDF pages | Books show as clean text only (no book styling or images). Highlights and bookmarks carry over. A minor version bump |
 | 5. Feature registry | `refactor/phase5-feature-registry`, `Arabic-Reader-p5` | Opus for the design and the first two features, then Sonnet for the rest | Each feature declares `{id, pref, SettingsSection, Host, chords, touchPoints}`. `ReaderSwitch` and `SettingsPanel` loop over the list. Feature code stops calling `localStorage` directly | 23 `*Enabled` flags, overlays and settings groups are wired by hand. 12 files call `localStorage` directly instead of `src/utils/storage.ts` | Adding a feature touches 4 to 6 shared files | One folder plus one registry line | No visible change. Values already stored in `localStorage` must be read and migrated, not lost |

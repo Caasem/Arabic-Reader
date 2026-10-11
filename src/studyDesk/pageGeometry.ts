@@ -1,4 +1,4 @@
-import { formatCleanLocation, parseCleanLocation } from '../quietReader/location';
+import { formatCleanLocation, parseCleanLocation } from '../readerCore/location';
 import { caretAt, offsetWithin, rangeAt } from '../quietReader/textOffsets';
 
 /**

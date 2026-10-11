@@ -8,7 +8,7 @@
  * `quietReaderEnabled` preference is on, and the epub reader for a book whose
  * Display -> View is "Original layout"), <QuietReaderSettings> in
  * SettingsPanel, App (opening Settings at a group), the clean-location guards
- * in the epub reader (location.ts's isCleanLocation), and savePopupEntries in
+ * in the epub reader (src/readerCore/location.ts's isCleanLocation), and savePopupEntries in
  * useWordLookups (the popup's whole-section "+"). Bookmarks and highlights
  * made here are stored with "clean:" locations in the usual tables. To go
  * back: switch "New reader" off in Settings, or `git revert` the commit that
@@ -17,4 +17,4 @@
 export { QuietReader } from './QuietReader';
 export { QuietReaderSettings } from './QuietReaderSettings';
 export { useReaderView } from './readerView';
-export { isCleanLocation } from './location';
+export { isCleanLocation } from '../readerCore/location';

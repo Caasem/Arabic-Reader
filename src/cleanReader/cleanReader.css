@@ -24,24 +24,6 @@
   text-align: start;
 }
 
-.clean-reader__title {
-  margin: 0.6em 0 1.4em;
-  font-size: 1.5em;
-  font-weight: 600;
-  text-align: center;
-}
-
-.clean-reader__gap {
-  height: 1em;
-}
-
-.clean-reader__break {
-  margin: 1.2em 0;
-  text-align: center;
-  color: var(--ink-faint);
-  letter-spacing: 0.4em;
-}
-
 .clean-reader__text .ar-word {
   cursor: pointer;
   border-radius: 3px;

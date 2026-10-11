@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { CleanBook } from '../../cleanReader/parseCleanEpub';
-import type { BookModel } from '../../quietReader/bookModel';
+import type { CleanBook } from '../../readerCore/parseCleanEpub';
+import type { BookModel } from '../../readerCore/bookModel';
 import { normalizeArabic } from '../arabic';
 import type { OpenedPdf } from './pdfjsLoader';
 

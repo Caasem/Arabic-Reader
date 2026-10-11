@@ -4,7 +4,7 @@ import { usePreferences } from '../state/PreferencesContext';
 import { useChordHotkey } from '../readerChords';
 import { registerPdfPageExtension } from '../pdf/pages/extensions';
 import { textInBox } from '../studyDesk/pageGeometry';
-import { parseCleanLocation } from '../quietReader/location';
+import { parseCleanLocation } from '../readerCore/location';
 import { CleanInkLayer } from './CleanInk';
 import { InkBar } from './InkBar';
 import { refreshReaderTools, registerReaderTool } from '../readerTools';
@@ -15,7 +15,7 @@ import { SketchPanel } from './SketchPanel';
 import { tabsAt, type Place } from './sheets';
 import { bookSketches, newSketch, onInkChange, saveSketch } from './inkStore';
 import { getItem } from '../studyDesk/deskStore';
-import { isCleanLocation, parseCleanLocation as parseClean } from '../quietReader/location';
+import { isCleanLocation, parseCleanLocation as parseClean } from '../readerCore/location';
 import type { Sketch } from './types';
 import './annotate.css';
 

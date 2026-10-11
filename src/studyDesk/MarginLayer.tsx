@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { isCleanLocation } from '../quietReader/location';
+import { isCleanLocation } from '../readerCore/location';
 import { getReaderMarks } from '../readerChords';
 import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta, ReaderPreferences } from '../types';

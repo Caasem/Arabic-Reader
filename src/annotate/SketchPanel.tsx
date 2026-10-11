@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BookMeta } from '../types';
-import { formatCleanLocation } from '../quietReader/location';
+import { formatCleanLocation } from '../readerCore/location';
 import { saveFile } from '../utils/saveFile';
 import { getReaderMarks } from '../readerChords';
 import { openDictionaryPage } from '../dictionaryPage/events';

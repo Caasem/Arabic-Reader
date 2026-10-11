@@ -1,5 +1,5 @@
 import type { BookMeta } from '../types';
-import { formatCleanLocation, parseCleanLocation } from '../quietReader/location';
+import { formatCleanLocation, parseCleanLocation } from '../readerCore/location';
 import { bookDeskId, listItems, updateItem } from '../studyDesk/deskStore';
 import { attachImage } from '../studyDesk/marginImages';
 import { formatPdfLocation, parsePdfLocation } from '../studyDesk/pageGeometry';

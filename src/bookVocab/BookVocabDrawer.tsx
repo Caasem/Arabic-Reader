@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { vocabularyService } from '../vocabulary';
 import type { BookMeta, VocabularyItem } from '../types';
 import { goToBookLocation } from '../readerChords';
-import { isCleanLocation } from '../quietReader/location';
+import { isCleanLocation } from '../readerCore/location';
 
 type Filter = 'all' | 'new' | 'learning' | 'known' | 'due';
 type Sort = 'saved' | 'due';

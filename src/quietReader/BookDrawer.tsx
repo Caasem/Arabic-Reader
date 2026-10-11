@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { HIGHLIGHT_FILL } from '../theme/tokens';
 import type { Highlight, HighlightColor, VocabularyItem } from '../types';
 import { IconBookmark, IconChevronLeft, IconChevronRight, IconClose, IconJump, IconPencil, IconSearch, IconTrash } from './icons';
-import type { CleanMatch } from './cleanSearch';
-import type { ReaderSearch, SearchHit, SearchScope } from './searchState';
+import type { CleanMatch } from '../readerCore/cleanSearch';
+import type { ReaderSearch, SearchHit, SearchScope } from '../readerCore/searchState';
 import { dueText, statusKindOf, statusLabel, type StatusKind } from './vocabStatus';
 
 export type DrawerTab = 'contents' | 'search' | 'marks' | 'words';
