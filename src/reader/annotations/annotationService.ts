@@ -3,8 +3,8 @@ import type { BookMeta, Highlight, HighlightColor } from '../../types';
 import { newId } from '../../utils/id';
 
 /**
- * Highlight/annotation CRUD, kept separate from EpubService (which only
- * knows how to *render* a highlight into the page) and from the reader UI
+ * Highlight/annotation CRUD, kept separate from the drawing of highlights
+ * (readerCore/paint.ts) and from the reader UI
  * (which only knows how to prompt for a color/note). This is the layer a
  * future native client's own rendering engine would also call into.
  */

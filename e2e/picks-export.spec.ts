@@ -1,7 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 /**
  * Alt+P opens a panel with the entries saved from this book and a button that writes them to a file.
@@ -13,8 +10,7 @@ test('Alt+P lists the saved entries and saves them to a file', async ({ page }) 
   await page.click('text=Try the sample book');
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
-  await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
-  await page.waitForTimeout(2500);
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 30000 });
 
   // Nothing saved yet.
   await page.keyboard.press('Alt+KeyP');
@@ -26,11 +22,11 @@ test('Alt+P lists the saved entries and saves them to a file', async ({ page }) 
   await expect(panel).toHaveCount(0);
 
   // Save one entry with its round +, in a word whose popup has more than one entry.
-  const frame = page.frames().find((f) => f !== page.mainFrame())!;
-  const count = await frame.evaluate(() => document.querySelectorAll('p .ar-word').length);
+  const words = page.locator('.qr-chapter p .ar-word');
+  const count = await words.count();
   let saved = false;
   for (let i = 0; i < Math.min(count, 40) && !saved; i++) {
-    await frame.evaluate((n) => document.querySelectorAll('p .ar-word')[n].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })), i);
+    await words.nth(i).click();
     await page.waitForSelector('.dict-popup', { timeout: 8000 });
     await page.waitForTimeout(700);
     if ((await page.locator('.dict-popup__entry-save').count()) > 1) {

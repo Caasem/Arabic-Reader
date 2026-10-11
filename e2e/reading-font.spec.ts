@@ -1,9 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 const fontsDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', 'fonts');
 // The bundled (OFL) Latin subset stands in for a font someone uploads. WOFF2
@@ -13,16 +10,15 @@ const UPLOADED_FAMILY = 'NotoNaskhArabic latin (uploaded)';
 
 const bookBodyFont = (page: Page) =>
   page.evaluate(() => {
-    const doc = document.querySelector<HTMLIFrameElement>('.reader__epub iframe')?.contentDocument;
-    return doc ? getComputedStyle(doc.body).fontFamily : null;
+    const text = document.querySelector('.qr-text');
+    return text ? getComputedStyle(text).fontFamily : null;
   });
 
-/** Whether the uploaded @font-face actually loads inside the book's section document. */
+/** Whether the uploaded @font-face actually loads in the page the book is drawn in. */
 const bookLoadsUploadedFont = (page: Page) =>
   page.evaluate(async (family) => {
-    const doc = document.querySelector<HTMLIFrameElement>('.reader__epub iframe')?.contentDocument;
-    if (!doc?.getElementById('ar-user-fonts')) return false;
-    return (await doc.fonts.load(`16px '${family}'`, 'abc')).length > 0;
+    if (!document.getElementById('ar-user-fonts')) return false;
+    return (await document.fonts.load(`16px '${family}'`, 'abc')).length > 0;
   }, UPLOADED_FAMILY);
 
 const appArabicFont = (page: Page) =>
@@ -36,7 +32,7 @@ async function openSampleBook(page: Page) {
   if ((await page.locator('.book-card').count()) === 0) await page.click('text=Try the sample book');
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.locator('.book-card').first().click();
-  await page.waitForSelector('.reader__epub iframe', { timeout: 15000 });
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
 }
 
 async function openFontSettings(page: Page) {

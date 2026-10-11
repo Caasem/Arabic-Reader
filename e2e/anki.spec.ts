@@ -1,7 +1,4 @@
 import { test, expect, type Page } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 /** Save the first word of the sample book. */
 async function saveAWord(page: Page) {
@@ -10,10 +7,8 @@ async function saveAWord(page: Page) {
   await page.click('text=Try the sample book');
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
-  await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
-  await page.waitForTimeout(2000);
-  const frame = page.frames().find((f) => f !== page.mainFrame())!;
-  await frame.evaluate(() => document.querySelectorAll('p .ar-word')[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 30000 });
+  await page.locator('.qr-chapter p .ar-word').first().click();
   await page.locator('.dict-popup__save').click();
   await expect(page.locator('.dict-popup__save')).toHaveText('✓ Vocabulary');
   await page.locator('.dict-popup__close').click();

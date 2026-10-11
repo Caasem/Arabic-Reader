@@ -1,10 +1,8 @@
 /**
- * Strips everything executable out of a book section before epub.js renders
- * it. Section iframes are sandboxed `allow-same-origin allow-scripts` (the
- * scripts flag is needed for iOS WebKit to deliver taps into the frame at
- * all -- see EpubService.open), which would otherwise let a hostile EPUB's
- * own script read this app's IndexedDB. Removing script sources here, plus a
- * restrictive CSP inside the section document, keeps book content inert.
+ * Strips everything executable out of an (X)HTML document. Written for the
+ * Original layout's epub.js section iframes (removed in 0.96.0); now used on
+ * HTML books as they are imported (importFormats/html.ts), so a hostile file's
+ * own script never reaches this app's IndexedDB.
  */
 
 const XHTML_NS = 'http://www.w3.org/1999/xhtml';

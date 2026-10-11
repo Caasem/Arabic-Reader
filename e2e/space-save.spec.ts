@@ -1,5 +1,4 @@
 import { test, expect, type Page } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
 
 /** Rows in the app's vocabulary table. */
 const vocabCount = (page: Page) =>
@@ -70,22 +69,21 @@ test.describe('new reader', () => {
     await page.keyboard.press('Space');
     await expect(chapter).toHaveText('الفصل الثاني: المدرسة');
   });
-});
 
-test.describe('original reader', () => {
-  test.beforeEach(async ({ page }) => useOriginalReader(page));
-
-  test('Space saves the word whose popup is open', async ({ page }) => {
+  /** Opens the sample book and the popup of its first word, ready to save. */
+  async function openFirstWord(page: Page) {
     await page.goto('/', { waitUntil: 'networkidle' });
     await page.waitForSelector('text=Try the sample book', { timeout: 10000 });
     await page.click('text=Try the sample book');
     await page.waitForSelector('.book-card', { timeout: 15000 });
     await page.click('.book-card');
-    await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
-    await page.waitForTimeout(2500);
-    const frame = page.frames().find((f) => f !== page.mainFrame())!;
-    await frame.evaluate(() => document.querySelectorAll('p .ar-word')[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
+    await page.waitForSelector('.qr-chapter .ar-word', { timeout: 30000 });
+    await page.locator('.qr-chapter p .ar-word').first().click();
     await expect(page.locator('.dict-popup__save')).toHaveText('Save Vocabulary', { timeout: 10000 });
+  }
+
+  test('Space saves the word whose popup is open', async ({ page }) => {
+    await openFirstWord(page);
 
     const before = await vocabCount(page);
     await page.keyboard.press('Space');
@@ -94,16 +92,7 @@ test.describe('original reader', () => {
   });
 
   test('Space types a space in the edit box instead of saving', async ({ page }) => {
-    await page.goto('/', { waitUntil: 'networkidle' });
-    await page.waitForSelector('text=Try the sample book', { timeout: 10000 });
-    await page.click('text=Try the sample book');
-    await page.waitForSelector('.book-card', { timeout: 15000 });
-    await page.click('.book-card');
-    await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
-    await page.waitForTimeout(2500);
-    const frame = page.frames().find((f) => f !== page.mainFrame())!;
-    await frame.evaluate(() => document.querySelectorAll('p .ar-word')[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
-    await expect(page.locator('.dict-popup__save')).toHaveText('Save Vocabulary', { timeout: 10000 });
+    await openFirstWord(page);
 
     const before = await vocabCount(page);
     await page.locator('.dict-popup__edit').click();

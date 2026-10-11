@@ -1,7 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 /**
  * Clean popup layout: pressing a verb's root shows its form (I-X) in the same
@@ -15,16 +12,13 @@ test('the dictionary popup shows a verb form and the root family', async ({ page
   await page.click('text=Try the sample book');
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
-  await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
-  await page.waitForTimeout(2500);
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 30000 });
 
-  const frame = page.frames().find((f) => f !== page.mainFrame())!;
-  const count = await frame.evaluate(() => document.querySelectorAll('p .ar-word').length);
+  const words = page.locator('.qr-chapter p .ar-word');
+  const count = await words.count();
   let found = false;
   for (let i = 0; i < Math.min(count, 40) && !found; i++) {
-    await frame.evaluate((n) => {
-      document.querySelectorAll('p .ar-word')[n].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    }, i);
+    await words.nth(i).click();
     await page.waitForSelector('.dict-popup', { timeout: 8000 });
     await page.waitForTimeout(700);
     found = (await page.locator('.dict-popup--clean .dict-popup__entry--tappable').count()) > 0;
@@ -50,9 +44,7 @@ test('the dictionary popup shows a verb form and the root family', async ({ page
   await page.click('.navbar__settings');
   await page.locator('label', { hasText: 'Clean popup layout' }).locator('input').uncheck();
   await page.click('.settings-panel__close');
-  await frame.evaluate(() => {
-    document.querySelectorAll('p .ar-word')[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-  });
+  await words.first().click();
   await page.waitForSelector('.dict-popup', { timeout: 8000 });
   await expect(page.locator('.dict-popup--clean')).toHaveCount(0);
 });

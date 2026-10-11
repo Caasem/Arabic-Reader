@@ -1,7 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 // Speed Reader is intentionally hidden behind SPEED_READER_ENABLED = false in
 // NavBar.tsx (its own nav tab doesn't render, so nothing below this point

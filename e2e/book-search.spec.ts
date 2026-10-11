@@ -1,11 +1,7 @@
 import { test, expect } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 /**
- * Press Alt+S in the epub reader (the key can come from inside the book's
- * iframe or the host page) to search the whole book; Enter jumps to a match.
+ * Press Alt+S in the reader to search the whole book; Enter jumps to a match.
  */
 test('Alt+S searches the book and jumps to a match', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
@@ -13,15 +9,12 @@ test('Alt+S searches the book and jumps to a match', async ({ page }) => {
   await page.click('text=Try the sample book');
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
-  await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
-  await page.waitForTimeout(2500);
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 30000 });
 
-  const frame = page.frames().find((f) => f !== page.mainFrame())!;
-  const word = await frame.evaluate(() => (document.querySelector('p .ar-word') as HTMLElement).dataset.word!);
-  const pressSInBook = () =>
-    frame.evaluate(() => document.dispatchEvent(new KeyboardEvent('keydown', { key: 's', code: 'KeyS', altKey: true, bubbles: true })));
+  const word = (await page.locator('.qr-chapter p .ar-word').first().getAttribute('data-word'))!;
+  const pressSInBook = () => page.keyboard.press('Alt+s');
 
-  // Alt+S from inside the book opens the palette; typing finds the word, in both modes.
+  // Alt+S opens the palette; typing finds the word, in both modes.
   await pressSInBook();
   await expect(page.locator('.bsearch')).toBeVisible();
   await page.keyboard.type(word);

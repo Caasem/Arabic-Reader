@@ -69,9 +69,34 @@ Decisions:
 | New reader chrome PDF pages borrows (`Chrome`, `BookDrawer`, `MarginLevels`, `DisplaySheet`, `icons`, `TimerPopover`, `pomodoroClock`, `useMarks`) | **Stays** in `src/quietReader` | It is the new reader's UI, `src/quietReader` stays, and moving it would churn many files for nothing 2b needs |
 | Legacy names (`clean:` locations, `parseCleanEpub`, `.clean-reader__*`, `cleanFocus`) | **Kept** | Renaming changes stored data or every caller, with no change in behaviour |
 
+## Phase 2b: remove Original layout and the old clean reader (done)
+
+Branch `refactor/phase2b-retire-readers`, worktree `Arabic-Reader-p2b`. Users can see it: 0.96.0. Session 1 (Sonnet)
+ported the 25 specs that started in Original layout, one commit each; session 2 (Opus) removed the readers. Four
+reading paths become two: the new reader and a PDF's own pages.
+
+| Change | Why | Before | After | Impact | Revert |
+|---|---|---|---|---|---|
+| Specs run in the new reader | The readers they ran in are gone | 25 specs started in Original layout through `e2e/originalReader.ts`; `arabic-fold` and `dictionary-page` seeded "new reader off"; `new-reader-migration` tested Switch back | Every spec runs in the new reader; `originalReader.ts` is gone; `old-reader-prefs.spec.ts` checks that preferences from either old reader still open books in the new reader | Five tests are `fixme`, one for each accepted loss below (`docs/changes/reader-gaps.md`) | Specs go back to the old readers |
+| Original-layout positions land on their word | The brief: bookmarks made there must land at the right spot, not only the right chapter | A bookmark, last place or link holding an epub CFI opened its chapter at the top | `readerCore/epubPosition.ts` walks the CFI in the chapter's XHTML, counts the letters before it and finds the same count in the clean text. Unit tests in `epubPosition.test.ts` | Old bookmarks and books last read in Original layout open on their word | Back to the chapter's start |
+| Original layout and the old clean reader deleted | Only the new reader and PDF pages stay | `components/reader/Reader.tsx` and what only it used (useEpubReader, EpubService, its top bar, footer, panels, search overlay, selection toolbar, quick settings, footnote popup, vocab levels, pomodoro timer, word styles), `src/cleanReader`, Display -> View | Gone (35 files, about 4,200 lines). The toasts the new reader and PDF pages borrowed from `Reader.css` moved to `quietReader.css` | Books show as clean text only: no book styling, images or table layout. Per-book "original" views stored in localStorage are no longer read | Restores both readers and Display -> View |
+| Reader settings removed | Nothing to choose | Settings had *New reader*, *Read books as clean text* and the 0.95.0 notice with *Switch back*; preferences `quietReaderEnabled`, `cleanReaderEnabled`, `newReaderSwitchBack` | Settings -> Reading keeps the dock choice. Migration 1 is a no-op (its slot keeps the count). Book search no longer checks the reader | Stored preferences may still carry the three keys; nothing reads them | Restores the switches and the notice; preferences already saved without the keys get defaults (new reader on) |
+| Footnotes leave out script source | Found while porting: a note holding a `<script>` showed its source as text | `noteText` used `textContent` | Notes skip the tags chapters skip (script, style, media). Unit test in `parseCleanEpub.test.ts` | Cleaner notes | Script source shows in such notes again |
+| Bundle budgets lowered | They sat 10% above the old sizes | Entry script 730 kB, entry styles 165 kB, app code 2.85 MB | 685 kB, 148 kB, 2.75 MB (measured 622 kB, 134 kB, 2.50 MB). epub.js stays, so the drop is modest | A PR growing them past the new budgets fails CI | Old budgets |
+
+Accepted losses (each is a `fixme` test that still documents it):
+
+| Loss | Where it showed | Why accepted |
+|---|---|---|
+| The book's own styling, images and table layout | Original layout | The decision of 2026-10-11 ("Which readers stay") |
+| Bold and italic inside footnotes | `footnotes.spec.ts` | Notes are plain text; the words are all there |
+| *Go to note* for a note link that leads nowhere | `footnotes.spec.ts` | The new reader says the note can't be found; the button would have nothing to open |
+| Text labels under the page-turn arrows | `reading-layout.spec.ts` | The arrows are named (aria-label and tooltip) |
+| A `script-src 'none'` CSP per section | `untrusted-epub.spec.ts` | No section iframe exists; book markup never reaches the page (the ported test checks that) |
+| Collapsing the Vocab Levels panel to a strip | `vocab-levels.spec.ts` | The margin's Levels panel opens and closes; the dock reopens it |
+
 ## Planned phases
 
 | Phase | Branch / worktree | Model | Change | Why | Before | After | Impact |
 |---|---|---|---|---|---|---|---|
-| 2b. Remove Original layout and the old clean reader | `refactor/phase2b-retire-readers`, `Arabic-Reader-p2b` | Sonnet ports the 25 specs still in Original layout (2a ported touch-gestures), then Opus removes the readers | Delete the epub.js `Reader`, `src/cleanReader` (since phase 1 only `CleanReader` and its CSS), the `quietReaderEnabled` and `cleanReaderEnabled` settings and Display → View → Original layout | Four reading paths become two | New reader, Original layout, old clean reader, PDF pages | New reader and PDF pages | Books show as clean text only (no book styling or images). Highlights and bookmarks carry over. A minor version bump |
 | 5. Feature registry | `refactor/phase5-feature-registry`, `Arabic-Reader-p5` | Opus for the design and the first two features, then Sonnet for the rest | Each feature declares `{id, pref, SettingsSection, Host, chords, touchPoints}`. `ReaderSwitch` and `SettingsPanel` loop over the list. Feature code stops calling `localStorage` directly | 23 `*Enabled` flags, overlays and settings groups are wired by hand. 12 files call `localStorage` directly instead of `src/utils/storage.ts` | Adding a feature touches 4 to 6 shared files | One folder plus one registry line | No visible change. Values already stored in `localStorage` must be read and migrated, not lost |

@@ -71,7 +71,7 @@ export function CleanInkLayer({ book }: { book: BookMeta }) {
   const [origins, setOrigins] = useState<Map<string, Origin>>(new Map());
   const layerRef = useRef<HTMLDivElement>(null);
 
-  // The quiet reader comes and goes (Original layout, PDF pages): look for its stage now and then.
+  // The quiet reader comes and goes (a PDF's own pages replace it): look for its stage now and then.
   useEffect(() => {
     const t = window.setInterval(() => setStage((s) => (s && s.isConnected ? s : findStage())), 500);
     return () => window.clearInterval(t);

@@ -1,9 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
 import { makePdf, sampleArabicBookPdf } from '../src/pdf/testPdf';
 import { turnOnPdfConvert } from './pdfConvert';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 async function addFile(page: Page, name: string, text: string | Uint8Array, mimeType = 'text/plain', convertPdf = false) {
   await page.goto('/');
@@ -13,11 +10,8 @@ async function addFile(page: Page, name: string, text: string | Uint8Array, mime
 }
 
 async function tapFirstWord(page: Page) {
-  await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
-  await page.waitForTimeout(2000);
-  const frame = page.frames().find((f) => f !== page.mainFrame())!;
-  await frame.waitForSelector('.ar-word', { timeout: 15000 });
-  await frame.evaluate(() => document.querySelector('.ar-word')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 30000 });
+  await page.locator('.qr-chapter .ar-word').first().click();
   await expect(page.locator('.dict-popup')).toBeVisible({ timeout: 8000 });
 }
 

@@ -5,8 +5,9 @@
 //
 // Each file takes the budget of the first rule its name matches. "App code" is every JS and CSS file
 // that is not data, a worker or WebAssembly; it also has a budget for its total. Budgets sit about 10%
-// above the sizes measured when this was written; raise one on purpose, in the same commit that
-// explains why. The dictionary data rules go away when the dictionaries become packs (refactor phase 3).
+// above the sizes measured when this was written (lowered in 0.96.0, when the old readers went);
+// raise one on purpose, in the same commit that explains why. The dictionary data rules go away when
+// the dictionaries become packs (refactor phase 3).
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -19,12 +20,12 @@ const RULES = [
   ['AraMorph worker', /^aramorph\.worker-[\w-]+\.js$/, 4.8 * MB, false],
   ['pdf.js worker', /^pdf\.worker\.min-[\w-]+\.m?js$/, 1.3 * MB, false],
   ['WebAssembly', /\.wasm$/, 15.7 * MB, false],
-  ['entry script', /^index-[\w-]+\.js$/, 730 * KB, true],
-  ['entry styles', /^index-[\w-]+\.css$/, 165 * KB, true],
+  ['entry script', /^index-[\w-]+\.js$/, 685 * KB, true],
+  ['entry styles', /^index-[\w-]+\.css$/, 148 * KB, true],
   ['other script', /\.m?js$/, 480 * KB, true],
   ['other styles', /\.css$/, 60 * KB, true],
 ];
-const APP_CODE_TOTAL = 2.85 * MB;
+const APP_CODE_TOTAL = 2.75 * MB;
 
 const dist = process.argv[2] ?? 'dist';
 const assets = join(dist, 'assets');

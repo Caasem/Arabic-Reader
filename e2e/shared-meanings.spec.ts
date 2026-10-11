@@ -1,7 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 /**
  * Shared meanings (src/crowdSync) ships switched off: a build without a service address says so, the switch cannot be

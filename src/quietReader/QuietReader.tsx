@@ -31,11 +31,11 @@ import { searchForms, searchTexts } from '../readerCore/cleanSearch';
 import { normalizeForSearch } from '../reader/tokenizer/arabicTokenizer';
 import { DisplaySheet } from './DisplaySheet';
 import { chapterForEpubPosition, formatCleanLocation, parseCleanLocation } from '../readerCore/location';
+import { epubOffsetInChapter } from '../readerCore/epubPosition';
 import { MarginLevels } from './MarginLevels';
 import { NotePopover, SelectionBar, type ViewportRect } from './Overlays';
 import { clearPaint, flash, paintHighlights, paintSearchMatch, paintSupported } from '../readerCore/paint';
 import { bookProgress, chapterStarts, estimatePages } from './progress';
-import { useReaderView } from './readerView';
 import { useReaderSearch, type SearchHit } from '../readerCore/searchState';
 import { caretAt, offsetWithin, rangeAt } from './textOffsets';
 import { formatClock, remainingMs, usePomodoroSnapshot } from './pomodoroClock';
@@ -88,8 +88,6 @@ interface Props {
   levelsOpen?: boolean;
   onLevelsOpenChange?(open: boolean): void;
   onOpenSettings?(group?: string): void;
-  /** Display -> View -> Original layout. */
-  onShowOriginal?(): void;
   /** A book added from a PDF: Display -> Original pages. */
   onShowPages?(): void;
 }
@@ -102,13 +100,12 @@ const sectionOf = (node: Node | null) => (node instanceof Element ? node : node?
  * the bottom, vocab levels beside the text, the usual dictionary popup, and a
  * drawer for contents, search, marks and saved words.
  */
-export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation, onOpenBookAt, levelsOpen, onLevelsOpenChange, onOpenSettings, onShowOriginal, onShowPages }: Props) {
+export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation, onOpenBookAt, levelsOpen, onLevelsOpenChange, onOpenSettings, onShowPages }: Props) {
   const { prefs, resolvedTheme } = usePreferences();
   const prefsRef = useRef(prefs);
   useLayoutEffect(() => {
     prefsRef.current = prefs;
   });
-  const [view, setView] = useReaderView(book.id);
 
   // --- The book and where we are in it ---------------------------------------------------------------
   const [model, setModel] = useState<BookModel | null>(null);
@@ -124,6 +121,8 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   const [atEnd, setAtEnd] = useState(false);
   const [visible, setVisible] = useState<Located | null>(null);
   const pendingRef = useRef<Target | null>(null);
+  /** The book's file, for placing positions saved by the Original layout (epubPosition.ts). */
+  const fileRef = useRef<Blob | null>(null);
   const trackerRef = useRef<ReadingSessionTracker | null>(null);
   const saveTimerRef = useRef<number | undefined>(undefined);
   const visibleTimerRef = useRef<number | undefined>(undefined);
@@ -150,11 +149,16 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
         const last = m.book.chapters.length - 1;
         const loc = parseCleanLocation(initialLocation);
         const epubChapter = !loc && initialLocation ? chapterForEpubPosition(m.book.chapters, initialLocation) : null;
+        const epubOffset = epubChapter !== null ? await epubOffsetInChapter(file, m.book.chapters[epubChapter], m.texts[epubChapter], initialLocation) : null;
+        if (cancelled) return;
+        fileRef.current = file;
         const saved = loadCleanPosition(book.id);
         const target: Target = loc
           ? { chapter: Math.min(loc.chapter, last), offset: loc.start, end: loc.end }
           : epubChapter !== null
-            ? { chapter: epubChapter, fraction: 0 }
+            ? epubOffset !== null
+              ? { chapter: epubChapter, offset: epubOffset }
+              : { chapter: epubChapter, fraction: 0 }
             : { chapter: Math.min(saved.chapter, last), fraction: saved.scroll };
         pendingRef.current = target;
         chapterRef.current = target.chapter;
@@ -512,6 +516,16 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
     [model, hover, setPageIdx, applyPending, settle]
   );
 
+  /** A place saved by the Original layout (an epub CFI) in chapter `ch`: the same word, else the chapter's start. */
+  const goToEpub = useCallback(
+    async (ch: number, cfi: string | undefined) => {
+      if (!model) return;
+      const offset = await epubOffsetInChapter(fileRef.current, model.book.chapters[ch], model.texts[ch], cfi);
+      goTo(offset !== null ? { chapter: ch, offset } : { chapter: ch, fraction: 0 });
+    },
+    [model, goTo]
+  );
+
   const next = useCallback(() => {
     if (!model) return;
     const lastChapter = model.book.chapters.length - 1;
@@ -550,9 +564,9 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
     if (loc) goTo({ chapter: loc.chapter, offset: loc.start, end: loc.end });
     else if (initialLocation) {
       const ch = chapterForEpubPosition(model.book.chapters, initialLocation);
-      if (ch !== null) goTo({ chapter: ch, fraction: 0 });
+      if (ch !== null) void goToEpub(ch, initialLocation);
     }
-  }, [model, initialLocation, goTo]);
+  }, [model, initialLocation, goTo, goToEpub]);
 
   // --- Finding places in the text ---------------------------------------------------------------------
   const findText = useCallback(
@@ -614,9 +628,9 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
             hits.find((h) => tail && normalizeForSearch(model.texts[ch].slice(Math.max(0, h.start - 80), h.start)).normalized.trim().endsWith(tail)) ?? hits[0];
           if (best) return void jumpTo(best);
         }
-        goTo({ chapter: ch, fraction: 0 });
+        void goToEpub(ch, target);
       }),
-    [model, goTo, jumpTo, locateWord]
+    [model, goToEpub, jumpTo, locateWord]
   );
 
   // Alt+N (note) and Alt+F (flashcard) read the selection and add highlights through readerChords.
@@ -970,7 +984,7 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
       id: bookmark.id,
       label: bookmark.chapterLabel || (ch !== null ? chapters[ch]?.title : '') || bookmark.bookTitle,
       where: `${bookmark.locationLabel}${onThisPage(loc) ? ' · this page' : ''}`,
-      open: () => (loc ? goTo({ chapter: loc.chapter, offset: loc.start }) : ch !== null && goTo({ chapter: ch, fraction: 0 })),
+      open: () => (loc ? goTo({ chapter: loc.chapter, offset: loc.start }) : ch !== null && void goToEpub(ch, bookmark.cfi)),
       remove: () => void marks.removeBookmark(bookmark.id),
     }));
 
@@ -1133,11 +1147,6 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
       {sheet === 'display' && (
         <DisplaySheet
           center={dockCenter}
-          view={view}
-          onSetView={(v) => {
-            setView(v);
-            if (v === 'original') onShowOriginal?.();
-          }}
           onOpenSettings={() => onOpenSettings?.('reading')}
           onShowPages={onShowPages}
           onClose={() => setSheet(null)}

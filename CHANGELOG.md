@@ -4,6 +4,20 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.96.0 — 2026-10-11
+
+- **One reader.** Every book now opens in the new reader, and a book added from a PDF can still show its own pages.
+  *Original layout* (Display → View) and the old clean reader are gone, along with the *New reader* switch, the
+  clean reader's settings and the *Switch back* notice.
+  - What you lose: a book's own styling, its images and its table layout. Books show as clean text. Footnotes show as
+    plain text (no bold or italic); a footnote link that leads nowhere no longer offers *Go to note*; the page-turn
+    arrows have no text labels under them; and the Vocab Levels panel opens and closes but no longer folds to a strip.
+  - Why: one reader instead of three, so every feature (the dock, the Ḥāshiya, ink, Focus) works on every book, and
+    the app gets lighter.
+- Bookmarks you made in Original layout, and books you last read there, now open on the right word instead of at the
+  top of the chapter.
+- A footnote that contained a script no longer shows the script's text in the note.
+
 ## v0.95.0 — 2026-10-11
 
 - **The new reader on every device.** Phones and tablets set up from now on read in the new reader, with their touch

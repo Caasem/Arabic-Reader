@@ -1,7 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 test('hover-preview toggle: off by default, shows a condensed pill when enabled, persists across reload', async ({ page }) => {
   await page.goto('/');
@@ -18,15 +15,12 @@ test('hover-preview toggle: off by default, shows a condensed pill when enabled,
   await page.click('text=Try the sample book');
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
-  await page.waitForSelector('.reader__epub iframe', { timeout: 15000 });
-  await page.waitForTimeout(1800);
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
 
-  const frame = () => page.frames().find((f) => f !== page.mainFrame())!;
+  const word = page.locator('.qr-chapter p .ar-word').first();
 
   // Off by default: hovering must not show a preview.
-  await frame().evaluate(() => {
-    document.querySelector('p .ar-word')!.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true }));
-  });
+  await word.hover();
   await page.waitForTimeout(600);
   await expect(page.locator('.hover-preview')).toHaveCount(0);
 
@@ -36,27 +30,21 @@ test('hover-preview toggle: off by default, shows a condensed pill when enabled,
   await hoverRow.locator('input[type=checkbox]').check();
   await page.click('.settings-panel__close');
   await page.locator('.navbar__label', { hasText: /^Read$/ }).click();
-  await page.waitForSelector('.reader__epub iframe', { timeout: 10000 });
-  await page.waitForTimeout(1200);
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 10000 });
 
-  await frame().evaluate(() => {
-    document.querySelector('p .ar-word')!.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true, relatedTarget: document.body }));
-  });
+  await page.mouse.move(5, 5);
+  await word.hover();
   await page.waitForSelector('.hover-preview', { timeout: 3000 });
   const previewText = await page.textContent('.hover-preview__text');
   expect(previewText?.trim()).toBeTruthy();
 
   // Mouseout dismisses it.
-  await frame().evaluate(() => {
-    document.querySelector('p .ar-word')!.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, cancelable: true, relatedTarget: document.body }));
-  });
+  await page.mouse.move(5, 5);
   await page.waitForTimeout(300);
   await expect(page.locator('.hover-preview')).toHaveCount(0);
 
   // A click still opens the full popup, unaffected by hover wiring.
-  await frame().evaluate(() => {
-    document.querySelector('p .ar-word')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-  });
+  await word.click();
   await page.waitForSelector('.dict-popup', { timeout: 8000 });
   await page.click('.dict-popup__close');
   await page.waitForTimeout(200);

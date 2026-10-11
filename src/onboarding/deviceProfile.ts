@@ -55,8 +55,6 @@ export function detectDeviceProfile(): DeviceProfile {
  * alone, so the app default applies. */
 export function profilePreferences(profile: DeviceProfile): Partial<ReaderPreferences> {
   const shared: Partial<ReaderPreferences> = {
-    quietReaderEnabled: true,
-    cleanReaderEnabled: false,
     readingFlow: 'scrolled',
     continuousScrollEnabled: true,
     twoColumnEnabled: false,

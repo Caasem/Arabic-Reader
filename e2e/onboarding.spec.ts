@@ -37,7 +37,7 @@ test('a first visit walks the showcase, then applies the chosen device and dicti
 
   await page.waitForSelector('.navbar');
   const saved = await prefs(page);
-  expect(saved).toMatchObject({ readingWidthPct: 65, hoverPreviewEnabled: true, quietReaderEnabled: true, enabledProviderIds: ['aramorph', 'alwasit'] });
+  expect(saved).toMatchObject({ readingWidthPct: 65, hoverPreviewEnabled: true, enabledProviderIds: ['aramorph', 'alwasit'] });
   await expect(page.locator('.navbar')).not.toHaveClass(/navbar--collapsed/);
   // The starter books are already on the shelf.
   await expect(page.locator('.book-card__title', { hasText: 'نَارَادَا' })).toBeVisible({ timeout: 15000 });
@@ -63,14 +63,14 @@ async function opensInNewReader(page: Page) {
 
 test('choosing Phone applies the touch starting layout and a collapsed sidebar, and reads in the new reader', async ({ page }) => {
   await setUpAs(page, 'Phone');
-  expect(await prefs(page)).toMatchObject({ readingWidthPct: 100, hoverPreviewEnabled: false, cleanReaderEnabled: false, quietReaderEnabled: true });
+  expect(await prefs(page)).toMatchObject({ readingWidthPct: 100, hoverPreviewEnabled: false });
   await expect(page.locator('.navbar')).toHaveClass(/navbar--collapsed/);
   await opensInNewReader(page);
 });
 
 test('choosing Tablet reads in the new reader too', async ({ page }) => {
   await setUpAs(page, 'Tablet');
-  expect(await prefs(page)).toMatchObject({ readingWidthPct: 80, cleanReaderEnabled: false, quietReaderEnabled: true });
+  expect(await prefs(page)).toMatchObject({ readingWidthPct: 80 });
   await opensInNewReader(page);
 });
 

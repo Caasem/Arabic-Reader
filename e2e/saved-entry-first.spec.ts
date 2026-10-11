@@ -1,7 +1,4 @@
 import { test, expect, type Locator } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 const entryText = async (entry: Locator) => (await entry.innerText()).replace(/[+✓]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80);
 
@@ -16,17 +13,16 @@ test('a saved entry comes first the next time the word is opened', async ({ page
   await page.click('text=Try the sample book');
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
-  await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
-  await page.waitForTimeout(2500);
-  const frame = page.frames().find((f) => f !== page.mainFrame())!;
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 30000 });
+  const words = page.locator('.qr-chapter p .ar-word');
   const tap = async (n: number) => {
-    await frame.evaluate((i) => document.querySelectorAll('p .ar-word')[i].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })), n);
+    await words.nth(n).click();
     await page.waitForSelector('.dict-popup', { timeout: 8000 });
     await page.waitForTimeout(700);
   };
 
   // Find a word with a dictionary group holding at least three entries.
-  const count = await frame.evaluate(() => document.querySelectorAll('p .ar-word').length);
+  const count = await words.count();
   let word = -1;
   let groupIndex = -1;
   for (let i = 0; i < Math.min(count, 60) && word === -1; i++) {

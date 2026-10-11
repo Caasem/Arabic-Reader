@@ -2,27 +2,25 @@
 
 What the new reader (`src/quietReader`) and the PDF pages (`src/pdf/pages`) share, plus `ReaderSwitch`, which
 picks the reader for a book. Made in refactor phase 1 (`docs/changes/refactor-changes.md`) so that nothing the two
-kept readers need lives in `src/cleanReader`, which phase 2b deletes.
+kept readers need lived in `src/cleanReader`, which phase 2b deleted along with the Original layout (0.96.0).
 
 | File | What it is | Used by |
 |---|---|---|
-| `ReaderSwitch.tsx` | Picks the reader for a book and mounts the reader overlays ("hosts") | `App` |
-| `NewReaderNotice.tsx`, `newReaderNotice.css` | The one-time "you're in the new reader" notice with Switch back (0.95.0) | `ReaderSwitch` |
+| `ReaderSwitch.tsx` | Shows the new reader, or a PDF's own pages, and mounts the reader overlays ("hosts") | `App` |
 | `parseCleanEpub.ts` | An EPUB as clean text: chapters of paragraphs, titles, breaks and notes | new reader, search, PDF text (its types) |
 | `chapterHtml.ts`, `chapterHtml.css` | A clean chapter as HTML and as plain text; the title, gap and break styles | new reader, `bookModel` |
 | `bookModel.ts` | A book's chapter texts and paragraphs, for search, Words and Levels | new reader, PDF pages (`pdfText.ts` builds one per page) |
 | `cleanSearch.ts`, `rootSearch.ts`, `searchState.ts` | Searching the clean text (phrase, any word, word forms, same root) and the drawer's search state | new reader, PDF pages |
 | `location.ts` | `clean:chapter:start:end` locations, and mapping an epub position to a chapter | new reader, PDF pages, annotate, study desk, book vocab, flash cards |
+| `epubPosition.ts` | Places a position saved by the Original layout (an epub CFI: bookmarks, last place, saved words) on the same word in the clean text | new reader |
 | `paint.ts` | Highlights and search matches drawn with the CSS Custom Highlight API | new reader, PDF pages |
 | `cleanPosition.ts`, `cleanFocus.ts` | The saved place in a book, and whether Focus is on (localStorage; keys unchanged) | new reader, `readerTools/focus.ts` |
 | `elementAsDocument.ts`, `useCleanSavedWords.ts` | Lets the shared tap/hold/hover rules run on text in the page; colours saved words | new reader |
 
 Rules:
 
-- Nothing here imports from `src/quietReader` or `src/cleanReader`. The one exception is `ReaderSwitch`, which
-  lazy-loads the readers it chooses between and reads a book's Display -> View choice (`quietReader/readerView`,
-  which goes with Original layout in 2b).
-- `src/quietReader` and `src/pdf` never import from `src/cleanReader`.
+- Nothing here imports from `src/quietReader`. The one exception is `ReaderSwitch`, which lazy-loads the readers it
+  chooses between.
 - Some legacy names stay (`clean:` locations, `parseCleanEpub`, `.clean-reader__*` classes, the
   `arabic-reader:cleanFocus` and `arabic-reader:cleanPosition:<book>` keys): renaming them would change stored data or every caller, for no
   change in behaviour.

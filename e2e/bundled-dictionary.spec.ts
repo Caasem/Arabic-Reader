@@ -1,7 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 /**
  * The bundled AraMorph dictionary (public/dictionary-data/) must load
@@ -38,19 +35,17 @@ test('bundled AraMorph dictionary auto-loads and resolves a real lookup', async 
   await page.click('text=Try the sample book');
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
-  await page.waitForSelector('.reader__epub iframe', { timeout: 15000 });
-  await page.waitForTimeout(1800);
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
 
-  const readerFrame = page.frames().find((f) => f !== page.mainFrame())!;
-  await readerFrame.evaluate(() => {
-    const p = document.querySelector('p')!;
+  await page.evaluate(() => {
+    const p = document.querySelector('.qr-chapter p')!;
     const span = document.createElement('span');
     span.className = 'ar-word';
     span.dataset.word = 'كتاب';
     span.textContent = 'كتاب';
     p.appendChild(span);
-    span.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
   });
+  await page.locator('.qr-chapter .ar-word[data-word="كتاب"]').last().click();
 
   await page.waitForSelector('.dict-popup', { timeout: 8000 });
   await page.waitForTimeout(600);

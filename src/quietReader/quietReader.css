@@ -1720,3 +1720,52 @@
 .qr--narrow .qr-where--right {
   bottom: 80px;
 }
+
+/* The quick-add and touch toasts, shared with the PDF pages (they kept the epub reader's names when it went in 0.96.0). */
+.reader__quick-add-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 90px;
+  transform: translateX(-50%);
+  background: var(--text, #2a2a2a);
+  color: var(--bg, #fff);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  z-index: 60;
+  animation: reader-toast-in 0.15s ease;
+  pointer-events: none;
+}
+
+@keyframes reader-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.reader__touch-toast {
+  /* Unlike the quick-add toast above (fire-and-forget, nothing to click),
+     this one can carry an Undo button — re-enable pointer events just for
+     this variant rather than changing the shared base rule. */
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reader__touch-toast-undo {
+  border: none;
+  background: none;
+  color: var(--accent, #e6aa3c);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
