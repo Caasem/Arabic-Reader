@@ -188,6 +188,13 @@ export function DictionarySettings() {
         each one on; see <code>alsihah-data/SOURCE-README.md</code> and <code>almaqayis-data/SOURCE-README.md</code>.
       </Note>
 
+      <Note>
+        Lane's Lexicon (Arabic–English, 1863–93, public domain) is also off by default and filed by root the same way
+        — about 5,060 roots, a large download the first time you switch it on; see <code>lane-data/SOURCE-README.md</code>.
+        Hans Wehr is listed too, but it is under copyright, so the app ships it empty: switching it on shows a note
+        explaining how to add your own copy (<code>hanswehr-data/SOURCE-README.md</code>).
+      </Note>
+
       <PackRow id="alsihah" />
 
       <PersonalDictionarySettings onImported={() => toggleProvider('personal', true)} />

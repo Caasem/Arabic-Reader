@@ -92,6 +92,8 @@ const DICTS: { id: 'aramorph' | OptionalProviderId; label: string; mark: string 
   { id: 'alwasit', label: 'Al-Wasīṭ', mark: 'و' },
   { id: 'alsihah', label: 'Al-Ṣiḥāḥ', mark: 'ص' },
   { id: 'almaqayis', label: 'Maqāyīs al-Lugha', mark: 'م' },
+  { id: 'lane', label: "Lane's Lexicon", mark: 'L' },
+  { id: 'hanswehr', label: 'Hans Wehr (bring your own copy)', mark: 'W' },
   { id: 'baranov', label: 'Baranov (Arabic–Russian)', mark: 'Р' },
 ];
 
@@ -205,9 +207,15 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                       <DictTile key={d.id} d={d} on={optional.includes(d.id as OptionalProviderId)} onToggle={() => toggleDict(d.id as OptionalProviderId)} />
                     ))}
                   </div>
+                  <p className="ob-grp">English</p>
+                  <div className="ob-dgrid">
+                    {DICTS.slice(4, 6).map((d) => (
+                      <DictTile key={d.id} d={d} on={optional.includes(d.id as OptionalProviderId)} onToggle={() => toggleDict(d.id as OptionalProviderId)} />
+                    ))}
+                  </div>
                   <p className="ob-grp">Russian</p>
                   <div className="ob-dgrid">
-                    {DICTS.slice(4).map((d) => (
+                    {DICTS.slice(6).map((d) => (
                       <DictTile key={d.id} d={d} on={optional.includes(d.id as OptionalProviderId)} onToggle={() => toggleDict(d.id as OptionalProviderId)} />
                     ))}
                   </div>

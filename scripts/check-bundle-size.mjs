@@ -16,6 +16,7 @@ const MB = 1000 * KB;
 
 /** [label, file name pattern, budget per file in bytes, counts toward the app code total] */
 const RULES = [
+  ['Lane data (29 MB of text, off by default, never precached)', /^_virtual_lane-data-[\w-]+\.js$/, 32 * MB, false],
   ['dictionary data', /^_virtual_[\w-]+-data-[\w-]+\.js$/, 8.6 * MB, false],
   ['AraMorph worker', /^aramorph\.worker-[\w-]+\.js$/, 4.8 * MB, false],
   ['pdf.js worker', /^pdf\.worker\.min-[\w-]+\.m?js$/, 1.3 * MB, false],

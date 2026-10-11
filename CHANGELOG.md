@@ -7,7 +7,7 @@ release.
 ## Summary: 10–11 October 2026 (the refactor pass)
 
 Everything that landed from the evening of 10 October to midday on 11 October, in order. Rows 1–7 are on `main`
-(up to 0.96.0); rows 8–16 are on `refactor/integration`
+(up to 0.96.0); rows 8–17 are on `refactor/integration`
 ([Caasem/Arabic-Reader#73](https://github.com/Caasem/Arabic-Reader/pull/73), 0.97.0), waiting to be tested before
 merging. Per-phase detail and how to revert each one: `docs/changes/refactor-changes.md`.
 
@@ -29,8 +29,20 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 | 14 | 11 Oct 12:56 | #73 | No scrollbars on any device (before, only the desktop app hid them) | Yes | 0.97.0 | On `refactor/integration` |
 | 15 | 11 Oct | #73, fix | A word with ال whose noun AraMorph lacks (التحاسد) now finds the verb and its root instead of nothing | Yes | 0.97.1 | On `refactor/integration` |
 | 16 | 11 Oct | #73 | Form V/VI verbal nouns missing from AraMorph (about 340, e.g. تَحاسُد) are made as hidden entries: they find the root for the Arabic dictionaries but are never shown | Yes | 0.99.1 | On `refactor/integration` |
+| 17 | 11 Oct | #73 | Lane's Lexicon (Arabic–English) added as an optional dictionary, off by default; Hans Wehr listed too but empty because of copyright, with a note on how to add your own copy | Yes | 0.100.0 | On `refactor/integration` |
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
+
+## v0.100.0 — 2026-10-11
+
+- **Lane's Lexicon.** Edward Lane's *Arabic-English Lexicon* (1863–93, public domain) is now available as a dictionary.
+  It is off by default: switch it on under Settings > Dictionaries (or in the first-run dictionary choice). It is filed
+  by root like Al-Ṣiḥāḥ, so tapping a word shows the article for its root, as plain text. It is a big file (about 29 MB),
+  downloaded only the first time you turn it on; it also appears as "Lane · English" in the popup and "Lane" on the
+  dictionary page.
+- **Hans Wehr is listed but empty.** Hans Wehr's dictionary is under copyright, so the app does not include it. Turning it
+  on shows one note saying so. If you have the right to use a copy, you can build your own with the extraction script's
+  `--hanswehr` option; the steps are in `public/hanswehr-data/SOURCE-README.md`. Never commit the file it makes.
 
 ## v0.99.1 — 2026-10-11
 

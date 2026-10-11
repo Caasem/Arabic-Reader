@@ -25,7 +25,7 @@ interface Lookup {
 }
 
 /** Tab labels: short, as on a shelf of books. */
-const SHORT_NAMES: Record<string, string> = { aramorph: 'English', alwasit: 'Al-Wasīṭ', alsihah: 'Al-Ṣiḥāḥ', almaqayis: 'Maqāyīs', baranov: 'Baranov', personal: 'My dictionary' };
+const SHORT_NAMES: Record<string, string> = { aramorph: 'English', alwasit: 'Al-Wasīṭ', alsihah: 'Al-Ṣiḥāḥ', almaqayis: 'Maqāyīs', lane: 'Lane', hanswehr: 'Hans Wehr', baranov: 'Baranov', personal: 'My dictionary' };
 const shortName = (p: { id: string; name: string }) => SHORT_NAMES[p.id] ?? p.name;
 
 const isTyping = (target: EventTarget | null) => !!(target as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]');
