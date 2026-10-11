@@ -1,10 +1,33 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { vocabularyService, formatDueIn, type ReviewGrade } from '../../vocabulary';
 import { useArabicSpeech } from '../../utils/speech';
 import { BackupControls } from '../shared/BackupControls';
 import { IconEdit } from '../shared/icons';
 import type { VocabularyItem } from '../../types';
+import type { Sketch } from '../../annotate/types';
 import './Review.css';
+
+// A sheet card draws its sheet; that code loads only when one comes up.
+const SketchCardFigure = lazy(() => import('../../annotate/sketchCardView'));
+
+/** The sheet a card was made from, when it is on this device (sheets are not synced yet); null: use the card's text. */
+function useCardSheet(card: VocabularyItem | undefined): Sketch | null {
+  const [found, setFound] = useState<Sketch | null>(null);
+  const sketchId = card?.sketch?.sketchId;
+  useEffect(() => {
+    setFound(null);
+    if (!sketchId) return;
+    let live = true;
+    void import('../../annotate/inkStore')
+      .then((m) => m.getSketch(sketchId))
+      .then((s) => live && setFound(s ?? null))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [sketchId]);
+  return found;
+}
 
 type EditableField = 'meaning' | 'sentence';
 
@@ -27,7 +50,7 @@ const REQUEUE_WITHIN_MS = 5 * 60_000;
  * then grade recall Again/Hard/Good/Easy; each button previews the interval
  * it would schedule. Keyboard: Space or Enter reveals, 1–4 grade.
  */
-export function Review() {
+export function Review({ onOpenSheet }: { onOpenSheet?: (sheet: Pick<Sketch, 'id' | 'bookId' | 'location'>) => void } = {}) {
   const [queue, setQueue] = useState<VocabularyItem[] | null>(null);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -50,6 +73,9 @@ export function Review() {
   }, [editingField]);
 
   const current = queue?.[index];
+  const sheet = useCardSheet(current);
+  // Only an occlusion card shows the picture (the front must not give the answer away); the others stay text.
+  const picture = sheet && current?.sketch?.occlude ? current.sketch : null;
 
   // previewGrades() runs the scheduler for all four grades -- memoized per card.
   const previews = useMemo(() => (current ? vocabularyService.previewGrades(current) : null), [current]);
@@ -187,7 +213,7 @@ export function Review() {
       </header>
 
       <div className="review__card" onClick={() => setFlipped((f) => !f)} aria-live="polite">
-        {speak && (
+        {speak && !current.sketch && (
           <button
             className="review__speak"
             onClick={(e) => {
@@ -201,9 +227,27 @@ export function Review() {
           </button>
         )}
         <div className="review__card-box">{STATE_LABELS[current.fsrsState] ?? 'New'}</div>
-        <div className="review__card-word" lang="ar" dir="rtl">
-          {current.surfaceForm}
-        </div>
+        {picture ? (
+          <Suspense fallback={null}>
+            <SketchCardFigure sketch={sheet!} card={picture} side={flipped ? 'back' : 'front'} />
+          </Suspense>
+        ) : (
+          <div className={'review__card-word' + (current.sketch ? ' review__card-word--sheet' : '')} lang={current.sketch ? undefined : 'ar'} dir={current.sketch ? 'auto' : 'rtl'}>
+            {current.surfaceForm}
+          </div>
+        )}
+        {sheet && onOpenSheet && (
+          <button
+            type="button"
+            className="review__open-sheet"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenSheet(sheet);
+            }}
+          >
+            Open sheet
+          </button>
+        )}
         {!flipped && <div className="review__card-hint">Tap to reveal</div>}
         {flipped && (
           <div className="review__card-back">
@@ -224,7 +268,7 @@ export function Review() {
               />
             ) : (
               <div className="review__card-field" onClick={(e) => startEdit('meaning', e)}>
-                <span className="review__card-meaning">{current.meaning}</span>
+                <span className={'review__card-meaning' + (current.sketch ? ' review__card-meaning--sheet' : '')}>{current.meaning}</span>
                 <IconEdit size={12} className="review__card-field-icon" />
               </div>
             )}

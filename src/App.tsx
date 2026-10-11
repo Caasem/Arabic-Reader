@@ -13,6 +13,7 @@ import { fullscreen, isDesktopApp } from './utils/desktop';
 import { libraryService } from './library/libraryService';
 import { Onboarding, shouldShowOnboarding } from './onboarding';
 import { parseRoute, useHashRoute, type Route } from './routing';
+import { setInkUi } from './annotate/inkUi';
 import type { BookMeta, Highlight } from './types';
 import './App.css';
 
@@ -94,6 +95,15 @@ function App() {
     if (!book) return false;
     openBook(book, highlight.cfiRange);
     return true;
+  }
+
+  /** A sketch card's Open sheet: the book at the sheet's place, with the sketch panel on that sheet. */
+  async function openSheet(sheet: { id: string; bookId: string; location: string }) {
+    const book = (await libraryService.listBooks()).find((b) => b.id === sheet.bookId);
+    if (!book) return;
+    setInkUi({ sketch: true, full: false, openSketch: sheet.id });
+    // A PDF sheet's place is "pdf:3"; the PDF reader opens "pdf:page=3".
+    openBook(book, sheet.location.replace(/^pdf:(d+)$/, 'pdf:page=$1'));
   }
 
   function handleNav(next: ViewName) {
@@ -219,7 +229,7 @@ function App() {
               )}
               {view === 'vocabulary' && <VocabularyList />}
               {view === 'highlights' && <HighlightsList onOpenInBook={openHighlight} />}
-              {view === 'review' && <Review />}
+              {view === 'review' && <Review onOpenSheet={(s) => void openSheet(s)} />}
               {view === 'speedReader' && <SpeedReader />}
               {view === 'dashboard' && <Dashboard />}
               {view === 'dictionary' && (
