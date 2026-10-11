@@ -10,7 +10,8 @@ import { TEMPLATES } from './templates';
 import { HIGHLIGHTER_PRESETS } from '../studyDesk/highlighterColour';
 import { bookSketches, deleteSketch, isEmptySketch, newSketch, onInkChange, saveSketch } from './inkStore';
 import { vocabularyService } from '../vocabulary';
-import { cardFromNodes, occlusionCard, occlusionTargets, OCCLUSION_CONFIRM_ABOVE, type SketchCardSpec } from './sketchCards';
+import { SheetWalk } from './SheetWalk';
+import { cardFromNodes, occlusionCard, occlusionTargets, OCCLUSION_CONFIRM_ABOVE, walkOrder, type SketchCardSpec } from './sketchCards';
 import { refreshSketchCards, sendSketchToMargin, sketchOutline, sketchPng, sketchSvgBlob, type SendHow } from './toMargin';
 import { usePreferences } from '../state/PreferencesContext';
 import { COLOR_NAMES, inkUi, keyOwner, PEN_WIDTHS, setInkUi, THEME_COLORS, useInkUi } from './inkUi';
@@ -48,6 +49,9 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
   const [undoDelete, setUndoDelete] = useState<Sketch | null>(null);
   /** Cards just made from the sheet (ids), so the toast can undo them. */
   const [madeCards, setMadeCards] = useState<string[] | null>(null);
+  /** The sheet Review sheet is running on, over the stage. */
+  const [walkOf, setWalkOf] = useState<string | null>(null);
+  const walkingRef = useRef(false);
   /** The line from a pointed-at quote to its words on the page. */
   const [lead, setLead] = useState<string | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -379,7 +383,7 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
     const onKey = (e: KeyboardEvent) => {
       const s = surface.current;
       const t = e.target as HTMLElement;
-      if (!s || !ours.current || e.altKey) return;
+      if (!s || !ours.current || e.altKey || walkingRef.current) return;
       // Ctrl+Tab and Ctrl+Shift+Tab go through the tabs.
       if (e.ctrlKey && e.key === 'Tab') {
         e.preventDefault();
@@ -519,6 +523,8 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
 
   const mode = state?.mode ?? 'draw';
   const current = sheet.current?.sketch;
+  const walking = !!walkOf && walkOf === current?.id;
+  walkingRef.current = walking;
   const pdf = current ? current.key.startsWith('pdf:') : place?.kind === 'pdf';
   const all = useMemo(
     () => (sketches ?? []).filter((s) => s.key.startsWith(place?.kind === 'clean' ? 'clean:' : 'pdf:')).sort((a, b) => b.updatedAt - a.updatedAt),
@@ -711,6 +717,12 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
           <button type="button" role="menuitem" onClick={() => (setTabMenu(false), duplicate())}>
             <b>Duplicate</b>
           </button>
+          {walkOrder(current).length > 0 && (
+            <button type="button" role="menuitem" onClick={() => (setTabMenu(false), setWalkOf(current.id))} title="Practise: every label is hidden, Space reveals the next one">
+              <b>Review sheet</b>
+              <span>Reveal the boxes one by one</span>
+            </button>
+          )}
           {current.nodes.length > 0 && (
             <button type="button" role="menuitem" onClick={makeOcclusion} title="One flashcard per selected box (or every box with words): the sheet with that label hidden">
               <b>Make occlusion cards</b>
@@ -911,6 +923,7 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
 
       <div className="sk-stage">
         <div ref={hostRef} />
+        {walking && current && <SheetWalk sketch={current} onClose={() => setWalkOf(null)} />}
         {state?.empty && (
           <div className="sk-empty">
             {mode === 'draw' ? (
