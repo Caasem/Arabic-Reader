@@ -46,6 +46,8 @@ export interface MorphologicalAnalysis {
   person?: string;
   gender?: string;
   number?: string;
+  /** The reading contradicts the vowels written on the tapped word (it is listed after those that don't). */
+  vowelClash?: boolean;
 }
 
 export interface DictionaryLookupResult {

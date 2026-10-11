@@ -6,7 +6,8 @@ import { usePreferences } from '../../state/PreferencesContext';
 import { IconEdit, IconChevronLeft, IconChevronRight, IconBook, IconMaximize } from '../shared/icons';
 import { buildEntryTokenSenses, buildExampleEntryTokens, reconstructSelection, type DefinitionToken, type ExampleEntryTokens } from './definitionTokens';
 import { isTokenizedProvider } from '../../dictionary/tokenizedProviders';
-import { findMatchedSenses } from '../../wasitMatch';
+import { findMatchedSenses, scrollToFirstMatches } from '../../wasitMatch';
+import { hasSubEntryHeads } from '../../dictionary/subEntries/heads';
 import { annotateEntry } from '../../wasitStructure';
 import { arabicEntriesStartFolded, EntryDock, entryGist, groupLabel, type DockItem } from '../../popupClean';
 import { dictionaryManager } from '../../dictionary';
@@ -298,12 +299,12 @@ export function DictionaryPopup({
   }, [result]);
   const startFoldedExamples = clean && arabicEntriesStartFolded(exampleTokenData.size, prefs.collapseManyArabicEntries);
 
-  // Which Al-Wasit senses are the form that was looked up (see wasitMatch).
+  // Which senses of the root dictionaries' articles are the word that was looked up (see wasitMatch).
   const wasitMatches = useMemo(() => {
     const map = new Map<number, Set<number>>();
     if (!prefs.wasitMatchHighlight) return map;
     result?.entries.forEach((e, i) => {
-      if (isTokenizedProvider(e.providerId)) map.set(i, findMatchedSenses(e, word, result.morphology));
+      if (hasSubEntryHeads(e.providerId)) map.set(i, findMatchedSenses(e, word, result.morphology));
     });
     return map;
   }, [result, word, prefs.wasitMatchHighlight]);
@@ -423,6 +424,18 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
     // handler on the popup element below catches the settled end of it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [word, loading, result, x, y, wordRect, sizePct, effectiveLayout, isNarrow]);
+
+  // Land on the looked-up word: once per result (and per Split tab), scroll each scroll container to the
+  // first sub-entry coloured as matching it, unless it is already in view (see wasitMatch).
+  const landedRef = useRef<{ result: unknown; view: string } | null>(null);
+  useEffect(() => {
+    const el = popupRef.current;
+    if (!el || !prefs.subEntryScroll || loading || refreshing || !result || (!page && style.visibility !== 'visible')) return;
+    const view = `${effectiveLayout}:${activeTabId ?? ''}`;
+    if (landedRef.current?.result === result && landedRef.current.view === view) return;
+    landedRef.current = { result, view };
+    scrollToFirstMatches(el);
+  }, [result, wasitMatches, loading, refreshing, prefs.subEntryScroll, style.visibility, page, effectiveLayout, activeTabId]);
 
   const scale = sizePct / 100;
 

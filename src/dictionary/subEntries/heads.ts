@@ -6,6 +6,8 @@ export interface SubEntryHead {
   head: string;
   /** The headword's keys (see subEntryKey): as written and without the article. */
   keys: string[];
+  /** The headword as written, vowels and all (Lane, Al-Wasīṭ, Al-Ṣiḥāḥ): tells homographs apart (see vowelsAgree). */
+  word?: string;
   /** Weaker keys, used only when nothing matches `keys`: a verb without its object pronoun (Lane's حَسَدَهُ). */
   looseKeys: string[];
   /**
@@ -26,7 +28,7 @@ export const hasSubEntryIndex = (providerId: string): boolean => INDEXED.has(pro
 
 const ARABIC_WORD_RE = /^[؀-ۿ]*[ء-ي][؀-ۿ]*$/;
 /** Punctuation that can cling to either end of a word in the running text. */
-const EDGE_PUNCT_RE = /^[↓(\[«]+|[،,.:;؛)\]»]+$/g;
+const EDGE_PUNCT_RE = /^[↓([«]+|[،,.:;؛)\]»]+$/g;
 
 /** The words a line opens with, up to the first one that is not Arabic, and that run's raw length. */
 function leadingRun(text: string): { words: string[]; end: number } {
@@ -72,10 +74,12 @@ function laneHead(unit: string, root?: string): SubEntryHead | null {
   // Quadriliteral paragraphs ("Q. 1") are left without a form: AraMorph has no number for them.
   const form = /^\s*(\d{1,2})(?=[\s,.;:]|$)/.exec(unit.slice(end));
   const verbForm = form && +form[1] >= 1 && +form[1] <= 15 ? +form[1] : undefined;
-  const keys = keysOf(pickHeadword(words, root));
+  const word = pickHeadword(words, root);
+  const keys = keysOf(word);
   return {
     head: unit.slice(0, end),
     keys,
+    word,
     looseKeys: verbForm ? keys.flatMap(withoutObject) : [],
     ...(verbForm ? { verbForm } : {}),
   };
@@ -113,7 +117,7 @@ function parenHead(unit: string): SubEntryHead | null {
   const lead = leadForm(unit);
   if (!lead) return null;
   const keys = keysOf(lead);
-  return keys.length ? { head: '', keys, looseKeys: keys.flatMap(withoutObject) } : null;
+  return keys.length ? { head: '', keys, word: lead, looseKeys: keys.flatMap(withoutObject) } : null;
 }
 
 /**
@@ -132,7 +136,7 @@ export function openingKeys(gloss: string): string[] {
 
 function sihahHead(unit: string): SubEntryHead | null {
   const keys = openingKeys(unit);
-  return keys.length ? { head: '', keys, looseKeys: [] } : null;
+  return keys.length ? { head: '', keys, word: unit.trim().split(/\s+/)[0], looseKeys: [] } : null;
 }
 
 /**

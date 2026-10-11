@@ -223,7 +223,9 @@ function toAnalyses(results: AramorphResult[]): MorphologicalAnalysis[] {
     root: r.root !== '---' ? r.root : undefined,
     altRoot: r.root !== '---' ? r.altRoot : undefined,
     pos: r.pos || undefined,
-    form: r.verbForm, // lets the root dictionaries land on the verb's own paragraph (src/dictionary/subEntries)
+    // Let the root dictionaries land on the verb's own paragraph, by a reading that fits the vowels (src/dictionary/subEntries).
+    form: r.verbForm,
+    ...(r.vowelClash ? { vowelClash: true } : {}),
   }));
 }
 

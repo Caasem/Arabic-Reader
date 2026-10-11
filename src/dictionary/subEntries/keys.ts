@@ -58,3 +58,48 @@ export function containsRoot(key: string, root: string): boolean {
   }
   return true;
 }
+
+const SHADDA = 'ّ';
+/** Tanwin read as its short vowel; sukun kept as a vowel of its own. */
+const VOWEL_OF: Record<string, string> = { 'ً': 'َ', 'ٌ': 'ُ', 'ٍ': 'ِ', 'َ': 'َ', 'ُ': 'ُ', 'ِ': 'ِ', 'ْ': 'ْ' };
+
+/** A word as letters (keyed as subEntryKey does) with the vowel and shadda each carries. */
+function syllables(word: string): { letter: string; vowel?: string; shadda: boolean }[] {
+  const out: { letter: string; vowel?: string; shadda: boolean }[] = [];
+  for (const ch of word) {
+    const last = out[out.length - 1];
+    if (ch === SHADDA) {
+      if (last) last.shadda = true;
+    } else if (VOWEL_OF[ch]) {
+      if (last) last.vowel = VOWEL_OF[ch];
+    } else {
+      const letter = subEntryKey(ch);
+      if (letter) out.push({ letter, shadda: false });
+    }
+  }
+  return out;
+}
+
+/**
+ * True unless the vowels written on `lemma` and on a dictionary's `headword` disagree somewhere both are
+ * marked -- telling كِتاب from كُتّاب though both are كتاب. A mark missing on either side matches anything,
+ * the last letter's ending (case, tanwin) is ignored, and so is whatever the headword opens with that
+ * the lemma lacks (و, the article and the shadda it leaves on a sun letter: الرَّحْمٰنُ for رَحْمٰن).
+ */
+export function vowelsAgree(lemma: string, headword: string): boolean {
+  const a = syllables(lemma);
+  let b = syllables(headword);
+  const extra = b.length - a.length;
+  if (extra < 0) return true;
+  if (extra > 0) {
+    b = b.slice(extra);
+    if (b[0]) b[0] = { ...b[0], shadda: false };
+  }
+  for (let i = 0; i < a.length - 1; i++) {
+    if (a[i].letter !== b[i].letter) return true; // spelled differently: nothing to compare by
+    const [x, y] = [a[i], b[i]];
+    if (x.vowel && y.vowel && x.vowel !== y.vowel) return false;
+    if ((x.vowel || x.shadda) && (y.vowel || y.shadda) && x.shadda !== y.shadda) return false;
+  }
+  return true;
+}

@@ -1,7 +1,7 @@
 import type { DictionaryEntry } from '../../types';
 import { weakLastRadicalVariants } from '../providers/alwasit/lookupKeys';
 import { hasSubEntryHeads, unitHead, type SubEntryHead } from './heads';
-import { articleVariants, cliticVariants, subEntryKey } from './keys';
+import { articleVariants, cliticVariants, subEntryKey, vowelsAgree } from './keys';
 
 /** The parts of an AraMorph analysis (MorphologicalAnalysis) matching reads. */
 export interface AnalysisLike {
@@ -38,6 +38,10 @@ export interface Wanted {
   nounLemmas: Set<string>;
   /** Each verb reading's form number and the spellings of its root. */
   verbs: { form: number; roots: Set<string> }[];
+  /** The readings' lemmas as written (vowels and all), best reading first. */
+  lemmas: { key: string; text: string }[];
+  /** The tapped word's own keys (as tapped, and without the article when AraMorph doesn't know it). */
+  surface: Set<string>;
 }
 
 function rootSpellings(a: AnalysisLike): Set<string> {
@@ -63,13 +67,17 @@ export function wantedKeys(word: string, analyses: AnalysisLike[] = []): Wanted 
     verbLemmas: new Set(),
     nounLemmas: new Set(),
     verbs: [],
+    lemmas: [],
+    surface: new Set(),
   };
+  wanted.surface = new Set(wanted.exact);
   for (const a of usable) {
     const form = a.form ? FORM_NUMBER[a.form] : undefined;
     const lemma = a.lemma ? subEntryKey(a.lemma) : '';
     // A lemma never carries the article: one starting with ال is a word of its own (ألبير، ألماس).
     if (lemma) {
       wanted.exact.add(lemma);
+      wanted.lemmas.push({ key: lemma, text: a.lemma! });
       (form ? wanted.verbLemmas : wanted.nounLemmas).add(lemma);
     }
     if (form) wanted.verbs.push({ form, roots: rootSpellings(a) });
@@ -101,7 +109,20 @@ export function matchTier(head: SubEntryHead | null, wanted: Wanted, providerId:
   return all.some((k) => wanted.exact.has(k) || wanted.loose.has(k)) ? 1 : 0;
 }
 
-/** The best tier among `heads` and the indexes that reach it (none when nothing matches). */
+/**
+ * Which reading a matched headword is, best first: the index of the first lemma it is spelled and
+ * vowelled like (كِتَابٌ is reading 0 of كِتاب, كُتّاب, كاتِب; كُتَّابٌ is reading 1). Infinity when none fits.
+ */
+function readingRank(head: SubEntryHead | null, wanted: Wanted): number {
+  if (!head) return Infinity;
+  const i = wanted.lemmas.findIndex((l) => head.keys.includes(l.key) && (!head.word || vowelsAgree(l.text, head.word)));
+  return i === -1 ? Infinity : i;
+}
+
+/**
+ * The best tier among `heads` and the indexes that reach it (none when nothing matches). Among headwords
+ * matched by spelling (tiers 2-3), those of the best-ranked reading win when the vowels tell them apart.
+ */
 export function bestMatches(
   heads: (SubEntryHead | null)[],
   wanted: Wanted,
@@ -119,6 +140,14 @@ export function bestMatches(
     }
     indexes.add(i);
   });
+  if (tier === 2 || tier === 3) {
+    const ranks = new Map([...indexes].map((i) => [i, readingRank(heads[i], wanted)]));
+    const best = Math.min(...ranks.values());
+    if (best !== Infinity) indexes = new Set([...indexes].filter((i) => ranks.get(i) === best));
+    // Matched through a lemma whose vowels it contradicts (العَالَمُ for عالِم) and not spelled as tapped: not it.
+    else indexes = new Set([...indexes].filter((i) => !heads[i]?.word || heads[i]!.keys.some((k) => wanted.surface.has(k)) || !wanted.lemmas.length));
+    if (!indexes.size) tier = 0;
+  }
   return { tier, indexes };
 }
 

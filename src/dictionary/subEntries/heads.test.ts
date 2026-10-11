@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { hasSubEntryHeads, hasSubEntryIndex, matchedHead, unitHead } from './heads';
-import { articleVariants, cliticVariants, containsRoot, subEntryKey } from './keys';
+import { articleVariants, cliticVariants, containsRoot, subEntryKey, vowelsAgree } from './keys';
 
 describe('subEntryKey', () => {
   it('drops diacritics, tatweel and punctuation and folds alef/hamza, ى and ة', () => {
@@ -40,7 +40,7 @@ describe('containsRoot', () => {
 
 describe('unitHead: Lane', () => {
   it('reads a noun headword', () => {
-    expect(unitHead('lane', 'حَسَدٌ Envy; or the wishing …', 'حسد')).toEqual({ head: 'حَسَدٌ', keys: ['حسد'], looseKeys: [] });
+    expect(unitHead('lane', 'حَسَدٌ Envy; or the wishing …', 'حسد')).toEqual({ head: 'حَسَدٌ', keys: ['حسد'], word: 'حَسَدٌ', looseKeys: [] });
   });
 
   it('reads a verb paragraph: the verb, its form, and the verb without its object as a loose key', () => {
@@ -112,5 +112,20 @@ describe('matchedHead', () => {
   it('splits a line into the headword run and the rest', () => {
     expect(matchedHead('lane', 'حَسَدٌ Envy.', 'حسد')).toEqual(['حَسَدٌ', ' Envy.']);
     expect(matchedHead('alsihah', 'والوَفاةُ: الموتُ.', 'وفى')).toBeNull();
+  });
+});
+
+describe('vowelsAgree', () => {
+  it('compares the vowels both sides mark, ignoring the ending', () => {
+    expect(vowelsAgree('كِتاب', 'كِتَابٌ')).toBe(true);
+    expect(vowelsAgree('كُتّاب', 'كِتَابٌ')).toBe(false);
+    expect(vowelsAgree('كُتّاب', 'كُتَّابٌ')).toBe(true);
+    expect(vowelsAgree('كتاب', 'كُتَّابٌ')).toBe(true);
+  });
+
+  it('skips what the headword opens with that the lemma lacks', () => {
+    expect(vowelsAgree('رَحْمٰن', 'الرَّحْمٰنُ')).toBe(true);
+    expect(vowelsAgree('وَفاة', 'والوَفاةُ')).toBe(true);
+    expect(vowelsAgree('حَسُود', 'حَسَدٌ')).toBe(true); // spelled differently: nothing to compare
   });
 });

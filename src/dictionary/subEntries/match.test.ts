@@ -200,3 +200,41 @@ describe('isFunctionWord', () => {
     expect(isFunctionWord({})).toBe(false);
   });
 });
+
+describe('telling homographs apart by their vowels', () => {
+  const kitab: DictionaryEntry = {
+    providerId: 'lane',
+    providerName: 'Lane',
+    headword: 'كتب',
+    root: 'كتب',
+    senses: [
+      { gloss: 'كِتَابٌ [inf. n. of 1] A writing; a book.' },
+      { gloss: 'كُتَّابٌ , see مَكْتَبٌ' },
+      { gloss: 'كَاتِبٌ A writer.' },
+      { gloss: 'كِتَابٌ (same as عَقْدٌ) The ceremony.' },
+    ],
+  };
+
+  it("keeps to the best reading's own headword when several readings match", () => {
+    const readings = [{ lemma: 'كِتاب', root: 'كتب' }, { lemma: 'كُتّاب', root: 'كتب' }, { lemma: 'كاتِب', root: 'كتب' }];
+    expect([...findMatchedSenses(kitab, 'كتاب', readings)]).toEqual([0, 3]);
+    expect([...findMatchedSenses(kitab, 'كُتّاب', readings.slice(1))]).toEqual([1]);
+  });
+
+  it('keeps every match when the vowels say nothing', () => {
+    expect([...findMatchedSenses(kitab, 'كتاب', [{ lemma: 'كتاب' }])]).toEqual([0, 1, 3]);
+  });
+});
+
+describe('a lemma match the vowels contradict', () => {
+  it('is dropped unless the headword is spelled as tapped', () => {
+    const wasit: DictionaryEntry = {
+      providerId: 'alwasit',
+      providerName: 'Al-Wasit',
+      headword: 'علم',
+      senses: [{ gloss: '(العَالَمُ): الخلق كله.' }],
+    };
+    expect(findMatchedSenses(wasit, 'العلماء', [{ lemma: 'عالِم', root: 'علم' }]).size).toBe(0);
+    expect([...findMatchedSenses(wasit, 'عالم', [{ lemma: 'عالِم', root: 'علم' }])]).toEqual([0]);
+  });
+});

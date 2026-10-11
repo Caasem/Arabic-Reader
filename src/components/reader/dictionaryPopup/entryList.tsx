@@ -2,7 +2,7 @@ import type { Dispatch, MutableRefObject, PointerEvent, ReactNode, SetStateActio
 import type { DictionaryEntry } from '../../../types';
 import { normalize } from '../../../reader/tokenizer/arabicTokenizer';
 import { isTokenizedProvider } from '../../../dictionary/tokenizedProviders';
-import { WASIT_MATCH_CLASS } from '../../../wasitMatch';
+import { matchedHead, SUB_ENTRY_MATCH_ATTR, WASIT_MATCH_CLASS } from '../../../wasitMatch';
 import type { annotateEntry } from '../../../wasitStructure';
 import { VerbFormInfo, VerbFormMark } from '../../../verbForms';
 import { groupLabel } from '../../../popupClean';
@@ -280,6 +280,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                       (structure?.isContinuation ? ' wasit-sense--cont' : '')
                     }
                     key={si}
+                    {...(wasitMatches.get(i)?.has(si) ? { [SUB_ENTRY_MATCH_ATTR]: '' } : {})}
                   >
                     {tokenData.bySense[si].map((t) => {
                       if (!t.isWord) return <span key={t.globalIdx}>{t.text}</span>;
@@ -331,8 +332,11 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                         <span key={t.globalIdx}>{t.text}</span>
                       ),
                     );
+                  // Lane and Hans Wehr: the line about the looked-up word gets its headword coloured (see wasitMatch).
+                  const matched = wasitMatches.get(i)?.has(si);
+                  const head = matched ? matchedHead(entry.providerId, s.gloss, entry.root ?? entry.headword) : null;
                   return (
-                    <li key={si}>
+                    <li key={si} {...(matched ? { [SUB_ENTRY_MATCH_ATTR]: '' } : {})}>
                       {EXAMPLE_PROVIDERS.has(entry.providerId) ? (
                         <div className="dict-popup__sense-main">
                           {s.notes && <bdi className="dict-popup__lead" dir="rtl">{s.notes}</bdi>}
@@ -363,7 +367,14 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                         </div>
                       ) : (
                         <>
-                          {s.gloss}
+                          {head ? (
+                            <>
+                              <span className={WASIT_MATCH_CLASS}>{head[0]}</span>
+                              {head[1]}
+                            </>
+                          ) : (
+                            s.gloss
+                          )}
                           {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
                         </>
                       )}
