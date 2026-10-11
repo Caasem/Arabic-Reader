@@ -141,7 +141,7 @@ test('PDF pages have the reader’s dock in the same order; Contents and Search 
 
   const dock = page.locator('.pdfp .qr-dock');
   const names = await dock.locator('button').evaluateAll((buttons) => buttons.map((b) => b.getAttribute('aria-label')));
-  expect(names).toEqual(['Contents', 'Search', 'Marks', 'Words', 'Display', 'Levels', 'Pomodoro timer', 'Focus', 'Margins', 'Document', 'Write', 'Sketch']);
+  expect(names).toEqual(['Contents', 'Search', 'Marks', 'Words', 'Display', 'Levels', 'Pomodoro timer', 'Focus', 'Ḥāshiya', 'Document', 'Write', 'Sketch']);
 
   await dock.getByRole('button', { name: 'Contents', exact: true }).click();
   const drawer = page.locator('.qr-drawer');

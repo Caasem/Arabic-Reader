@@ -443,7 +443,7 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
     flush();
     const name = sheetName(c.sketch, Math.max(0, shown.findIndex((t) => t.id === c.sketch.id)));
     sendSketchToMargin(book, structuredClone(c.sketch), how, state?.node, name).then(
-      () => setSent(how === 'node' ? 'Node sent to the margin' : how === 'outline' ? 'Outline sent to the margin' : how === 'ink' ? 'Ink card in the margin' : 'Sketch sent to the margin'),
+      () => setSent(how === 'node' ? 'Node sent to the Ḥāshiya' : how === 'outline' ? 'Outline sent to the Ḥāshiya' : how === 'ink' ? 'Ink card in the Ḥāshiya' : 'Sketch sent to the Ḥāshiya'),
       (e: Error) => setSent(e.message || 'Could not send it')
     );
   };
@@ -483,8 +483,8 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
         </span>
         {prefs.studyDeskEnabled && (
           <span className="sk-send">
-            <button type="button" className="sk-send__btn" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} title="Put this sheet in the margin beside its page">
-              To margin ▾
+            <button type="button" className="sk-send__btn" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(!menu)} title="Put this sheet in the Ḥāshiya beside its page">
+              To Ḥāshiya ▾
             </button>
             {menu && (
               <span className="sk-send__menu" role="menu">
@@ -494,15 +494,15 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
                 </button>
                 <button type="button" role="menuitem" onClick={() => send('ink')}>
                   <b>Handwriting, as an ink card</b>
-                  <span>The freehand strokes, written in the margin</span>
+                  <span>The freehand strokes, written in the Ḥāshiya</span>
                 </button>
                 <button type="button" role="menuitem" onClick={() => send('outline')}>
                   <b>Whole sheet, as an outline</b>
-                  <span>Nodes and arrows as lines of a margin note</span>
+                  <span>Nodes and arrows as lines of a Ḥāshiya note</span>
                 </button>
                 <button type="button" role="menuitem" disabled={!state?.node} onClick={() => send('node')}>
                   <b>Selected node only</b>
-                  <span>{state?.node ? 'Its words as a margin note' : 'Select a node in Diagram first'}</span>
+                  <span>{state?.node ? 'Its words as a Ḥāshiya note' : 'Select a node in Diagram first'}</span>
                 </button>
               </span>
             )}

@@ -91,7 +91,7 @@ function Active({ book }: { book: BookMeta }) {
         const clean = isCleanLocation(at) ? parseClean(at) : null;
         if (!pdf && !clean) return;
         const s = newSketch(book.id, pdf ? `pdf:${pdf[1]}` : `clean:${clean!.chapter}`, pdf ? `pdf:${pdf[1]}` : at);
-        s.title = 'Margin ink';
+        s.title = 'Ḥāshiya ink';
         s.order = Date.now();
         // The ink's own units are pixels, as a sheet's are; a little room around it.
         s.strokes = item.ink.strokes.map((st, i) => ({ id: `${s.id}-${i}`, color: st.color, width: st.width, pts: st.pts.map(([x, y, p]) => [x + 24, y + 24, p]) }));

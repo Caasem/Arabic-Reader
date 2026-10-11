@@ -101,7 +101,7 @@ export const useDeskTrip = (): DeskTrip | null => useSyncExternalStore(subscribe
 /** What a capture made on the trip carries besides its own words and source: its place back home. */
 export const tripPlacement = (t: DeskTrip): Pick<NewDeskItem, 'pin' | 'inInbox'> => placement(t.target, t.spot);
 
-const whereFiled = (t: DeskTrip) => (t.target === 'inbox' || !t.spot ? 'the inbox' : `the ${t.target} margin`);
+const whereFiled = (t: DeskTrip) => (t.target === 'inbox' || !t.spot ? 'the inbox' : `the ${t.target} Ḥāshiya`);
 
 /** Said back home: `count` captures were filed on this trip. */
 export function tripFiledMessage(t: DeskTrip, count = 1): string {

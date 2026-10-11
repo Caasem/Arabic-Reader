@@ -239,7 +239,7 @@ export function PdfSelect({ book, data, active, commands, onToast }: { book: Boo
       setPending(null);
       window.getSelection()?.removeAllRanges();
       if (where === 'margin') setPdfDeskFocus(item.id);
-      onToast(where === 'inbox' ? 'Sent to the inbox' : text ? 'Gloss it in the margin' : 'Region kept; gloss it in the margin');
+      onToast(where === 'inbox' ? 'Sent to the inbox' : text ? 'Gloss it in the Ḥāshiya' : 'Region kept; gloss it in the Ḥāshiya');
     } finally {
       setBusy(false);
     }
@@ -330,7 +330,7 @@ export function PdfSelect({ book, data, active, commands, onToast }: { book: Boo
             ) : (
               <>
                 <button type="button" className="sd-btn sd-btn--pri" disabled={busy} onClick={() => void keep('margin')}>
-                  {pending.snapped.text ? 'Gloss in the margin' : 'Gloss this region'}
+                  {pending.snapped.text ? 'Gloss in the Ḥāshiya' : 'Gloss this region'}
                 </button>
                 <button type="button" className="sd-btn" disabled={busy} onClick={() => void keep('inbox')}>
                   Send to inbox

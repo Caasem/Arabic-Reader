@@ -114,7 +114,7 @@ export const TYPE_LABEL: Record<DeskItem['type'], string> = {
   quote: 'Quote',
   capture: 'Capture',
   note: 'Note',
-  line: 'Margin note',
+  line: 'Ḥāshiya note',
   question: 'Question',
   card: 'Flashcard',
 };

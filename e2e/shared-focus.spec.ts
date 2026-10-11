@@ -26,7 +26,7 @@ test('F enters Focus in the reader; Alt twice opens a rail with every tool, whic
   await page.keyboard.press('Alt');
   const rail = page.getByRole('navigation', { name: 'Reader tools' });
   await expect(rail).toBeVisible();
-  for (const name of ['Contents', 'Search', 'Words', 'Margins', 'Document', 'Capture', 'Write', 'Sketch']) await expect(rail.getByRole('button', { name: new RegExp('^' + name) })).toBeVisible();
+  for (const name of ['Contents', 'Search', 'Words', 'Ḥāshiya', 'Document', 'Capture', 'Write', 'Sketch']) await expect(rail.getByRole('button', { name: new RegExp('^' + name) })).toBeVisible();
 
   // A drawer opens without leaving Focus.
   await rail.getByRole('button', { name: /^Contents/ }).click();
@@ -53,7 +53,7 @@ test('PDF pages: the dock has the shared tools and Focus; Focus hides the dock a
   await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 3', { timeout: 20000 });
 
   const bar = page.locator('.pdfp .qr-dock');
-  for (const name of ['Display', 'Pomodoro timer', 'Focus', 'Margins', 'Document', 'Write', 'Sketch']) await expect(bar.getByRole('button', { name, exact: true })).toBeVisible();
+  for (const name of ['Display', 'Pomodoro timer', 'Focus', 'Ḥāshiya', 'Document', 'Write', 'Sketch']) await expect(bar.getByRole('button', { name, exact: true })).toBeVisible();
   await bar.getByRole('button', { name: 'Focus', exact: true }).click();
   await expect(page.locator('.pdfp .qr-dock')).toHaveCount(0);
   await expect(page.locator('.pdfp .qr-header')).toHaveCount(0);

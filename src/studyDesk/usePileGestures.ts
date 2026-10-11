@@ -141,7 +141,7 @@ export function usePileGestures(a: PileAdapter) {
   const pileSelection = useCallback(() => {
     const { items, piles, layerRef, cards, placeOf, onToast } = ad.current;
     const tops = [...latestSel.current].map((id) => items.find((i) => i.id === id)).filter((i): i is DeskItem => !!i);
-    if (tops.length < 2) return onToast('Choose two or more cards first: drag over empty margin, or Shift-click');
+    if (tops.length < 2) return onToast('Choose two or more cards first: drag over the empty Ḥāshiya, or Shift-click');
     const at = (i: DeskItem) => layerRef.current?.querySelector(`${cards}[data-gloss="${i.id}"]`)?.getBoundingClientRect();
     tops.sort((x, y) => (at(x)?.top ?? 0) - (at(y)?.top ?? 0) || (at(x)?.left ?? 0) - (at(y)?.left ?? 0));
     const groups = tops.map((t) => groupOf(t, piles));

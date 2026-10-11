@@ -134,7 +134,7 @@ test.describe('margins', () => {
     const area = page.locator('.sd-margins__area').last();
     const box = (await area.boundingBox())!;
     await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 2));
-    const note = page.getByRole('textbox', { name: 'Margin note' });
+    const note = page.getByRole('textbox', { name: 'Ḥāshiya note' });
     await expect(note).toBeFocused();
     await page.keyboard.type('Why does he go home?');
     await expect(page.locator('.sd-gloss--m .sd-sug', { hasText: 'Question' })).toBeVisible();
@@ -150,7 +150,7 @@ test.describe('margins', () => {
     const area = page.locator('.sd-margins__area').last();
     const box = (await area.boundingBox())!;
     await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 1));
-    await expect(page.getByRole('textbox', { name: 'Margin note' })).toBeFocused();
+    await expect(page.getByRole('textbox', { name: 'Ḥāshiya note' })).toBeFocused();
     await page.keyboard.type('A note to fold away');
     await page.keyboard.press('Escape');
     const card = page.locator('.sd-gloss--m');
@@ -166,7 +166,7 @@ test.describe('margins', () => {
     await expect(page.locator('.sd-chip__peek')).toContainText('A note to fold away');
     // A click opens it again.
     await chip.click();
-    await expect(page.getByRole('textbox', { name: 'Margin note' })).toHaveValue('A note to fold away');
+    await expect(page.getByRole('textbox', { name: 'Ḥāshiya note' })).toHaveValue('A note to fold away');
 
     // [ folds every card on screen, ] opens them.
     await page.mouse.move(5, 5);
@@ -177,7 +177,7 @@ test.describe('margins', () => {
     await expect(page.locator('.sd-gloss--chip')).toHaveCount(0);
 
     // Margin settings → Cards: Folded folds cards that have no choice of their own; a new note opens to be written.
-    await page.getByRole('button', { name: 'Margin settings' }).click();
+    await page.getByRole('button', { name: 'Ḥāshiya settings' }).click();
     await page.getByRole('group', { name: 'Cards' }).getByRole('button', { name: 'Folded' }).click();
     await page.keyboard.press('Escape');
     await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 3));
@@ -195,7 +195,7 @@ test.describe('margins', () => {
     await expect(area).toBeVisible();
     const box = (await area.boundingBox())!;
     await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 1));
-    await expect(page.getByRole('textbox', { name: 'Margin note' })).toBeFocused();
+    await expect(page.getByRole('textbox', { name: 'Ḥāshiya note' })).toBeFocused();
     await page.keyboard.type('عصبية = group feeling');
     await page.locator('.sd-gloss--m').getByRole('button', { name: 'Flashcard', exact: true }).click();
     await expect(page.locator('.sd-gloss--card .sd-gloss__front')).toContainText('عصبية');
@@ -224,7 +224,7 @@ test.describe('margins', () => {
     const area = page.locator('.sd-margins__area').last();
     const box = (await area.boundingBox())!;
     await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 2));
-    await expect(page.getByRole('textbox', { name: 'Margin note' })).toBeFocused();
+    await expect(page.getByRole('textbox', { name: 'Ḥāshiya note' })).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(page.locator('.sd-gloss--m')).toHaveCount(0);
   });
@@ -256,10 +256,10 @@ test.describe('pull in', () => {
     await expect(pull).toBeVisible();
     await pull.getByRole('button', { name: 'Highlights' }).click();
     await expect(pull.locator('.dsearch__entry .dsearch__provider', { hasText: 'Highlight' })).toHaveCount(1);
-    await expect(pull.getByRole('button', { name: 'Right margin' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(pull.getByRole('button', { name: 'Right Ḥāshiya' })).toHaveAttribute('aria-pressed', 'true');
     await page.keyboard.press('Enter');
     await expect(pull).toHaveCount(0);
-    await expect(page.locator('.sd-toast')).toContainText('right margin');
+    await expect(page.locator('.sd-toast')).toContainText('right Ḥāshiya');
     await expect(page.locator('.sd-gloss')).toHaveCount(2);
 
     await page.keyboard.press('Alt+i');
@@ -290,7 +290,7 @@ test.describe('margin images', () => {
     const area = page.locator('.sd-margins__area').last();
     const box = (await area.boundingBox())!;
     await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 1));
-    const note = page.getByRole('textbox', { name: 'Margin note' });
+    const note = page.getByRole('textbox', { name: 'Ḥāshiya note' });
     await expect(note).toBeFocused();
     await page.keyboard.type('Figure');
     await note.evaluate((el, b64) => {
@@ -461,7 +461,7 @@ test.describe('margin beside PDF pages', () => {
     const a = (await area.boundingBox())!;
     const frame = (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!;
     await page.mouse.dblclick(a.x + a.width / 2, frame.y + 200);
-    const note = page.getByRole('textbox', { name: 'Margin note' });
+    const note = page.getByRole('textbox', { name: 'Ḥāshiya note' });
     await expect(note).toBeFocused();
     await page.keyboard.type('Why the spheres? See page two');
     await page.locator('.sd-gloss--m').getByRole('button', { name: 'Question', exact: true }).click();
@@ -471,7 +471,7 @@ test.describe('margin beside PDF pages', () => {
     // No box on the page for a note, and it stays after leaving it.
     await page.keyboard.press('Escape');
     await expect(page.locator('.sd-pdfbox')).toHaveCount(0);
-    await expect(page.getByRole('textbox', { name: 'Margin note' })).toHaveValue('Why the spheres? See page two');
+    await expect(page.getByRole('textbox', { name: 'Ḥāshiya note' })).toHaveValue('Why the spheres? See page two');
     // Its place is the page and the height tapped.
     const top = (await page.locator('.sd-gloss--question').boundingBox())!.y;
     expect(Math.abs(top + 16 - (frame.y + 200))).toBeLessThan(24);
@@ -481,8 +481,8 @@ test.describe('margin beside PDF pages', () => {
     await openScan(page);
     await page.keyboard.press('Alt+u');
     const pull = page.getByRole('dialog', { name: 'Pull in' }).or(page.getByRole('complementary', { name: 'Pull in' }));
-    await expect(pull.getByRole('button', { name: 'Right margin' })).toHaveAttribute('aria-pressed', 'true');
-    await expect(pull.getByRole('button', { name: 'Left margin' })).toHaveCount(0);
+    await expect(pull.getByRole('button', { name: 'Right Ḥāshiya' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(pull.getByRole('button', { name: 'Left Ḥāshiya' })).toHaveCount(0);
     await page.getByLabel('Image file').setInputFiles({ name: 'figure.png', mimeType: 'image/png', buffer: png });
     await expect(page.locator('.sd-pdfmargin .sd-gloss .sd-frame img')).toHaveCount(1);
   });
@@ -506,7 +506,7 @@ test.describe('capture trip', () => {
   async function goToScan(page: Page) {
     await page.keyboard.press('Alt+u');
     const pull = page.getByRole('dialog', { name: 'Pull in' }).or(page.getByRole('complementary', { name: 'Pull in' }));
-    await expect(pull.getByRole('button', { name: 'Right margin' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(pull.getByRole('button', { name: 'Right Ḥāshiya' })).toHaveAttribute('aria-pressed', 'true');
     await pull.getByText('Go to another book…').click();
     await pull.locator('.dsearch__entry', { hasText: 'scan' }).click();
     await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 2', { timeout: 20000 });
@@ -529,7 +529,7 @@ test.describe('capture trip', () => {
 
     // Back in the sample, with the region beside the page it was left on.
     await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
-    await expect(page.locator('.sd-toast')).toContainText('filed in the right margin');
+    await expect(page.locator('.sd-toast')).toContainText('filed in the right Ḥāshiya');
     const gloss = page.locator('.sd-margins .sd-gloss', { hasText: 'Page 1' });
     await expect(gloss).toHaveCount(1);
     await expect(gloss.locator('.sd-frame img')).toHaveCount(1);
@@ -585,7 +585,7 @@ test.describe('capture trip', () => {
     await expect(pull.locator('[role=option][aria-selected=true]')).toContainText('Back to');
     await page.keyboard.press('Enter');
     await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 2', { timeout: 20000 });
-    await expect(page.getByRole('region', { name: 'Capture trip' })).toContainText('right margin');
+    await expect(page.getByRole('region', { name: 'Capture trip' })).toContainText('right Ḥāshiya');
   });
 
   test('Esc goes back without capturing', async ({ page }) => {
@@ -613,7 +613,7 @@ test.describe('D opens the desk document', () => {
     const area = page.locator('.sd-margins__area').last();
     const box = (await area.boundingBox())!;
     await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, 1));
-    const note = page.getByRole('textbox', { name: 'Margin note' });
+    const note = page.getByRole('textbox', { name: 'Ḥāshiya note' });
     await expect(note).toBeFocused();
     await page.keyboard.type('dd');
     await expect(note).toHaveValue('dd');
@@ -899,7 +899,7 @@ test.describe('highlighting on scanned PDF pages', () => {
     const bar = page.getByRole('dialog', { name: 'Highlight on the page' });
     await expect(bar).toContainText('المدرسة الكبيرة');
     await expect(bar.getByRole('button', { name: /Snap to words/ })).toHaveAttribute('aria-pressed', 'true');
-    await bar.getByRole('button', { name: 'Gloss in the margin' }).click();
+    await bar.getByRole('button', { name: 'Gloss in the Ḥāshiya' }).click();
     await expect(bar).toHaveCount(0);
     await expect(page.locator('.pdfp-page[data-page="1"] .sd-pdfbox')).toHaveCount(1);
     const gloss = page.locator('.sd-pdfmargin .sd-gloss', { hasText: 'المدرسة الكبيرة' });
@@ -953,7 +953,7 @@ test.describe('highlighting on scanned PDF pages', () => {
     const a = (await area.boundingBox())!;
     const frame = (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!;
     await page.mouse.dblclick(a.x + a.width / 2, frame.y + 300);
-    await expect(page.getByRole('textbox', { name: 'Margin note' })).toBeFocused();
+    await expect(page.getByRole('textbox', { name: 'Ḥāshiya note' })).toBeFocused();
     await page.keyboard.type('Compare with page 40');
     await page.locator('.sd-gloss--m').getByRole('button', { name: 'Tie to words' }).click();
     await expect(page.locator('.sd-pdfsel__tie')).toBeVisible();
@@ -972,13 +972,13 @@ test.describe('right-click ring in the margins', () => {
     const box = (await area.boundingBox())!;
     const y = await lineY(page, 1);
     await page.mouse.click(box.x + box.width / 2, y, { button: 'right' });
-    const ring = page.getByRole('menu', { name: 'Margin' });
+    const ring = page.getByRole('menu', { name: 'Ḥāshiya' });
     await expect(ring).toBeVisible();
     await expect(ring.getByRole('menuitem')).toHaveCount(8);
     await expect(ring.getByRole('menuitem', { name: /Pull in/ })).toContainText('Alt U');
     await ring.getByRole('menuitem', { name: /Write a note here/ }).click();
     await expect(ring).toHaveCount(0);
-    await expect(page.getByRole('textbox', { name: 'Margin note' })).toBeFocused();
+    await expect(page.getByRole('textbox', { name: 'Ḥāshiya note' })).toBeFocused();
     await page.keyboard.type('Why the village?');
     await page.keyboard.press('Escape');
 
@@ -986,7 +986,7 @@ test.describe('right-click ring in the margins', () => {
     const note = page.locator('.sd-gloss--m');
     const nb = (await note.boundingBox())!;
     await page.mouse.click(nb.x + 3, nb.y + 3, { button: 'right' });
-    const noteRing = page.getByRole('menu', { name: 'Margin note' });
+    const noteRing = page.getByRole('menu', { name: 'Ḥāshiya note' });
     await noteRing.getByRole('menuitem', { name: /Question/ }).click();
     await expect(page.locator('.sd-gloss--question')).toHaveCount(1);
 
@@ -1014,7 +1014,7 @@ test.describe('right-click ring in the margins', () => {
 
     const strip = (await page.locator('.sd-pdfmargin__area').boundingBox())!;
     await page.mouse.click(strip.x + strip.width / 2, strip.y + strip.height - 60, { button: 'right' });
-    await expect(page.getByRole('menu', { name: 'Margin' })).toBeVisible();
+    await expect(page.getByRole('menu', { name: 'Ḥāshiya' })).toBeVisible();
     await page.keyboard.press('Escape');
 
     const b = (await frame.locator('.sd-pdfbox').boundingBox())!;
@@ -1029,7 +1029,7 @@ test.describe('dock switch and lit cards', () => {
   test('Margins and Document in the dock, and in the Focus tool rail', async ({ page }) => {
     await openSample(page);
     const dock = page.locator('.qr-dock');
-    const margins = dock.getByRole('button', { name: 'Margins' });
+    const margins = dock.getByRole('button', { name: 'Ḥāshiya' });
     await expect(margins).toHaveAttribute('aria-pressed', 'true');
     await margins.click();
     await expect(page.locator('.sd-margins')).toHaveCount(0);
@@ -1041,9 +1041,9 @@ test.describe('dock switch and lit cards', () => {
     await expect(page.locator('.sd-margins__area').first()).toBeVisible();
     await page.getByRole('group', { name: 'Focus' }).getByRole('button', { name: 'Tools' }).click();
     const rail = page.getByRole('navigation', { name: 'Reader tools' });
-    await rail.getByRole('button', { name: /^Margins/ }).click();
+    await rail.getByRole('button', { name: /^Ḥāshiya/ }).click();
     await expect(page.locator('.sd-margins')).toHaveCount(0);
-    await rail.getByRole('button', { name: /^Margins/ }).click();
+    await rail.getByRole('button', { name: /^Ḥāshiya/ }).click();
     await rail.getByRole('button', { name: /^Document/ }).click();
     await expect(page.getByRole('dialog', { name: 'Desk document' })).toBeVisible();
   });

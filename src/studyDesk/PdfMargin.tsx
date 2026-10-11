@@ -96,7 +96,7 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
   const [dropping, setDropping] = useState(false);
   // Right-click (or long-press) the strip: the ring of shortcuts.
   const [ring, setRing] = useState<RingState | null>(null);
-  const stripRing = useRingTrigger((x, y) => setRing({ x, y, title: 'Margin', actions: marginActions(commands, () => void newNote(y), () => setSettingsOpen(true), foldActions(onScreen, (i) => isFolded(i, prefs.studyDeskCards))) }));
+  const stripRing = useRingTrigger((x, y) => setRing({ x, y, title: 'Ḥāshiya', actions: marginActions(commands, () => void newNote(y), () => setSettingsOpen(true), foldActions(onScreen, (i) => isFolded(i, prefs.studyDeskCards))) }));
   const layerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
@@ -224,7 +224,7 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
       const location = pdfLevelAt(y);
       if (!location) return onToast(image ? 'Drop beside a page' : 'Tap beside a page');
       const item = await capture(book, data.deskId, { type: image ? 'capture' : 'line', text: '', body: '', fromMargin: true, inInbox: false, pin: { bookId: book.id, location, side: 'right' } }, image);
-      if (image) onToast('Image placed in the margin');
+      if (image) onToast('Image placed in the Ḥāshiya');
       else setFocusId(item.id);
     },
     [book, data.deskId, onToast]
@@ -235,7 +235,7 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
   const width = PDF_STRIP - GAP * 2;
 
   return (
-    <div ref={layerRef} className="sd-pdfmargin" aria-label="Margin beside the pages" onPointerDown={onLayerPointerDown} onPointerDownCapture={inkCards.onPointerDownCapture}>
+    <div ref={layerRef} className="sd-pdfmargin" aria-label="Ḥāshiya beside the pages" onPointerDown={onLayerPointerDown} onPointerDownCapture={inkCards.onPointerDownCapture}>
       <svg ref={svgRef} className="sd-pdfdesk__lines" aria-hidden="true" />
       {inkCards.overlay}
       <div
@@ -275,7 +275,7 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
           e.preventDefault();
           setDropping(false);
           const image = imageIn(e.dataTransfer);
-          if (!image) return onToast('Only images can be dropped in a margin');
+          if (!image) return onToast('Only images can be dropped in the Ḥāshiya');
           void newNote(e.clientY, image);
         }}
       >
@@ -365,12 +365,12 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
               {sel.size} chosen · <kbd>P</kbd> piles them · <kbd>Del</kbd> deletes · <kbd>Esc</kbd> lets go
             </>
           ) : (
-            <>1 chosen · Shift-click or drag over the margin to add more</>
+            <>1 chosen · Shift-click or drag over the Ḥāshiya to add more</>
           )}
         </div>
       )}
       <button type="button" className="sd-margins__set" style={{ left: stage.right + PDF_STRIP - 130, top: stage.top + 4 }} onClick={() => setSettingsOpen((v) => !v)}>
-        Margin settings
+        Ḥāshiya settings
       </button>
       {settingsOpen && <MarginSettings prefs={prefs} update={updatePrefs} onClose={() => setSettingsOpen(false)} />}
       {ring && <MarginRing {...ring} onClose={() => setRing(null)} />}

@@ -33,7 +33,7 @@ async function threeNotes(page: Page) {
   const box = (await area.boundingBox())!;
   for (const [i, text] of ['First note', 'Second note', 'Third note'].entries()) {
     await page.mouse.dblclick(box.x + box.width / 2, await lineY(page, i));
-    await expect(page.getByRole('textbox', { name: 'Margin note' }).last()).toBeFocused();
+    await expect(page.getByRole('textbox', { name: 'Ḥāshiya note' }).last()).toBeFocused();
     await page.keyboard.type(text);
     await page.keyboard.press('Escape');
   }
@@ -187,7 +187,7 @@ test.describe('piles beside PDF pages', () => {
     const frame = (await page.locator('.pdfp-page[data-page="1"]').boundingBox())!;
     for (const [i, text] of ['First note', 'Second note', 'Third note'].entries()) {
       await page.mouse.dblclick(a.x + a.width / 2, frame.y + 120 + i * 140);
-      await expect(page.getByRole('textbox', { name: 'Margin note' }).last()).toBeFocused();
+      await expect(page.getByRole('textbox', { name: 'Ḥāshiya note' }).last()).toBeFocused();
       await page.keyboard.type(text);
       await page.keyboard.press('Escape');
     }

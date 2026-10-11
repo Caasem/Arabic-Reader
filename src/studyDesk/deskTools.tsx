@@ -36,7 +36,7 @@ export function useDeskTools(h: Handlers): void {
   ref.current = h;
   useEffect(() => {
     const offs = [
-      registerReaderTool({ id: 'desk:margins', label: 'Margins', title: 'Margins on and off', keys: 'Alt+M', group: 'desk', order: 0, readers: ['clean', 'pdf'], icon: <IconMargins />, isOn: () => ref.current.marginsOn, run: () => ref.current.onToggleMargins() }),
+      registerReaderTool({ id: 'desk:margins', label: 'Ḥāshiya', title: 'Ḥāshiya (the margins) on and off', keys: 'Alt+M', group: 'desk', order: 0, readers: ['clean', 'pdf'], icon: <IconMargins />, isOn: () => ref.current.marginsOn, run: () => ref.current.onToggleMargins() }),
       registerReaderTool({ id: 'desk:document', label: 'Document', title: 'The desk document', keys: 'D', group: 'desk', order: 1, readers: ['clean', 'pdf'], icon: <IconDocument />, run: () => ref.current.onDocument() }),
       registerReaderTool({ id: 'desk:capture', label: 'Capture', title: 'Capture a region of the page', keys: 'Alt+X', group: 'desk', order: 2, readers: ['clean', 'pdf'], noDock: true, icon: <IconCapture />, run: () => ref.current.onCapture() }),
     ];

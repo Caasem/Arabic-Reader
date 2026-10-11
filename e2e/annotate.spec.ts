@@ -152,9 +152,9 @@ test('a sketch goes to the margin as a picture card that opens its sheet again',
   await page.keyboard.press('Enter');
   await expect(panel).toContainText('Saved on this device');
 
-  await panel.getByRole('button', { name: /To margin/ }).click();
+  await panel.getByRole('button', { name: /To Ḥāshiya/ }).click();
   await panel.getByRole('menuitem', { name: /as a picture/ }).click();
-  await expect(panel.locator('.sk-foot [role=status]')).toContainText('Sketch sent to the margin');
+  await expect(panel.locator('.sk-foot [role=status]')).toContainText('Sketch sent to the Ḥāshiya');
   await page.keyboard.press('Escape');
   await expect(panel).toHaveCount(0);
 
@@ -308,18 +308,18 @@ test('an ink card opens as a sheet, and a sheet\'s handwriting goes to the margi
   await card.getByRole('textbox').click();
   await card.getByRole('button', { name: 'Open as sheet' }).click();
   const panel = page.getByRole('complementary', { name: 'Sketch' });
-  await expect(panel.getByRole('tab', { name: 'Margin ink' })).toHaveAttribute('aria-selected', 'true');
+  await expect(panel.getByRole('tab', { name: 'Ḥāshiya ink' })).toHaveAttribute('aria-selected', 'true');
   await expect(panel.locator('.sk-ink path')).toHaveCount(1);
 
   // And back: the sheet's handwriting as a second ink card, named after the sheet.
-  await panel.getByRole('button', { name: /To margin/ }).click();
+  await panel.getByRole('button', { name: /To Ḥāshiya/ }).click();
   await panel.getByRole('menuitem', { name: /as an ink card/ }).click();
-  await expect(panel.locator('.sk-foot [role=status]')).toContainText('Ink card in the margin');
+  await expect(panel.locator('.sk-foot [role=status]')).toContainText('Ink card in the Ḥāshiya');
   // The margins have room again once the panel is closed.
   await page.keyboard.press('Escape');
   await expect(panel).toHaveCount(0);
   await expect(page.locator('.sd-gloss', { has: page.locator('.sd-mink') })).toHaveCount(2);
-  await expect(page.locator('.sd-gloss', { hasText: 'Ink from sketch · Margin ink' })).toHaveCount(1);
+  await expect(page.locator('.sd-gloss', { hasText: 'Ink from sketch · Ḥāshiya ink' })).toHaveCount(1);
 });
 
 test('a quote from the reader goes back to its words, and its words open the dictionary', async ({ page }) => {
@@ -429,9 +429,9 @@ test('a node sent to the margin follows its sheet, until the note is edited: the
   await page.keyboard.type('Group feeling');
   await page.keyboard.press('Enter');
   await panel.locator('.sk-node').click();
-  await panel.getByRole('button', { name: /To margin/ }).click();
+  await panel.getByRole('button', { name: /To Ḥāshiya/ }).click();
   await panel.getByRole('menuitem', { name: /Selected node only/ }).click();
-  await expect(panel.locator('.sk-foot [role=status]')).toContainText('Node sent to the margin');
+  await expect(panel.locator('.sk-foot [role=status]')).toContainText('Node sent to the Ḥāshiya');
 
   const renameNode = async (text: string) => {
     await page.keyboard.press('Alt+k');
