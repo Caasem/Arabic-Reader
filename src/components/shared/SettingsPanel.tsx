@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { BackupControls } from './BackupControls';
 import { useEscapeKey } from './useEscapeKey';
 import { Note, SettingsSection } from './settings/controls';
@@ -10,20 +10,8 @@ import { SearchSettings } from './settings/SearchSettings';
 import { TouchGestureSettings } from './settings/TouchGestureSettings';
 import { AnkiSettings } from './settings/AnkiSettings';
 import { DiagnosticsSettings } from './settings/DiagnosticsSettings';
-import { DictionarySearchSettings } from '../../dictionarySearch';
-import { BookSearchSettings } from '../../bookSearch';
-import { BookVocabSettings } from '../../bookVocab';
-import { NoteSettings } from '../../noteCard';
-import { FlashSettings } from '../../flashCard';
-import { StudyDeskSettings } from '../../studyDesk';
-import { AnnotateSettings } from '../../annotate';
-import { VerbFormsSettings } from '../../verbForms';
-import { PopupCleanSettings } from '../../popupClean';
-import { CrowdSettings } from '../../crowdSync';
-import { LookSettings } from '../../look';
-import { FontSettings } from '../../readerFont';
-import { WasitMatchSettings } from '../../wasitMatch';
-import { WasitStructureSettings } from '../../wasitStructure';
+import { FEATURES, type SettingsGroupId } from '../../features/registry';
+import { sectionOrder } from '../../features/placement';
 import { ShamelaBetaSettings } from './settings/ShamelaBetaSettings';
 import { BrowseLibrarySettings } from './settings/BrowseLibrarySettings';
 import { LibrarySettings } from './settings/LibrarySettings';
@@ -49,13 +37,16 @@ function BackupSettings() {
   );
 }
 
-/** Settings grouped by what they're for; the sidebar jumps between groups. */
-const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] }[] = [
+/**
+ * Settings grouped by what they're for; the sidebar jumps between groups. `sections` are the app's own; each feature's
+ * section joins its group from the registry (src/features/registry.ts), after the key it names or at the end.
+ */
+const GROUPS: { id: SettingsGroupId; label: string; blurb: string; sections: ReactElement[] }[] = [
   {
     id: 'appearance',
     label: 'Appearance',
     blurb: 'Colours and the overall look of the app.',
-    sections: [<LookSettings key="look" />],
+    sections: [],
   },
   {
     id: 'reading',
@@ -64,7 +55,6 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
     sections: [
       <QuietReaderSettings key="quiet" />,
       <ReadingSettings key="reading" />,
-      <FontSettings key="font" />,
       <TouchGestureSettings key="touch" />,
       <SearchSettings key="search" />,
       <PomodoroSettings key="pomodoro" />,
@@ -77,7 +67,7 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
     id: 'dictionary',
     label: 'Dictionary',
     blurb: 'Which dictionaries answer, and how lookups appear.',
-    sections: [<DictionarySettings key="dictionaries" />, <DictionarySearchSettings key="dsearch" />, <BookSearchSettings key="bsearch" />, <BookVocabSettings key="bvocab" />, <NoteSettings key="notecard" />, <FlashSettings key="flashcard" />, <StudyDeskSettings key="studydesk" />, <AnnotateSettings key="annotate" />, <VerbFormsSettings key="verbforms" />, <PopupCleanSettings key="popupclean" />, <WasitMatchSettings key="wasitmatch" />, <WasitStructureSettings key="wasitstructure" />],
+    sections: [<DictionarySettings key="dictionaries" />],
   },
   {
     id: 'vocabulary',
@@ -89,7 +79,7 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
     id: 'library',
     label: 'Library & data',
     blurb: 'Where books come from and keeping your data safe.',
-    sections: [<LibrarySettings key="librarypage" />, <BrowseLibrarySettings key="browselibrary" />, <ShamelaBetaSettings key="shamela" />, <StorageSettings key="storage" />, <BackupSettings key="backup" />, <SyncSettings key="sync" />, <CrowdSettings key="crowd" />],
+    sections: [<LibrarySettings key="librarypage" />, <BrowseLibrarySettings key="browselibrary" />, <ShamelaBetaSettings key="shamela" />, <StorageSettings key="storage" />, <BackupSettings key="backup" />, <SyncSettings key="sync" />],
   },
   {
     id: 'advanced',
@@ -99,10 +89,21 @@ const GROUPS: { id: string; label: string; blurb: string; sections: ReactNode[] 
   },
 ];
 
+const featureSections = new Map(FEATURES.flatMap((f) => (f.SettingsSection ? [[f.id, f.SettingsSection] as const] : [])));
+
+/** A group's sections in order: its own, with the features' placed among them. */
+function sectionsOf(group: (typeof GROUPS)[number]): ReactElement[] {
+  const own = new Map(group.sections.map((el) => [String(el.key), el]));
+  return sectionOrder(group.id, [...own.keys()], FEATURES).map((key) => {
+    const Section = featureSections.get(key);
+    return own.get(key) ?? (Section ? <Section key={key} /> : <></>);
+  });
+}
+
 export function SettingsPanel({ onClose, initialGroup }: { onClose: () => void; initialGroup?: string }) {
   useEscapeKey(onClose);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [active, setActive] = useState(GROUPS[0].id);
+  const [active, setActive] = useState<string>(GROUPS[0].id);
 
   // Opened from a link that names a group (e.g. the reader's "All reading settings").
   useEffect(() => {
@@ -176,7 +177,7 @@ export function SettingsPanel({ onClose, initialGroup }: { onClose: () => void; 
                   {group.label}
                 </h3>
                 <p className="settings-group__blurb">{group.blurb}</p>
-                {group.sections}
+                {sectionsOf(group)}
               </div>
             ))}
           </div>

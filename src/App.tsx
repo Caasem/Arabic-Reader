@@ -5,10 +5,8 @@ import { ReaderSwitch } from './readerCore/ReaderSwitch';
 import { BackupReminder } from './components/shared/BackupReminder';
 import { PomodoroNotifier } from './components/pomodoro/PomodoroNotifier';
 import { PreferencesProvider } from './state/PreferencesProvider';
-import { LookSkin } from './look';
-import { ReadingFontSync } from './readerFont';
 import { AutoSync } from './sync/AutoSyncMount';
-import { CrowdSyncHost } from './crowdSync';
+import { FEATURES } from './features/registry';
 import { AnkiAutoSync } from './anki/AnkiAutoSync';
 import { onOpenDictionaryPage, type DictionaryPageRequest } from './dictionaryPage/events';
 import { fullscreen, isDesktopApp } from './utils/desktop';
@@ -110,10 +108,8 @@ function App() {
 
   return (
     <PreferencesProvider>
-      <LookSkin />
-      <ReadingFontSync />
+      {FEATURES.map(({ id, AppHost }) => AppHost && <AppHost key={id} />)}
       <AutoSync />
-      <CrowdSyncHost />
       <AnkiAutoSync />
       {firstRun ? (
         <Onboarding onDone={() => setFirstRun(false)} />
