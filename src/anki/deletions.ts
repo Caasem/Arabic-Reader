@@ -1,4 +1,5 @@
 import type { VocabularyItem } from '../types';
+import { readJSON, writeJSON } from '../utils/storage';
 
 /**
  * Anki notes whose cards were removed in the app, waiting for the next Anki sync. Kept per device
@@ -8,29 +9,18 @@ import type { VocabularyItem } from '../types';
 const KEY = 'anki.pendingDeletes';
 
 export function pendingAnkiDeletes(): number[] {
-  try {
-    const raw = JSON.parse(localStorage.getItem(KEY) ?? '[]') as unknown;
-    return Array.isArray(raw) ? raw.filter((n): n is number => typeof n === 'number') : [];
-  } catch {
-    return [];
-  }
+  const raw = readJSON<unknown>(KEY);
+  return Array.isArray(raw) ? raw.filter((n): n is number => typeof n === 'number') : [];
 }
 
+/** Storage blocked: the note simply stays in Anki. */
 export function rememberAnkiDeletes(items: (VocabularyItem | undefined)[]): void {
   const ids = items.map((i) => i?.ankiNoteId).filter((n): n is number => typeof n === 'number');
   if (!ids.length) return;
-  try {
-    localStorage.setItem(KEY, JSON.stringify([...new Set([...pendingAnkiDeletes(), ...ids])]));
-  } catch {
-    // Storage blocked: the note simply stays in Anki.
-  }
+  writeJSON(KEY, [...new Set([...pendingAnkiDeletes(), ...ids])]);
 }
 
 export function clearAnkiDeletes(ids: number[]): void {
   const done = new Set(ids);
-  try {
-    localStorage.setItem(KEY, JSON.stringify(pendingAnkiDeletes().filter((n) => !done.has(n))));
-  } catch {
-    // Nothing to do.
-  }
+  writeJSON(KEY, pendingAnkiDeletes().filter((n) => !done.has(n)));
 }
