@@ -246,6 +246,10 @@ export class SketchSurface {
     this.renderCursor();
     this.emitState();
   }
+  /** The ids of the selected nodes, the one clicked first leading (sketch cards use it as the parent). */
+  selectedIds(): string[] {
+    return this.selected();
+  }
   /** Every selected node. */
   private selected(): string[] {
     return [...new Set([...(this.sel ? [this.sel] : []), ...this.multi])].filter((id) => this.node(id));

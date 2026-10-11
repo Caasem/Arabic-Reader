@@ -9,6 +9,8 @@ import { goToPlace, placeRects } from './placeLinks';
 import { TEMPLATES } from './templates';
 import { HIGHLIGHTER_PRESETS } from '../studyDesk/highlighterColour';
 import { bookSketches, deleteSketch, isEmptySketch, newSketch, onInkChange, saveSketch } from './inkStore';
+import { vocabularyService } from '../vocabulary';
+import { cardFromNodes, type SketchCardSpec } from './sketchCards';
 import { refreshSketchCards, sendSketchToMargin, sketchOutline, sketchPng, sketchSvgBlob, type SendHow } from './toMargin';
 import { usePreferences } from '../state/PreferencesContext';
 import { COLOR_NAMES, inkUi, keyOwner, PEN_WIDTHS, setInkUi, THEME_COLORS, useInkUi } from './inkUi';
@@ -44,6 +46,8 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
   const [pinned, setPinned] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
   const [undoDelete, setUndoDelete] = useState<Sketch | null>(null);
+  /** Cards just made from the sheet (ids), so the toast can undo them. */
+  const [madeCards, setMadeCards] = useState<string[] | null>(null);
   /** The line from a pointed-at quote to its words on the page. */
   const [lead, setLead] = useState<string | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -447,6 +451,44 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
       (e: Error) => setSent(e.message || 'Could not send it')
     );
   };
+  /** Flashcards from the sheet (sketchCards.ts): ordinary hand-written cards that remember their sheet. */
+  const saveCards = async (specs: SketchCardSpec[]) => {
+    const c = sheet.current;
+    if (!c || !specs.length) return;
+    flush();
+    try {
+      const made = [];
+      for (const spec of specs) made.push(await vocabularyService.saveCustomCard({ front: spec.front, back: spec.back, book, location: c.sketch.location, sketch: spec.sketch }));
+      setMadeCards(made.map((m) => m.id));
+      setSent(null);
+    } catch {
+      setSent('Could not make the card');
+    }
+  };
+
+  /** The selected node(s) as one card; null with the reason when it cannot be made. */
+  const cardNow = (): { spec: SketchCardSpec | null; why: string } => {
+    const c = sheet.current;
+    if (!c || !state?.nodes) return { spec: null, why: 'Select a node first (Shift-click for more)' };
+    const r = cardFromNodes(c.sketch, surface.current?.selectedIds() ?? []);
+    return r.ok ? { spec: r.spec, why: 'Make a flashcard: this node asks, its child nodes answer' } : { spec: null, why: r.why };
+  };
+  const makeCard = () => {
+    const { spec } = cardNow();
+    if (spec) void saveCards([spec]);
+  };
+
+  const undoCards = () => {
+    const ids = madeCards;
+    setMadeCards(null);
+    if (ids) void Promise.all(ids.map((id) => vocabularyService.removeFromVocabulary(id))).then(() => setSent(ids.length > 1 ? 'Cards removed' : 'Card removed'));
+  };
+  useEffect(() => {
+    if (!madeCards) return;
+    const t = window.setTimeout(() => setMadeCards(null), 8000);
+    return () => window.clearTimeout(t);
+  }, [madeCards]);
+
   useEffect(() => {
     if (!sent) return;
     const t = window.setTimeout(() => setSent(null), 2600);
@@ -801,6 +843,9 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
           <button type="button" className="ink-ib ink-ib--wide" disabled={state?.empty} aria-label="Tidy the diagram" title="Lay the diagram out as a tree" onClick={() => surface.current?.tidy()}>
             Tidy
           </button>
+          <button type="button" className="ink-ib ink-ib--wide" disabled={!cardNow().spec} aria-label="Make a flashcard from the selected node" title={cardNow().why} onClick={makeCard}>
+            Make card
+          </button>
           <span className="sk-send">
             <button type="button" className="ink-ib ink-ib--wide" aria-haspopup="menu" aria-expanded={templates} onClick={() => setTemplates(!templates)}>
               Templates ▾
@@ -888,6 +933,13 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
                 void saveSketch(s).then(() => setInkUi({ openSketch: s.id }));
               }}
             >
+              Undo
+            </button>
+          </span>
+        ) : madeCards ? (
+          <span role="status">
+            {madeCards.length > 1 ? `${madeCards.length} cards made` : 'Card made'} ·{' '}
+            <button type="button" className="sk-foot__undo" onClick={undoCards}>
               Undo
             </button>
           </span>
