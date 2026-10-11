@@ -94,6 +94,8 @@ interface MorphEntry {
   morph: string;
   def: string;
   pos: string;
+  /** A verbal noun the engine made up (see buildHiddenMasdars), never shown. */
+  hidden?: boolean;
 }
 
 // ---------- Table parsers ----------
@@ -238,6 +240,45 @@ export interface AramorphResult {
   verbForm?: string;
   /** Form I only: the imperfect vowel(s) the dictionary marks (`u`, `a`, `i`). */
   imperfectVowel?: string;
+  /** Matched a made-up verbal noun: use it for the root, don't show it. Its
+   * `lemma` and `def` are the verb's. */
+  hidden?: boolean;
+}
+
+// Form V تَفَعَّلَ and Form VI تَفاعَلَ verbs, whose verbal nouns are تَفَعُّل and
+// تَفاعُل. The last letter must be a plain consonant: weak or hamzated endings
+// change the noun's spelling.
+const LAST = "[^aiuoFNK~AY`{wy'>&<}|]";
+const ANY = "[^aiuoFNK~AY`{]";
+const FORM_V_RE = new RegExp(`^ta(${ANY})a(${ANY})~a(${LAST})$`);
+const FORM_VI_RE = new RegExp(`^ta(${ANY})A(${ANY})a(${LAST})$`);
+
+/**
+ * AraMorph lists many Form V/VI verbs without their verbal noun (تَحاسَدَ but
+ * no تَحاسُد), so "the" + that noun matches nothing and the root dictionaries
+ * get no root. Make each missing noun as a hidden stem: it lets the word
+ * resolve to its root, but it's never shown, in case the made-up noun is wrong.
+ */
+export function buildHiddenMasdars(dictstems: OptimizedDictArray<MorphEntry>): OptimizedDictArray<MorphEntry> {
+  const nouns = new Set<string>();
+  for (const group of dictstems.values()) {
+    for (const e of group) if (e.morph.startsWith('N')) nouns.add(removeDiacriticsBuckwalter(e.word) + '|' + e.root);
+  }
+  const hidden = new OptimizedDictArray<MorphEntry>();
+  const made = new Set<string>();
+  for (const group of dictstems.values()) {
+    for (const e of group) {
+      if (e.morph !== 'PV' || e.root === '---' || e.lemma === '---') continue;
+      const m = e.lemma.match(FORM_V_RE) ?? e.lemma.match(FORM_VI_RE);
+      if (!m) continue;
+      const word = FORM_V_RE.test(e.lemma) ? `ta${m[1]}a${m[2]}~u${m[3]}` : `ta${m[1]}A${m[2]}u${m[3]}`;
+      const key = removeDiacriticsBuckwalter(word);
+      if (nouns.has(key + '|' + e.root) || made.has(key + '|' + e.lemma)) continue;
+      made.add(key + '|' + e.lemma);
+      hidden.addItem(key, { root: e.root, lemma: e.lemma, word, morph: 'N', def: e.def, pos: '', hidden: true });
+    }
+  }
+  return hidden;
 }
 
 const VERB_STEM_RE = /^(PV|IV|CV)/;
@@ -247,10 +288,13 @@ const CACHE_EXPIRY = 3600000;
 
 export class AramorphEngine {
   private tables: AramorphTables | null = null;
+  /** Kept apart from `tables` so the cached parse never stores them. */
+  private hiddenStems = new OptimizedDictArray<MorphEntry>();
   private lookupCache = new Map<string, { data: AramorphResult[]; timestamp: number }>();
 
   setTables(tables: AramorphTables): void {
     this.tables = tables;
+    this.hiddenStems = buildHiddenMasdars(tables.dictstems);
     this.lookupCache.clear();
     this.familyIndex = null;
   }
@@ -322,7 +366,7 @@ export class AramorphEngine {
   private lookupPrefStemSuff(pref: string, stem: string, suff: string): AramorphResult[] {
     const t = this.tables!;
     const prefMatches = t.dictprefs.get(pref);
-    const stemMatches = t.dictstems.get(stem);
+    const stemMatches = [...t.dictstems.get(stem), ...this.hiddenStems.get(stem)];
     const suffMatches = t.dictsuffs.get(suff);
     const data: AramorphResult[] = [];
     const bracketify = (word: string, space: number): string => {
@@ -345,6 +389,7 @@ export class AramorphEngine {
               pos: [p.pos, s.pos, su.pos].filter(Boolean).join(', '),
               morph: [p.morph, s.morph, su.morph].join(', '),
               ...verbFormOf(s),
+              ...(s.hidden ? { hidden: true } : {}),
             });
           }
         }
@@ -380,11 +425,11 @@ export class AramorphEngine {
     const processedWord = removeDiacriticsBuckwalter(transliterate(word));
     let candidates = this.allSplits(processedWord);
     // AraMorph lists some verbs without their verbal noun (e.g. تَحاسَدَ but no
-    // تَحاسُد), so "the" + that noun matches nothing. Retry without the article
-    // (and any و/ف/ب/ك/ل before it) to at least reach the verb and its root.
-    if (candidates.length === 0) {
+    // تَحاسُد), so "the" + that noun matches nothing it shows. Retry without the
+    // article (and any و/ف/ب/ك/ل before it) to at least show the verb.
+    if (!candidates.some((c) => !c.hidden)) {
       const bare = processedWord.replace(/^[wf]?[bkl]?Al(?=.{2})/, '');
-      if (bare !== processedWord) candidates = this.allSplits(bare);
+      if (bare !== processedWord) candidates = candidates.concat(this.allSplits(bare));
     }
 
     const seen = new Set<string>();

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   AramorphEngine,
+  buildHiddenMasdars,
   createDictTable,
   createMorphTableFromText,
   deserializeTables,
@@ -21,6 +22,14 @@ const DICT_STEMS = [
   'Aktb\t>akotab\tPV\tdictate;make write',
   ';',
   'qlm\tqalam\tN\tpen <pos>qalam/NOUN</pos>',
+  ';--- Hsd',
+  ';; taHAsad_1',
+  'tHAsd\ttaHAsad\tPV\tenvy',
+  ';--- Erf',
+  ';; taEAraf_1',
+  'tEArf\ttaEAraf\tPV\tget acquainted',
+  ';; taEAruf_1',
+  'tEArf\ttaEAruf\tN\tacquaintance',
 ].join('\n');
 const TABLE_AB = ['; header', 'Pref-0 PV', 'Pref-0 N', 'Pref-Wa PV'].join('\n');
 const TABLE_BC = ['PV Suff-0', 'N Suff-0'].join('\n');
@@ -104,6 +113,20 @@ describe('AramorphEngine.lookup', () => {
     expect(engine.lookup('الكتب')[0]).toMatchObject({ root: 'كتب', lemma: 'كَتَب' });
     expect(engine.lookup('وبالكتب')[0]).toMatchObject({ root: 'كتب' });
     expect(engine.lookup('الزززز')).toEqual([]);
+  });
+
+  it('makes missing Form V/VI verbal nouns as hidden stems that carry the root', () => {
+    const tables = buildTables();
+    const hidden = buildHiddenMasdars(tables.dictstems);
+    expect(hidden.get('tHAsd')).toEqual([expect.objectContaining({ word: 'taHAsud', root: 'Hsd', lemma: 'taHAsad', hidden: true })]);
+    expect(hidden.get('tEArf')).toEqual([]); // the data already has تَعارُف
+    expect(tables.dictstems.get('tHAsd')).toHaveLength(1); // the parse itself is untouched
+
+    const engine = new AramorphEngine();
+    engine.setTables(tables);
+    const results = engine.lookup('تحاسد');
+    expect(results.find((r) => r.hidden)).toMatchObject({ root: 'حسد', lemma: 'تَحاسَد', word: 'تَحاسُد' });
+    expect(results.find((r) => !r.hidden)).toMatchObject({ root: 'حسد', def: 'envy' });
   });
 
   it('returns nothing before tables are loaded or for unknown words', () => {

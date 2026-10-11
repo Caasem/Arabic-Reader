@@ -7,7 +7,7 @@ release.
 ## Summary: 10–11 October 2026 (the refactor pass)
 
 Everything that landed from the evening of 10 October to midday on 11 October, in order. Rows 1–7 are on `main`
-(up to 0.96.0); rows 8–15 are on `refactor/integration`
+(up to 0.96.0); rows 8–16 are on `refactor/integration`
 ([Caasem/Arabic-Reader#73](https://github.com/Caasem/Arabic-Reader/pull/73), 0.97.0), waiting to be tested before
 merging. Per-phase detail and how to revert each one: `docs/changes/refactor-changes.md`.
 
@@ -28,8 +28,16 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 | 13 | 11 Oct 12:49 | #73 | *Use recommended settings* also switches on Al-Wasīṭ; *Skip for now* stays English-only | Yes | 0.97.0 | On `refactor/integration` |
 | 14 | 11 Oct 12:56 | #73 | No scrollbars on any device (before, only the desktop app hid them) | Yes | 0.97.0 | On `refactor/integration` |
 | 15 | 11 Oct | #73, fix | A word with ال whose noun AraMorph lacks (التحاسد) now finds the verb and its root instead of nothing | Yes | 0.97.1 | On `refactor/integration` |
+| 16 | 11 Oct | #73 | Form V/VI verbal nouns missing from AraMorph (about 340, e.g. تَحاسُد) are made as hidden entries: they find the root for the Arabic dictionaries but are never shown | Yes | 0.99.1 | On `refactor/integration` |
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
+
+## v0.99.1 — 2026-10-11
+
+- Words such as التحاسد, تحاسدهم and بالتحاسد now find their root (حسد) directly, so Al-Wasīṭ, Al-Ṣiḥāḥ and Maqāyīs
+  show the right article. AraMorph lists about 340 Form V and VI verbs (تَفَعَّلَ, تَفاعَلَ) without their verbal noun;
+  the app now makes those nouns itself but keeps them hidden, in case one is wrong. The English line still shows
+  the verb.
 
 ## v0.99.0 — 2026-10-11
 

@@ -190,6 +190,7 @@ export class AramorphDictionaryProvider implements DictionaryProvider, Morpholog
   private groupByWord(results: AramorphResult[]): DictionaryEntry[] {
     const byWord = new Map<string, AramorphResult[]>();
     for (const r of results) {
+      if (r.hidden) continue; // made-up verbal nouns only feed analyze()'s roots
       const list = byWord.get(r.word);
       if (list) list.push(r);
       else byWord.set(r.word, [r]);
