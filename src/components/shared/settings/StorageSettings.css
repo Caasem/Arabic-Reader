@@ -16,11 +16,11 @@
 }
 
 .storage-bar__seg--records {
-  background: #6f8f72;
+  background: var(--c-storage-bar-a);
 }
 
 .storage-bar__seg--packs {
-  background: #6b86a8;
+  background: var(--c-storage-bar-b);
 }
 
 .storage-bar__seg--caches {

@@ -89,4 +89,23 @@
   --c-pdfpage-number: #b4b0a8;
   --c-pdfpage-warn-ink: #b0701c;
   --c-pdfpage-warn-bg: rgb(176 112 28 / 0.14);
+
+  /* Settings, storage, OCR, navigation bar */
+  --c-settings-backdrop: rgba(20, 18, 15, 0.42);
+  --c-settings-shadow: rgba(20, 18, 15, 0.3);
+  --c-settings-seg-shadow: rgba(20, 18, 15, 0.12);
+  --c-settings-knob: #ffffff;
+  --c-settings-knob-shadow: rgba(0, 0, 0, 0.25);
+  --c-storage-bar-a: #6f8f72;
+  --c-storage-bar-b: #6b86a8;
+  --c-ocr-ok: #2e7d4f;
+  --c-ocr-ok-bg: rgb(46 125 79 / 0.14);
+  --c-ocr-warn: #b0701c;
+  --c-ocr-warn-bg: rgb(176 112 28 / 0.15);
+  --c-ocr-button-ink: #fff;
+  --c-ocr-warn-wash: rgb(176 112 28 / 0.12);
+  --c-backup-ink: #fff;
+  --c-navbar-shadow: rgba(28, 27, 25, 0.12);
+  --c-look-mastered-ink: #ffffff;
+  --c-look-navbar-pill-shadow: rgba(28, 27, 25, 0.14);
 }

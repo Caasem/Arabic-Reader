@@ -59,8 +59,8 @@
 }
 
 .ocr-pill--ok {
-  color: #2e7d4f;
-  background: rgb(46 125 79 / 0.14);
+  color: var(--c-ocr-ok);
+  background: var(--c-ocr-ok-bg);
 }
 
 .ocr-pill--no {
@@ -69,8 +69,8 @@
 }
 
 .ocr-pill--cloud {
-  color: #b0701c;
-  background: rgb(176 112 28 / 0.15);
+  color: var(--c-ocr-warn);
+  background: var(--c-ocr-warn-bg);
 }
 
 .ocr-result {
@@ -78,11 +78,11 @@
 }
 
 .ocr-result--ok {
-  color: #2e7d4f;
+  color: var(--c-ocr-ok);
 }
 
 .ocr-result--bad {
-  color: #b0701c;
+  color: var(--c-ocr-warn);
 }
 
 .ocr-btn {
@@ -106,7 +106,7 @@
 }
 
 .ocr-btn--primary {
-  color: #fff;
+  color: var(--c-ocr-button-ink);
   background: var(--accent);
   border-color: var(--accent);
   font-weight: 600;
@@ -156,8 +156,8 @@
   border-radius: 8px;
   font-size: 0.85rem;
   line-height: 1.45;
-  color: #b0701c;
-  background: rgb(176 112 28 / 0.12);
+  color: var(--c-ocr-warn);
+  background: var(--c-ocr-warn-wash);
 }
 
 .ocr-contract,
