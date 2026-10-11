@@ -123,4 +123,5 @@
   --c-speed-ink: #fff;
   --c-speed-knob: #fff;
   --c-speed-scrim: rgba(0, 0, 0, 0.35);
+  --c-app-inset-edge: rgba(0, 0, 0, 0.12);
 }
