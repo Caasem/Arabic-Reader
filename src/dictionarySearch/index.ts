@@ -13,6 +13,7 @@ export const dictionarySearchFeature: FeatureDescriptor = {
   Host: DictionarySearchHost,
   SettingsSection: DictionarySearchSettings,
   settingsGroup: 'dictionary',
+  chords: ['Alt+D'],
   touchPoints: [
     'the `dictionarySearchEnabled` and `dictionarySearchStyle` preferences (src/types/preferences.ts, src/state/defaultPreferences.ts)',
     "the study desk's inbox and pull-in, which reuse its Shell frame and stylesheet (src/studyDesk/DeskHost.tsx)",
