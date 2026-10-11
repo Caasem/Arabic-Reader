@@ -40,13 +40,15 @@ async function threeNotes(page: Page) {
   await expect(page.locator('.sd-margins > .sd-gloss')).toHaveCount(3);
 }
 
-/** The centre of the card whose note says `text`. */
+/** The centre of the card whose note says `text`, waiting for it: a note just typed and left saves a moment later. */
 async function centreOf(page: Page, text: string) {
-  return page.evaluate((t) => {
+  const centre = await page.waitForFunction((t) => {
     const el = Array.from(document.querySelectorAll<HTMLElement>('.sd-margins > .sd-gloss, .sd-fan .sd-gloss')).find((g) => g.querySelector('textarea')?.value === t);
-    const r = el!.getBoundingClientRect();
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
     return { x: r.left + r.width / 2, y: r.top + Math.min(r.height / 2, 18) };
-  }, text);
+  }, text, { timeout: 10000 });
+  return (await centre.jsonValue())!;
 }
 
 /** Drags one card onto another and rests there `hold` ms before letting go. */
