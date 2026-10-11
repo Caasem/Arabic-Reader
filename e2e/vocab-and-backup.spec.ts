@@ -1,8 +1,5 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 test('sentence context, quick-add shortcut, review grading, and backup export/import', async ({ page }) => {
   await page.goto('/');
@@ -20,14 +17,9 @@ test('sentence context, quick-add shortcut, review grading, and backup export/im
   await page.click('text=Try the sample book');
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
-  await page.waitForSelector('.reader__epub iframe', { timeout: 15000 });
-  await page.waitForTimeout(1500);
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
 
-  const frame = page.frames().find((f) => f !== page.mainFrame())!;
-
-  await frame.evaluate(() => {
-    document.querySelector('p .ar-word')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-  });
+  await page.locator('.qr-chapter p .ar-word').first().click();
   await page.waitForSelector('.dict-popup', { timeout: 8000 });
   await page.waitForTimeout(600);
   await expect(page.locator('.dict-popup__sentence')).toHaveCount(1);
