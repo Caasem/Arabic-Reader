@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { dictionaryManager } from '../dictionary';
 import { FloatingCard } from '../floatingCard';
 import { getReaderMarks, subscribeReaderSelection, type MarkCapture } from '../readerChords';
-import { isCleanLocation } from '../quietReader/location';
+import { isCleanLocation } from '../readerCore/location';
 import type { BookMeta, VocabularyItem } from '../types';
 import { combinedMeaning, entryMeaning, vocabularyService } from '../vocabulary/vocabularyService';
 

@@ -1,5 +1,5 @@
 import { goToBookLocation } from '../readerChords/navigation';
-import { isCleanLocation } from '../quietReader/location';
+import { isCleanLocation } from '../readerCore/location';
 import { formatPdfLocation, goToPdfPlace, parsePdfLocation, rectsOfCleanLocation } from '../studyDesk/pageGeometry';
 
 /**

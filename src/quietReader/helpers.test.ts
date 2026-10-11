@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
 import type { CleanChapter } from '../readerCore/parseCleanEpub';
-import { buildBookModel } from './bookModel';
-import { searchForms, searchTexts } from './cleanSearch';
-import { chapterForEpubPosition, formatCleanLocation, isCleanLocation, parseCleanLocation } from './location';
+import { buildBookModel } from '../readerCore/bookModel';
+import { searchForms, searchTexts } from '../readerCore/cleanSearch';
+import { chapterForEpubPosition, formatCleanLocation, isCleanLocation, parseCleanLocation } from '../readerCore/location';
 import { bookProgress, chapterStarts, estimatePages } from './progress';
 import { offsetWithin, rangeAt } from './textOffsets';
 import { dueText, statusOf, statusText } from './vocabStatus';

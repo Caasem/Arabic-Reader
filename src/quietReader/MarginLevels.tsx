@@ -5,7 +5,7 @@ import type { BookMeta, VocabTier, VocabularyItem } from '../types';
 import { saveFile } from '../utils/saveFile';
 import { formatVocabularyExport } from '../vocabRarity/exportVocabulary';
 import { enableRarityData, isRarityDataReady } from '../vocabRarity/rarity';
-import type { BookModel } from './bookModel';
+import type { BookModel } from '../readerCore/bookModel';
 import { cleanVocabIndex, type CleanVocabWord } from './cleanVocabIndex';
 import { IconClose, IconJump } from './icons';
 import { statusKindOf, statusLabel, type StatusKind } from './vocabStatus';

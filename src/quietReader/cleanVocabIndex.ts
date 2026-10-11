@@ -2,7 +2,7 @@ import { aramorphProvider } from '../dictionary/providers/aramorph/AramorphDicti
 import { normalize, tokenize } from '../reader/tokenizer/arabicTokenizer';
 import { getWordRarities } from '../vocabRarity/rarity';
 import type { WordRarity } from '../types';
-import type { BookModel } from './bookModel';
+import type { BookModel } from '../readerCore/bookModel';
 
 const MAX_OCCURRENCES = 60;
 

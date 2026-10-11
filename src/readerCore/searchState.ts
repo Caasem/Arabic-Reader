@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { dictionaryManager } from '../dictionary';
 import { libraryService } from '../library/libraryService';
-import { parseCleanEpub } from '../readerCore/parseCleanEpub';
+import { parseCleanEpub } from './parseCleanEpub';
 import { readJSON, STORAGE_KEYS, writeJSON } from '../utils/storage';
 import type { BookMeta } from '../types';
 import { buildBookModel, type BookModel } from './bookModel';

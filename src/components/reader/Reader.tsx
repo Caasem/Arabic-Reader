@@ -37,7 +37,7 @@ import { QuickSettingsPopover } from './QuickSettingsPopover';
 import { VocabularyEditModal } from './VocabularyEditModal';
 import { PomodoroTimer } from '../pomodoro/PomodoroTimer';
 import { saveCleanFocus } from '../../readerCore/cleanFocus';
-import { isCleanLocation } from '../../quietReader/location';
+import { isCleanLocation } from '../../readerCore/location';
 import { announceReaderSelection, registerBookNavigator, registerReaderMarks } from '../../readerChords';
 import './Reader.css';
 import { senseText } from '../../dictionary/senseText';

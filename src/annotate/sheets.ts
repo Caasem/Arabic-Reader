@@ -1,4 +1,4 @@
-import { parseCleanLocation } from '../quietReader/location';
+import { parseCleanLocation } from '../readerCore/location';
 import { normalizeForSearch } from '../reader/tokenizer/arabicTokenizer';
 import type { Sketch, SketchScope } from './types';
 
