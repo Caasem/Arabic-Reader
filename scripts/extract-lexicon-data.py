@@ -76,7 +76,7 @@ def clean_html(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def extract_tree(db: sqlite3.Connection, table: str, out: Path) -> None:
+def extract_tree(db: sqlite3.Connection, table: str, out: Path, join_headless: bool = False) -> None:
     """Rows grouped by parent_id -> word<TAB>units, merged by root spelling.
 
     A root row (is_root=1) and its sub-entries share a parent_id. In Lane that
@@ -97,10 +97,17 @@ def extract_tree(db: sqlite3.Connection, table: str, out: Path) -> None:
             units.append(unit)
     merged: dict[str, list[str]] = {}
     roots = 0
-    for words, units in groups.values():
+    last_root = ""
+    for words, units in groups.values():  # in order of first row id
         roots += len(words)
-        if words and words[0] and units:
-            merged.setdefault(words[0], []).extend(units)
+        if words and words[0]:
+            last_root = words[0]
+        # Hans Wehr splits شرق's article in two, the second half with no root
+        # row, so there a headless group joins the root before it. Lane's few
+        # headless rows are unrelated strays (شرس, نصب...) and are left out.
+        root = words[0] if words and words[0] else (last_root if join_headless else "")
+        if root and units:
+            merged.setdefault(root, []).extend(units)
     lines = [f"{w}\t{'<br>'.join(u)}" for w, u in merged.items()]
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
@@ -117,11 +124,11 @@ def main() -> None:
     public = Path(__file__).resolve().parent.parent / "public"
     if hanswehr and "=" in hanswehr[0]:
         # Hans Wehr only, to a path of your choice (e.g. outside the repo).
-        extract_tree(db, "hanswehr", Path(hanswehr[0].split("=", 1)[1]))
+        extract_tree(db, "hanswehr", Path(hanswehr[0].split("=", 1)[1]), join_headless=True)
         return
     extract_tree(db, "lanelexcon", public / "lane-data" / "lane.tsv")
     if hanswehr:
-        extract_tree(db, "hanswehr", public / "hanswehr-data" / "hanswehr.tsv")
+        extract_tree(db, "hanswehr", public / "hanswehr-data" / "hanswehr.tsv", join_headless=True)
         print("\n*** WARNING: Hans Wehr is under copyright. public/hanswehr-data/hanswehr.tsv now holds the real")
         print("*** text. Use it locally only. NEVER commit it (git checkout -- that file before committing)."+"\n")
     for rel, table in TABLES.items():
