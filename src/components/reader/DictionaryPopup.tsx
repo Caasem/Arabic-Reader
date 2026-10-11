@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { DictionaryEntry, DictionaryLookupResult, WordInstance, WordOcrInfo, WordRarity } from '../../types';
-import { senseText } from '../../dictionary/senseText';
 import { getWordRarity, isRarityDataReady, TIER_LABELS } from '../../vocabRarity/rarity';
 import { normalize } from '../../reader/tokenizer/arabicTokenizer';
 import { usePreferences } from '../../state/PreferencesContext';
@@ -14,6 +13,10 @@ import { arabicEntriesStartFolded, EntryDock, entryGist, groupLabel, type DockIt
 import { vowelScore } from '../../dictionary/providers/personal/vowels';
 import { dictionaryManager } from '../../dictionary';
 import { AddDictionaryPanel } from '../../popupAddDictionary';
+import { MorphValue } from './dictionaryPopup/MorphValue';
+import { SentenceInBook } from './dictionaryPopup/SentenceInBook';
+import { OcrNote } from './dictionaryPopup/OcrNote';
+import { EditableWord } from './dictionaryPopup/EditableWord';
 
 /** Dictionaries whose senses carry examples: the verb-form tag leads the entry, its words can be
  * selected and saved on their own, and long ones fold (Baranov, and a file the reader loaded). */
@@ -43,71 +46,6 @@ const IGNORE_DISMISS_MS = 400;
 
 type EntryGroup = { providerId: string; providerName: string; entries: { entry: DictionaryEntry; index: number }[] };
 
-/** A root/lemma value that shows the Arabic text by default; tapping it
- * crossfades to the "root"/"form" label in the exact same spot, then fades
- * back to the value after a moment. Replaces a static always-visible label
- * — the label only appears when asked for, right where the value was. */
-function MorphValue({ kind, value, label }: { kind: 'form' | 'root'; value: string; label?: string }) {
-  const [revealed, setRevealed] = useState(false);
-  const timeoutRef = useRef<number | undefined>(undefined);
-  useEffect(() => () => window.clearTimeout(timeoutRef.current), []);
-
-  function handleTap() {
-    setRevealed(true);
-    window.clearTimeout(timeoutRef.current);
-    timeoutRef.current = window.setTimeout(() => setRevealed(false), 1400);
-  }
-
-  return (
-    <span
-      className="dict-popup__morph-item"
-      data-kind={kind}
-      onClick={handleTap}
-      role="button"
-      tabIndex={0}
-      aria-label={`${kind}: ${value}`}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleTap();
-        }
-      }}
-    >
-      <span className={'dict-popup__morph-swap' + (revealed ? ' dict-popup__morph-swap--label' : '')}>
-        <bdi className="dict-popup__entry-morph-value dict-popup__morph-face" aria-hidden={revealed}>
-          {value}
-        </bdi>
-        <span className="dict-popup__morph-face dict-popup__morph-face--label" aria-hidden={!revealed}>
-          {label ?? kind}
-        </span>
-      </span>
-    </span>
-  );
-}
-
-/** Where the word was met: the sentence, with the word itself in bold. */
-function SentenceInBook({ sentence, word }: { sentence: string; word: string }) {
-  const at = sentence.indexOf(word);
-  return (
-    <div className="dict-popup__context">
-      <div className="dict-popup__group-header">In this book</div>
-      <div className="dict-popup__sentence">
-        “
-        {at === -1 ? (
-          sentence
-        ) : (
-          <>
-            {sentence.slice(0, at)}
-            <strong>{word}</strong>
-            {sentence.slice(at + word.length)}
-          </>
-        )}
-        ”
-      </div>
-    </div>
-  );
-}
-
 /** Folds consecutive same-provider entries into one group so the popup can
  * show the provider name once per group instead of once per entry. Keeps
  * each entry's original index (needed for the per-entry save-state Set,
@@ -124,138 +62,6 @@ function groupEntriesByProvider(entries: DictionaryEntry[]): EntryGroup[] {
     }
   }
   return groups;
-}
-
-/** One correction offered for a misread word, with its first meaning so it can be chosen at a glance. */
-function Alternative({ word, why, index, onPick }: { word: string; why: string; index: number; onPick: (word: string) => void }) {
-  const [gloss, setGloss] = useState('');
-  useEffect(() => {
-    let cancelled = false;
-    void dictionaryManager
-      .lookup(word)
-      .then((r) => {
-        const sense = r.entries[0]?.senses[0];
-        if (!cancelled && sense) setGloss(senseText(sense));
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [word]);
-  return (
-    <button type="button" className={'dict-popup__alt' + (index === 0 ? ' dict-popup__alt--top' : '')} onClick={() => onPick(word)}>
-      <span className="dict-popup__alt-word" lang="ar" dir="rtl">
-        {word}
-      </span>
-      <span className="dict-popup__alt-gloss">{gloss}</span>
-      <kbd className="dict-popup__alt-key">{index + 1}</kbd>
-      <span className="dict-popup__alt-why">{why}</span>
-    </button>
-  );
-}
-
-/**
- * Under the headword of a word read from a scan: a warning and ranked corrections when the dictionary
- * does not know the read, a "Corrected" mark after the reader fixes it, and a note when a closer look
- * or another engine produced the word. The keys 1-3 take a correction.
- */
-function OcrNote({ ocr, onPick }: { ocr: WordOcrInfo; onPick: (word: string) => void }) {
-  const choices = useMemo(() => (ocr.suspect ? ocr.candidates : []), [ocr.suspect, ocr.candidates]);
-  useEffect(() => {
-    if (!choices.length) return;
-    function onKey(e: KeyboardEvent) {
-      const n = Number(e.key);
-      if (!Number.isInteger(n) || n < 1 || n > choices.length || e.ctrlKey || e.metaKey || e.altKey) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-      e.preventDefault();
-      onPick(choices[n - 1].word);
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [choices, onPick]);
-
-  if (ocr.corrected) return <div className="dict-popup__ocr-note dict-popup__ocr-note--ok">Corrected from the scan’s “{ocr.read}”. Remembered for this book.</div>;
-  if (ocr.suspect) {
-    return (
-      <div className="dict-popup__ocr">
-        <div className="dict-popup__ocr-note dict-popup__ocr-note--warn">Not a known word. Scans often drop a dot or merge letters; click the word to correct it{choices.length ? ', or pick one:' : '.'}</div>
-        {choices.length > 0 && (
-          <div className="dict-popup__alts" role="group" aria-label="Did you mean">
-            {choices.map((c, i) => (
-              <Alternative key={c.word} word={c.word} why={c.why} index={i} onPick={onPick} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-  if (ocr.via === 'remembered') return <div className="dict-popup__ocr-note">Remembered from your earlier correction</div>;
-  if (ocr.via !== 'first read') return <div className="dict-popup__ocr-note">Read again, {ocr.via.startsWith('a ') ? ocr.via : `by ${ocr.via}`}, to get a word</div>;
-  return null;
-}
-
-/** The popup's headword: click it to correct it (a misread scan, a typo); Enter looks up the corrected word, Esc cancels. */
-function EditableWord({ word, suspect, onCommit }: { word: string; suspect: boolean; onCommit: (word: string) => void }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(word);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const cancelled = useRef(false);
-  useEffect(() => {
-    if (!editing) return;
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, [editing]);
-
-  function commit() {
-    const next = draft.trim();
-    setEditing(false);
-    if (!cancelled.current && next && next !== word) onCommit(next);
-  }
-
-  if (!editing) {
-    return (
-      <button
-        type="button"
-        className={'dict-popup__word-text' + (suspect ? ' dict-popup__word-text--suspect' : '')}
-        title="Click to correct this word"
-        aria-label={`Correct the word ${word}`}
-        onClick={() => {
-          cancelled.current = false;
-          setDraft(word);
-          setEditing(true);
-        }}
-      >
-        {word}
-      </button>
-    );
-  }
-  return (
-    <input
-      ref={inputRef}
-      className="dict-popup__word-input"
-      dir="rtl"
-      lang="ar"
-      value={draft}
-      size={Math.max(draft.length, 3)}
-      aria-label="Correct the word"
-      spellCheck={false}
-      autoComplete="off"
-      onChange={(e) => setDraft(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          inputRef.current?.blur();
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          e.stopPropagation();
-          cancelled.current = true;
-          inputRef.current?.blur();
-        }
-      }}
-      onBlur={commit}
-    />
-  );
 }
 
 export function DictionaryPopup({
