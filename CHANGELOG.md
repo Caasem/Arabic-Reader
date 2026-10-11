@@ -4,6 +4,32 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## Summary: 10–11 October 2026 (the refactor pass)
+
+Everything that landed from the evening of 10 October to midday on 11 October, in order. Rows 1–7 are on `main`
+(up to 0.96.0); rows 8–14 are on `refactor/integration`
+([Caasem/Arabic-Reader#73](https://github.com/Caasem/Arabic-Reader/pull/73), 0.97.0), waiting to be tested before
+merging. Per-phase detail and how to revert each one: `docs/changes/refactor-changes.md`.
+
+| # | When | Where | What changed | Users see it? | Version | Status |
+|---|---|---|---|---|---|---|
+| 1 | 10 Oct 17:41 | [#65](https://github.com/Caasem/Arabic-Reader/pull/65) | Sketch and margin pass: margin piles, PDF ink on Night pages, searching sheets in All sheets | Yes | 0.82 – 0.93 | Merged |
+| 2 | 11 Oct 03:10 | [#66](https://github.com/Caasem/Arabic-Reader/pull/66) | The margins are renamed the Ḥāshiya everywhere | Yes | 0.94.0 | Merged |
+| 3 | 11 Oct 03:29 | [#67](https://github.com/Caasem/Arabic-Reader/pull/67), phase 0 | Housekeeping: one Baranov data file, docs moved into `docs/changes/`, a bundle size check added to CI | No | — | Merged |
+| 4 | 11 Oct 04:11 | [#69](https://github.com/Caasem/Arabic-Reader/pull/69), phase 2a | Phones and tablets switch to the new reader; a one-time notice offered Switch back, and old readers were marked Legacy | Yes | 0.95.0 | Merged |
+| 5 | 11 Oct 05:38 | [#71](https://github.com/Caasem/Arabic-Reader/pull/71) | Two study-desk e2e tests made reliable (they now wait properly) | No | — | Merged |
+| 6 | 11 Oct 05:40 | [#70](https://github.com/Caasem/Arabic-Reader/pull/70), phase 1 | Code shared by the new reader and PDF pages moves into `src/readerCore` | No | — | Merged |
+| 7 | 11 Oct 08:30 | [#72](https://github.com/Caasem/Arabic-Reader/pull/72), phase 2b | One reader: Original layout and the old clean reader are removed, with their settings and the Switch back notice; old bookmarks open on the right word; footnotes no longer show script text | Yes | 0.96.0 | Merged |
+| 8 | 11 Oct 10:04–11:54 | [#73](https://github.com/Caasem/Arabic-Reader/pull/73), phase 5 | Feature registry: all 15 features come from one list; saved settings use shared storage code, with keys unchanged | No | — | On `refactor/integration` |
+| 9 | 11 Oct 12:15–12:23 | #73, phase 4 | Dictionary popup split from 1,301 to 678 lines | No | — | On `refactor/integration` |
+| 10 | 11 Oct ~12:20 | #73, phase 6 | Hash routing: every screen has an address, Back and Forward work, a reload keeps your place | Yes | 0.97.0 | On `refactor/integration` |
+| 11 | 11 Oct 12:26–12:31 | #73, phase 7 | Colour tokens: 126 hard-coded colours become 111 named tokens with the same values | No (intended) | — | On `refactor/integration` |
+| 12 | 11 Oct 12:45 | #73, fix | The popup stylesheet loads again (phase 4 had dropped its import, so the popup had no backdrop or styling) | Fixes a regression | — | On `refactor/integration` |
+| 13 | 11 Oct 12:49 | #73 | *Use recommended settings* also switches on Al-Wasīṭ; *Skip for now* stays English-only | Yes | 0.97.0 | On `refactor/integration` |
+| 14 | 11 Oct 12:56 | #73 | No scrollbars on any device (before, only the desktop app hid them) | Yes | 0.97.0 | On `refactor/integration` |
+
+Not done: phase 3, dictionaries as downloadable packs (dropped).
+
 ## v0.97.0 — 2026-10-11
 
 - **Back and Forward work between screens, and a reload keeps you on the screen you were on.** Each screen has its
