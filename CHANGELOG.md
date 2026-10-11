@@ -34,6 +34,12 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.102.2 — 2026-10-11
+
+- Lane's Lexicon: one sub-entry under خطب that was left out is now shown.
+- For developers: `scripts/extract-lexicon-data.py --hanswehr` now extracts Hans Wehr correctly (it was keeping only
+  957 of its roots), and `--hanswehr=OUT.tsv` writes Hans Wehr alone to a file outside the repository.
+
 ## v0.102.1 — 2026-10-11
 
 - About 6,400 more words now have a root, so Al-Wasīṭ, Al-Ṣiḥāḥ, Maqāyīs and Lane show their article, root search

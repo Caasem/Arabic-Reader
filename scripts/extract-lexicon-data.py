@@ -7,7 +7,7 @@ app's optional dictionaries read -- the same shape as public/alwasit-data:
 
 `word` is the root, `meanings` separates sub-entries with `<br>`.
 
-Usage:  python scripts/extract-lexicon-data.py path/to/db.sqlite [--hanswehr]
+Usage:  python scripts/extract-lexicon-data.py path/to/db.sqlite [--hanswehr | --hanswehr=OUT.tsv]
 
 Lane's Lexicon (public domain) goes to public/lane-data/lane.tsv. Its table
 (`lanelexcon`) is shaped differently: a row with is_root=1 is a root and its
@@ -18,9 +18,11 @@ markup; one root becomes one line, sub-entries joined with `<br>`. Roots that
 share a spelling are merged into one line, in id order.
 
 --hanswehr also writes public/hanswehr-data/hanswehr.tsv from the `hanswehr`
-table (same shape as Lane). Hans Wehr is UNDER COPYRIGHT: that file is for your
-own machine only and must NEVER be committed -- the repository holds an empty
-placeholder there. Without the flag the script does not touch that file.
+table (grouped the same way; see extract_tree). Hans Wehr is UNDER COPYRIGHT:
+that file is for your own machine only and must NEVER be committed -- the
+repository holds an empty placeholder there. Without the flag the script does
+not touch that file. --hanswehr=OUT.tsv writes only Hans Wehr, to OUT.tsv (for
+example a folder outside the repository), and nothing else.
 
 Differences from the raw tables (verified against the full data):
   * `|` marks a new line/paragraph in the source; it becomes `<br>`. Empty
@@ -75,38 +77,50 @@ def clean_html(text: str) -> str:
 
 
 def extract_tree(db: sqlite3.Connection, table: str, out: Path) -> None:
-    """Root rows (is_root=1) with their children (parent_id) -> word<TAB>units, merged by root spelling."""
-    children: dict[int, list[str]] = {}
-    roots: list[tuple[int, str]] = []
-    for id_, is_root, parent_id, word, meanings in db.execute(
-        f"SELECT id, is_root, parent_id, word, meanings FROM {table} ORDER BY id"
+    """Rows grouped by parent_id -> word<TAB>units, merged by root spelling.
+
+    A root row (is_root=1) and its sub-entries share a parent_id. In Lane that
+    is the root row's own id and the root row holds just the root (dropped); in Hans Wehr
+    it is a separate number and the root row holds the verb's entry, which is
+    kept as the first unit."""
+    groups: dict[int, tuple[list[str], list[str]]] = {}
+    for is_root, parent_id, word, meanings in db.execute(
+        f"SELECT is_root, parent_id, word, meanings FROM {table} ORDER BY id"
     ):
+        words, units = groups.setdefault(parent_id, ([], []))
+        unit = clean_html(meanings or "")
         if is_root:
-            roots.append((id_, one_line(word or "")))
-        else:
-            unit = clean_html(meanings or "")
-            if unit:
-                children.setdefault(parent_id, []).append(unit)
+            words.append(one_line(word or ""))
+            if " " not in unit:  # Lane's root rows only repeat the root (بأس)
+                continue
+        if unit:
+            units.append(unit)
     merged: dict[str, list[str]] = {}
-    for id_, word in roots:
-        units = children.get(id_, [])
-        if word and units:
-            merged.setdefault(word, []).extend(units)
+    roots = 0
+    for words, units in groups.values():
+        roots += len(words)
+        if words and words[0] and units:
+            merged.setdefault(words[0], []).extend(units)
     lines = [f"{w}\t{'<br>'.join(u)}" for w, u in merged.items()]
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
-    print(f"{out.name}: {len(lines)} roots (of {len(roots)} root rows), {out.stat().st_size:,} bytes")
+    print(f"{out.name}: {len(lines)} roots (of {roots} root rows), {out.stat().st_size:,} bytes")
 
 
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     flags = [a for a in sys.argv[1:] if a.startswith("--")]
-    if len(args) != 1 or any(f != "--hanswehr" for f in flags):
+    hanswehr = [f for f in flags if f == "--hanswehr" or f.startswith("--hanswehr=")]
+    if len(args) != 1 or len(hanswehr) != len(flags) or len(hanswehr) > 1:
         sys.exit(__doc__)
     db = sqlite3.connect(f"file:{args[0]}?mode=ro", uri=True)
     public = Path(__file__).resolve().parent.parent / "public"
+    if hanswehr and "=" in hanswehr[0]:
+        # Hans Wehr only, to a path of your choice (e.g. outside the repo).
+        extract_tree(db, "hanswehr", Path(hanswehr[0].split("=", 1)[1]))
+        return
     extract_tree(db, "lanelexcon", public / "lane-data" / "lane.tsv")
-    if "--hanswehr" in flags:
+    if hanswehr:
         extract_tree(db, "hanswehr", public / "hanswehr-data" / "hanswehr.tsv")
         print("\n*** WARNING: Hans Wehr is under copyright. public/hanswehr-data/hanswehr.tsv now holds the real")
         print("*** text. Use it locally only. NEVER commit it (git checkout -- that file before committing)."+"\n")
