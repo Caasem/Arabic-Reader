@@ -1,7 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 /**
  * The optional Baranov (Arabic-Russian) dictionary in the popup: its section is headed
@@ -19,13 +16,8 @@ test('Baranov entries fold, expand, show more examples and save a word selection
   await page.click('text=Try the sample book');
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
-  await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
-  await page.waitForTimeout(2500);
-
-  const frame = page.frames().find((f) => f !== page.mainFrame())!;
-  await frame.evaluate(() =>
-    document.querySelectorAll('p .ar-word')[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })),
-  );
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 30000 });
+  await page.locator('.qr-chapter p .ar-word').first().click();
   await page.waitForSelector('.dict-popup', { timeout: 8000 });
 
   const group = page
