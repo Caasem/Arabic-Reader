@@ -751,6 +751,7 @@ test.describe('desk document', () => {
     await expect(editor.locator('b, strong')).toContainText('strong');
 
     await doc.getByRole('button', { name: 'Back to the page' }).click();
+    await expect(doc).toHaveCount(0);
     await page.keyboard.press('d');
     await expect(editor.locator('ul li')).toHaveCount(2);
     await expect(editor.locator('blockquote')).toHaveText('a saying');
@@ -847,10 +848,11 @@ test.describe('desk document', () => {
     await page.keyboard.type('Right after the quote');
     expect((await kinds()).slice(0, 4)).toEqual(['p:Before everything', 'item', 'p:Right after the quote', 'p:Between the two']);
 
-    // Kept after closing.
+    // Kept after closing. The document fills in once the desk has loaded, so wait for it.
     await doc.getByRole('button', { name: 'Back to the page' }).click();
+    await expect(doc).toHaveCount(0);
     await page.keyboard.press('d');
-    expect((await kinds()).slice(0, 4)).toEqual(['p:Before everything', 'item', 'p:Right after the quote', 'p:Between the two']);
+    await expect.poll(async () => (await kinds()).slice(0, 4)).toEqual(['p:Before everything', 'item', 'p:Right after the quote', 'p:Between the two']);
   });
 
   test('Arabic lines run right to left and source lines keep their parts in order', async ({ page }) => {
