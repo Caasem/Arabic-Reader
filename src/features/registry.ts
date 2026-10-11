@@ -11,7 +11,7 @@ import { annotateFeature } from '../annotate';
 import { verbFormsFeature } from '../verbForms';
 import { popupCleanFeature } from '../popupClean';
 import { wasitMatchFeature } from '../wasitMatch';
-import { WasitStructureSettings } from '../wasitStructure';
+import { wasitStructureFeature } from '../wasitStructure';
 import { LookSettings, LookSkin } from '../look';
 import { FontSettings, ReadingFontSync } from '../readerFont';
 import { CrowdSettings, CrowdSyncHost } from '../crowdSync';
@@ -69,7 +69,7 @@ export const FEATURES: FeatureDescriptor[] = [
   verbFormsFeature,
   popupCleanFeature,
   wasitMatchFeature,
-  { id: 'wasitStructure', SettingsSection: WasitStructureSettings, settingsGroup: 'dictionary', touchPoints: [] },
+  wasitStructureFeature,
   { id: 'look', AppHost: LookSkin, SettingsSection: LookSettings, settingsGroup: 'appearance', touchPoints: [] },
   { id: 'readerFont', AppHost: ReadingFontSync, SettingsSection: FontSettings, settingsGroup: 'reading', settingsAfter: 'reading', touchPoints: [] },
   { id: 'crowdSync', AppHost: CrowdSyncHost, SettingsSection: CrowdSettings, settingsGroup: 'library', touchPoints: [] },
