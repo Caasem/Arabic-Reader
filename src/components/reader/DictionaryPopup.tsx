@@ -17,7 +17,7 @@ import { EditableWord } from './dictionaryPopup/EditableWord';
 import { groupEntriesByProvider } from './dictionaryPopup/entryGroups';
 import { useTokenSelection } from './dictionaryPopup/useTokenSelection';
 import { EXAMPLE_PROVIDERS, renderGroupList, type EntryListContext } from './dictionaryPopup/entryList';
-
+import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
 
