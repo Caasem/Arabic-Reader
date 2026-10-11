@@ -54,6 +54,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   studyDeskMarginsToInbox: 'ask',
   studyDeskCards: 'open',
   annotateEnabled: true,
+  inkGesturesEnabled: false,
   pdfConvertToText: false,
   pdfHighlightFill: true,
   pdfHighlightColor: '#f6ead0',
