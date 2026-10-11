@@ -14,7 +14,7 @@ import { wasitMatchFeature } from '../wasitMatch';
 import { wasitStructureFeature } from '../wasitStructure';
 import { lookFeature } from '../look';
 import { readerFontFeature } from '../readerFont';
-import { CrowdSettings, CrowdSyncHost } from '../crowdSync';
+import { crowdSyncFeature } from '../crowdSync';
 
 /** What a reader Host gets: the open book, and a way to open another one at a place (capture trips, links). */
 export interface HostProps {
@@ -72,5 +72,5 @@ export const FEATURES: FeatureDescriptor[] = [
   wasitStructureFeature,
   lookFeature,
   readerFontFeature,
-  { id: 'crowdSync', AppHost: CrowdSyncHost, SettingsSection: CrowdSettings, settingsGroup: 'library', touchPoints: [] },
+  crowdSyncFeature,
 ];
