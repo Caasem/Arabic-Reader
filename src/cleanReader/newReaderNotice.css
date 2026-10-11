@@ -1,0 +1,48 @@
+/* Sits at the top so it never covers the quick-save toasts or the dock at the bottom. */
+.new-reader-notice {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(460px, calc(100vw - 32px));
+  padding: 12px 14px;
+  background: var(--bg-elevated);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  z-index: 60;
+}
+
+.new-reader-notice__text {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.new-reader-notice__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.new-reader-notice__actions button {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.new-reader-notice__ok {
+  border: none;
+  background: var(--accent);
+  color: var(--bg-elevated);
+  font-weight: 600;
+}
+
+.new-reader-notice__back {
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--ink-soft);
+}

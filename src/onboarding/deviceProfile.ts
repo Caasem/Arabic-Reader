@@ -50,10 +50,13 @@ export function detectDeviceProfile(): DeviceProfile {
   });
 }
 
-/** Preferences a profile starts from. Scroll all (one continuous scroll through
- * the book), single-column on all three. The font is left alone, so the app default applies. */
+/** Preferences a profile starts from. The new reader, scroll all (one continuous
+ * scroll through the book) and single-column on all three. The font is left
+ * alone, so the app default applies. */
 export function profilePreferences(profile: DeviceProfile): Partial<ReaderPreferences> {
   const shared: Partial<ReaderPreferences> = {
+    quietReaderEnabled: true,
+    cleanReaderEnabled: false,
     readingFlow: 'scrolled',
     continuousScrollEnabled: true,
     twoColumnEnabled: false,
@@ -61,16 +64,12 @@ export function profilePreferences(profile: DeviceProfile): Partial<ReaderPrefer
   if (profile === 'desktop') {
     return {
       ...shared,
-      quietReaderEnabled: true,
-      cleanReaderEnabled: false,
       readingWidthPct: 65,
       hoverPreviewEnabled: true,
     };
   }
   return {
     ...shared,
-    quietReaderEnabled: false,
-    cleanReaderEnabled: true,
     readingWidthPct: profile === 'tablet' ? 80 : 100,
     hoverPreviewEnabled: false,
     touchGestures: { singleTap: 'openDictionary', doubleTap: 'quickSave', hold: 'none' },

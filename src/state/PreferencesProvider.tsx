@@ -14,6 +14,7 @@ import { pomodoroService } from '../pomodoro';
 import type { ReaderPreferences } from '../types';
 import { readJSON, STORAGE_KEYS, writeJSON } from '../utils/storage';
 import { withDefaults } from './defaultPreferences';
+import { migratePreferences } from './prefsMigrations';
 import { PreferencesContext, type ResolvedTheme } from './PreferencesContext';
 
 /** IndexedDB writes are coalesced so dragging a slider doesn't write per tick. */
@@ -31,7 +32,7 @@ const systemPrefersDark = () => window.matchMedia(DARK_SCHEME_QUERY).matches;
 
 function readMirror(): ReaderPreferences | null {
   const stored = readJSON<Partial<ReaderPreferences>>(STORAGE_KEYS.preferencesMirror);
-  return stored && typeof stored === 'object' ? withDefaults(stored) : null;
+  return stored && typeof stored === 'object' ? migratePreferences(withDefaults(stored)) : null;
 }
 
 /**
@@ -39,6 +40,8 @@ function readMirror(): ReaderPreferences | null {
  * localStorage immediately (instant first paint on the next launch, and it
  * survives a reload that lands before the debounced IndexedDB write);
  * IndexedDB remains the durable copy used when the mirror is missing.
+ * Whichever is read first goes through the preference migrations, and the
+ * result is written back to both like any other change.
  */
 export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [initialMirror] = useState(readMirror);
@@ -50,7 +53,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     if (initialMirror) return;
     let cancelled = false;
     persistenceService.getPreferences().then((stored) => {
-      if (!cancelled) setPrefs(stored);
+      if (!cancelled) setPrefs(migratePreferences(stored));
     });
     return () => {
       cancelled = true;

@@ -12,6 +12,7 @@ import { AnnotateHost } from '../annotate';
 import { FocusHost } from '../readerTools';
 import { useReaderView } from '../quietReader/readerView';
 import { saveCleanFocus } from './cleanFocus';
+import { NewReaderNotice } from './NewReaderNotice';
 import { usePdfView } from '../pdf/pages/pdfView';
 
 const CleanReader = lazy(() => import('./CleanReader').then((m) => ({ default: m.CleanReader })));
@@ -29,9 +30,9 @@ type ReaderSwitchProps = ComponentProps<typeof Reader> & {
  * The single place that chooses which reader shows a book. With "New reader"
  * on (src/quietReader), books open in it unless one was switched to its
  * original layout under Display -> View. Off, the clean text reader or the epub
- * reader shows, as before. To remove the clean reader entirely: put <Reader>
- * back in App.tsx, delete this folder, and drop the `cleanReaderEnabled`
- * preference and its settings row (CleanReaderSettings).
+ * reader shows, as before. Every device starts in the new reader (0.95.0);
+ * the other two, and Original layout, go in refactor phase 2b
+ * (docs/changes/refactor-changes.md, "Which readers stay").
  */
 export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: ReaderSwitchProps) {
   const { prefs } = usePreferences();
@@ -89,6 +90,7 @@ export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: 
         />
         {hosts}
         <FocusHost reader="clean" />
+        <NewReaderNotice />
       </>
     );
   }

@@ -18,6 +18,11 @@ export function Note({ children }: { children: ReactNode }) {
   return <p className="settings-section__note">{children}</p>;
 }
 
+/** Marks a setting that turns on a reader due to be removed (refactor phase 2b). */
+export function LegacyNote() {
+  return <p className="settings-section__note settings-section__note--legacy">Legacy, will be removed in a coming version.</p>;
+}
+
 export function SegmentedRow<T extends string>({
   label,
   options,

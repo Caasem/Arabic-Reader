@@ -1,22 +1,27 @@
-import { test, expect, type Page, type Frame, type CDPSession } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
+import { test, expect, type Page, type CDPSession } from '@playwright/test';
 
-test.beforeEach(async ({ page }) => useOriginalReader(page));
+/**
+ * Touch gestures in the new reader, at a phone viewport, with the bindings the
+ * Phone profile sets up (src/onboarding/deviceProfile.ts): a tap opens the
+ * dictionary, a double tap quick-saves.
+ */
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    const key = 'arabic-reader:preferences';
+    if (!localStorage.getItem(key)) {
+      localStorage.setItem(key, JSON.stringify({ touchGestures: { singleTap: 'openDictionary', doubleTap: 'quickSave', hold: 'none' } }));
+    }
+  });
+});
 
 /**
  * Dispatches a real touch tap (or, with `holdMs`, a long-press) via the
- * DevTools Protocol's `Input` domain rather than an in-page dispatchEvent.
- * That distinction matters here: a script-dispatched TouchEvent is
- * untrusted, and this app's epub content renders inside a sandboxed iframe
- * (`about:srcdoc`) whose scripting permissions epub.js escalates
- * progressively as it boots the view -- an untrusted touch landed on that
- * iframe mid-boot was observed to leave its script execution wedged
- * ("Blocked script execution ... sandboxed", `frame.evaluate` never
- * resolving). CDP-injected touch input is trusted the same way a real
- * finger on a real touchscreen is, and doesn't hit that path.
+ * DevTools Protocol's `Input` domain rather than an in-page dispatchEvent:
+ * CDP-injected touch input is trusted the same way a real finger on a real
+ * touchscreen is, and goes through the browser's own tap and click handling.
  */
-async function touchWord(frame: Frame, client: CDPSession, wordIndex: number, { holdMs = 0 } = {}) {
-  const locator = frame.locator('.ar-word').nth(wordIndex);
+async function touchWord(page: Page, client: CDPSession, wordIndex: number, { holdMs = 0 } = {}) {
+  const locator = page.locator('.qr-chapter .ar-word').nth(wordIndex);
   const word = await locator.getAttribute('data-word');
   const box = await locator.boundingBox();
   if (!box) throw new Error(`touchWord: no bounding box for .ar-word[${wordIndex}]`);
@@ -31,7 +36,7 @@ async function touchWord(frame: Frame, client: CDPSession, wordIndex: number, { 
 
 test.use({ viewport: { width: 420, height: 860 }, hasTouch: true, isMobile: true });
 
-test('default touch-gesture bindings, single/double-tap/hold behavior, and the no-gestures fallback', async ({
+test('phone touch-gesture bindings, single/double-tap/hold behavior, and the no-gestures fallback', async ({
   page,
   context,
 }: {
@@ -52,7 +57,7 @@ test('default touch-gesture bindings, single/double-tap/hold behavior, and the n
     selects.nth(1).inputValue(),
     selects.nth(2).inputValue(),
   ]);
-  expect(singleTapDefault).toBe('bubble');
+  expect(singleTapDefault).toBe('openDictionary');
   expect(doubleTapDefault).toBe('quickSave');
   expect(holdDefault).toBe('none');
   await page.click('.settings-panel__close');
@@ -62,35 +67,27 @@ test('default touch-gesture bindings, single/double-tap/hold behavior, and the n
   await page.click('text=Try the sample book');
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
-  await page.waitForSelector('.reader__epub iframe', { timeout: 15000 });
-  await page.waitForTimeout(1500);
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
+  await page.waitForTimeout(500);
 
-  const frame = page.frames().find((f) => f !== page.mainFrame())!;
-  const wordCount = await frame.locator('.ar-word').count();
+  const wordCount = await page.locator('.qr-chapter .ar-word').count();
   expect(wordCount, 'expected at least 8 distinct word spans in the sample section').toBeGreaterThanOrEqual(8);
 
-  // --- Single tap (default: bubble) ---
-  await touchWord(frame, client, 0);
-  await page.waitForSelector('.dict-bubble', { timeout: 8000 });
-  await page.waitForTimeout(500);
-  await expect(page.locator('.dict-popup')).toHaveCount(0);
-
-  await page.click('.dict-bubble__save');
-  await page.waitForTimeout(200);
-  await expect(page.locator('.dict-bubble__save')).toHaveClass(/dict-bubble__save--saved/);
-
-  await page.click('.dict-bubble__def');
-  await page.waitForSelector('.dict-popup', { timeout: 5000 });
+  // --- Single tap (phone: openDictionary) ---
+  await touchWord(page, client, 0);
+  await page.waitForSelector('.dict-popup', { timeout: 8000 });
+  await expect(page.locator('.dict-bubble')).toHaveCount(0);
   await page.click('.dict-popup__close');
   await page.waitForTimeout(200);
 
-  // --- Double tap (default: quickSave) ---
-  await touchWord(frame, client, 2);
+  // --- Double tap (phone: quickSave) ---
+  await touchWord(page, client, 2);
   await page.waitForTimeout(120); // well under the 350ms double-tap window
-  await touchWord(frame, client, 2);
+  await touchWord(page, client, 2);
   await page.waitForSelector('.reader__touch-toast', { timeout: 8000 });
   const toastText = await page.locator('.reader__touch-toast span').first().textContent();
   expect(toastText).toContain('Saved');
+  await expect(page.locator('.dict-popup')).toHaveCount(0); // the first tap's popup closed with the double tap
   await expect(page.locator('.reader__touch-toast')).toHaveCount(0); // waits out its own auto-dismiss timer
 
   // --- Hold -> quickSave ---
@@ -100,12 +97,27 @@ test('default touch-gesture bindings, single/double-tap/hold behavior, and the n
   await page.click('.settings-panel__close');
   await page.waitForTimeout(200);
 
-  await touchWord(frame, client, 4, { holdMs: 650 }); // > TOUCH_HOLD_MS (500ms)
+  await touchWord(page, client, 4, { holdMs: 650 }); // > TOUCH_HOLD_MS (500ms)
   await page.waitForSelector('.reader__touch-toast', { timeout: 8000 });
   const holdToastText = await page.locator('.reader__touch-toast span').first().textContent();
   expect(holdToastText?.includes('Saved') || holdToastText?.includes('already')).toBe(true);
   await expect(page.locator('.dict-bubble')).toHaveCount(0);
   await expect(page.locator('.reader__touch-toast')).toHaveCount(0); // waits out its own auto-dismiss timer
+
+  // --- Single tap -> bubble (the default off phones) ---
+  await page.click('.navbar__settings');
+  await page.waitForSelector('.settings-panel', { timeout: 5000 });
+  await page.locator('.settings-row__select').nth(0).selectOption('bubble');
+  await page.click('.settings-panel__close');
+  await page.waitForTimeout(200);
+
+  await touchWord(page, client, 5);
+  await page.waitForSelector('.dict-bubble', { timeout: 8000 });
+  await expect(page.locator('.dict-popup')).toHaveCount(0);
+  await page.click('.dict-bubble__def');
+  await page.waitForSelector('.dict-popup', { timeout: 5000 });
+  await page.click('.dict-popup__close');
+  await page.waitForTimeout(200);
 
   // --- Gestures off -> falls back to the native click -> full popup ---
   await page.click('.navbar__settings');
@@ -115,7 +127,7 @@ test('default touch-gesture bindings, single/double-tap/hold behavior, and the n
   await page.click('.settings-panel__close');
   await page.waitForTimeout(200);
 
-  await touchWord(frame, client, 6);
+  await touchWord(page, client, 6);
   await page.waitForSelector('.dict-popup', { timeout: 8000 });
   await page.click('.dict-popup__close');
 

@@ -41,6 +41,9 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   shamelaEnabled: false,
   cleanReaderEnabled: false,
   quietReaderEnabled: true,
+  newReaderSwitchBack: null,
+  // 0, not the latest: stored preferences written before migrations existed lack the field and must still run them.
+  prefsMigrations: 0,
   dockStyle: 'icons',
   dictionarySearchEnabled: true,
   dictionarySearchStyle: 'floating',

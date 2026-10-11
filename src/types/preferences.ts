@@ -122,6 +122,11 @@ export interface ReaderPreferences {
   cleanReaderEnabled: boolean;
   /** The redesigned reader (src/quietReader): clean text, one dock, the dictionary in the margin. Off: the readers above. */
   quietReaderEnabled: boolean;
+  /** Set when migration 1 (src/state/prefsMigrations.ts) moved these preferences to the new reader: the reader shows
+   * a one-time notice whose Switch back restores this. Null once the notice is dismissed or used. Goes in phase 2b. */
+  newReaderSwitchBack: { cleanReaderEnabled: boolean } | null;
+  /** How many of src/state/prefsMigrations.ts's migrations these preferences have been through. */
+  prefsMigrations: number;
   /** The reader dock: icons that show their name on hover (fits every tool), or names that scroll when the window is narrow. */
   dockStyle: 'icons' | 'labels';
   /** Press D in either reader to search the dictionary. */

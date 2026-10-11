@@ -4,6 +4,16 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.95.0 — 2026-10-11
+
+- **The new reader on every device.** Phones and tablets set up from now on read in the new reader, with their touch
+  settings as before (a tap opens the dictionary, a double tap saves the word). Anyone who still had *New reader*
+  off is moved to it once and sees a notice in the reader; *Switch back* there, or in Settings → Reader, returns to
+  the previous reader until it is removed in a coming version. Settings marks both old readers *Legacy*.
+- A double tap that saves a word now also closes the dictionary its first tap opened.
+- On devices that can't draw highlights on the page (iOS before 17.2), the book drawer's Marks tab says so; the
+  highlights are still saved and listed there.
+
 ## v0.94.0 — 2026-10-10
 
 - **The margins are now called the Ḥāshiya** (حاشية) everywhere you see them: the dock button, Ḥāshiya settings,

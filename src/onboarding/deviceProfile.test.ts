@@ -34,9 +34,15 @@ describe('detectDeviceProfileFrom', () => {
 
 describe('profilePreferences', () => {
   it('gives each device its starting layout', () => {
-    expect(profilePreferences('phone')).toMatchObject({ quietReaderEnabled: false, cleanReaderEnabled: true, readingWidthPct: 100, hoverPreviewEnabled: false });
-    expect(profilePreferences('tablet')).toMatchObject({ cleanReaderEnabled: true, readingWidthPct: 80, hoverPreviewEnabled: false });
+    expect(profilePreferences('phone')).toMatchObject({ readingWidthPct: 100, hoverPreviewEnabled: false });
+    expect(profilePreferences('tablet')).toMatchObject({ readingWidthPct: 80, hoverPreviewEnabled: false });
     expect(profilePreferences('desktop')).toMatchObject({ quietReaderEnabled: true, cleanReaderEnabled: false, readingWidthPct: 65, hoverPreviewEnabled: true });
+  });
+
+  it('reads in the new reader on every device', () => {
+    for (const p of ['phone', 'tablet', 'desktop'] as const) {
+      expect(profilePreferences(p)).toMatchObject({ quietReaderEnabled: true, cleanReaderEnabled: false });
+    }
   });
 
   it('opens the floating popup on a tap for touch devices only', () => {
