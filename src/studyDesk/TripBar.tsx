@@ -2,7 +2,7 @@ import type { DeskTrip } from './trip';
 
 /** The bar across the top of the other book during a capture trip: what is happening and the way back. */
 export function TripBar({ trip, onCapture, onCaptureStay, onCancel }: { trip: DeskTrip; onCapture(): void; onCaptureStay(): void; onCancel(): void }) {
-  const where = trip.target === 'inbox' || !trip.spot ? 'the inbox' : `your ${trip.target} margin`;
+  const where = trip.target === 'inbox' || !trip.spot ? 'the inbox' : `your ${trip.target} Ḥāshiya`;
   const n = trip.captured ?? 0;
   return (
     <div className="sd-trip" role="region" aria-label="Capture trip">

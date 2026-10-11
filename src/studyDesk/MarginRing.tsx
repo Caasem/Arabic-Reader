@@ -39,8 +39,8 @@ export function marginActions(c: DeskCommands, write: () => void, settings: () =
     { id: 'doc', label: 'Document', keys: 'D', run: () => c.document() },
     ...(c.goToBook ? [{ id: 'go', label: 'Go to another book', run: c.goToBook }] : []),
     ...extra,
-    { id: 'settings', label: 'Margin settings', run: settings },
-    { id: 'hide', label: 'Hide margins', keys: 'Alt M', run: c.hideMargins },
+    { id: 'settings', label: 'Ḥāshiya settings', run: settings },
+    { id: 'hide', label: 'Hide the Ḥāshiya', keys: 'Alt M', run: c.hideMargins },
   ];
 }
 

@@ -4,6 +4,12 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.94.0 — 2026-10-10
+
+- **The margins are now called the Ḥāshiya** (حاشية) everywhere you see them: the dock button, Ḥāshiya settings,
+  Ḥāshiya notes, the right-click ring, messages (*Image placed in the Ḥāshiya*, *Gloss in the Ḥāshiya*), Pull in's
+  *Left/Right Ḥāshiya*, To Ḥāshiya in the sketch panel, and Settings → Study desk. Alt+M still shows and hides it.
+
 ## v0.93.0 — 2026-10-10
 
 - **Search your sheets.** All sheets has a search box: it finds sheets by name and by the words on them (Arabic

@@ -9,7 +9,7 @@ describe('capture trips', () => {
   it('files a margin capture at the page left behind', () => {
     const t = { from, to, deskId: 'book:a', target: 'left' as const, spot: { bookId: 'a', location: 'clean:3:40:40' } };
     expect(tripPlacement(t)).toEqual({ inInbox: false, pin: { bookId: 'a', location: 'clean:3:40:40', side: 'left' } });
-    expect(tripFiledMessage(t)).toBe('Captured from Tahafut, filed in the left margin');
+    expect(tripFiledMessage(t)).toBe('Captured from Tahafut, filed in the left Ḥāshiya');
   });
 
   it('goes to the inbox when there was no page to place on', () => {
@@ -46,8 +46,8 @@ describe('capture and stay', () => {
     expect(currentTrip()).toBe(t);
     expect(t?.captured).toBe(2);
     expect(t?.lastItemId).toBe('di_2');
-    expect(tripStayMessage(t!)).toBe('Filed in the right margin (2 so far). Capture more, or Done to go back');
-    expect(tripDoneMessage(t!)).toBe('Captured 2 things from Tahafut, filed in the right margin');
+    expect(tripStayMessage(t!)).toBe('Filed in the right Ḥāshiya (2 so far). Capture more, or Done to go back');
+    expect(tripDoneMessage(t!)).toBe('Captured 2 things from Tahafut, filed in the right Ḥāshiya');
     endTrip(tripDoneMessage(t!), t!.lastItemId);
     expect(currentTrip()).toBeNull();
   });

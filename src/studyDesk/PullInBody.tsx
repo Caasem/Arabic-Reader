@@ -47,7 +47,7 @@ function loadTarget(): PullTarget {
 }
 
 /** Where the trip again files its capture: the same place as last time. */
-const againWhere = (t: DeskTrip) => (t.target === 'inbox' || !t.spot ? 'to the inbox' : `to the ${t.target} margin, same place as last time`);
+const againWhere = (t: DeskTrip) => (t.target === 'inbox' || !t.spot ? 'to the inbox' : `to the ${t.target} Ḥāshiya, same place as last time`);
 
 /** Pull in (Alt+U): the dictionary search's input row and result rows over highlights, words and other books' desk items. */
 export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGoToBook, initialPicking, again, onGoAgain }: Props) {
@@ -117,7 +117,7 @@ export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGo
     }
   }
 
-  const placedMessage = (t: PullTarget) => (t === 'inbox' ? 'Added to the inbox and the desk' : `Placed in the ${t} margin`);
+  const placedMessage = (t: PullTarget) => (t === 'inbox' ? 'Added to the inbox and the desk' : `Placed in the ${t} Ḥāshiya`);
 
   async function take(c: PullCandidate) {
     if (busy.current) return;
@@ -168,8 +168,8 @@ export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGo
   }
 
   const targets: { t: PullTarget; label: string }[] = [
-    ...(sides.includes('left') ? [{ t: 'left' as const, label: 'Left margin' }] : []),
-    ...(sides.includes('right') ? [{ t: 'right' as const, label: 'Right margin' }] : []),
+    ...(sides.includes('left') ? [{ t: 'left' as const, label: 'Left Ḥāshiya' }] : []),
+    ...(sides.includes('right') ? [{ t: 'right' as const, label: 'Right Ḥāshiya' }] : []),
     { t: 'inbox', label: 'Inbox' },
   ];
 
@@ -211,7 +211,7 @@ export function PullInBody({ book, deskId, spot, margins, onClose, onToast, onGo
           ))}
         </span>}
       </div>
-      {!spot && <p className="dsearch__hint sd-pull__note">Margins take things only while a page is showing; this goes to the inbox.</p>}
+      {!spot && <p className="dsearch__hint sd-pull__note">The Ḥāshiya takes things only while a page is showing; this goes to the inbox.</p>}
       {picking && (
         <div className="dsearch__results sd-pull__books" role="listbox" aria-label="Books">
           <p className="dsearch__hint">The book opens with a bar at the top. Capture there (Alt+X) and you come straight back here with it filed. Esc in the list goes back to Pull in.</p>

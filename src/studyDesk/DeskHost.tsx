@@ -181,7 +181,7 @@ function Active({ book, style, onOpenBook }: { book: BookMeta; style: ReaderPref
         // Comes back as both sides.
       }
       updatePrefs({ studyDeskMargins: 'off' });
-      say('Margins hidden. Alt+M shows them again.');
+      say('Ḥāshiya hidden. Alt+M shows it again.');
     } else {
       let last: ReaderPreferences['studyDeskMargins'] = 'both';
       try {

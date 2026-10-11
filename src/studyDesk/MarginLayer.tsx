@@ -151,7 +151,7 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
   const [ring, setRing] = useState<RingState | null>(null);
   const areaRing = useRingTrigger((x, y, el) => {
     const side = (el.dataset.side as Side) || 'right';
-    setRing({ x, y, title: 'Margin', actions: marginActions(commands, () => void startNote(side, y), () => setSettingsOpen(true), foldActions(onScreen, (i) => isFolded(i, prefs.studyDeskCards))) });
+    setRing({ x, y, title: 'Ḥāshiya', actions: marginActions(commands, () => void startNote(side, y), () => setSettingsOpen(true), foldActions(onScreen, (i) => isFolded(i, prefs.studyDeskCards))) });
   });
   const layerRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -314,11 +314,11 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
   const dropImage = useCallback(
     async (side: Side, y: number, image: File | null) => {
       setDropSide(null);
-      if (!image) return onToast('Only images can be dropped in a margin');
+      if (!image) return onToast('Only images can be dropped in the Ḥāshiya');
       const location = lineBeside(side, y);
       if (!location) return onToast('Drop beside a line of text');
       await capture(book, data.deskId, { type: 'capture', text: '', body: '', fromMargin: true, inInbox: false, pin: { bookId: book.id, location, side } }, image);
-      onToast('Image placed in the margin');
+      onToast('Image placed in the Ḥāshiya');
     },
     [lineBeside, book, data.deskId, onToast]
   );
@@ -329,7 +329,7 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
   const hovered = placed.find((p) => p.item.id === hoverId || p.item.id === focusId);
 
   return (
-    <div ref={layerRef} className="sd-margins" aria-label="Margins" onPointerDown={onLayerPointerDown} onPointerDownCapture={ink.onPointerDownCapture}>
+    <div ref={layerRef} className="sd-margins" aria-label="Ḥāshiya" onPointerDown={onLayerPointerDown} onPointerDownCapture={ink.onPointerDownCapture}>
       <svg ref={svgRef} className="sd-margins__lines" aria-hidden="true" />
       {ink.overlay}
       {hovered?.rects.map((r, i) => (
@@ -462,18 +462,18 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
               {sel.size} chosen · <kbd>P</kbd> piles them · <kbd>Del</kbd> deletes · <kbd>Esc</kbd> lets go
             </>
           ) : (
-            <>1 chosen · Shift-click or drag over the margin to add more</>
+            <>1 chosen · Shift-click or drag over the Ḥāshiya to add more</>
           )}
         </div>
       )}
       {sides.right && (mode === 'both' || mode === 'right') ? (
         <button type="button" className="sd-margins__set" style={{ left: sides.right.to - 120, top: geo.stage.top - 26 }} onClick={() => setSettingsOpen((v) => !v)}>
-          Margin settings
+          Ḥāshiya settings
         </button>
       ) : (
         sides.left && (
           <button type="button" className="sd-margins__set" style={{ left: sides.left.from, top: geo.stage.top - 26 }} onClick={() => setSettingsOpen((v) => !v)}>
-            Margin settings
+            Ḥāshiya settings
           </button>
         )
       )}
@@ -484,10 +484,10 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
 }
 
 const SETS: { key: 'studyDeskMargins' | 'studyDeskMarginsInDocument' | 'studyDeskMarginsToInbox' | 'studyDeskCards'; label: string; options: [string, string][] }[] = [
-  { key: 'studyDeskMargins', label: 'Margins', options: [['both', 'Both sides'], ['right', 'Right only'], ['left', 'Left only'], ['off', 'Hidden']] },
+  { key: 'studyDeskMargins', label: 'Ḥāshiya', options: [['both', 'Both sides'], ['right', 'Right only'], ['left', 'Left only'], ['off', 'Hidden']] },
   { key: 'studyDeskCards', label: 'Cards', options: [['open', 'Open'], ['folded', 'Folded']] },
-  { key: 'studyDeskMarginsInDocument', label: 'Margin notes in the document', options: [['all', 'All'], ['chosen', 'Only chosen'], ['none', 'None']] },
-  { key: 'studyDeskMarginsToInbox', label: 'Send margin notes to the inbox', options: [['ask', 'When I choose'], ['auto', 'Automatically']] },
+  { key: 'studyDeskMarginsInDocument', label: 'Ḥāshiya notes in the document', options: [['all', 'All'], ['chosen', 'Only chosen'], ['none', 'None']] },
+  { key: 'studyDeskMarginsToInbox', label: 'Send Ḥāshiya notes to the inbox', options: [['ask', 'When I choose'], ['auto', 'Automatically']] },
 ];
 
 export function MarginSettings({ prefs, update, onClose }: { prefs: ReaderPreferences; update(p: Partial<ReaderPreferences>): void; onClose(): void }) {
@@ -497,11 +497,11 @@ export function MarginSettings({ prefs, update, onClose }: { prefs: ReaderPrefer
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
   return (
-    <div className="sd-mset" role="dialog" aria-label="Margin settings">
+    <div className="sd-mset" role="dialog" aria-label="Ḥāshiya settings">
       <div className="sd-mset__head">
-        <b>Margin settings</b>
+        <b>Ḥāshiya settings</b>
         <kbd>Alt M</kbd>
-        <button type="button" className="dsearch__close" aria-label="Close margin settings" onClick={onClose}>
+        <button type="button" className="dsearch__close" aria-label="Close Ḥāshiya settings" onClick={onClose}>
           ×
         </button>
       </div>
@@ -519,10 +519,10 @@ export function MarginSettings({ prefs, update, onClose }: { prefs: ReaderPrefer
       ))}
       <p className="sd-mset__note">
         {prefs.studyDeskMarginsInDocument === 'chosen'
-          ? 'Margin notes stay out of the document until you mark them In document.'
+          ? 'Ḥāshiya notes stay out of the document until you mark them In document.'
           : prefs.studyDeskMarginsInDocument === 'none'
-            ? 'Margin notes live only on the page.'
-            : 'Every margin note also appears in the desk document. Leave one out from its own options.'}
+            ? 'Ḥāshiya notes live only on the page.'
+            : 'Every Ḥāshiya note also appears in the desk document. Leave one out from its own options.'}
       </p>
     </div>
   );
@@ -718,10 +718,10 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
       },
       ...(img ? [{ id: 'look', label: 'Preview the image', keys: 'Space', run: () => setPreview('pinned') }] : []),
       { id: 'doc', label: 'Show in document', run: () => onOpenDocument(item.id) },
-      { id: 'hide', label: 'Hide', run: () => void updateItem(item.id, { hidden: true }).then(() => onToast('Hidden from the margin and the document. Show it again from the inbox.')) } as RingAction,
+      { id: 'hide', label: 'Hide', run: () => void updateItem(item.id, { hidden: true }).then(() => onToast('Hidden from the Ḥāshiya and the document. Show it again from the inbox.')) } as RingAction,
     ];
   }
-  const cardRing = useRingTrigger((x, y) => onRing?.({ x, y, title: item.fromMargin ? 'Margin note' : TYPE_LABEL[item.type], actions: ringActions() }));
+  const cardRing = useRingTrigger((x, y) => onRing?.({ x, y, title: item.fromMargin ? 'Ḥāshiya note' : TYPE_LABEL[item.type], actions: ringActions() }));
   const outsideText = (e: React.SyntheticEvent) => !!onRing && !(e.target as HTMLElement).closest('textarea, button');
 
   const suggest = {
@@ -994,7 +994,7 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
         rows={1}
         value={body}
         placeholder={item.ink ? 'Add words…' : item.fromMargin ? 'Write…' : 'Write a gloss…'}
-        aria-label={item.fromMargin ? 'Margin note' : 'Gloss'}
+        aria-label={item.fromMargin ? 'Ḥāshiya note' : 'Gloss'}
         onChange={(e) => edit(e.target.value)}
         onPaste={(e) => {
           // A pasted image (a screenshot on the clipboard) goes on the note; text pastes as usual.
