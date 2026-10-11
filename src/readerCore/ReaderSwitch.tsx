@@ -1,6 +1,5 @@
-import { lazy, type ComponentProps } from 'react';
-import { Reader } from '../components/reader/Reader';
-import { usePreferences } from '../state/PreferencesContext';
+import { lazy } from 'react';
+import type { BookMeta } from '../types';
 import { DictionarySearchHost } from '../dictionarySearch';
 import { BookSearchHost } from '../bookSearch';
 import { BookVocabHost } from '../bookVocab';
@@ -10,33 +9,34 @@ import { PicksExportHost } from '../picksExport';
 import { DeskHost } from '../studyDesk';
 import { AnnotateHost } from '../annotate';
 import { FocusHost } from '../readerTools';
-import { useReaderView } from '../quietReader/readerView';
-import { saveCleanFocus } from './cleanFocus';
 import { NewReaderNotice } from './NewReaderNotice';
 import { usePdfView } from '../pdf/pages/pdfView';
 
-const CleanReader = lazy(() => import('../cleanReader/CleanReader').then((m) => ({ default: m.CleanReader })));
 const PdfPagesReader = lazy(() => import('../pdf/pagesEntry').then((m) => ({ default: m.PdfPagesReader })));
 const QuietReader = lazy(() => import('../quietReader/QuietReader').then((m) => ({ default: m.QuietReader })));
 
-type ReaderSwitchProps = ComponentProps<typeof Reader> & {
-  /** Clean Reader's Focus went idle: the app-level sidebar should hide too. */
+interface ReaderSwitchProps {
+  book: BookMeta;
+  onBack(): void;
+  /** The margin's vocab levels, driven by the "Vocab Levels" nav tab. */
+  vocabPanelOpen?: boolean;
+  onVocabPanelOpenChange?(open: boolean): void;
+  /** Opens at this place (a "clean:" location or, from before 0.96.0, an epub CFI) instead of the saved one. */
+  initialCfiOverride?: string;
+  /** Switches the open book -- for library search results in another book. */
+  onOpenBookAt?(book: BookMeta, cfi?: string): void;
+  /** Focus went idle: the app-level sidebar should hide too. */
   onFocusChromeChange?(hidden: boolean): void;
   /** Opens Settings, at a group when given (the new reader's settings links). */
   onOpenSettings?(group?: string): void;
-};
+}
 
 /**
- * The single place that chooses which reader shows a book. With "New reader"
- * on (src/quietReader), books open in it unless one was switched to its
- * original layout under Display -> View. Off, the clean text reader or the epub
- * reader shows, as before. Every device starts in the new reader (0.95.0);
- * the other two, and Original layout, go in refactor phase 2b
- * (docs/changes/refactor-changes.md, "Which readers stay").
+ * The single place that chooses which reader shows a book: the new reader (src/quietReader), or, for a book added
+ * from a PDF, its own pages when Display -> PDF says so. Since 0.96.0 there is no other reader: Original layout and
+ * the old clean reader went in refactor phase 2b (docs/changes/refactor-changes.md, "Which readers stay").
  */
 export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: ReaderSwitchProps) {
-  const { prefs } = usePreferences();
-  const [view, setView] = useReaderView(props.book.id);
   const [pdfView, setPdfView] = usePdfView(props.book);
 
   // Alt+D, Alt+S, Alt+V, Alt+N, Alt+F and Alt+P open their palettes and cards over whichever reader is showing.
@@ -73,46 +73,22 @@ export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: 
     );
   }
 
-  if (prefs.quietReaderEnabled && view === 'clean') {
-    return (
-      <>
-        <QuietReader
-          book={props.book}
-          onBack={props.onBack}
-          onFocusChromeChange={onFocusChromeChange}
-          initialLocation={props.initialCfiOverride}
-          onOpenBookAt={props.onOpenBookAt}
-          levelsOpen={props.vocabPanelOpen}
-          onLevelsOpenChange={props.onVocabPanelOpenChange}
-          onOpenSettings={onOpenSettings}
-          onShowOriginal={() => setView('original')}
-          onShowPages={props.book.pdf ? () => setPdfView('pages') : undefined}
-        />
-        {hosts}
-        <FocusHost reader="clean" />
-        <NewReaderNotice />
-      </>
-    );
-  }
-
-  const backToClean = prefs.quietReaderEnabled
-    ? {
-        onSwitchToCleanReader: () => setView('clean'),
-        onEnterCleanFocus: () => {
-          saveCleanFocus(true);
-          setView('clean');
-        },
-      }
-    : {};
-
   return (
     <>
-      {prefs.cleanReaderEnabled && !prefs.quietReaderEnabled ? (
-        <CleanReader book={props.book} onBack={props.onBack} onFocusChromeChange={onFocusChromeChange} />
-      ) : (
-        <Reader {...props} {...backToClean} />
-      )}
+      <QuietReader
+        book={props.book}
+        onBack={props.onBack}
+        onFocusChromeChange={onFocusChromeChange}
+        initialLocation={props.initialCfiOverride}
+        onOpenBookAt={props.onOpenBookAt}
+        levelsOpen={props.vocabPanelOpen}
+        onLevelsOpenChange={props.onVocabPanelOpenChange}
+        onOpenSettings={onOpenSettings}
+        onShowPages={props.book.pdf ? () => setPdfView('pages') : undefined}
+      />
       {hosts}
+      <FocusHost reader="clean" />
+      <NewReaderNotice />
     </>
   );
 }

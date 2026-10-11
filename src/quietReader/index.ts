@@ -16,5 +16,4 @@
  */
 export { QuietReader } from './QuietReader';
 export { QuietReaderSettings } from './QuietReaderSettings';
-export { useReaderView } from './readerView';
 export { isCleanLocation } from '../readerCore/location';

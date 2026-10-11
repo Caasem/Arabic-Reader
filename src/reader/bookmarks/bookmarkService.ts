@@ -15,7 +15,7 @@ export class BookmarkService {
     cfi: string;
     percent: number;
     /** A real "Page N of Total" label, if epub.js's locations index has
-     * finished generating for this book (see EpubService.getPageLabel) --
+     * finished generating for this book (the Original layout did this before 0.96.0) --
      * falls back to a percent label when it hasn't (or never finishes,
      * e.g. a very short book/section). */
     pageLabel?: string;

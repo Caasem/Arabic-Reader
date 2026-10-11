@@ -36,7 +36,6 @@ import { MarginLevels } from './MarginLevels';
 import { NotePopover, SelectionBar, type ViewportRect } from './Overlays';
 import { clearPaint, flash, paintHighlights, paintSearchMatch, paintSupported } from '../readerCore/paint';
 import { bookProgress, chapterStarts, estimatePages } from './progress';
-import { useReaderView } from './readerView';
 import { useReaderSearch, type SearchHit } from '../readerCore/searchState';
 import { caretAt, offsetWithin, rangeAt } from './textOffsets';
 import { formatClock, remainingMs, usePomodoroSnapshot } from './pomodoroClock';
@@ -89,8 +88,6 @@ interface Props {
   levelsOpen?: boolean;
   onLevelsOpenChange?(open: boolean): void;
   onOpenSettings?(group?: string): void;
-  /** Display -> View -> Original layout. */
-  onShowOriginal?(): void;
   /** A book added from a PDF: Display -> Original pages. */
   onShowPages?(): void;
 }
@@ -103,13 +100,12 @@ const sectionOf = (node: Node | null) => (node instanceof Element ? node : node?
  * the bottom, vocab levels beside the text, the usual dictionary popup, and a
  * drawer for contents, search, marks and saved words.
  */
-export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation, onOpenBookAt, levelsOpen, onLevelsOpenChange, onOpenSettings, onShowOriginal, onShowPages }: Props) {
+export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation, onOpenBookAt, levelsOpen, onLevelsOpenChange, onOpenSettings, onShowPages }: Props) {
   const { prefs, resolvedTheme } = usePreferences();
   const prefsRef = useRef(prefs);
   useLayoutEffect(() => {
     prefsRef.current = prefs;
   });
-  const [view, setView] = useReaderView(book.id);
 
   // --- The book and where we are in it ---------------------------------------------------------------
   const [model, setModel] = useState<BookModel | null>(null);
@@ -1151,11 +1147,6 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
       {sheet === 'display' && (
         <DisplaySheet
           center={dockCenter}
-          view={view}
-          onSetView={(v) => {
-            setView(v);
-            if (v === 'original') onShowOriginal?.();
-          }}
           onOpenSettings={() => onOpenSettings?.('reading')}
           onShowPages={onShowPages}
           onClose={() => setSheet(null)}

@@ -3,9 +3,8 @@
  * device in their own IndexedDB database, never bundled or backed up).
  *
  * Touch points: <FontSettings> in SettingsPanel, <ReadingFontSync /> mounted
- * once in App, EpubService.injectFonts (uploaded fonts into each book
- * section), CleanReader honouring a picked font over Lotus, the new reader's
- * Display sheet (useFontChoices), and the `fontFamily` / `readingFontAppWide`
+ * once in App, the new reader's Display sheet (useFontChoices), and the
+ * `fontFamily` / `readingFontAppWide`
  * preferences. Picking the built-in font restores the original look; `git
  * revert` the commit that added it to remove it.
  */

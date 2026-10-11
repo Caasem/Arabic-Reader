@@ -3,7 +3,6 @@ import { usePreferences } from '../state/PreferencesContext';
 import { FONT_FILE_ACCEPT, useFontChoices } from '../readerFont';
 import type { PageDirection, ReaderTheme } from '../types';
 import { IconChevronRight, IconClose, IconUpload } from './icons';
-import type { ReaderView } from './readerView';
 
 const THEMES: { id: ReaderTheme; label: string }[] = [
   { id: 'light', label: 'Light' },
@@ -23,11 +22,6 @@ const DIRECTIONS: { id: PageDirection; label: string }[] = [
   { id: 'auto', label: 'Automatic' },
   { id: 'rtl', label: 'RTL' },
   { id: 'ltr', label: 'LTR' },
-];
-
-const VIEWS: { id: ReaderView; label: string }[] = [
-  { id: 'clean', label: 'Clean text' },
-  { id: 'original', label: 'Original layout' },
 ];
 
 const FONT_MIN = 80;
@@ -97,15 +91,11 @@ export function ThemePicker() {
 /** Everything about how the page looks, opened from the dock's Aa. */
 export function DisplaySheet({
   center,
-  view,
-  onSetView,
   onOpenSettings,
   onShowPages,
   onClose,
 }: {
   center: number;
-  view: ReaderView;
-  onSetView(view: ReaderView): void;
   onOpenSettings(): void;
   /** A book added from a PDF: switch to its original pages. */
   onShowPages?(): void;
@@ -246,7 +236,6 @@ export function DisplaySheet({
             <span className="qr-range__value">{prefs.lineHeight.toFixed(1)}</span>
           </label>
           <Segmented label="Page turns" options={DIRECTIONS} value={prefs.pageDirection} onChange={(pageDirection) => updatePrefs({ pageDirection })} />
-          <Segmented label="View" options={VIEWS} value={view} onChange={onSetView} />
           {onShowPages && (
             <Segmented
               label="PDF"
