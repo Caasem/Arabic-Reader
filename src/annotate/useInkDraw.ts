@@ -20,6 +20,11 @@ export interface InkSurface {
   begin(clientX: number, clientY: number): InkSession | null;
   /** The strokes the eraser touches at this point. */
   hitsAt(clientX: number, clientY: number): InkStroke[];
+  /**
+   * Offered a finished pen or marker stroke (its screen points) before it is saved. Returns true when the stroke
+   * was a gesture and has been acted on: it is then not saved as ink, unless `keep` is called (the gesture's Undo).
+   */
+  gesture?(screen: readonly (readonly number[])[], keep: () => Promise<void>): boolean;
 }
 
 /**
@@ -31,7 +36,7 @@ export function useInkDraw(surface: InkSurface, colors: Record<string, string>) 
   const liveRef = useRef<SVGPathElement>(null);
   const liveGroupRef = useRef<SVGGElement>(null);
   const active = useRef<
-    | { kind: 'ink'; id: number; session: InkSession; pts: InkPoint[]; pen: boolean; tool: 'pen' | 'marker'; width: number }
+    | { kind: 'ink'; id: number; session: InkSession; pts: InkPoint[]; screen: [number, number][]; pen: boolean; tool: 'pen' | 'marker'; width: number }
     | { kind: 'erase'; id: number; removed: Map<string, InkStroke> }
     | null
   >(null);
@@ -70,7 +75,7 @@ export function useInkDraw(surface: InkSurface, colors: Record<string, string>) 
       const tool = ui.tool;
       const width = r3((tool === 'marker' ? MARKER_WIDTH : ui.width) * session.unitsPerPx);
       const [x, y] = session.map(e.clientX, e.clientY);
-      active.current = { kind: 'ink', id: e.pointerId, session, pts: [[r3(x), r3(y), e.pressure || 0.5]], pen: e.pointerType === 'pen', tool, width };
+      active.current = { kind: 'ink', id: e.pointerId, session, pts: [[r3(x), r3(y), e.pressure || 0.5]], screen: [[e.clientX, e.clientY]], pen: e.pointerType === 'pen', tool, width };
       const live = liveRef.current;
       liveGroupRef.current?.setAttribute('transform', session.transform ?? '');
       if (live) {
@@ -96,7 +101,10 @@ export function useInkDraw(surface: InkSurface, colors: Record<string, string>) 
       for (const ev of events.length ? events : [native]) {
         const [x, y] = a.session.map(ev.clientX, ev.clientY);
         const last = a.pts[a.pts.length - 1];
-        if (Math.hypot(x - last[0], y - last[1]) / a.session.unitsPerPx >= 1.5) a.pts.push([r3(x), r3(y), Math.round((ev.pressure || 0.5) * 100) / 100]);
+        if (Math.hypot(x - last[0], y - last[1]) / a.session.unitsPerPx >= 1.5) {
+          a.pts.push([r3(x), r3(y), Math.round((ev.pressure || 0.5) * 100) / 100]);
+          a.screen.push([ev.clientX, ev.clientY]);
+        }
       }
       liveRef.current?.setAttribute('d', pathD(a.pts));
     },
@@ -117,10 +125,17 @@ export function useInkDraw(surface: InkSurface, colors: Record<string, string>) 
       return;
     }
     const width = a.tool === 'pen' ? pressureWidth(a.width, a.pts, a.pen) : a.width;
-    void addStroke({ ...a.session.base, tool: a.tool, color: inkUi().color, width, pts: a.pts }).then((row) => {
+    const color = inkUi().color;
+    const save = () =>
+      addStroke({ ...a.session.base, tool: a.tool, color, width, pts: a.pts }).then((row) => {
+        liveRef.current?.setAttribute('d', '');
+        recordInk({ undo: () => deleteStrokes([row.id]), redo: () => restoreStrokes([row]) });
+      });
+    if (surfaceRef.current.gesture?.(a.screen, save)) {
       liveRef.current?.setAttribute('d', '');
-      recordInk({ undo: () => deleteStrokes([row.id]), redo: () => restoreStrokes([row]) });
-    });
+      return;
+    }
+    void save();
   }, []);
 
   return { liveRef, liveGroupRef, handlers: { onPointerDown, onPointerMove, onPointerUp: finish, onPointerCancel: finish } };

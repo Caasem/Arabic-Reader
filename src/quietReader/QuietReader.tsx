@@ -683,6 +683,18 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
         window.getSelection()?.removeAllRanges();
         setSelection(null);
       },
+      async addHighlight(chapter, start, end, color) {
+        const text = model.texts[chapter]?.slice(start, end);
+        if (!text?.trim()) return null;
+        const created = await marksRef.current.addHighlight({
+          location: formatCleanLocation({ chapter, start, end }),
+          text,
+          color,
+          chapterHref: `clean:${chapter}`,
+          chapterLabel: titleOf(chapter),
+        });
+        return () => marksRef.current.removeHighlight(created.id);
+      },
       wordSaved(word) {
         savedWords.setSaved(word, true);
         bumpSavedRef.current();

@@ -353,6 +353,19 @@ export class AramorphEngine {
     return data;
   }
 
+  /** Every prefix/stem/suffix split of a diacritic-free Buckwalter word. */
+  private allSplits(processedWord: string): AramorphResult[] {
+    const candidates: AramorphResult[] = [];
+    for (let i = 0; i < processedWord.length; i++) {
+      for (let j = i + 1; j <= processedWord.length; j++) {
+        for (const r of this.lookupPrefStemSuff(processedWord.slice(0, i), processedWord.slice(i, j), processedWord.slice(j))) {
+          candidates.push(r);
+        }
+      }
+    }
+    return candidates;
+  }
+
   lookup(word: string): AramorphResult[] {
     if (!this.tables) return [];
     const cached = this.lookupCache.get(word);
@@ -364,15 +377,14 @@ export class AramorphEngine {
       }
     }
 
-    // Every prefix/stem/suffix split of the (diacritic-free) word.
     const processedWord = removeDiacriticsBuckwalter(transliterate(word));
-    const candidates: AramorphResult[] = [];
-    for (let i = 0; i < processedWord.length; i++) {
-      for (let j = i + 1; j <= processedWord.length; j++) {
-        for (const r of this.lookupPrefStemSuff(processedWord.slice(0, i), processedWord.slice(i, j), processedWord.slice(j))) {
-          candidates.push(r);
-        }
-      }
+    let candidates = this.allSplits(processedWord);
+    // AraMorph lists some verbs without their verbal noun (e.g. تَحاسَدَ but no
+    // تَحاسُد), so "the" + that noun matches nothing. Retry without the article
+    // (and any و/ف/ب/ك/ل before it) to at least reach the verb and its root.
+    if (candidates.length === 0) {
+      const bare = processedWord.replace(/^[wf]?[bkl]?Al(?=.{2})/, '');
+      if (bare !== processedWord) candidates = this.allSplits(bare);
     }
 
     const seen = new Set<string>();

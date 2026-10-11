@@ -2,8 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { BookMeta } from '../types';
 import { caretAt, offsetWithin, rangeAt } from '../quietReader/textOffsets';
+import { getReaderMarks } from '../readerChords';
+import { usePreferences } from '../state/PreferencesContext';
+import type { HighlightColor } from '../types';
 import { hitStroke, pathD } from './geometry';
-import { THEME_COLORS, useBookStrokes, useInkUi } from './inkUi';
+import { classifyStroke, isTick, TICK_REACH, TICK_WINDOW_MS, type WordBox } from './gestures';
+import { inkUi, THEME_COLORS, useBookStrokes, useInkUi } from './inkUi';
+import type { InkColor } from './types';
 import { useInkDraw, type InkSurface } from './useInkDraw';
 
 /**
@@ -62,6 +67,52 @@ function anchorAt(stage: HTMLElement, x: number, y: number): { section: HTMLElem
   return caret && section ? { section, offset: offsetWithin(section, caret.node, caret.offset) } : null;
 }
 
+/** The highlight colour an ink colour stands for: red and teal have a twin, the rest are yellow. */
+const HIGHLIGHT_FOR_INK: Record<InkColor, HighlightColor> = { ink: 'yellow', brown: 'yellow', teal: 'green', red: 'red' };
+
+/** How far around a stroke to look for words, in pixels. */
+const WORD_REACH_PX = 90;
+
+interface NearWord {
+  box: WordBox;
+  el: HTMLElement;
+}
+
+/** The words on screen within reach of the points, with their boxes and places in their chapters. */
+function wordsNear(stage: HTMLElement, screen: readonly (readonly number[])[]): NearWord[] {
+  let x0 = Infinity;
+  let y0 = Infinity;
+  let x1 = -Infinity;
+  let y1 = -Infinity;
+  for (const p of screen) {
+    x0 = Math.min(x0, p[0]);
+    y0 = Math.min(y0, p[1]);
+    x1 = Math.max(x1, p[0]);
+    y1 = Math.max(y1, p[1]);
+  }
+  const out: NearWord[] = [];
+  for (const el of stage.querySelectorAll<HTMLElement>('.qr-chapter .ar-word')) {
+    const r = el.getBoundingClientRect();
+    if (!r.width || r.right < x0 - WORD_REACH_PX || r.left > x1 + WORD_REACH_PX || r.bottom < y0 - WORD_REACH_PX || r.top > y1 + WORD_REACH_PX) continue;
+    const section = el.closest<HTMLElement>('.qr-chapter');
+    if (!section) continue;
+    const start = offsetWithin(section, el, 0);
+    out.push({ el, box: { chapter: Number(section.dataset.chapter), start, end: start + (el.textContent?.length ?? 0), x: r.left, y: r.top, w: r.width, h: r.height } });
+  }
+  return out;
+}
+
+/** Does the same as tapping the word: a click on it, or (detail 2) the double click that saves it. */
+function clickWord(el: HTMLElement, detail: number) {
+  el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail, clientX: el.getBoundingClientRect().left + 2, clientY: el.getBoundingClientRect().top + 2 }));
+}
+
+interface GestureToast {
+  message: string;
+  undo?: () => void;
+}
+const TOAST_MS = 4000;
+
 export function CleanInkLayer({ book }: { book: BookMeta }) {
   const ui = useInkUi();
   const all = useBookStrokes(book.id);
@@ -70,6 +121,20 @@ export function CleanInkLayer({ book }: { book: BookMeta }) {
   const [frame, setFrame] = useState<DOMRect | null>(null);
   const [origins, setOrigins] = useState<Map<string, Origin>>(new Map());
   const layerRef = useRef<HTMLDivElement>(null);
+  const { prefs } = usePreferences();
+  const gesturesOn = prefs.inkGesturesEnabled;
+  const [toast, setToast] = useState<GestureToast | null>(null);
+  /** The last circle: a tick close after it saves the circled word. */
+  const circled = useRef<{ el: HTMLElement; at: number; box: WordBox } | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), TOAST_MS);
+    return () => window.clearTimeout(t);
+  }, [toast]);
+  useEffect(() => {
+    if (!ui.inking || !gesturesOn) setToast(null);
+  }, [ui.inking, gesturesOn]);
 
   // The quiet reader comes and goes (a PDF's own pages replace it): look for its stage now and then.
   useEffect(() => {
@@ -158,10 +223,68 @@ export function CleanInkLayer({ book }: { book: BookMeta }) {
       });
     },
   };
+  if (gesturesOn && ui.inking) {
+    surface.gesture = (screen, keep) => {
+      if (!stage) return false;
+      const undoable = (message: string, then?: () => Promise<void> | void) =>
+        setToast({
+          message,
+          undo: () => {
+            setToast(null);
+            void Promise.resolve(then?.()).then(keep);
+          },
+        });
+      // A tick close after a circle saves the circled word, the way a double click does (the reader shows its own Saved toast and Undo).
+      const last = circled.current;
+      if (last && Date.now() - last.at <= TICK_WINDOW_MS && last.el.isConnected && isTick(screen, last.box.h)) {
+        const cx = screen.reduce((s, p) => s + p[0], 0) / screen.length;
+        const cy = screen.reduce((s, p) => s + p[1], 0) / screen.length;
+        const reach = TICK_REACH * last.box.h;
+        if (cx >= last.box.x - reach && cx <= last.box.x + last.box.w + reach && cy >= last.box.y - reach && cy <= last.box.y + last.box.h + reach) {
+          circled.current = null;
+          setToast(null);
+          clickWord(last.el, 2);
+          return true;
+        }
+      }
+      const near = wordsNear(stage, screen);
+      const g = classifyStroke(screen, near.map((n) => n.box));
+      if (!g || g.kind === 'tick') return false;
+      if (g.kind === 'circle') {
+        const hit = near.find((n) => n.box === g.word);
+        if (!hit) return false;
+        circled.current = { el: hit.el, at: Date.now(), box: g.word };
+        clickWord(hit.el, 1);
+        undoable(`Looked up ${hit.el.dataset.word ?? 'the word'}`);
+        return true;
+      }
+      const marks = getReaderMarks();
+      if (!marks?.addHighlight) return false;
+      const color = HIGHLIGHT_FOR_INK[inkUi().color] ?? 'yellow';
+      void marks.addHighlight(g.chapter, g.start, g.end, color).then((remove) => {
+        if (!remove) return void keep();
+        undoable('Highlighted', remove);
+      }, () => void keep());
+      return true;
+    };
+  }
   const draw = useInkDraw(surface, THEME_COLORS);
 
-  if (!stage || !frame || (!ui.inking && !origins.size)) return null;
-  return createPortal(
+  const toastView =
+    toast &&
+    createPortal(
+      <div className="reader__quick-add-toast reader__touch-toast" role="status">
+        <span>{toast.message}</span>
+        {toast.undo && (
+          <button className="reader__touch-toast-undo" onClick={toast.undo}>
+            Undo
+          </button>
+        )}
+      </div>,
+      document.body
+    );
+  if (!stage || !frame || (!ui.inking && !origins.size)) return toastView || null;
+  const layer = createPortal(
     <div
       ref={layerRef}
       className={'ink-clean' + (ui.inking ? ' ink-clean--on' : '') + (ui.inking && ui.tool === 'eraser' ? ' ink-clean--erase' : '') + (ui.penSeen ? ' ink-clean--pen' : '')}
@@ -185,5 +308,11 @@ export function CleanInkLayer({ book }: { book: BookMeta }) {
       </svg>
     </div>,
     document.body
+  );
+  return (
+    <>
+      {layer}
+      {toastView}
+    </>
   );
 }

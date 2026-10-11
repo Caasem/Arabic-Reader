@@ -17,6 +17,7 @@ export const annotateFeature: FeatureDescriptor = {
   touchPoints: [
     'the `annotateEnabled` preference (src/types/preferences.ts, src/state/defaultPreferences.ts)',
     'its ink database (INK_DB) in the storage registry (src/storage/registry.ts) and the full export (src/dataExport/stores.ts)',
+    "the `inkGesturesEnabled` preference, and `addHighlight` on the reader marks bridge (src/readerChords/readerMarks.ts), implemented by src/quietReader/QuietReader.tsx",
     "the study desk's margins and PDF pages, which draw and select ink with its geometry and ink UI (src/studyDesk: marginInk, MarginLayer, PdfMargin, PdfSelect, docxExport)",
   ],
 };

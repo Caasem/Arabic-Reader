@@ -158,6 +158,8 @@ export interface ReaderPreferences {
   pdfPageTint: 'paper' | 'sepia' | 'night';
   /** Ink and sketches (src/annotate): write on the page (Alt+W) and a sketch sheet beside it (Alt+K). */
   annotateEnabled: boolean;
+  /** Ink gestures (src/annotate/gestures.ts): while writing, underline highlights, circle looks up, circle and tick saves. Off by default. */
+  inkGesturesEnabled: boolean;
   /** Show a verb's form (I-X) and its root's other verbs in the dictionary popup (src/verbForms). */
   verbFormsEnabled: boolean;
   /** The aligned, roomier dictionary popup layout (src/popupClean). Off restores the classic popup. */

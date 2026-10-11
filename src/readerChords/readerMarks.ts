@@ -23,6 +23,8 @@ export interface ReaderMarks {
   existing(capture: MarkCapture): { note: string } | null;
   /** Highlights the place (or updates the highlight already there) with this note. */
   saveNote(capture: MarkCapture, note: string, color: HighlightColor): Promise<void>;
+  /** Highlights a span of the chapter (ink gestures); resolves to a function that takes the highlight away again. Readers that cannot omit it. */
+  addHighlight?(chapter: number, start: number, end: number, color: HighlightColor): Promise<(() => Promise<void>) | null>;
   /** A word was saved as a card: show it as saved wherever it is on the page. */
   wordSaved(word: string): void;
 }

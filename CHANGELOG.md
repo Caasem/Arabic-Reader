@@ -7,7 +7,7 @@ release.
 ## Summary: 10–11 October 2026 (the refactor pass)
 
 Everything that landed from the evening of 10 October to midday on 11 October, in order. Rows 1–7 are on `main`
-(up to 0.96.0); rows 8–14 are on `refactor/integration`
+(up to 0.96.0); rows 8–15 are on `refactor/integration`
 ([Caasem/Arabic-Reader#73](https://github.com/Caasem/Arabic-Reader/pull/73), 0.97.0), waiting to be tested before
 merging. Per-phase detail and how to revert each one: `docs/changes/refactor-changes.md`.
 
@@ -27,8 +27,27 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 | 12 | 11 Oct 12:45 | #73, fix | The popup stylesheet loads again (phase 4 had dropped its import, so the popup had no backdrop or styling) | Fixes a regression | — | On `refactor/integration` |
 | 13 | 11 Oct 12:49 | #73 | *Use recommended settings* also switches on Al-Wasīṭ; *Skip for now* stays English-only | Yes | 0.97.0 | On `refactor/integration` |
 | 14 | 11 Oct 12:56 | #73 | No scrollbars on any device (before, only the desktop app hid them) | Yes | 0.97.0 | On `refactor/integration` |
+| 15 | 11 Oct | #73, fix | A word with ال whose noun AraMorph lacks (التحاسد) now finds the verb and its root instead of nothing | Yes | 0.97.1 | On `refactor/integration` |
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
+
+## v0.98.0 — 2026-10-11
+
+- **Ink gestures (off by default).** Switch on *Gestures* under Settings → Ink and sketches, then, with Write on
+  (Alt+W) in the reader, some strokes act instead of staying on the page:
+  - **Underline** a run of words: they are highlighted, in yellow (or green for teal ink, red for red ink).
+  - **Circle** one word: the dictionary popup opens on it, as if you had tapped it.
+  - **Circle, then a short tick** within a second and a half: the word is saved to your vocabulary with its sentence.
+  - Each shows a note with **Undo**, which takes the action back and keeps your stroke as ordinary ink. After a
+    tick, the reader's own *Saved* note and its Undo take the word out of your vocabulary again.
+  - Anything that is not clearly one of these (handwriting, a scribble, a short dash, an open arc) is ink as before.
+  - Not on PDF pages yet. No new keys.
+
+## v0.97.1 — 2026-10-11
+
+- Words like التحاسد now show in the dictionary. AraMorph has the verb تَحاسَدَ but not its verbal noun, so the word
+  with ال matched nothing and the Arabic dictionaries had no root to look up. When that happens the lookup now tries
+  again without ال (and any و/ف/ب/ك/ل before it): you get the verb's English gloss and the root's articles (حسد).
 
 ## v0.97.0 — 2026-10-11
 
