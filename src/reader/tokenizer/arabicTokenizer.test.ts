@@ -10,6 +10,12 @@ describe('tokenize', () => {
     for (const t of tokens) expect(text.slice(t.start, t.end)).toBe(t.text);
   });
 
+  it('keeps dagger alif, alif wasla and Qur’anic annotation marks inside the word', () => {
+    const words = ['هَٰذَا', 'ٱلْكِتَٰبُ', 'إِسْمَٰعِيلَ', 'مِنۢ', 'يَوْمِ'];
+    const tokens = tokenize(words.join(' '));
+    expect(tokens.filter((t) => t.isArabic).map((t) => t.text)).toEqual(words);
+  });
+
   it('splits Arabic-script punctuation off adjacent words', () => {
     const tokens = tokenize('كتاب، قلم؟');
     expect(tokens.filter((t) => t.isArabic).map((t) => t.text)).toEqual(['كتاب', 'قلم']);

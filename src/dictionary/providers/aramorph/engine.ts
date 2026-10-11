@@ -414,6 +414,57 @@ export interface AramorphResult {
   altRoot?: string;
 }
 
+// ---------- Spelling variants (Qur'anic and classical orthography) ----------
+// Qur'anic annotation marks U+06D6-U+06ED (the Qur'anic sukun U+06E1 is kept as a plain sukun).
+const QURANIC_MARKS_RE = /[ۖ-ۭ]/g;
+const QURANIC_SUKUN_RE = /ۡ/g;
+const TATWEEL_RE = /ـ/g;
+const DAGGER_RE = /ٰ/g;
+
+/** The word with Qur'anic annotation marks and tatweel removed, ٱ written ا,
+ * and the Qur'anic sukun turned into an ordinary one. The dagger alif stays. */
+export function cleanQuranicMarks(word: string): string {
+  return word.replace(QURANIC_SUKUN_RE, 'ْ').replace(QURANIC_MARKS_RE, '').replace(TATWEEL_RE, '').replace(/ٱ/g, 'ا');
+}
+
+const ARABIC_MARKS_RE = /[ً-ٰ]/g;
+const LONG_VOWEL_LETTERS = 'اويى';
+
+/**
+ * Other ways to write a word the dictionary may know under, for when the word
+ * as written finds nothing. Groups come most likely first; the spellings in
+ * one group are equally likely and all of them are used: Qur'anic marks and ٱ
+ * cleaned up, the dagger alif dropped or written out as ا (هَٰذَا is هذا,
+ * إِسْمَٰعِيلَ is إسماعيل), يء written ئ, and last of all the long ā left out of
+ * a defective spelling (سليمن for سليمان), one inserted ا at a time.
+ */
+export function spellingVariants(word: string): string[][] {
+  const seen = new Set<string>([word]);
+  const groups: string[][] = [];
+  const addGroup = (...variants: string[]) => {
+    const fresh = variants.filter((v) => v && !seen.has(v));
+    fresh.forEach((v) => seen.add(v));
+    if (fresh.length) groups.push(fresh);
+  };
+  const base = cleanQuranicMarks(word);
+  const forms = base.includes('ٰ') ? [base.replace(DAGGER_RE, ''), base.replace(DAGGER_RE, 'ا')] : [base];
+  const hamza = (w: string) => w.replace(/[يى]([ً-ْ]*)ء/g, 'ئ$1');
+  addGroup(...forms);
+  addGroup(...forms.map(hamza));
+  // Defective long ā: one inserted ا at a time, on the bare letters.
+  const letters = Array.from(hamza(forms[0]).replace(ARABIC_MARKS_RE, ''));
+  const afterArticle = letters[0] === 'ا' && letters[1] === 'ل' ? 2 : 0;
+  if (letters.length >= 3) {
+    for (let i = 1; i < letters.length; i++) {
+      if (LONG_VOWEL_LETTERS.includes(letters[i - 1]) || LONG_VOWEL_LETTERS.includes(letters[i])) continue;
+      // An ا right after the article would only give the stem an initial alef it never had.
+      if (i === afterArticle) continue;
+      addGroup(letters.slice(0, i).join('') + 'ا' + letters.slice(i).join(''));
+    }
+  }
+  return groups;
+}
+
 // Form V تَفَعَّلَ and Form VI تَفاعَلَ verbs, whose verbal nouns are تَفَعُّل and
 // تَفاعُل. The last letter must be a plain consonant: weak or hamzated endings
 // change the noun's spelling.
@@ -592,12 +643,23 @@ export class AramorphEngine {
       }
     }
 
+    const visible = (c: AramorphResult[]) => c.some((r) => !r.hidden);
     const processedWord = removeDiacriticsBuckwalter(transliterate(word));
     let candidates = this.allSplits(processedWord);
+    // Qur'anic and classical spellings the dictionary doesn't write that way.
+    if (!visible(candidates)) {
+      for (const group of spellingVariants(word)) {
+        const found = group.flatMap((variant) => this.allSplits(removeDiacriticsBuckwalter(transliterate(variant))));
+        if (visible(found)) {
+          candidates = found;
+          break;
+        }
+      }
+    }
     // AraMorph lists some verbs without their verbal noun (e.g. تَحاسَدَ but no
     // تَحاسُد), so "the" + that noun matches nothing it shows. Retry without the
     // article (and any و/ف/ب/ك/ل before it) to at least show the verb.
-    if (!candidates.some((c) => !c.hidden)) {
+    if (!visible(candidates)) {
       const bare = processedWord.replace(/^[wf]?[bkl]?Al(?=.{2})/, '');
       if (bare !== processedWord) candidates = candidates.concat(this.allSplits(bare));
     }
