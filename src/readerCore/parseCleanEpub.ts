@@ -206,13 +206,22 @@ export function chapterTitle(blocks: CleanBlock[], index: number): string {
   return heading ? stripNoteMarkers(heading.s) : `الفصل ${index + 1}`;
 }
 
+async function packagePath(zip: JSZip): Promise<string | null> {
+  const container = await readText(zip, 'META-INF/container.xml');
+  return container ? (new DOMParser().parseFromString(container, 'text/xml').querySelector('rootfile')?.getAttribute('full-path') ?? null) : null;
+}
+
+/** The XHTML of one chapter's spine file (`CleanChapter.href`), read from the book again. */
+export async function readChapterHtml(file: Blob, href: string): Promise<string | null> {
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const opfPath = await packagePath(zip);
+  return opfPath ? readText(zip, normalizePath(dirOf(opfPath) + href)) : null;
+}
+
 /** Reads an EPUB's spine into plain-text chapters. Throws on a file that isn't a valid EPUB. */
 export async function parseCleanEpub(file: Blob): Promise<CleanBook> {
   const zip = await JSZip.loadAsync(await file.arrayBuffer());
-  const container = await readText(zip, 'META-INF/container.xml');
-  const opfPath = container
-    ? new DOMParser().parseFromString(container, 'text/xml').querySelector('rootfile')?.getAttribute('full-path')
-    : null;
+  const opfPath = await packagePath(zip);
   const opfText = opfPath ? await readText(zip, opfPath) : null;
   if (!opfPath || !opfText) throw new Error('This is not a valid EPUB file.');
 

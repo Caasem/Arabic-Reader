@@ -13,6 +13,7 @@ kept readers need lives in `src/cleanReader`, which phase 2b deletes.
 | `bookModel.ts` | A book's chapter texts and paragraphs, for search, Words and Levels | new reader, PDF pages (`pdfText.ts` builds one per page) |
 | `cleanSearch.ts`, `rootSearch.ts`, `searchState.ts` | Searching the clean text (phrase, any word, word forms, same root) and the drawer's search state | new reader, PDF pages |
 | `location.ts` | `clean:chapter:start:end` locations, and mapping an epub position to a chapter | new reader, PDF pages, annotate, study desk, book vocab, flash cards |
+| `epubPosition.ts` | Places a position saved by the Original layout (an epub CFI: bookmarks, last place, saved words) on the same word in the clean text | new reader |
 | `paint.ts` | Highlights and search matches drawn with the CSS Custom Highlight API | new reader, PDF pages |
 | `cleanPosition.ts`, `cleanFocus.ts` | The saved place in a book, and whether Focus is on (localStorage; keys unchanged) | new reader, `readerTools/focus.ts` |
 | `elementAsDocument.ts`, `useCleanSavedWords.ts` | Lets the shared tap/hold/hover rules run on text in the page; colours saved words | new reader |
