@@ -4,6 +4,13 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## v0.97.0 — 2026-10-11
+
+- **Back and Forward work between screens, and a reload keeps you on the screen you were on.** Each screen has its
+  own address (#/library, #/read/..., #/read/.../levels, #/vocabulary, #/highlights, #/review, #/dashboard,
+  #/dictionary?q=...). A reading position and the Settings panel are not part of the address. If a book in the
+  address is no longer in your Library, you land on the Library.
+
 ## v0.96.0 — 2026-10-11
 
 - **One reader.** Every book now opens in the new reader, and a book added from a PDF can still show its own pages.
