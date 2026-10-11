@@ -8,7 +8,7 @@ import { flashCardFeature } from '../flashCard';
 import { picksExportFeature } from '../picksExport';
 import { studyDeskFeature } from '../studyDesk';
 import { annotateFeature } from '../annotate';
-import { VerbFormsSettings } from '../verbForms';
+import { verbFormsFeature } from '../verbForms';
 import { PopupCleanSettings } from '../popupClean';
 import { WasitMatchSettings } from '../wasitMatch';
 import { WasitStructureSettings } from '../wasitStructure';
@@ -66,7 +66,7 @@ export const FEATURES: FeatureDescriptor[] = [
   picksExportFeature,
   studyDeskFeature,
   annotateFeature,
-  { id: 'verbForms', SettingsSection: VerbFormsSettings, settingsGroup: 'dictionary', touchPoints: [] },
+  verbFormsFeature,
   { id: 'popupClean', SettingsSection: PopupCleanSettings, settingsGroup: 'dictionary', touchPoints: [] },
   { id: 'wasitMatch', SettingsSection: WasitMatchSettings, settingsGroup: 'dictionary', touchPoints: [] },
   { id: 'wasitStructure', SettingsSection: WasitStructureSettings, settingsGroup: 'dictionary', touchPoints: [] },
