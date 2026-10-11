@@ -149,6 +149,13 @@ export function extractChapter(html: string, keepNotes = true): { blocks: CleanB
   return { blocks: result, notes };
 }
 
+/** An element's text without what chapters skip too (a script's source, styles, media). */
+function visibleText(el: Element): string {
+  const copy = el.cloneNode(true) as Element;
+  copy.querySelectorAll([...SKIP_TAGS].join(',')).forEach((n) => n.remove());
+  return clean(copy.textContent ?? '');
+}
+
 /** A note's text by its id. A bare back-link anchor (`<a id="fn1">1</a>`)
  * stands for the paragraph around it. */
 function noteText(doc: Document, id: string): string {
@@ -159,8 +166,8 @@ function noteText(doc: Document, id: string): string {
     target = doc.getElementById(id);
   }
   if (!target) return '';
-  if (clean(target.textContent ?? '').length < 6) target = target.closest('p, li, aside, div, section') ?? target;
-  return clean(target.textContent ?? '').replace(/\n/g, ' ');
+  if (visibleText(target).length < 6) target = target.closest('p, li, aside, div, section') ?? target;
+  return visibleText(target).replace(/\n/g, ' ');
 }
 
 const decoder = new TextDecoder('utf-8');
@@ -263,7 +270,7 @@ export async function parseCleanEpub(file: Blob): Promise<CleanBook> {
       if (note.text || note.href.startsWith('#')) continue;
       const [file, id] = note.href.split('#');
       const doc = await loadDoc(normalizePath(base + dirOf(path) + safeDecode(file)));
-      if (doc) note.text = id ? noteText(doc, id) : clean(doc.body?.textContent ?? '');
+      if (doc) note.text = id ? noteText(doc, id) : doc.body ? visibleText(doc.body) : '';
     }
     chapters.push({
       title: chapterTitle(blocks, chapters.length),

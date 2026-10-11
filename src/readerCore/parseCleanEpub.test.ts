@@ -38,6 +38,13 @@ describe('extractChapter', () => {
     const { notes } = extractChapter('<body><p>نص<a href="#fn2">2</a></p><p><a id="fn2" href="#r2">2</a> شرح الحاشية هنا.</p></body>');
     expect(notes[0].text).toBe('2 شرح الحاشية هنا.');
   });
+
+  it("leaves a script's source and styles out of a note", () => {
+    const { notes } = extractChapter(
+      '<body><p>نص<a href="#n3">3</a></p><aside id="n3"><p>شرح <script>window.__xss = true;</script><style>p{}</style><b>مهم</b> هنا.</p></aside></body>'
+    );
+    expect(notes[0].text).toBe('شرح مهم هنا.');
+  });
 });
 
 describe('chapterHtml', () => {

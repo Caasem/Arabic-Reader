@@ -57,12 +57,19 @@ test('footnote popup resolves inline content, does not run scripts in it, and do
   await expect(popup).toHaveCount(0);
 });
 
-// The old popup showed the note's safe markup (<b> kept) and none of a <script>'s source; the new one shows the note's plain text.
-test.fixme('footnote popup keeps safe markup and drops script source from the note', async ({ page }) => {
+test('the note leaves out the source of a <script> in it', async ({ page }) => {
   await openNotedBook(page, '#test-note-1', INJECTED);
   await page.getByRole('button', { name: 'Note 1' }).click();
   const popup = page.getByRole('dialog', { name: 'Note 1' });
+  await expect(popup).toContainText('bold content');
   await expect(popup).not.toContainText('__xss');
+});
+
+// Accepted loss (0.96.0): the old popup kept the note's safe markup (<b>); the new one shows the note's plain text.
+test.fixme('footnote popup keeps safe markup from the note', async ({ page }) => {
+  await openNotedBook(page, '#test-note-1', INJECTED);
+  await page.getByRole('button', { name: 'Note 1' }).click();
+  const popup = page.getByRole('dialog', { name: 'Note 1' });
   await expect(popup.locator('b')).toHaveCount(1);
 });
 
