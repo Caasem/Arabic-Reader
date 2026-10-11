@@ -1,0 +1,28 @@
+# Refactor pass: change matrix
+
+The plan from 2026-10-10: tidy the repo, put the readers on one shared core, retire the old clean reader, and replace
+hand-wired feature switches with a registry. One phase per branch and worktree, one PR each, green CI before merge.
+Order: **0 → 2a → 1 → 2b → 5**. Phases 3 (dictionaries as packs), 4 (popup split), 6 (routing) and 7 (colour
+tokens) are planned separately.
+
+To undo a phase, revert its merge commit. Each row says what a revert leaves behind.
+
+## Phase 0: housekeeping (done)
+
+Branch `refactor/phase0-cleanup`, worktree `Arabic-Reader-refactor`. Nothing users can see; no version bump.
+
+| Change | Why | Before | After | Impact | Revert |
+|---|---|---|---|---|---|
+| Full Baranov file moved into `baranov-data/` | The build read a dictionary from the repo root, while the folder that documents it held an incomplete copy (7,000 of 39,000 lines) that nothing used | `russian.txt` at the root (read by the build); `baranov-data/russian.txt` incomplete and unused | One file, `baranov-data/russian.txt`, complete and read by the build. `vite.config.ts`, `SOURCE-README.md`, `CONTRIBUTING.md`, `NOTICE.md` point to it | None for users: the built Baranov chunk is byte-identical (same hash, `CIsFGcvB`). One less file at the root | Restores both files and the old path |
+| Piles prototype moved out of `src/` | A design file, not app code, sat among the study desk sources; piles shipped in 0.70.0 | `src/studyDesk/piles.prototype.html` | `docs/prototypes/piles.prototype.html`; `docs/features/study-desk.md` updated | None. Not imported by the app | Moves it back |
+| Change matrices grouped in `docs/changes/` | Five `*-changes.md` files crowded the `docs/` root next to governance and privacy docs | `docs/annotate-changes.md`, `shared-dock-`, `shared-focus-`, `sketch-margin-`, `study-desk-changes.md` | `docs/changes/<name>-changes.md` (this file joins them). Links in three `index.ts` headers, the study desk spec and `roadmap.json` updated | None for users. Old links in closed PRs point to the previous paths | Moves them back |
+| Bundle size check in CI | Nothing stopped the app's own code from growing. Data and workers already total about 38 MB | No size check | `scripts/check-bundle-size.mjs` (`npm run size`) runs after the e2e tests. Per-file budgets, plus a 2.85 MB budget for app code (now 2.57 MB) | A PR that makes a file more than about 10% bigger fails CI until it shrinks or the budget is raised in the same commit, with a reason | Removes the script, the npm script and the CI step |
+
+## Planned phases
+
+| Phase | Branch / worktree | Model | Change | Why | Before | After | Impact |
+|---|---|---|---|---|---|---|---|
+| 2a. Mark the old clean reader legacy | `refactor/phase2a-legacy-reader`, `Arabic-Reader-p2a` | Opus | Label the old clean reader and the "New reader off" path as legacy in Settings, with a notice to anyone using them. No code removed | Phase 1 then only has to serve the readers that stay | With **New reader** off, books open in the old clean reader (`cleanReaderEnabled`) or the epub.js reader | Same paths, labelled legacy and due for removal | Users who turned the new reader off see a notice. Nothing else changes |
+| 1. Shared reader core | `refactor/phase1-reader-core`, `Arabic-Reader-p1` | Opus | New `src/readerCore/`: book model, positions, word wrapping, search, painting, sessions. `ReaderSwitch` moves there | The default reader imports six modules from `cleanReader/` and its popup and hooks from `components/reader/`. Deleting any reader breaks the others | Shared code lives inside whichever reader came first | One core used by the new reader, Original layout (epub.js) and PDF pages | No visible change. Every reader e2e spec has to pass unchanged. Highest regression risk of the pass |
+| 2b. Remove the old clean reader | `refactor/phase2b-retire-reader`, `Arabic-Reader-p2b` | Opus | Delete `CleanReader.tsx` and the `cleanReaderEnabled` setting. Users who had the new reader off get it back on | It duplicates the new reader, which replaced it in 0.21.0 | Four reader paths | Three: the new reader, Original layout, PDF pages | Saved positions and Focus state carry over. **The epub.js reader stays**: it is the new reader's *Original layout* view. Dropping it, and `epubjs`, is a separate decision |
+| 5. Feature registry | `refactor/phase5-feature-registry`, `Arabic-Reader-p5` | Opus for the design and the first two features, then Sonnet for the rest | Each feature declares `{id, pref, SettingsSection, Host, chords, touchPoints}`. `ReaderSwitch` and `SettingsPanel` loop over the list. Feature code stops calling `localStorage` directly | 23 `*Enabled` flags, overlays and settings groups are wired by hand. 12 files call `localStorage` directly instead of `src/utils/storage.ts` | Adding a feature touches 4 to 6 shared files | One folder plus one registry line. Storage goes through `src/utils/storage.ts` or the preferences repo | No visible change. Values already stored in `localStorage` must be read and migrated, not lost |

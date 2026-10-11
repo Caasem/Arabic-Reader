@@ -37,6 +37,10 @@ jobs:
       - name: Run e2e tests
         run: npm test
 
+      # The e2e run builds dist/, so the size check reuses that build.
+      - name: Bundle size
+        run: npm run size
+
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4

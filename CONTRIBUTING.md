@@ -29,7 +29,7 @@ The data files under `public/*-data/` are generated, not hand-edited.
 
 - Al-Wasīṭ, Al-Ṣiḥāḥ and Maqāyīs: `python scripts/extract-lexicon-data.py path/to/db.sqlite` (the database comes from
   the arabic_lexicons project; see each folder's `SOURCE-README.md`).
-- Baranov: the build reads the repo-root `russian.txt`. If it is missing the build still succeeds and the dictionary is
+- Baranov: the build reads `baranov-data/russian.txt`. If it is missing the build still succeeds and the dictionary is
   simply empty.
 - Do not add data whose licence you cannot state. Record its source in a `SOURCE-README.md` and in `NOTICE.md`.
 

@@ -463,7 +463,7 @@
       "effort": 4,
       "deps": [],
       "branch": "feat/study-desk",
-      "notes": "Built in phases on feat/study-desk; every phase is one commit with its own off-switch. Revert matrix: docs/study-desk-changes.md. Concept: https://claude.ai/artifact/FjdxN1wKtaYzSTRLTvtKx4",
+      "notes": "Built in phases on feat/study-desk; every phase is one commit with its own off-switch. Revert matrix: docs/changes/study-desk-changes.md. Concept: https://claude.ai/artifact/FjdxN1wKtaYzSTRLTvtKx4",
       "brief": "features/study-desk.md",
       "milestone": "M2"
     }

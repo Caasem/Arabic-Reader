@@ -20,7 +20,7 @@ Settings → Dictionaries → Load dictionary file.
 
 ## Which file the build reads
 
-The build reads the repo-root `russian.txt` (the complete file, about 39,000
-lines). `baranov-data/russian.txt` is an incomplete copy (about 7,000 lines) and
-is not used. If the root file is missing, the build still succeeds and the
-Baranov dictionary is simply empty.
+The build reads `baranov-data/russian.txt` (the complete file, about 39,000
+lines). It used to sit at the repo root, next to an incomplete 7,000-line copy
+here; the full file replaced that copy. If the file is missing, the
+build still succeeds and the Baranov dictionary is simply empty.

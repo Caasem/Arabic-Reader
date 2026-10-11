@@ -20,7 +20,7 @@ licence could not be verified, this file says so rather than guessing.
 | Al-Muʿjam al-Wasīṭ | `public/alwasit-data/` | Extracted from the [arabic_lexicons](https://github.com/wizsk/arabic_lexicons) project (GPL-3.0). The dictionary is a 20th-century work (Arabic Language Academy, Cairo, first published 1960) whose copyright status is **not clean-cut**. Included in good faith; verify before redistributing beyond personal use. |
 | Al-Ṣiḥāḥ | `public/alsihah-data/` | al-Jawharī's work (d. c. 1002), public domain. Digital text from arabic_lexicons v3.5.0 (GPL-3.0), which compiled it from a modern critical edition. |
 | Maqāyīs al-Lugha | `public/almaqayis-data/` | Aḥmad ibn Fāris (d. 1004), public domain. Digital text from arabic_lexicons v3.5.0 (GPL-3.0). |
-| Baranov (Arabic–Russian) | repo-root `russian.txt` | Resembles Kh. K. Baranov's *Arabic–Russian Dictionary* and matches a file in ApayRus/meteor-arabic-dictionary. **Provenance and licence unverified**: Baranov's dictionary is a copyrighted work, and no licence text backs up the claim that this data is open. Do not redistribute the built app beyond personal use until this is settled. Users can also load their own copy in Settings. |
+| Baranov (Arabic–Russian) | `baranov-data/russian.txt` | Resembles Kh. K. Baranov's *Arabic–Russian Dictionary* and matches a file in ApayRus/meteor-arabic-dictionary. **Provenance and licence unverified**: Baranov's dictionary is a copyrighted work, and no licence text backs up the claim that this data is open. Do not redistribute the built app beyond personal use until this is settled. Users can also load their own copy in Settings. |
 
 Regenerate the lexicon data with `python scripts/extract-lexicon-data.py path/to/db.sqlite`.
 
