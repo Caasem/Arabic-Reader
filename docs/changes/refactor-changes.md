@@ -152,6 +152,17 @@ Branch `refactor/phase6-routing`, version 0.97.0. Users can see this.
 Not done: Android's hardware back button. Nothing in `src` or `android` listens for Capacitor's `backButton`, so it
 still behaves as before (the WebView history now has entries to go back through).
 
+## Phase 7: colour tokens (done)
+
+Branch `refactor/phase7-colour-tokens`, worktree `Arabic-Reader-p7`. Nothing users can see; no version bump. Every token's value is the literal it replaced, so the rendered colours are the same in every theme.
+
+| Change | Why | Before | After | Impact | Revert |
+|---|---|---|---|---|---|
+| `src/theme/palette.css` (111 `--c-*` tokens), imported first in `src/index.css` | Hard-coded colours were scattered through 30 component CSS files | `#rgb`, `#rrggbb`, `rgb()` and `rgba()` written inline | Named by role and place (`--c-popup-warn`, `--c-settings-backdrop`), grouped by area, defined once on `:root`. Not per theme, so they never change with the theme | None | Revert the six phase 7 commits |
+| Component CSS uses `var(--c-...)` | One place to read and change them | 126 inline literals | 126 `var(--c-...)` uses, nothing else on the line changed. Same literal for the same purpose shares a token; the same value for a different purpose has its own | None | As above |
+
+Left alone: colours in `.ts` / `.tsx`; the theme blocks in `index.css`, `quietReader.css`, `readerTools.css`, `annotate.css`, `onboarding.css`, `BrowseLibraryPanel.css` and the palettes in `src/look/`; literals already inside a `var(--x, #fallback)` fallback; the per-theme `::highlight(qr-hl-yellow)` colours and the theme swatches in `quietReader.css`; the `conic-gradient` colour wheel in `pdfHighlighterSettings.css`.
+
 ## Planned phases
 
-Phases 7 (colour tokens) and 3 (dictionaries as packs, not planned for now) are planned separately.
+Only phase 3 (dictionaries as packs) remains, and it is not planned for now.
