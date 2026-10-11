@@ -128,6 +128,19 @@ Storage moves, all with unchanged keys:
 Left alone (core code, not features): `CollapsibleSection`, `diagnosticsLog`, `pdf/ocr/index.ts`, `pomodoroService`,
 `PreferencesProvider`.
 
+## Phase 4: dictionary popup split (done)
+
+Branch `refactor/phase4-popup-split`, worktree `Arabic-Reader-p4`. Nothing users can see; no version bump. Same DOM, class names, props, event handling and effect order. `DictionaryPopup.tsx` stays the entry point (every import is unchanged); `DictionaryPopup.css` is untouched.
+
+| Change | Why | Before | After | Impact | Revert |
+|---|---|---|---|---|---|
+| Small components moved to `components/reader/dictionaryPopup/` | One 1,301-line file held five components, a helper and the popup | `MorphValue`, `SentenceInBook`, `Alternative`, `OcrNote`, `EditableWord` defined in `DictionaryPopup.tsx` | One file each, moved as they were (only `export` added) | None | Move them back |
+| `groupEntriesByProvider` in `entryGroups.ts` | A pure helper deserves a test | Private function and `EntryGroup` type in the popup | Exported with its type; `entryGroups.test.ts` pins how it folds consecutive entries and keeps flat indices | None | Move back, drop the test |
+| Token selection in `useTokenSelection.ts` | The click and drag selection logic is its own concern | State, reset effect, `toggleToken`, `addTokenRange`, `clearEntrySelection`, the pointer handlers and the window `pointerup` effect inline | A hook taking `word` and the two token maps. Its effects sit in the same position relative to the popup's other effects (nothing between them before) | None | Inline the hook again |
+| Entry list rendering in `entryList.tsx` | About 320 lines of JSX inside the popup | `renderSubEntries` and `renderGroupList` closed over about 30 values | Plain functions (not components, so the element tree is the same) taking one `EntryListContext` object that the popup builds each render | Two new `only-export-components` lint warnings in `entryList.tsx` | Inline the functions again |
+
+Left inline: the positioning code (`recalcPosition` and its layout effect), the add-dictionary panel state, the split-column wheel handling and the footer. Each depends on the popup's own refs, props and render order, so moving them risked more than it saved. `DictionaryPopup.tsx` is 678 lines (from 1,301), above the 500-line target.
+
 ## Planned phases
 
-Phases 3 (dictionaries as packs), 4 (popup split), 6 (routing) and 7 (colour tokens) are planned separately.
+Phases 6 (routing), 7 (colour tokens) and 3 (dictionaries as packs, not planned for now) are planned separately.
