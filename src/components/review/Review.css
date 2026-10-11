@@ -208,7 +208,7 @@
 .review__btn--reveal {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--c-review-btn-ink);
 }
 
 .review__btn--again {
@@ -224,13 +224,13 @@
 .review__btn--good {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--c-review-btn-ink);
 }
 
 .review__btn--easy {
-  background: #4a8f5c;
-  border-color: #4a8f5c;
-  color: #fff;
+  background: var(--c-review-good);
+  border-color: var(--c-review-good);
+  color: var(--c-review-good-ink);
 }
 
 .review__card {

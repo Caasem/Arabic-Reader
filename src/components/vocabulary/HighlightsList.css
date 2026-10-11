@@ -43,19 +43,19 @@
 }
 
 .hl-card--yellow {
-  --hl-color: #e7c65b;
+  --hl-color: var(--c-hl-yellow);
 }
 .hl-card--green {
-  --hl-color: #8bb872;
+  --hl-color: var(--c-hl-green);
 }
 .hl-card--blue {
-  --hl-color: #6fa3c9;
+  --hl-color: var(--c-hl-blue);
 }
 .hl-card--purple {
-  --hl-color: #9c85c9;
+  --hl-color: var(--c-hl-purple);
 }
 .hl-card--red {
-  --hl-color: #c97a6d;
+  --hl-color: var(--c-hl-red);
 }
 
 .hl-card__text {

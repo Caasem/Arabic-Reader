@@ -108,4 +108,19 @@
   --c-navbar-shadow: rgba(28, 27, 25, 0.12);
   --c-look-mastered-ink: #ffffff;
   --c-look-navbar-pill-shadow: rgba(28, 27, 25, 0.14);
+
+  /* Dashboard, review, speed reader, vocabulary, app base */
+  --c-focus-danger-wash: rgba(179, 84, 63, 0.12);
+  --c-vocab-danger-wash: rgba(179, 84, 63, 0.12);
+  --c-hl-yellow: #e7c65b;
+  --c-hl-green: #8bb872;
+  --c-hl-blue: #6fa3c9;
+  --c-hl-purple: #9c85c9;
+  --c-hl-red: #c97a6d;
+  --c-review-btn-ink: #fff;
+  --c-review-good: #4a8f5c;
+  --c-review-good-ink: #fff;
+  --c-speed-ink: #fff;
+  --c-speed-knob: #fff;
+  --c-speed-scrim: rgba(0, 0, 0, 0.35);
 }
