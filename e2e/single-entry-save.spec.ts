@@ -1,7 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 /** Rows in one IndexedDB table of the app's database. */
 async function count(page: import('@playwright/test').Page, table: string): Promise<number> {
@@ -30,15 +27,14 @@ test('the per-entry "+" appears and saves when a word has only one entry', async
   await page.click('text=Try the sample book');
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
-  await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
-  await page.waitForTimeout(2500);
-  const frame = page.frames().find((f) => f !== page.mainFrame())!;
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 30000 });
+  const words = page.locator('.qr-chapter p .ar-word');
 
   // Find a word with exactly one dictionary entry.
-  const total = await frame.evaluate(() => document.querySelectorAll('p .ar-word').length);
+  const total = await words.count();
   let found = false;
   for (let i = 0; i < Math.min(total, 60) && !found; i++) {
-    await frame.evaluate((n) => document.querySelectorAll('p .ar-word')[n].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })), i);
+    await words.nth(i).click();
     await page.waitForSelector('.dict-popup', { timeout: 8000 });
     await page.waitForTimeout(700);
     found = (await page.locator('.dict-popup__entry').count()) === 1 && !(await page.locator('.dict-popup__save--saved').count());
