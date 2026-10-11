@@ -35,6 +35,17 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.104.0 — 2026-10-11
+
+- **Straight lines in ink.** Hold Shift while drawing (pen, mouse or trackpad) and the stroke becomes a straight line
+  from where it started to the pen; pressing Shift partway straightens the whole stroke, and letting go before you
+  lift keeps it straight. With no keyboard, draw and hold still for about half a second and the stroke snaps straight;
+  keep moving and the line's end follows.
+- Any angle works, but within about 5 degrees of level or plumb the line snaps exactly level or plumb, so underlines
+  come out flat.
+- Works on reader pages, PDF pages, freehand sketch sheets and Ḥāshiya ink cards. A straight line is an ordinary
+  stroke (Undo and the eraser work as usual), and it is never read as a gesture, even with Gestures on.
+
 ## v0.103.0 — 2026-10-11
 
 - **Roots ending (or hinging) on و or ي are searched both ways.** Where the letter is in doubt, Al-Wasīṭ, Al-Ṣiḥāḥ,

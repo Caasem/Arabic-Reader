@@ -40,3 +40,16 @@ label) is in `src/annotate/sketchCards.ts` with tests in `sketchCards.test.ts`.
 
 Not done: sheets do not sync yet, so on another device a sketch card is its text; the Anki note has no picture;
 cards made with Make card never show the picture.
+
+## G. Straight lines (0.104.0)
+
+Hold Shift while drawing, or draw and hold still, and the stroke becomes a straight line from its start to the pen. No
+setting and no schema change. Thresholds are named constants at the top of `src/annotate/straightLine.ts`: level/plumb
+snap within 5 degrees, hold 500 ms within 4 px, and a hold only straightens a stroke that has gone at least 8 px.
+
+| Change | Why | Before | After | Files | Off switch / revert |
+|---|---|---|---|---|---|
+| Straight-line module | Keep the geometry and timing testable, and shared by every drawing path | Nothing | `straighten` (end point, snapped exactly level or plumb within 5 degrees, any other angle unchanged, either direction), `createHoldDetector` (fires once after 500 ms within 4 px, resets on movement), `createStraightTracker` (Shift on any pointer event or key press, or a hold, latches the stroke straight until it lifts), `straightPoints` (start and end, both with the stroke's average pressure) | `src/annotate/straightLine.ts`, `straightLine.test.ts` | Revert the commit |
+| Page ink | Underline or rule a line on the page | Strokes followed the pen | Straight on Shift or hold, live while drawing; saved as a two-point stroke anchored to the word it starts on, like any stroke. Never offered to the gesture check, even with Gestures on. Covers the reader and PDF pages (both use the same hook) | `src/annotate/useInkDraw.ts` | Revert the commit |
+| Sketch sheets | Straight rules and boxes in freehand sheets | As above | Same behaviour in freehand mode (not in diagram mode, not for the eraser or lasso) | `src/annotate/sketchSurface.ts` | Revert the commit |
+| Ḥāshiya ink cards | Same in the margins | As above | Same behaviour; the card is made from the two-point stroke as usual | `src/studyDesk/marginInk.tsx` | Revert the commit |
