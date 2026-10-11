@@ -4,8 +4,8 @@
  * delete this folder, its registry line and those touch points.
  */
 import type { FeatureDescriptor } from '../features/registry';
-import { WasitMatchSettings } from './WasitMatchSettings';
 import './wasitMatch.css';
+import { WasitMatchSettings } from './WasitMatchSettings';
 
 export const wasitMatchFeature: FeatureDescriptor = {
   id: 'wasitMatch',

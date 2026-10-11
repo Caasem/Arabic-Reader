@@ -4,9 +4,9 @@
  * it through `lookFeature` in src/features/registry.ts; the other touch points are listed in it.
  */
 import type { FeatureDescriptor } from '../features/registry';
+import './look.css';
 import { LookSettings } from './LookSettings';
 import { LookSkin } from './LookSkin';
-import './look.css';
 
 export const lookFeature: FeatureDescriptor = {
   id: 'look',

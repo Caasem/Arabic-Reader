@@ -5,8 +5,8 @@
  * it. To remove the feature, delete this folder, its registry line and those touch points.
  */
 import type { FeatureDescriptor } from '../features/registry';
-import { WasitStructureSettings } from './WasitStructureSettings';
 import './wasitStructure.css';
+import { WasitStructureSettings } from './WasitStructureSettings';
 
 export const wasitStructureFeature: FeatureDescriptor = {
   id: 'wasitStructure',

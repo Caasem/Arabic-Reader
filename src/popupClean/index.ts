@@ -8,8 +8,8 @@
  * those touch points.
  */
 import type { FeatureDescriptor } from '../features/registry';
-import { PopupCleanSettings } from './PopupCleanSettings';
 import './popupClean.css';
+import { PopupCleanSettings } from './PopupCleanSettings';
 
 export const popupCleanFeature: FeatureDescriptor = {
   id: 'popupClean',
