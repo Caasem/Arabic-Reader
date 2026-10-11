@@ -7,7 +7,7 @@ import { noteCardFeature } from '../noteCard';
 import { FlashHost, FlashSettings } from '../flashCard';
 import { PicksExportHost } from '../picksExport';
 import { DeskHost, StudyDeskSettings } from '../studyDesk';
-import { AnnotateHost, AnnotateSettings } from '../annotate';
+import { annotateFeature } from '../annotate';
 import { VerbFormsSettings } from '../verbForms';
 import { PopupCleanSettings } from '../popupClean';
 import { WasitMatchSettings } from '../wasitMatch';
@@ -65,7 +65,7 @@ export const FEATURES: FeatureDescriptor[] = [
   { id: 'flashCard', Host: FlashHost, SettingsSection: FlashSettings, settingsGroup: 'dictionary', touchPoints: [] },
   { id: 'picksExport', Host: PicksExportHost, touchPoints: [] },
   { id: 'studyDesk', Host: DeskHost, SettingsSection: StudyDeskSettings, settingsGroup: 'dictionary', touchPoints: [] },
-  { id: 'annotate', Host: AnnotateHost, SettingsSection: AnnotateSettings, settingsGroup: 'dictionary', touchPoints: [] },
+  annotateFeature,
   { id: 'verbForms', SettingsSection: VerbFormsSettings, settingsGroup: 'dictionary', touchPoints: [] },
   { id: 'popupClean', SettingsSection: PopupCleanSettings, settingsGroup: 'dictionary', touchPoints: [] },
   { id: 'wasitMatch', SettingsSection: WasitMatchSettings, settingsGroup: 'dictionary', touchPoints: [] },
