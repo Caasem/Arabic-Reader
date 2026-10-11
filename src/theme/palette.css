@@ -24,4 +24,23 @@
   --c-note-colour-blue: #8fb8f0;
   --c-note-colour-purple: #bb9be6;
   --c-note-colour-red: #ef9a9a;
+
+  /* Library and catalogue browser */
+  --c-library-danger-wash: #f7e6e1;
+  --c-library-badge-bg: rgba(0, 0, 0, 0.55);
+  --c-library-badge-ink: #fff;
+  --c-library-cover-scrim: rgba(0, 0, 0, 0.4);
+  --c-library-cover-ink: #fff;
+  --c-library-neutral-border: rgba(128, 128, 128, 0.35);
+  --c-library-neutral-tint: rgba(128, 128, 128, 0.14);
+  --c-lib-mark-yellow: rgba(231, 198, 91, 0.5);
+  --c-lib-mark-green: rgba(126, 186, 140, 0.5);
+  --c-lib-mark-blue: rgba(110, 160, 220, 0.45);
+  --c-lib-mark-purple: rgba(170, 130, 210, 0.45);
+  --c-lib-mark-red: rgba(225, 120, 110, 0.45);
+  --c-lib-cover-spine: rgba(0, 0, 0, 0.2);
+  --c-lib-cover-shadow: rgba(40, 30, 15, 0.5);
+  --c-lib-sheet-backdrop: rgba(28, 27, 25, 0.38);
+  --c-lib-sheet-shadow: rgba(0, 0, 0, 0.4);
+  --c-browse-backdrop: rgba(0, 0, 0, 0.4);
 }
