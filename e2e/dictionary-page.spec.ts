@@ -6,7 +6,7 @@ test.use({ viewport: { width: 1440, height: 900 } });
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     const key = 'arabic-reader:preferences';
-    if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify({ quietReaderEnabled: false, enabledProviderIds: ['aramorph', 'alwasit'] }));
+    if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify({ quietReaderEnabled: false, prefsMigrations: 1, enabledProviderIds: ['aramorph', 'alwasit'] }));
   });
 });
 

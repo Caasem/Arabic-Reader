@@ -153,6 +153,11 @@
   margin: 0 0 12px;
 }
 
+.settings-section__note--legacy {
+  color: var(--danger);
+  font-weight: 600;
+}
+
 .settings-row {
   display: flex;
   align-items: center;

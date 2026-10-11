@@ -11,6 +11,7 @@ async function openWordWithManyArabicEntries(page: Page, collapse: boolean) {
       'arabic-reader:preferences',
       JSON.stringify({
         quietReaderEnabled: false,
+        prefsMigrations: 1,
         enabledProviderIds: ['aramorph', 'alwasit', 'alsihah', 'almaqayis'],
         collapseManyArabicEntries: collapseMany,
       })

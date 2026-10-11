@@ -1,11 +1,11 @@
 import { usePreferences } from '../../../state/PreferencesContext';
-import { Note, SettingsSection, ToggleRow } from './controls';
+import { LegacyNote, Note, SettingsSection, ToggleRow } from './controls';
 
 export function CleanReaderSettings() {
   const { prefs, updatePrefs } = usePreferences();
 
   return (
-    <SettingsSection title="Clean text reader (Beta)">
+    <SettingsSection title="Clean text reader (Legacy)">
       <Note>
         Shows books as plain text, stripped of the publisher's styling, images and page layout — a simpler,
         steadier way to read Arabic novels.
@@ -19,6 +19,7 @@ export function CleanReaderSettings() {
           ? 'Word lookup and vocabulary still work. Highlights, bookmarks and in-book search are only available in the original reader, which you can switch back to any time.'
           : null}
       </ToggleRow>
+      {prefs.cleanReaderEnabled && <LegacyNote />}
     </SettingsSection>
   );
 }

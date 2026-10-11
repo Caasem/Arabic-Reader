@@ -33,7 +33,7 @@ import { DisplaySheet } from './DisplaySheet';
 import { chapterForEpubPosition, formatCleanLocation, parseCleanLocation } from './location';
 import { MarginLevels } from './MarginLevels';
 import { NotePopover, SelectionBar, type ViewportRect } from './Overlays';
-import { clearPaint, flash, paintHighlights, paintSearchMatch } from './paint';
+import { clearPaint, flash, paintHighlights, paintSearchMatch, paintSupported } from './paint';
 import { bookProgress, chapterStarts, estimatePages } from './progress';
 import { useReaderView } from './readerView';
 import { useReaderSearch, type SearchHit } from './searchState';
@@ -729,7 +729,8 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
         lookups.runTouchAction(action, withLocation(target));
       },
       onBackgroundClick: () => lookups.closeBubble(),
-      onDoubleTap: () => lookups.closeBubble(),
+      // The double tap's first tap already ran the single-tap action: close what it opened (the bubble, or on phones the popup).
+      onDoubleTap: () => lookups.closeAll(),
       onHoverStart: hover.schedule,
       onHoverEnd: hover.dismiss,
       onSwipe: (direction) => (direction === 'next' ? next() : prev()),
@@ -1194,6 +1195,7 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
             highlights: highlightRows,
             editing: editingNote,
             setEditing: setEditingNote,
+            highlightsNote: paintSupported ? undefined : 'Highlights need iOS 17.2 or newer to show on the page. They are saved and listed here.',
           }}
           words={{
             items: savedItems,

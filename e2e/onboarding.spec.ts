@@ -45,15 +45,33 @@ test('a first visit walks the showcase, then applies the chosen device and dicti
   await expect(page.locator('.book-card__title', { hasText: 'الأخبار الطوال' })).toBeVisible();
 });
 
-test('choosing Phone applies the touch starting layout and a collapsed sidebar', async ({ page }) => {
+async function setUpAs(page: Page, device: 'Phone' | 'Tablet') {
   await page.goto('/');
   await page.getByRole('button', { name: 'Skip intro' }).click();
-  await page.locator('.ob-choice', { hasText: 'Phone' }).click();
+  await page.locator('.ob-choice', { hasText: device }).click();
   await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Set up my reading space' }).click();
   await page.waitForSelector('.navbar');
-  expect(await prefs(page)).toMatchObject({ readingWidthPct: 100, hoverPreviewEnabled: false, cleanReaderEnabled: true, quietReaderEnabled: false });
+}
+
+/** Opens the first starter book and waits for the new reader's text. */
+async function opensInNewReader(page: Page) {
+  await page.locator('.book-card').first().click({ timeout: 15000 });
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 20000 });
+  await expect(page.locator('.new-reader-notice')).toHaveCount(0);
+}
+
+test('choosing Phone applies the touch starting layout and a collapsed sidebar, and reads in the new reader', async ({ page }) => {
+  await setUpAs(page, 'Phone');
+  expect(await prefs(page)).toMatchObject({ readingWidthPct: 100, hoverPreviewEnabled: false, cleanReaderEnabled: false, quietReaderEnabled: true });
   await expect(page.locator('.navbar')).toHaveClass(/navbar--collapsed/);
+  await opensInNewReader(page);
+});
+
+test('choosing Tablet reads in the new reader too', async ({ page }) => {
+  await setUpAs(page, 'Tablet');
+  expect(await prefs(page)).toMatchObject({ readingWidthPct: 80, cleanReaderEnabled: false, quietReaderEnabled: true });
+  await opensInNewReader(page);
 });
 
 test('skipping uses the recommended layout with only the essential dictionary, and never returns', async ({ page }) => {

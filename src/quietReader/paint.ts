@@ -5,9 +5,13 @@ import type { HighlightColor } from '../types';
  * the CSS Custom Highlight API (styled by ::highlight() rules in
  * quietReader.css), so the text's DOM -- its word spans, and the character
  * offsets every saved place depends on -- is never touched. Where the API is
- * missing the marks still list in the drawer; they just aren't drawn.
+ * missing (iOS before 17.2, Android WebView before 105) the marks still list in
+ * the drawer, which says why they aren't drawn (`paintSupported`).
  */
 const supported = typeof CSS !== 'undefined' && 'highlights' in CSS && typeof Highlight !== 'undefined';
+
+/** False where highlights, search matches and jump flashes can't be drawn. */
+export const paintSupported = supported;
 
 const COLORS: HighlightColor[] = ['yellow', 'green', 'blue', 'purple', 'red'];
 let flashTimer: number | undefined;

@@ -1,5 +1,5 @@
 import { usePreferences } from '../state/PreferencesContext';
-import { Note, SegmentedRow, SettingsSection, ToggleRow } from '../components/shared/settings/controls';
+import { LegacyNote, Note, SegmentedRow, SettingsSection, ToggleRow } from '../components/shared/settings/controls';
 
 const DOCK_STYLES = [
   { id: 'icons', label: 'Icons' },
@@ -15,6 +15,7 @@ export function QuietReaderSettings() {
         better in its original layout can switch back under Display → View. Turn this off to return to the previous
         readers.
       </ToggleRow>
+      {!prefs.quietReaderEnabled && <LegacyNote />}
       <SegmentedRow label="Dock" options={DOCK_STYLES} value={prefs.dockStyle} onChange={(dockStyle) => updatePrefs({ dockStyle })} />
       <Note>
         Icons: every tool fits, and a tool shows its name and key when you point at it. Names: each tool is named, and the
