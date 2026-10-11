@@ -1,0 +1,8 @@
+# Reader gaps found while porting the e2e specs (refactor phase 2b, session 1)
+
+Each row is a test that checked something Original layout did and the new reader (`src/quietReader`) does not. The test is kept as `test.fixme` with a one-line reason, so it still documents the behaviour. Session 2 decides on each: close the gap in the new reader, or accept the loss and record it in the change matrix (`refactor-changes.md`).
+
+| Spec | Test | What Original layout did | Why the new reader can't | Suggested resolution |
+| --- | --- | --- | --- | --- |
+| `footnotes.spec.ts` | footnote popup keeps safe markup and drops script source from the note | The note popup showed the note's sanitised markup (a `<b>` stayed bold) and left out a `<script>`'s source. | The new reader keeps a note as plain text (`noteText` in `src/readerCore/parseCleanEpub.ts` takes `textContent`), so the markup is gone and a `<script>`'s source text shows in the note. | Close the gap for the script text (skip `script`/`style` in `noteText`, a one-line fix). Accept the loss of bold and italic in notes. |
+| `footnotes.spec.ts` | an unresolvable footnote target shows the "Go to note" fallback | A note that could not be loaded inline said so and offered a "Go to note" button to follow the link in the book. | The new reader says "This note could not be found in the book." and offers "Go to note" only when the note's text can be found in the chapter (`noteTarget` in `QuietReader.tsx`). A broken link has nowhere to go. | Accept the loss: the message is honest and the button would have nothing to open. |
