@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import type { CleanChapter } from '../cleanReader/parseCleanEpub';
+import type { CleanChapter } from '../readerCore/parseCleanEpub';
 import { buildBookModel } from './bookModel';
 import { searchForms, searchTexts } from './cleanSearch';
 import { chapterForEpubPosition, formatCleanLocation, isCleanLocation, parseCleanLocation } from './location';

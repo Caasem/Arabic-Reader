@@ -1,5 +1,5 @@
-import { chapterText } from '../cleanReader/chapterHtml';
-import { NOTE_MARKER, type CleanBook, type CleanChapter } from '../cleanReader/parseCleanEpub';
+import { chapterText } from '../readerCore/chapterHtml';
+import { NOTE_MARKER, type CleanBook, type CleanChapter } from '../readerCore/parseCleanEpub';
 
 /** A parsed book plus the per-chapter text the reader searches and positions against. */
 export interface BookModel {

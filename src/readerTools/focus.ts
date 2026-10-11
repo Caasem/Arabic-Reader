@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { loadCleanFocus, saveCleanFocus } from '../cleanReader/cleanFocus';
+import { loadCleanFocus, saveCleanFocus } from '../readerCore/cleanFocus';
 import type { ReaderKind } from './tools';
 
 /**

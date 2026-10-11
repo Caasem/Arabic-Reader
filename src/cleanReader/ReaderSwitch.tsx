@@ -11,7 +11,7 @@ import { DeskHost } from '../studyDesk';
 import { AnnotateHost } from '../annotate';
 import { FocusHost } from '../readerTools';
 import { useReaderView } from '../quietReader/readerView';
-import { saveCleanFocus } from './cleanFocus';
+import { saveCleanFocus } from '../readerCore/cleanFocus';
 import { NewReaderNotice } from './NewReaderNotice';
 import { usePdfView } from '../pdf/pages/pdfView';
 

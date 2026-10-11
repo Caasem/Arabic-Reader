@@ -19,12 +19,12 @@ import { usePreferences } from '../state/PreferencesContext';
 import { SAVED_WORD_COLOR } from '../theme/tokens';
 import type { BookMeta, TocItem } from '../types';
 import { vocabularyService } from '../vocabulary';
-import { chapterHtml } from './chapterHtml';
-import { loadCleanFocus, saveCleanFocus } from './cleanFocus';
-import { loadCleanPosition, saveCleanPosition } from './cleanPosition';
-import { elementAsDocument } from './elementAsDocument';
-import { parseCleanEpub, type CleanBook } from './parseCleanEpub';
-import { useCleanSavedWords } from './useCleanSavedWords';
+import { chapterHtml } from '../readerCore/chapterHtml';
+import { loadCleanFocus, saveCleanFocus } from '../readerCore/cleanFocus';
+import { loadCleanPosition, saveCleanPosition } from '../readerCore/cleanPosition';
+import { elementAsDocument } from '../readerCore/elementAsDocument';
+import { parseCleanEpub, type CleanBook } from '../readerCore/parseCleanEpub';
+import { useCleanSavedWords } from '../readerCore/useCleanSavedWords';
 import './cleanReader.css';
 import { senseText } from '../dictionary/senseText';
 
