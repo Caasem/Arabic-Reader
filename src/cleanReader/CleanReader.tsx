@@ -25,6 +25,7 @@ import { loadCleanPosition, saveCleanPosition } from '../readerCore/cleanPositio
 import { elementAsDocument } from '../readerCore/elementAsDocument';
 import { parseCleanEpub, type CleanBook } from '../readerCore/parseCleanEpub';
 import { useCleanSavedWords } from '../readerCore/useCleanSavedWords';
+import '../readerCore/chapterHtml.css';
 import './cleanReader.css';
 import { senseText } from '../dictionary/senseText';
 

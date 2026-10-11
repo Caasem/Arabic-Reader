@@ -12,7 +12,7 @@ import { loadCleanPosition, saveCleanPosition } from '../readerCore/cleanPositio
 import { elementAsDocument } from '../readerCore/elementAsDocument';
 import { parseCleanEpub } from '../readerCore/parseCleanEpub';
 import { useCleanSavedWords } from '../readerCore/useCleanSavedWords';
-import '../cleanReader/cleanReader.css';
+import '../readerCore/chapterHtml.css';
 import { logDiagnostic } from '../diagnostics/diagnosticsLog';
 import { libraryService } from '../library/libraryService';
 import { announceReaderSelection, registerBookNavigator, registerReaderMarks, sentenceSpan, type LocationHint } from '../readerChords';
