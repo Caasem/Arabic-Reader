@@ -1,14 +1,11 @@
 import { test, expect } from '@playwright/test';
 import JSZip from 'jszip';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 /**
- * A hostile EPUB must render as inert content: section iframes are
- * sandboxed with scripts allowed (needed for iOS taps), so the app strips
- * every script source out of each section before it renders. Each payload
- * below would otherwise reach the host page's window/localStorage.
+ * A hostile EPUB must render as inert content: the new reader draws a book
+ * as escaped plain text, so no script source, handler or frame of the book's
+ * ever reaches the page. Each payload below would otherwise reach the host
+ * page's window/localStorage.
  */
 const HOSTILE_BODY = `
   <p onclick="parent.__pwnedClick = true">كتاب جميل <a href="javascript:parent.__pwnedHref = true">رابط</a></p>
@@ -61,20 +58,11 @@ test('scripts embedded in an EPUB never run, and word taps still work', async ({
   });
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
-  await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
-
-  // The reader's own section frame, not "any child frame": the hostile book's <iframe srcdoc> can
-  // exist for a moment before the sanitiser removes it, and picking it fails as a detached frame.
-  const frame = async () => (await (await page.locator('.reader__epub iframe').first().elementHandle())?.contentFrame())!;
-  await expect
-    .poll(async () => (await frame().catch(() => null))?.evaluate(() => document.querySelectorAll('.ar-word').length).catch(() => 0) ?? 0, { timeout: 15000 })
-    .toBeGreaterThan(0);
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 30000 });
 
   // Give any surviving payload (image error handler, etc.) a chance to fire.
   await page.waitForTimeout(1000);
-  await (await frame()).evaluate(() => {
-    document.querySelector('p')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-  });
+  await page.locator('.qr-chapter p').first().click();
 
   const pwned = await page.evaluate(() => {
     const w = window as unknown as Record<string, unknown>;
@@ -86,18 +74,36 @@ test('scripts embedded in an EPUB never run, and word taps still work', async ({
   expect(pwned.flags, 'book-supplied script executed in the app').toEqual([]);
   expect(pwned.storage).toBeNull();
 
-  const sectionState = await (await frame()).evaluate(() => ({
-    scripts: document.getElementsByTagNameNS('*', 'script').length,
-    handlers: document.querySelectorAll('[onclick], [onerror]').length,
-    csp: document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.getAttribute('content') ?? null,
-  }));
+  const sectionState = await page.evaluate(() => {
+    const chapter = document.querySelector('.qr-chapter')!;
+    return {
+      scripts: chapter.getElementsByTagNameNS('*', 'script').length,
+      handlers: chapter.querySelectorAll('[onclick], [onerror]').length,
+      frames: chapter.querySelectorAll('iframe, img, svg').length,
+    };
+  });
   expect(sectionState.scripts).toBe(0);
   expect(sectionState.handlers).toBe(0);
-  expect(sectionState.csp).toContain("script-src 'none'");
+  expect(sectionState.frames).toBe(0);
 
   // Tapping a word still opens the dictionary.
-  await (await frame()).evaluate(() => {
-    document.querySelector('.ar-word')!.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-  });
+  await page.locator('.qr-chapter .ar-word').first().click();
   await expect(page.locator('.dict-popup')).toBeVisible({ timeout: 8000 });
+});
+
+// The old reader sandboxed each section iframe behind a script-src 'none' CSP; the new reader has no section frame to put one on.
+test.fixme("each section carries a script-src 'none' content security policy", async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('.navbar__settings', { timeout: 15000 });
+  await page.setInputFiles('.library__actions input[type=file]', {
+    name: 'hostile.epub',
+    mimeType: 'application/epub+zip',
+    buffer: await buildEpub(HOSTILE_BODY),
+  });
+  await page.waitForSelector('.book-card', { timeout: 15000 });
+  await page.click('.book-card');
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 30000 });
+
+  const csp = await page.evaluate(() => document.querySelector('.qr-chapter meta[http-equiv="Content-Security-Policy"]')?.getAttribute('content') ?? null);
+  expect(csp).toContain("script-src 'none'");
 });
