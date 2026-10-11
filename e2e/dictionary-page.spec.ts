@@ -2,11 +2,11 @@ import { test, expect, type Page } from '@playwright/test';
 
 test.use({ viewport: { width: 1440, height: 900 } });
 
-/** The original reader, with Al-Wasīṭ switched on (seeded only when no preferences exist yet). */
+/** Al-Wasīṭ switched on (seeded only when no preferences exist yet). */
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     const key = 'arabic-reader:preferences';
-    if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify({ quietReaderEnabled: false, prefsMigrations: 1, enabledProviderIds: ['aramorph', 'alwasit'] }));
+    if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify({ enabledProviderIds: ['aramorph', 'alwasit'] }));
   });
 });
 
@@ -58,19 +58,15 @@ test('the popup opens the word in the full-page dictionary, and Back returns to 
   await page.click('text=Try the sample book');
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
-  await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
-  await page.waitForTimeout(2000);
-  const frame = page.frames().find((f) => f !== page.mainFrame())!;
-  const word = await frame.evaluate(() => {
-    const el = document.querySelectorAll('p .ar-word')[0] as HTMLElement;
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    return el.dataset.word ?? el.textContent ?? '';
-  });
+  await page.waitForSelector('.qr-chapter p .ar-word', { timeout: 30000 });
+  const first = page.locator('.qr-chapter p .ar-word').first();
+  const word = (await first.getAttribute('data-word')) ?? (await first.textContent()) ?? '';
+  await first.click();
   await page.getByRole('button', { name: 'Open in full page' }).click();
 
   await expect(page.locator('.dpage')).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Search the dictionary' })).toHaveValue(word);
   await expect(page.locator('.dict-popup--page .dict-popup__word')).toContainText(word);
   await page.getByRole('button', { name: 'Back to book' }).click();
-  await expect(page.locator('.reader__epub iframe')).toBeVisible({ timeout: 30000 });
+  await expect(page.locator('.qr-chapter p .ar-word').first()).toBeVisible({ timeout: 30000 });
 });

@@ -38,7 +38,7 @@ test('opens books as clean text with one dock, and turns pages and chapters', as
   await expect(chapterTitle(page)).toHaveText('الفصل الثاني: المدرسة');
 });
 
-test('the display sheet changes the page, and a book can switch to its original layout and back', async ({ page }) => {
+test('the display sheet changes the page, and there is no Original layout to switch to', async ({ page }) => {
   await openSample(page);
   await dock(page, 'Display').click();
   const sheet = page.getByRole('dialog', { name: 'Display' });
@@ -63,10 +63,9 @@ test('the display sheet changes the page, and a book can switch to its original 
   await expect(page.locator('.qr-chapter')).toHaveCount(3);
 
   await sheet.getByRole('button', { name: 'Paged' }).click();
-  await sheet.getByRole('button', { name: 'Original layout' }).click();
-  await page.waitForSelector('.reader__epub iframe', { timeout: 15000 });
-  await page.getByRole('button', { name: 'Clean text' }).click();
-  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
+  await expect(page.locator('.qr-stage')).not.toHaveClass(/qr-stage--scroll/);
+  // Original layout went in 0.96.0.
+  await expect(sheet.getByRole('button', { name: 'Original layout' })).toHaveCount(0);
 });
 
 test('a word opens the usual dictionary popup, in Focus too, and saving it colours it in the text', async ({ page }) => {

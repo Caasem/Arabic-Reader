@@ -1,13 +1,13 @@
 import { test, expect, type Page } from '@playwright/test';
 
 /**
- * Preference migration 1 (src/state/prefsMigrations.ts, 0.95.0): anyone with
- * "New reader" off is moved to it once, told so once, and can switch back
- * until the old readers go in phase 2b.
+ * Since 0.96.0 the new reader is the only one. Preferences saved when an old reader was chosen (before or after
+ * preference migration 1 of 0.95.0) still open books in it, keep everything else, and show no notice; Settings no
+ * longer offers the old readers.
  */
 test.use({ viewport: { width: 1440, height: 900 } });
 
-/** Preferences saved before migrations existed: no `prefsMigrations`. Seeded only into an empty mirror. */
+/** Preferences as an older version saved them. Seeded only into an empty mirror. */
 function seedOldPrefs(page: Page, prefs: Record<string, unknown>) {
   return page.addInitScript((seed) => {
     const key = 'arabic-reader:preferences';
@@ -27,53 +27,28 @@ async function openSample(page: Page) {
   await page.locator('.book-card').first().click();
 }
 
-const notice = (page: Page) => page.locator('.new-reader-notice');
+for (const [who, seed] of [
+  ['the old clean reader, before migrations', { quietReaderEnabled: false, cleanReaderEnabled: true, theme: 'sepia' }],
+  ['Original layout, before migrations', { quietReaderEnabled: false, cleanReaderEnabled: false, theme: 'sepia' }],
+  ['the old clean reader after Switch back', { quietReaderEnabled: false, cleanReaderEnabled: true, newReaderSwitchBack: null, prefsMigrations: 1, theme: 'sepia' }],
+] as const) {
+  test(`someone who had ${who} reads in the new reader, with their other settings`, async ({ page }) => {
+    await seedOldPrefs(page, seed);
+    await openSample(page);
+    await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
+    await expect(page.locator('.new-reader-notice')).toHaveCount(0);
+    expect(await storedPrefs(page)).toMatchObject({ theme: 'sepia', prefsMigrations: 1 });
+  });
+}
 
-test('someone on the old clean reader is moved to the new reader once, and the notice goes for good', async ({ page }) => {
-  await seedOldPrefs(page, { quietReaderEnabled: false, cleanReaderEnabled: true, theme: 'sepia' });
-  await openSample(page);
-  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
-  await expect(notice(page)).toContainText('Books now open in the new reader');
-  expect(await storedPrefs(page)).toMatchObject({ quietReaderEnabled: true, cleanReaderEnabled: false, prefsMigrations: 1, theme: 'sepia' });
-
-  await notice(page).getByRole('button', { name: 'Keep the new reader' }).click();
-  await expect(notice(page)).toHaveCount(0);
-
-  await openSample(page);
-  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
-  await expect(notice(page)).toHaveCount(0);
-});
-
-test('Switch back returns to the reader they had, and the migration does not run again', async ({ page }) => {
-  await seedOldPrefs(page, { quietReaderEnabled: false, cleanReaderEnabled: true });
-  await openSample(page);
-  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
-  await notice(page).getByRole('button', { name: 'Switch back' }).click();
-  await page.waitForSelector('.clean-reader__text', { timeout: 15000 });
-  await expect(notice(page)).toHaveCount(0);
-
-  await openSample(page);
-  await page.waitForSelector('.clean-reader__text', { timeout: 15000 });
-  expect(await storedPrefs(page)).toMatchObject({ quietReaderEnabled: false, cleanReaderEnabled: true, newReaderSwitchBack: null, prefsMigrations: 1 });
-});
-
-test('someone already on the new reader sees no notice', async ({ page }) => {
-  await openSample(page);
-  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 15000 });
-  await expect(notice(page)).toHaveCount(0);
-});
-
-test('Settings marks New reader off and the clean reader on as legacy', async ({ page }) => {
+test('Settings has no reader to choose and nothing marked Legacy', async ({ page }) => {
   await page.goto('/');
   await page.waitForSelector('.navbar__settings', { timeout: 15000 });
   await page.click('.navbar__settings');
   await page.waitForSelector('.settings-panel', { timeout: 5000 });
-  const legacy = page.locator('.settings-section__note--legacy');
-  await expect(legacy).toHaveCount(0);
-
-  await page.locator('.settings-toggle', { hasText: 'New reader' }).locator('input').uncheck();
-  await expect(legacy).toHaveCount(1);
-  await page.locator('.settings-toggle', { hasText: 'Read books as clean text' }).locator('input').check();
-  await expect(legacy).toHaveCount(2);
-  await expect(legacy.first()).toHaveText('Legacy, will be removed in a coming version.');
+  await expect(page.locator('.settings-toggle', { hasText: 'New reader' })).toHaveCount(0);
+  await expect(page.locator('.settings-toggle', { hasText: 'Read books as clean text' })).toHaveCount(0);
+  await expect(page.locator('.settings-panel')).not.toContainText('Legacy');
+  // The reader's own section stays, with the dock choice.
+  await expect(page.locator('.settings-panel')).toContainText('Dock');
 });
