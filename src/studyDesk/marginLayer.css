@@ -104,7 +104,7 @@
 .sd-gloss:hover,
 .sd-gloss--focus {
   background: var(--bg-elevated);
-  box-shadow: 0 1px 2px rgba(28, 27, 25, 0.06);
+  box-shadow: 0 1px 2px var(--c-margin-card-shadow);
 }
 .sd-gloss--out {
   opacity: 0.72;
@@ -403,7 +403,7 @@
 .sd-seg button[aria-pressed='true'] {
   background: var(--bg-elevated);
   color: var(--ink);
-  box-shadow: 0 1px 3px rgba(28, 27, 25, 0.14);
+  box-shadow: 0 1px 3px var(--c-margin-pop-shadow);
 }
 .sd-mset__note {
   margin: 0;
@@ -467,7 +467,7 @@ body.sd-margins--left .qr-stage--all .qr-column {
 /* A card lit while the words or box it belongs to are pointed at. */
 .sd-gloss--lit {
   background: var(--bg-elevated);
-  box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px rgb(0 0 0 / 0.1);
+  box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px var(--c-margin-active-shadow);
 }
 
 /* Piles (piles.ts, PileFan.tsx): the top card on the cards beneath it, a count badge and an optional named tab. */
@@ -475,7 +475,7 @@ body.sd-margins--left .qr-stage--all .qr-column {
   isolation: isolate;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  box-shadow: 0 1px 2px rgba(28, 27, 25, 0.06);
+  box-shadow: 0 1px 2px var(--c-margin-card-shadow);
 }
 .sd-pile__under {
   position: absolute;
@@ -501,7 +501,7 @@ body.sd-margins--left .qr-stage--all .qr-column {
   padding: 0 9px;
   border-radius: 6px 6px 0 0;
   background: var(--tab, var(--accent));
-  color: #fff;
+  color: var(--c-margin-badge-ink);
   font: 600 11.5px/20px var(--font-ui);
   white-space: nowrap;
   overflow: hidden;
@@ -595,7 +595,7 @@ body.sd-dragging-card * {
   pointer-events: none;
   background: var(--bg-elevated);
   border-radius: 10px;
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.22);
+  box-shadow: 0 10px 30px var(--c-margin-menu-shadow);
   max-height: 60vh;
   overflow: hidden;
   transform-origin: 30% 20%;
@@ -881,7 +881,7 @@ body.sd-dragging-card * {
   max-width: 36px;
   border-radius: 3px;
   object-fit: cover;
-  background: #fff;
+  background: var(--c-margin-field-bg);
 }
 .sd-chip__t {
   min-width: 0;
@@ -919,7 +919,7 @@ body.sd-dragging-card * {
   width: 100%;
   margin-top: 6px;
   border-radius: 4px;
-  background: #fff;
+  background: var(--c-margin-field-bg);
 }
 .sd-chip__body {
   margin-top: 4px;

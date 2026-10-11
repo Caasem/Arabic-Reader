@@ -46,7 +46,7 @@
   border: 1px solid var(--border);
   background: var(--bg-elevated);
   color: var(--ink);
-  box-shadow: 0 4px 14px rgb(0 0 0 / 0.14);
+  box-shadow: 0 4px 14px var(--c-ring-shadow);
   display: grid;
   place-content: center;
   gap: 1px;
@@ -68,8 +68,8 @@
 .sd-ring__btn--danger:hover,
 .sd-ring__btn--danger:focus-visible,
 .sd-ring__btn--danger.sd-ring__btn--on {
-  background: #b4472f;
-  border-color: #b4472f;
+  background: var(--c-ring-alert);
+  border-color: var(--c-ring-alert);
 }
 .sd-ring__l {
   font-size: 11px;

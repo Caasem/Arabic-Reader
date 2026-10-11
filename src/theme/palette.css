@@ -57,4 +57,36 @@
   --c-dictsearch-backdrop: rgba(28, 27, 25, 0.42);
   --c-dictsearch-shadow: rgba(28, 27, 25, 0.28);
   --c-dictsearch-sheet-shadow: rgba(28, 27, 25, 0.25);
+
+  /* Study desk and PDF pages */
+  --c-desk-lightbox-backdrop: rgb(20 18 15 / 0.72);
+  --c-desk-lightbox-shadow: rgb(0 0 0 / 0.4);
+  --c-desk-lightbox-bg: #fff;
+  --c-desk-lightbox-ink: #f1ece4;
+  --c-desk-lightbox-border: rgb(255 255 255 / 0.4);
+  --c-desk-alert-ink: #b4472f;
+  --c-desk-alert-fill: #b4472f;
+  --c-desk-alert-fill-ink: #fff;
+  --c-margin-card-shadow: rgba(28, 27, 25, 0.06);
+  --c-margin-pop-shadow: rgba(28, 27, 25, 0.14);
+  --c-margin-active-shadow: rgb(0 0 0 / 0.1);
+  --c-margin-badge-ink: #fff;
+  --c-margin-menu-shadow: rgb(0 0 0 / 0.22);
+  --c-margin-field-bg: #fff;
+  --c-ring-shadow: rgb(0 0 0 / 0.14);
+  --c-ring-alert: #b4472f;
+  --c-pdfdesk-marker: #2e7d74;
+  --c-pdfdesk-note-border: #7d5a14;
+  --c-pdfdesk-note-bg: #fffdf8;
+  --c-pdfdesk-pin: rgb(202 138 4 / 0.8);
+  --c-pdfdesk-hl-soft: rgb(250 204 21 / 0.12);
+  --c-pdfdesk-hl-strong: rgb(250 204 21 / 0.28);
+  --c-pdfpage-paper: #fff;
+  --c-pdfpage-shadow-near: rgb(28 27 25 / 0.12);
+  --c-pdfpage-shadow-far: rgb(28 27 25 / 0.08);
+  --c-pdfpage-paper-sepia: #f4ead6;
+  --c-pdfpage-paper-night: #1d1c21;
+  --c-pdfpage-number: #b4b0a8;
+  --c-pdfpage-warn-ink: #b0701c;
+  --c-pdfpage-warn-bg: rgb(176 112 28 / 0.14);
 }
