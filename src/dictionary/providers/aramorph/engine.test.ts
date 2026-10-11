@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { buildLookupKeys } from '../alwasit/lookupKeys';
 import {
   AramorphEngine,
   buildHiddenMasdars,
@@ -139,6 +140,32 @@ describe('parseRootHeader', () => {
     expect(parseRootHeader('nw/yf')).toEqual({ root: 'nwf', altRoot: 'nyf' });
     expect(parseRootHeader('$fh/w')).toEqual({ root: '$fh', altRoot: '$fw' });
     expect(parseRootHeader('Dwr/Dyr')).toEqual({ root: 'Dwr', altRoot: 'Dyr' });
+  });
+
+  it('drops the homograph number', () => {
+    expect(parseRootHeader('nwr(1)')).toEqual({ root: 'nwr' });
+    expect(parseRootHeader('bn(2)')).toEqual({ root: 'bn' });
+    expect(parseRootHeader('Hyy(3)')).toEqual({ root: 'Hyy' });
+    expect(parseRootHeader('Asw/y(1)')).toEqual({ root: 'Asw', altRoot: 'Asy' });
+  });
+
+  it('gives every stem under a numbered header the plain root, and looks a word up to it', () => {
+    const stems = createDictTable([';--- nwr(1)', ';; nUr_1', 'nwr\tnUr\tN\tlight', ';--- Hwl(2) and Hyl', ';; Hawol_1', 'Hwl\tHawol\tN\tyear'].join('\n'));
+    expect(stems.get('nwr')[0].root).toBe('nwr');
+    expect(stems.get('Hwl')[0].root).toBe('Hwl');
+    const engine = new AramorphEngine();
+    engine.setTables({
+      dictprefs: createDictTable(['\t\tPref-0\t', 'Al\tAl\tPref-Al\tthe'].join('\n')),
+      dictstems: stems,
+      dictsuffs: createDictTable('\t\tSuff-0\t'),
+      tableab: createMorphTableFromText(['Pref-0 N', 'Pref-Al N'].join('\n')),
+      tablebc: createMorphTableFromText('N Suff-0'),
+      tableac: createMorphTableFromText(['Pref-0 Suff-0', 'Pref-Al Suff-0'].join('\n')),
+    });
+    const root = engine.lookup('النور')[0].root;
+    expect(root).toBe('نور');
+    expect(engine.lookup('حول')[0].root).toBe('حول');
+    expect(buildLookupKeys('النور', [{ root }])).toContain('نور');
   });
 });
 

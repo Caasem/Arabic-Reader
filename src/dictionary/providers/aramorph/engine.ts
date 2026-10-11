@@ -205,9 +205,13 @@ export function weakLetterOf(stem: string): 'w' | 'y' | null {
 /**
  * A root header, which may give two spellings where the data notes a dispute:
  * `Asw/y` (asw or asy), `nw/yf` (nwf or nyf), `$fh/w`, `Dwr/Dyr`. The first
- * spelling is listed first; a bare header (`ktb`) has no alternative.
+ * spelling is listed first; a bare header (`ktb`) has no alternative. A
+ * homograph number (`bn(1)`) is dropped.
  */
-export function parseRootHeader(token: string): { root: string; altRoot?: string } {
+export function parseRootHeader(rawToken: string): { root: string; altRoot?: string } {
+  // Homograph numbers (`bn(1)`, `nwr(2)`) tell apart the data's roots of the
+  // same spelling; they are not part of the root.
+  const token = rawToken.replace(/\(\d+\)/g, '');
   const slash = token.indexOf('/');
   if (slash < 0) return { root: token };
   const left = token.slice(0, slash);
