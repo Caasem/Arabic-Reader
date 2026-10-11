@@ -3,7 +3,7 @@ import type { BookMeta, ReaderPreferences } from '../types';
 import { DictionarySearchHost, DictionarySearchSettings } from '../dictionarySearch';
 import { BookSearchHost, BookSearchSettings } from '../bookSearch';
 import { BookVocabHost, BookVocabSettings } from '../bookVocab';
-import { NoteHost, NoteSettings } from '../noteCard';
+import { noteCardFeature } from '../noteCard';
 import { FlashHost, FlashSettings } from '../flashCard';
 import { PicksExportHost } from '../picksExport';
 import { DeskHost, StudyDeskSettings } from '../studyDesk';
@@ -61,7 +61,7 @@ export const FEATURES: FeatureDescriptor[] = [
   { id: 'dictionarySearch', Host: DictionarySearchHost, SettingsSection: DictionarySearchSettings, settingsGroup: 'dictionary', touchPoints: [] },
   { id: 'bookSearch', Host: BookSearchHost, SettingsSection: BookSearchSettings, settingsGroup: 'dictionary', touchPoints: [] },
   { id: 'bookVocab', Host: BookVocabHost, SettingsSection: BookVocabSettings, settingsGroup: 'dictionary', touchPoints: [] },
-  { id: 'noteCard', Host: NoteHost, SettingsSection: NoteSettings, settingsGroup: 'dictionary', touchPoints: [] },
+  noteCardFeature,
   { id: 'flashCard', Host: FlashHost, SettingsSection: FlashSettings, settingsGroup: 'dictionary', touchPoints: [] },
   { id: 'picksExport', Host: PicksExportHost, touchPoints: [] },
   { id: 'studyDesk', Host: DeskHost, SettingsSection: StudyDeskSettings, settingsGroup: 'dictionary', touchPoints: [] },

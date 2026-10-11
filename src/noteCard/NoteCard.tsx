@@ -2,18 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { HighlightColor } from '../types';
 import { FloatingCard } from '../floatingCard';
 import { getReaderMarks, subscribeReaderSelection, type MarkCapture } from '../readerChords';
-
-const COLORS: HighlightColor[] = ['yellow', 'green', 'blue', 'purple', 'red'];
-const COLOR_KEY = 'noteCard.color';
-
-function loadColor(): HighlightColor {
-  try {
-    const raw = localStorage.getItem(COLOR_KEY);
-    return COLORS.includes(raw as HighlightColor) ? (raw as HighlightColor) : 'yellow';
-  } catch {
-    return 'yellow';
-  }
-}
+import { COLORS, loadColor, saveColor } from './color';
 
 /** The Alt+N card: writes a note on the selected text (or the first sentence on the page) and keeps floating so notes can be taken while reading on. */
 export function NoteCard({ onClose }: { onClose(): void }) {
@@ -92,11 +81,7 @@ export function NoteCard({ onClose }: { onClose(): void }) {
 
   function pickColor(next: HighlightColor) {
     setColor(next);
-    try {
-      localStorage.setItem(COLOR_KEY, next);
-    } catch {
-      // The colour just won't be remembered.
-    }
+    saveColor(next);
   }
 
   return (
