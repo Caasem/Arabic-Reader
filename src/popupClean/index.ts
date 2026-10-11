@@ -1,17 +1,28 @@
 /**
- * Clean dictionary popup layout: aligned on one edge, more white space, one-row
- * header, round add buttons in their own column (also per Al-Wasit sub-entry),
- * the verb form shown by pressing a root, other forms by tapping the verb.
+ * Clean dictionary popup layout: aligned on one edge, more white space, one-row header, round add buttons in their
+ * own column (also per Al-Wasit sub-entry), the verb form shown by pressing a root, other forms by tapping the verb.
  * Fonts are DM Sans and Amiri when installed, else the app's own fonts.
  *
- * Touch points: <DictionaryPopup> (the `clean` branches and the `dict-popup--clean`
- * class), <PopupCleanSettings> in SettingsPanel, the `dictionaryPopupCleanLayout`
- * preference, and verbForms' VerbFormInfo (`clean`/`open` props). To go back:
- * switch it off in Settings (instant), or `git revert` the commit that added it.
+ * The app wires its Settings section through `popupCleanFeature` in src/features/registry.ts; the other touch points
+ * are listed in it. To go back: switch it off in Settings (instant), or delete this folder, its registry line and
+ * those touch points.
  */
+import type { FeatureDescriptor } from '../features/registry';
+import { PopupCleanSettings } from './PopupCleanSettings';
 import './popupClean.css';
 
-export { PopupCleanSettings } from './PopupCleanSettings';
+export const popupCleanFeature: FeatureDescriptor = {
+  id: 'popupClean',
+  pref: 'dictionaryPopupCleanLayout',
+  SettingsSection: PopupCleanSettings,
+  settingsGroup: 'dictionary',
+  touchPoints: [
+    'the `dictionaryPopupCleanLayout` and `collapseManyArabicEntries` preferences (src/types/preferences.ts, src/state/defaultPreferences.ts)',
+    'the dictionary popup: its `clean` branches and the `dict-popup--clean` class (src/components/reader/DictionaryPopup.tsx)',
+    "verbForms' VerbFormInfo, which takes `clean` and `open` props (src/verbForms/VerbFormInfo.tsx)",
+  ],
+};
+
 export { EntryDock, type DockItem } from './EntryDock';
 export { entryGist } from './entryGist';
 

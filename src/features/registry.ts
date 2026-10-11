@@ -9,7 +9,7 @@ import { picksExportFeature } from '../picksExport';
 import { studyDeskFeature } from '../studyDesk';
 import { annotateFeature } from '../annotate';
 import { verbFormsFeature } from '../verbForms';
-import { PopupCleanSettings } from '../popupClean';
+import { popupCleanFeature } from '../popupClean';
 import { WasitMatchSettings } from '../wasitMatch';
 import { WasitStructureSettings } from '../wasitStructure';
 import { LookSettings, LookSkin } from '../look';
@@ -67,7 +67,7 @@ export const FEATURES: FeatureDescriptor[] = [
   studyDeskFeature,
   annotateFeature,
   verbFormsFeature,
-  { id: 'popupClean', SettingsSection: PopupCleanSettings, settingsGroup: 'dictionary', touchPoints: [] },
+  popupCleanFeature,
   { id: 'wasitMatch', SettingsSection: WasitMatchSettings, settingsGroup: 'dictionary', touchPoints: [] },
   { id: 'wasitStructure', SettingsSection: WasitStructureSettings, settingsGroup: 'dictionary', touchPoints: [] },
   { id: 'look', AppHost: LookSkin, SettingsSection: LookSettings, settingsGroup: 'appearance', touchPoints: [] },
