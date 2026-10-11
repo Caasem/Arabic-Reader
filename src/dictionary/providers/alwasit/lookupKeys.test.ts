@@ -34,4 +34,11 @@ describe('buildLookupKeys', () => {
     const keys = buildLookupKeys('كَتَبَ', [{ root: 'كتب', lemma: 'كَتَب' }]);
     expect([...keys].sort()).toEqual(['كتب']);
   });
+
+  it('searches a disputed root under both spellings, the leading one first', () => {
+    const keys = [...buildLookupKeys('ضار', [{ root: 'ضير', altRoot: 'ضور' }])];
+    expect(keys.indexOf('ضير')).toBeLessThan(keys.indexOf('ضور'));
+    const weak = [...buildLookupKeys('نفى', [{ root: 'نفي', altRoot: 'نفو' }])];
+    expect(weak.indexOf('نفي')).toBeLessThan(weak.indexOf('نفو'));
+  });
 });

@@ -36,6 +36,8 @@ export interface MorphologicalAnalysis {
   surfaceForm: string;
   lemma: string;
   root?: string;
+  /** The same root with و and ي swapped, where scholars or the data differ; searched after `root`. */
+  altRoot?: string;
   pos?: string;
   form?: string; // verb form I-X, etc.
   tense?: string;

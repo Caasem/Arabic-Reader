@@ -4,6 +4,7 @@ import {
   buildHiddenMasdars,
   createDictTable,
   createMorphTableFromText,
+  parseRootHeader,
   rootFromVerbLemma,
   deserializeTables,
   detransliterate,
@@ -128,6 +129,72 @@ describe('rootFromVerbLemma', () => {
     expect(rootFromVerbLemma('qAl')).toBeNull();
     expect(rootFromVerbLemma('ramaY')).toBeNull();
     expect(rootFromVerbLemma('daEA')).toBeNull();
+  });
+});
+
+describe('parseRootHeader', () => {
+  it('reads both spellings of a disputed root, first one listed first', () => {
+    expect(parseRootHeader('ktb')).toEqual({ root: 'ktb' });
+    expect(parseRootHeader('Asw/y')).toEqual({ root: 'Asw', altRoot: 'Asy' });
+    expect(parseRootHeader('nw/yf')).toEqual({ root: 'nwf', altRoot: 'nyf' });
+    expect(parseRootHeader('$fh/w')).toEqual({ root: '$fh', altRoot: '$fw' });
+    expect(parseRootHeader('Dwr/Dyr')).toEqual({ root: 'Dwr', altRoot: 'Dyr' });
+  });
+});
+
+describe('weak roots (و or ي)', () => {
+  const parse = (lines: string[]) => createDictTable(lines.join('\n'));
+
+  it('leads a rootless weak verb with the letter its own stems show, the other one second', () => {
+    const stems = parse([
+      ';; banaY-i_1',
+      'bnY\tbanaY\tPV_0\tbuild',
+      'bny\tbanay\tPV_Atn\tbuild',
+      'bny\tboniy\tIV_0hAnn\tbuild',
+      ";; binA'_1",
+      "bnA'\tbinA'\tN\tbuilding",
+      ';',
+      ';; badA-u_1',
+      'bdA\tbadA\tPV_h\tappear',
+      'bdw\tbadaw\tPV_Atn\tappear',
+    ]);
+    expect(stems.get("bnA'")[0]).toMatchObject({ root: 'bny', altRoot: 'bnw' });
+    expect(stems.get('bdw')[0]).toMatchObject({ root: 'bdw', altRoot: 'bdy' });
+  });
+
+  it('does not trust a derived form, whose stems always show ي, and uses the root filed elsewhere', () => {
+    const stems = parse([
+      ';--- bdw',
+      ';; badiyhap_1',
+      'bdyh\tbadiyhap\tN\tintuition',
+      ';',
+      ';; >abodaY_1',
+      '>bdY\t>abodaY\tPV_0\tshow',
+      '>bdy\t>aboday\tPV_Atn\tshow',
+    ]);
+    expect(stems.get('>bdY')[0]).toMatchObject({ root: 'bdw', altRoot: 'bdy' });
+  });
+
+  it('lets each verb under a disputed header lead with its own letter', () => {
+    const stems = parse([
+      ';--- nfw/y',
+      ';; nafA-u_1',
+      'nfA\tnafA\tPV_h\tbe chased away',
+      'nfw\tnofuw\tIV\tbe chased away',
+      ';; nafaY-i_1',
+      'nfY\tnafaY\tPV_0\tdeny',
+      'nfy\tnofiy\tIV\tdeny',
+    ]);
+    expect(stems.get('nfA')[0]).toMatchObject({ root: 'nfw', altRoot: 'nfy' });
+    expect(stems.get('nfY')[0]).toMatchObject({ root: 'nfy', altRoot: 'nfw' });
+  });
+
+  it('reports the other spelling with each lookup result', () => {
+    const engine = new AramorphEngine();
+    const tables = buildTables();
+    tables.dictstems = parse([';--- nfw/y', ';; nafaY-i_1', 'nfY\tnafaY\tPV\tdeny', 'nfy\tnofiy\tIV\tdeny']);
+    engine.setTables(tables);
+    expect(engine.lookup('نفى')[0]).toMatchObject({ root: 'نفي', altRoot: 'نفو' });
   });
 });
 

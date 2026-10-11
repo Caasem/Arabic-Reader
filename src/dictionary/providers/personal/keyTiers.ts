@@ -3,6 +3,7 @@ import { weakLastRadicalVariants } from '../alwasit/lookupKeys';
 
 interface AnalysisLike {
   root?: string;
+  altRoot?: string;
   lemma?: string;
 }
 
@@ -13,8 +14,7 @@ export function keyTiers(word: string, analyses: AnalysisLike[]): string[][] {
   const lemmas = analyses.flatMap((a) => (a.lemma ? [normalize(a.lemma)] : []));
   const roots = analyses.flatMap((a) => {
     if (!a.root || a.root === '---') return [];
-    const root = normalize(a.root);
-    return [root, ...weakLastRadicalVariants(root)];
+    return [a.root, a.altRoot].flatMap((r) => (r ? [normalize(r), ...weakLastRadicalVariants(normalize(r))] : []));
   });
   return [tier([normalize(word)]), tier(lemmas), tier(roots)];
 }

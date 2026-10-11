@@ -7,7 +7,7 @@ release.
 ## Summary: 10–11 October 2026 (the refactor pass)
 
 Everything that landed from the evening of 10 October to midday on 11 October, in order. Rows 1–7 are on `main`
-(up to 0.96.0); rows 8–18 are on `refactor/integration`
+(up to 0.96.0); rows 8–19 are on `refactor/integration`
 ([Caasem/Arabic-Reader#73](https://github.com/Caasem/Arabic-Reader/pull/73), 0.97.0), waiting to be tested before
 merging. Per-phase detail and how to revert each one: `docs/changes/refactor-changes.md`.
 
@@ -31,8 +31,19 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 | 16 | 11 Oct | #73 | Form V/VI verbal nouns missing from AraMorph (about 340, e.g. تَحاسُد) are made as hidden entries: they find the root for the Arabic dictionaries but are never shown | Yes | 0.99.1 | On `refactor/integration` |
 | 17 | 11 Oct | #73 | Lane's Lexicon (Arabic–English) added as an optional dictionary, off by default; Hans Wehr listed too but empty because of copyright, with a note on how to add your own copy | Yes | 0.100.0 | On `refactor/integration` |
 | 18 | 11 Oct | #73 | About 6,400 AraMorph entries that had no root get one from their group's verb (e.g. التباعد → بعد, التنافس → نفس), so the Arabic dictionaries and root search find them | Yes | 0.102.1 | On `refactor/integration` |
+| 19 | 11 Oct | #73 | Roots whose و/ي is in doubt are searched under both spellings, led by the one the verb's present tense shows; about 1,000 rootless weak-verb entries get a root, and 2,435 entries under AraMorph's "و or ي" headings (e.g. `nfw/y`) find their articles again | Yes | 0.103.0 | On `refactor/integration` |
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
+
+## v0.103.0 — 2026-10-11
+
+- **Roots ending (or hinging) on و or ي are searched both ways.** Where the letter is in doubt, Al-Wasīṭ, Al-Ṣiḥāḥ,
+  Maqāyīs and Lane show the article for the spelling the verb's present tense shows first, then the other one:
+  نَفَى (يَنْفِي) leads with نفي, نَفَا (يَنْفُو) with نفو, بَدَا (يَبْدُو) with بدو.
+- About 1,000 words from weak verbs that had no root now have one (البناء → بني, أبدى → بدو, التلاوة → تلو).
+- 2,435 words filed under AraMorph's "و or ي" roots (such as نفو/نفي, سمو/سمي, ضور/ضير) used to find no Arabic
+  article at all, because the root was read literally as "نفو/ي". They now find both.
+- The dictionary rebuilds once on first launch after the update.
 
 ## v0.102.2 — 2026-10-11
 

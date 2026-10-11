@@ -96,6 +96,9 @@ interface MorphEntry {
   pos: string;
   /** A verbal noun the engine made up (see buildHiddenMasdars), never shown. */
   hidden?: boolean;
+  /** The root with و and ي the other way round, where scholars or the data
+   * differ (`;--- Asw/y`, or a weak verb's last letter); `root` leads. */
+  altRoot?: string;
 }
 
 // ---------- Table parsers ----------
@@ -158,25 +161,123 @@ const DOUBLED_FORM_I = new RegExp(`^${R}a${R}~$`);
  * null when the pattern is unclear. */
 export function rootFromVerbLemma(lemma: string): string | null {
   const radicals = [DOUBLED_FORM_I, ...VERB_ROOT_PATTERNS].map((re) => lemma.match(re)).find(Boolean)?.slice(1);
-  return radicals ? radicals.join('').replace(/[>&<}|']/g, 'A') : null;
+  return radicals ? hamzaAsA(radicals.join('')) : null;
+}
+
+// The same verb forms with a weak last radical, written ى or ا in the citation
+// form (banaY, badA): only the first two radicals can be read off the letters.
+const W = '(?:aY|A)';
+const WEAK_LAST_PATTERNS = [
+  `^${R}a${R}${W}$`, // I     banaY, badA
+  `^${R}a${R}~${W}$`, // II    Dar~aY
+  `^${R}A${R}${W}$`, // III   lAqaY
+  `^>a${R}o${R}${W}$`, // IV    >abodaY
+  `^ta${R}a${R}~${W}$`, // V     talaq~aY
+  `^ta${R}A${R}${W}$`, // VI    tanAdaY
+  `^\\{ino${R}a${R}${W}$`, // VII   {inotahaY
+  `^\\{i${R}o[tTd]a${R}${W}$`, // VIII  {iqotaDaY
+  `^\\{isota${R}o${R}${W}$`, // X     {isotadoEaY
+].map((p) => new RegExp(p));
+
+const hamzaAsA = (radicals: string) => radicals.replace(/[>&<}|']/g, 'A');
+
+/**
+ * A verb with a weak last radical: its first two radicals, and the last one as
+ * the citation form suggests (ى usually ي, ا usually و). Only a Form I verb
+ * shows the real letter (see weakLetterOf): derived forms turn it into ي
+ * whatever it was (أَبْدَى, يُبْدِي from بدو).
+ */
+export function weakVerbRadicals(lemma: string): { first: string; guess: 'w' | 'y'; formI: boolean } | null {
+  for (const [i, re] of WEAK_LAST_PATTERNS.entries()) {
+    const m = lemma.match(re);
+    if (m) return { first: hamzaAsA(m[1] + m[2]), guess: lemma.endsWith('Y') ? 'y' : 'w', formI: i === 0 };
+  }
+  return null;
+}
+
+/** Which weak letter a Form I stem shows: banay-/yaboniy -> y, daEaw-/yadoEuw -> w. */
+export function weakLetterOf(stem: string): 'w' | 'y' | null {
+  if (/(?:ay|iy)$/.test(stem)) return 'y';
+  if (/(?:aw|uw)$/.test(stem)) return 'w';
+  return null;
+}
+
+/**
+ * A root header, which may give two spellings where the data notes a dispute:
+ * `Asw/y` (asw or asy), `nw/yf` (nwf or nyf), `$fh/w`, `Dwr/Dyr`. The first
+ * spelling is listed first; a bare header (`ktb`) has no alternative.
+ */
+export function parseRootHeader(token: string): { root: string; altRoot?: string } {
+  const slash = token.indexOf('/');
+  if (slash < 0) return { root: token };
+  const left = token.slice(0, slash);
+  const right = token.slice(slash + 1);
+  if (left.length >= 3 && right.length >= 3) return { root: left, altRoot: right };
+  return { root: left + right.slice(1), altRoot: left.slice(0, -1) + right };
 }
 
 export function createDictTable(text: string): OptimizedDictArray<MorphEntry> {
   const lines = text.split('\n');
   const table = new OptimizedDictArray<MorphEntry>();
   let root = '---';
+  let altRoot: string | undefined;
   let lemma = '---';
   let lemmaVowel: string | undefined;
   // About 13,600 stems sit in groups with no `;--- root` header: lone `;`
   // lines split some roots' blocks, and some roots never got a header. When
   // such a group has a verb, its root comes from the verb (rootFromVerbLemma)
   // and goes to every stem in the group.
-  let rootless: MorphEntry[] = [];
+  //
+  // Where و and ي are in doubt -- a weak verb's last radical (بَنَى), or a
+  // header that gives both (`nfw/y`) -- the root leads with the letter a Form I
+  // verb in the group shows: its stems (بَنَيْتُ, يَبْنِي) and its marked
+  // present-tense vowel (badA-u: يَبْدُو). Failing that, a rootless weak verb
+  // takes the spelling the data files a root under elsewhere, then the
+  // citation form's hint. The other letter is kept as altRoot and searched too.
+  const headerRoots = new Set<string>();
+  for (const m of text.matchAll(/^;--- (\S+)/gm)) {
+    const h = parseRootHeader(m[1]);
+    headerRoots.add(h.root);
+    if (h.altRoot) headerRoots.add(h.altRoot);
+  }
+  let group: MorphEntry[] = [];
   let inferredRoot: string | null = null;
+  let weak: { first: string; guess: 'w' | 'y'; formI: boolean } | null = null;
+  // Votes per Form I weak verb; a verb follows its own, everything else the group's.
+  const lemmaVotes = new Map<string, { w: number; y: number }>();
+  const leading = (v: { w: number; y: number } | undefined) => (!v ? null : v.y > v.w ? 'y' : v.w > v.y ? 'w' : null);
   const endGroup = () => {
-    if (inferredRoot) for (const e of rootless) e.root = inferredRoot;
-    rootless = [];
+    const total = { w: 0, y: 0 };
+    for (const v of lemmaVotes.values()) {
+      total.w += v.w;
+      total.y += v.y;
+    }
+    const shown = leading(total);
+    let alt: string | undefined;
+    if (!inferredRoot && weak) {
+      const other = weak.guess === 'y' ? 'w' : 'y';
+      const filed = headerRoots.has(weak.first + weak.guess) ? weak.guess : headerRoots.has(weak.first + other) ? other : null;
+      const last = shown ?? filed ?? weak.guess;
+      inferredRoot = weak.first + last;
+      alt = weak.first + (last === 'y' ? 'w' : 'y');
+    }
+    for (const e of group) {
+      if (e.root === '---') {
+        if (!inferredRoot) continue;
+        e.root = inferredRoot;
+        if (alt) e.altRoot = alt;
+      } else if (e.altRoot) {
+        // A disputed header (`nfw/y`): lead with the spelling the verb shows --
+        // نَفَى (يَنْفِي) under nfy, نَفا (يَنْفُو) under nfw.
+        const letter = leading(lemmaVotes.get(e.lemma)) ?? shown;
+        const i = Array.from(e.root).findIndex((c, k) => c !== e.altRoot![k]);
+        if (letter && e.altRoot[i] === letter && e.root[i] !== letter) [e.root, e.altRoot] = [e.altRoot, e.root];
+      }
+    }
+    group = [];
     inferredRoot = null;
+    weak = null;
+    lemmaVotes.clear();
   };
   for (const line of lines) {
     if (line !== '' && line[0] !== ';') {
@@ -193,20 +294,35 @@ export function createDictTable(text: string): OptimizedDictArray<MorphEntry> {
         morph: (elems[2] || '').trim(),
         def: gloss.split(/;/).join(', '),
         pos: (posMatch?.[1] || '').trim(),
+        ...(altRoot ? { altRoot } : {}),
       };
       table.addItem(elems[0], def);
-      if (root === '---') {
-        rootless.push(def);
-        if (!inferredRoot && lemma !== '---' && def.morph.startsWith('PV')) inferredRoot = rootFromVerbLemma(lemma);
+      group.push(def);
+      const isVerb = /^(PV|IV)/.test(def.morph);
+      const weakVerb = isVerb && lemma !== '---' ? weakVerbRadicals(lemma) : null;
+      if (weakVerb?.formI) {
+        let v = lemmaVotes.get(lemma);
+        if (!v) {
+          v = { w: lemmaVowel === 'u' ? 1 : 0, y: lemmaVowel === 'i' ? 1 : 0 };
+          lemmaVotes.set(lemma, v);
+        }
+        const letter = weakLetterOf(def.word);
+        if (letter) v[letter]++;
+      }
+      if (root === '---' && !inferredRoot && def.morph.startsWith('PV') && lemma !== '---') {
+        inferredRoot = rootFromVerbLemma(lemma);
+        // A Form I weak verb replaces a derived one: only it shows the letter.
+        if (!inferredRoot && weakVerb && (!weak || (weakVerb.formI && !weak.formI))) weak = weakVerb;
       }
     } else if (line !== '' && line.trim() === ';') {
       endGroup();
       root = '---';
+      altRoot = undefined;
       lemma = '---';
       lemmaVowel = undefined;
     } else if (line !== '' && line.slice(0, 5) === ';--- ') {
       endGroup();
-      root = line.split(/\s/)[1];
+      ({ root, altRoot } = parseRootHeader(line.split(/\s/)[1]));
       lemma = '---';
       lemmaVowel = undefined;
     } else {
@@ -290,6 +406,8 @@ export interface AramorphResult {
   /** Matched a made-up verbal noun: use it for the root, don't show it. Its
    * `lemma` and `def` are the verb's. */
   hidden?: boolean;
+  /** Another spelling of `root` (و and ي swapped) where scholars or the data differ; `root` leads. */
+  altRoot?: string;
 }
 
 // Form V تَفَعَّلَ and Form VI تَفاعَلَ verbs, whose verbal nouns are تَفَعُّل and
@@ -322,7 +440,7 @@ export function buildHiddenMasdars(dictstems: OptimizedDictArray<MorphEntry>): O
       const key = removeDiacriticsBuckwalter(word);
       if (nouns.has(key + '|' + e.root) || made.has(key + '|' + e.lemma)) continue;
       made.add(key + '|' + e.lemma);
-      hidden.addItem(key, { root: e.root, lemma: e.lemma, word, morph: 'N', def: e.def, pos: '', hidden: true });
+      hidden.addItem(key, { root: e.root, lemma: e.lemma, word, morph: 'N', def: e.def, pos: '', hidden: true, ...(e.altRoot ? { altRoot: e.altRoot } : {}) });
     }
   }
   return hidden;
@@ -437,6 +555,7 @@ export class AramorphEngine {
               morph: [p.morph, s.morph, su.morph].join(', '),
               ...verbFormOf(s),
               ...(s.hidden ? { hidden: true } : {}),
+              ...(s.altRoot ? { altRoot: detransliterate(s.altRoot) } : {}),
             });
           }
         }

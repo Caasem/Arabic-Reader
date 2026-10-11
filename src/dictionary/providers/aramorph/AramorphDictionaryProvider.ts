@@ -216,6 +216,7 @@ function toAnalyses(results: AramorphResult[]): MorphologicalAnalysis[] {
     surfaceForm: r.word,
     lemma: r.lemma && r.lemma !== '---' ? r.lemma : r.word,
     root: r.root !== '---' ? r.root : undefined,
+    altRoot: r.root !== '---' ? r.altRoot : undefined,
     pos: r.pos || undefined,
   }));
 }
