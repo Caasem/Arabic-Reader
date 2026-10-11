@@ -3,7 +3,7 @@ import { readJSON, writeJSON } from '../utils/storage';
 
 /**
  * Anki notes whose cards were removed in the app, waiting for the next Anki sync. Kept per device
- * in localStorage: Anki is reached from this device, and losing the list only means a removed
+ * in browser storage: Anki is reached from this device, and losing the list only means a removed
  * card's note stays in Anki (the reader can delete it there).
  */
 const KEY = 'anki.pendingDeletes';

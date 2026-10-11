@@ -28,7 +28,7 @@ interface FloatingCardProps {
   label: string;
   /** The shortcut shown in the header, e.g. "Alt N". */
   keyHint: string;
-  /** localStorage key remembering where the card was left. */
+  /** Storage key remembering where the card was left. */
   posKey: string;
   /** Where the card first appears, before it has been moved. */
   defaultPos(width: number): Pos;
