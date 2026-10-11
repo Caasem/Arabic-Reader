@@ -259,22 +259,22 @@
   color: #6b4c10;
 }
 ::highlight(qr-hl-green) {
-  background-color: rgba(139, 184, 114, 0.45);
+  background-color: var(--c-qr-highlight-green);
 }
 ::highlight(qr-hl-blue) {
-  background-color: rgba(111, 163, 201, 0.45);
+  background-color: var(--c-qr-highlight-blue);
 }
 ::highlight(qr-hl-purple) {
-  background-color: rgba(156, 133, 201, 0.45);
+  background-color: var(--c-qr-highlight-purple);
 }
 ::highlight(qr-hl-red) {
-  background-color: rgba(201, 122, 109, 0.45);
+  background-color: var(--c-qr-highlight-red);
 }
 ::highlight(qr-search) {
-  background-color: rgba(201, 150, 58, 0.4);
+  background-color: var(--c-qr-search);
 }
 ::highlight(qr-flash) {
-  background-color: rgba(230, 170, 60, 0.55);
+  background-color: var(--c-qr-flash);
 }
 
 .qr-message {
@@ -836,7 +836,7 @@
   background: var(--qr-surface);
   color: var(--qr-accent-ink) !important;
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(20, 18, 15, 0.16);
+  box-shadow: 0 1px 3px var(--c-qr-chip-shadow);
 }
 
 .qr-seg__btn:disabled {
@@ -1513,19 +1513,19 @@
   box-decoration-break: clone;
 }
 .qr-hl-fill--yellow {
-  background: rgba(231, 198, 91, 0.45);
+  background: var(--c-qr-highlight-yellow);
 }
 .qr-hl-fill--green {
-  background: rgba(139, 184, 114, 0.45);
+  background: var(--c-qr-highlight-green);
 }
 .qr-hl-fill--blue {
-  background: rgba(111, 163, 201, 0.45);
+  background: var(--c-qr-highlight-blue);
 }
 .qr-hl-fill--purple {
-  background: rgba(156, 133, 201, 0.45);
+  background: var(--c-qr-highlight-purple);
 }
 .qr-hl-fill--red {
-  background: rgba(201, 122, 109, 0.45);
+  background: var(--c-qr-highlight-red);
 }
 
 .qr-hl-card__note {
@@ -1732,7 +1732,7 @@
   padding: 8px 16px;
   border-radius: 20px;
   font-size: 13px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 18px var(--c-qr-toast-shadow);
   z-index: 60;
   animation: reader-toast-in 0.15s ease;
   pointer-events: none;

@@ -1,0 +1,27 @@
+/* Fixed colours used by component styles, named by role and place. Unlike the theme tokens in index.css
+   (--bg, --ink, --accent ...), these are the same in every theme: each value is the literal that used to
+   sit in the component CSS. Add a token here instead of writing a colour inline. */
+:root {
+  /* Reader: margin notes, book search, Quiet Reader highlights, note card colours */
+  --c-note-card-shadow: rgba(28, 27, 25, 0.07);
+  --c-note-card-active-shadow: rgba(28, 27, 25, 0.12);
+  --c-note-chip-shadow: rgba(28, 27, 25, 0.08);
+  --c-note-paper: #fffdf8;
+  --c-note-field-bg: #fff;
+  --c-booksearch-backdrop: rgba(28, 27, 25, 0.42);
+  --c-booksearch-shadow: rgba(28, 27, 25, 0.28);
+  --c-qr-highlight-green: rgba(139, 184, 114, 0.45);
+  --c-qr-highlight-blue: rgba(111, 163, 201, 0.45);
+  --c-qr-highlight-purple: rgba(156, 133, 201, 0.45);
+  --c-qr-highlight-red: rgba(201, 122, 109, 0.45);
+  --c-qr-search: rgba(201, 150, 58, 0.4);
+  --c-qr-flash: rgba(230, 170, 60, 0.55);
+  --c-qr-chip-shadow: rgba(20, 18, 15, 0.16);
+  --c-qr-highlight-yellow: rgba(231, 198, 91, 0.45);
+  --c-qr-toast-shadow: rgba(0, 0, 0, 0.2);
+  --c-note-colour-yellow: #f2d95c;
+  --c-note-colour-green: #8fd18f;
+  --c-note-colour-blue: #8fb8f0;
+  --c-note-colour-purple: #bb9be6;
+  --c-note-colour-red: #ef9a9a;
+}

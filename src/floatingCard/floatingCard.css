@@ -157,19 +157,19 @@
   border-color: var(--ink);
 }
 .fcard__dot--yellow {
-  background: #f2d95c;
+  background: var(--c-note-colour-yellow);
 }
 .fcard__dot--green {
-  background: #8fd18f;
+  background: var(--c-note-colour-green);
 }
 .fcard__dot--blue {
-  background: #8fb8f0;
+  background: var(--c-note-colour-blue);
 }
 .fcard__dot--purple {
-  background: #bb9be6;
+  background: var(--c-note-colour-purple);
 }
 .fcard__dot--red {
-  background: #ef9a9a;
+  background: var(--c-note-colour-red);
 }
 .fcard__stack {
   display: flex;

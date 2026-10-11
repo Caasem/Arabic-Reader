@@ -414,7 +414,7 @@ body.ink-sketching .pdfp .pdfp__body {
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--bg-elevated);
-  box-shadow: 0 2px 8px rgba(28, 27, 25, 0.07);
+  box-shadow: 0 2px 8px var(--c-note-card-shadow);
   color: var(--ink);
   font: 500 14px/1.5 'DM Sans', var(--font-arabic, 'Noto Naskh Arabic'), var(--font-ui);
   text-align: center;
@@ -462,7 +462,7 @@ body.ink-sketching .pdfp .pdfp__body {
 }
 .sk-node--sel {
   border-color: var(--ink-primary);
-  box-shadow: 0 0 0 2px var(--accent-soft), 0 6px 20px rgba(28, 27, 25, 0.12);
+  box-shadow: 0 0 0 2px var(--accent-soft), 0 6px 20px var(--c-note-card-active-shadow);
 }
 .sk-node--from {
   outline: 2px dashed var(--ink-teal);
@@ -573,7 +573,7 @@ body.ink-sketching .pdfp .pdfp__body {
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--ink-chrome);
-  box-shadow: 0 2px 8px rgba(28, 27, 25, 0.08);
+  box-shadow: 0 2px 8px var(--c-note-chip-shadow);
 }
 .sk-zoom button {
   height: 28px;
@@ -841,7 +841,7 @@ body.ink-sketching .pdfp .pdfp__body {
   height: 44px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #fffdf8;
+  background: var(--c-note-paper);
   overflow: hidden;
 }
 .sk-list__thumb img {
@@ -882,7 +882,7 @@ body.ink-sketching .pdfp .pdfp__body {
   width: 100%;
   margin: 2px 0 4px;
   border-radius: 6px;
-  background: #fff;
+  background: var(--c-note-field-bg);
   pointer-events: none;
 }
 .sk-node--sel .sk-w {

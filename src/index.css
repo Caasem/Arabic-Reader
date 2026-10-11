@@ -1,3 +1,5 @@
+@import './theme/palette.css';
+
 /* Self-hosted (see public/fonts/OFL-NOTICE.txt) instead of pulled from
    fonts.googleapis.com at runtime -- this app is meant to work fully
    offline, and a remote font request on first paint both slows down first
