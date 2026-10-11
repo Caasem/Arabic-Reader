@@ -31,6 +31,18 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.98.0 — 2026-10-11
+
+- **Ink gestures (off by default).** Switch on *Gestures* under Settings → Ink and sketches, then, with Write on
+  (Alt+W) in the reader, some strokes act instead of staying on the page:
+  - **Underline** a run of words: they are highlighted, in yellow (or green for teal ink, red for red ink).
+  - **Circle** one word: the dictionary popup opens on it, as if you had tapped it.
+  - **Circle, then a short tick** within a second and a half: the word is saved to your vocabulary with its sentence.
+  - Each shows a note with **Undo**, which takes the action back and keeps your stroke as ordinary ink. After a
+    tick, the reader's own *Saved* note and its Undo take the word out of your vocabulary again.
+  - Anything that is not clearly one of these (handwriting, a scribble, a short dash, an open arc) is ink as before.
+  - Not on PDF pages yet. No new keys.
+
 ## v0.97.1 — 2026-10-11
 
 - Words like التحاسد now show in the dictionary. AraMorph has the verb تَحاسَدَ but not its verbal noun, so the word
