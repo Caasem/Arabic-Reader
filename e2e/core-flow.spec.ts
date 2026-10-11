@@ -1,7 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { useOriginalReader } from './originalReader';
-
-test.beforeEach(async ({ page }) => useOriginalReader(page));
 
 /**
  * The main reading path: open the sample book, tap a word, save it, confirm
@@ -14,26 +11,19 @@ test('word lookup, save, highlight, and TOC survive a reload', async ({ page }) 
   await page.click('text=Try the sample book');
   await page.waitForSelector('.book-card', { timeout: 15000 });
   await page.click('.book-card');
-  // First book open in the whole suite -- epub.js's own asset fetches (the
-  // sample EPUB itself, first-run AraMorph table build in its worker) are
-  // slower cold than every later navigation, hence the longer timeout here
-  // specifically rather than raising the global default for every test.
-  await page.waitForSelector('.reader__epub iframe', { timeout: 30000 });
-  await page.waitForTimeout(2500); // epub.js render + word-wrapping
+  // First book open in the whole suite -- the sample EPUB itself and the
+  // first-run AraMorph table build in its worker are slower cold than every
+  // later navigation, hence the longer timeout here specifically rather than
+  // raising the global default for every test.
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 30000 });
 
-  const readerFrame = page.frames().find((f) => f !== page.mainFrame());
-  expect(readerFrame, 'epub iframe not found among page frames').toBeTruthy();
-
-  const wordCount = await readerFrame!.evaluate(() => document.querySelectorAll('.ar-word').length);
+  const wordCount = await page.locator('.qr-chapter .ar-word').count();
   expect(wordCount, 'no .ar-word spans found -- word wrapping failed').toBeGreaterThan(0);
 
-  const clicked = await readerFrame!.evaluate(() => {
-    const el = document.querySelector('p .ar-word') || document.querySelector('.ar-word');
-    if (!el) return null;
-    (el as HTMLElement).dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    return (el as HTMLElement).dataset.word;
-  });
+  const firstWord = page.locator('.qr-chapter p .ar-word').first();
+  const clicked = await firstWord.getAttribute('data-word');
   expect(clicked).toBeTruthy();
+  await firstWord.click();
 
   await page.waitForSelector('.dict-popup', { timeout: 8000 });
   await page.waitForTimeout(800);
@@ -56,21 +46,18 @@ test('word lookup, save, highlight, and TOC survive a reload', async ({ page }) 
 
   // --- TOC ---
   await page.locator('.navbar__label', { hasText: /^Read$/ }).click();
-  await page.waitForSelector('.reader__epub iframe', { timeout: 10000 });
-  await page.waitForTimeout(1500);
-  await page.click('text=Contents');
-  await page.waitForSelector('.reader__toc', { timeout: 5000 });
-  const tocItemCount = await page.locator('.toc-list__item').count();
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 10000 });
+  await page.getByRole('button', { name: 'Contents', exact: true }).click();
+  await page.getByRole('complementary', { name: 'Book' }).waitFor({ timeout: 5000 });
+  const tocItemCount = await page.locator('.qr-chapter-row').count();
   expect(tocItemCount, 'expected at least 2 TOC entries for the 3-chapter sample book').toBeGreaterThanOrEqual(2);
 
   // --- Highlighting ---
   await page.locator('.navbar__label', { hasText: /^Read$/ }).click();
-  await page.waitForSelector('.reader__epub iframe', { timeout: 10000 });
-  await page.waitForTimeout(1500);
-  const hlFrame = page.frames().find((f) => f !== page.mainFrame())!;
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 10000 });
 
-  const selectionInfo = await hlFrame.evaluate(() => {
-    const p = document.querySelector('p');
+  const selectionInfo = await page.evaluate(() => {
+    const p = document.querySelector('.qr-chapter p');
     if (!p) return null;
     const words = p.querySelectorAll('.ar-word');
     if (words.length < 3) return null;
@@ -80,14 +67,12 @@ test('word lookup, save, highlight, and TOC survive a reload', async ({ page }) 
     const sel = window.getSelection()!;
     sel.removeAllRanges();
     sel.addRange(range);
-    document.dispatchEvent(new Event('selectionchange'));
+    document.querySelector('.qr-stage')!.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
     return { text: sel.toString() };
   });
   expect(selectionInfo, 'could not create a text selection in the rendered section').toBeTruthy();
-  await hlFrame.evaluate(() => document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })));
 
-  await page.waitForSelector('.selection-toolbar', { timeout: 8000 });
-  await page.click('.selection-toolbar__swatch--yellow');
+  await page.getByRole('button', { name: 'Highlight yellow' }).click({ timeout: 8000 });
   await page.waitForTimeout(400);
 
   await page.locator('.navbar__item', { hasText: 'Highlights' }).click();
@@ -107,15 +92,14 @@ test('word lookup, save, highlight, and TOC survive a reload', async ({ page }) 
   await page.waitForSelector('.hl-card', { timeout: 5000 });
   expect(await page.locator('.hl-card').count()).toBeGreaterThanOrEqual(1);
 
-  // Highlight actually re-renders visually (SVG overlay in the main
-  // document, positioned over the iframe -- not inside it) after reopening.
+  // Highlight actually re-paints visually after reopening.
   await page.locator('.navbar__item', { hasText: 'Library' }).click();
   await page.waitForSelector('.book-card', { timeout: 5000 });
   await page.click('.book-card');
-  await page.waitForSelector('.reader__epub iframe', { timeout: 10000 });
-  // Saved highlights are re-registered asynchronously (an IndexedDB read,
-  // see Reader.tsx) and epub.js queues/renders them as their section comes
-  // into view -- poll instead of a fixed wait, since exactly how long that
-  // takes depends on both of those finishing, not a fixed render delay.
-  await expect(page.locator('[ref="ar-highlight"]')).not.toHaveCount(0, { timeout: 10000 });
+  await page.waitForSelector('.qr-chapter .ar-word', { timeout: 10000 });
+  // Saved highlights are painted asynchronously (an IndexedDB read) as ranges
+  // in the CSS highlight registry -- poll instead of a fixed wait.
+  await expect
+    .poll(() => page.evaluate(() => CSS.highlights.get('qr-hl-yellow')?.size ?? 0), { timeout: 10000 })
+    .toBeGreaterThan(0);
 });
