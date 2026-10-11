@@ -7,7 +7,7 @@ release.
 ## Summary: 10–11 October 2026 (the refactor pass)
 
 Everything that landed from the evening of 10 October to midday on 11 October, in order. Rows 1–7 are on `main`
-(up to 0.96.0); rows 8–20 are on `refactor/integration`
+(up to 0.96.0); rows 8–21 are on `refactor/integration`
 ([Caasem/Arabic-Reader#73](https://github.com/Caasem/Arabic-Reader/pull/73), 0.97.0), waiting to be tested before
 merging. Per-phase detail and how to revert each one: `docs/changes/refactor-changes.md`.
 
@@ -33,8 +33,24 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 | 18 | 11 Oct | #73 | About 6,400 AraMorph entries that had no root get one from their group's verb (e.g. التباعد → بعد, التنافس → نفس), so the Arabic dictionaries and root search find them | Yes | 0.102.1 | On `refactor/integration` |
 | 19 | 11 Oct | #73 | Roots whose و/ي is in doubt are searched under both spellings, led by the one the verb's present tense shows; about 1,000 rootless weak-verb entries get a root, and 2,435 entries under AraMorph's "و or ي" headings (e.g. `nfw/y`) find their articles again | Yes | 0.103.0 | On `refactor/integration` |
 | 20 | 11 Oct | #73 | Dictionary lookup: roots no longer carry AraMorph's homograph numbers (so النور, البشرية, الأحياء find their Arabic articles); Qur'anic and classical spellings are read (هَٰذَا, ٱلْكِتَٰبُ, إِسْمَٰعِيلَ, شاطيء, سليمن); readings that contradict the vowels in the text are sorted last and muted, never removed | Yes | 0.105.0 | On `refactor/integration` |
+| 21 | 11 Oct | #73 | Root dictionaries land on the word: the line about the tapped word (or its dictionary form; a verb's own form paragraph in Lane and Hans Wehr) is coloured and scrolled to in Al-Wasīṭ, Al-Ṣiḥāḥ, Lane and Hans Wehr; a word with no root (إدام, قيراط, بطيخ) opens the article the dictionary files it under | Yes | 0.106.0 | On `refactor/integration` |
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
+
+## v0.106.0 — 2026-10-11
+
+- **The dictionaries land on your word.** Al-Wasīṭ, Al-Ṣiḥāḥ, Lane's Lexicon and Hans Wehr file every word of a root
+  in one long article. The line about the word you tapped is now coloured, and the popup scrolls to it if it's out
+  of view; the rest of the article is still there above and below. For a verb, Lane's paragraph for its form (تَحَاسَدُوا
+  lands on 6) and Hans Wehr's verb paragraph are the match; for a noun, its own line (الحسود on حَسُودٌ, not the verb).
+  When the word's vowels tell two lines apart (كِتَابٌ or كُتَّابٌ), the one that fits is chosen.
+- **Words with no root find their article.** About 680 words AraMorph knows but gives no root for (860 with a Hans Wehr copy),
+  such as إدام, قيراط, أرائك, بطيخ, إجاص and إزميل, now open the article each dictionary files them under, as long as
+  that's one or two roots.
+  Particles and pronouns are never looked up this way.
+- When a word finds several articles, the one that lists the word itself comes first.
+- Settings → Dictionary: the section is now *Land on the word in root dictionaries*, with a new switch to turn the
+  scrolling off and keep only the colour.
 
 ## v0.105.0 — 2026-10-11
 
