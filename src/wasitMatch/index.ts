@@ -1,12 +1,22 @@
 /**
- * Colours the Al-Wasit sense that matches the looked-up word. Self-contained:
- * the app touches this folder in three places only -- `findMatchedSenses`
- * and `WASIT_MATCH_CLASS` in DictionaryPopup, <WasitMatchSettings> in
- * SettingsPanel, and the `wasitMatchHighlight` preference. To remove the
- * feature, delete the folder and those three references.
+ * Colours the Al-Wasit sense that matches the looked-up word. The app wires its Settings section through
+ * `wasitMatchFeature` in src/features/registry.ts; the other touch points are listed in it. To remove the feature,
+ * delete this folder, its registry line and those touch points.
  */
+import type { FeatureDescriptor } from '../features/registry';
+import { WasitMatchSettings } from './WasitMatchSettings';
 import './wasitMatch.css';
 
+export const wasitMatchFeature: FeatureDescriptor = {
+  id: 'wasitMatch',
+  pref: 'wasitMatchHighlight',
+  SettingsSection: WasitMatchSettings,
+  settingsGroup: 'dictionary',
+  touchPoints: [
+    'the `wasitMatchHighlight` preference (src/types/preferences.ts, src/state/defaultPreferences.ts)',
+    '`findMatchedSenses` and `WASIT_MATCH_CLASS` in the dictionary popup (src/components/reader/DictionaryPopup.tsx)',
+  ],
+};
+
 export { findMatchedSenses } from './matchSenses';
-export { WasitMatchSettings } from './WasitMatchSettings';
 export const WASIT_MATCH_CLASS = 'wasit-match';

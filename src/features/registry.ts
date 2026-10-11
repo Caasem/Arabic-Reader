@@ -10,7 +10,7 @@ import { studyDeskFeature } from '../studyDesk';
 import { annotateFeature } from '../annotate';
 import { verbFormsFeature } from '../verbForms';
 import { popupCleanFeature } from '../popupClean';
-import { WasitMatchSettings } from '../wasitMatch';
+import { wasitMatchFeature } from '../wasitMatch';
 import { WasitStructureSettings } from '../wasitStructure';
 import { LookSettings, LookSkin } from '../look';
 import { FontSettings, ReadingFontSync } from '../readerFont';
@@ -68,7 +68,7 @@ export const FEATURES: FeatureDescriptor[] = [
   annotateFeature,
   verbFormsFeature,
   popupCleanFeature,
-  { id: 'wasitMatch', SettingsSection: WasitMatchSettings, settingsGroup: 'dictionary', touchPoints: [] },
+  wasitMatchFeature,
   { id: 'wasitStructure', SettingsSection: WasitStructureSettings, settingsGroup: 'dictionary', touchPoints: [] },
   { id: 'look', AppHost: LookSkin, SettingsSection: LookSettings, settingsGroup: 'appearance', touchPoints: [] },
   { id: 'readerFont', AppHost: ReadingFontSync, SettingsSection: FontSettings, settingsGroup: 'reading', settingsAfter: 'reading', touchPoints: [] },
