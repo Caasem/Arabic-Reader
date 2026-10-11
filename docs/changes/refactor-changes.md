@@ -95,8 +95,39 @@ Accepted losses (each is a `fixme` test that still documents it):
 | A `script-src 'none'` CSP per section | `untrusted-epub.spec.ts` | No section iframe exists; book markup never reaches the page (the ported test checks that) |
 | Collapsing the Vocab Levels panel to a strip | `vocab-levels.spec.ts` | The margin's Levels panel opens and closes; the dock reopens it |
 
+## Phase 5: feature registry (done)
+
+Branch `refactor/phase5-feature-registry`, worktree `Arabic-Reader-p5`. Nothing users can see; no version bump. Opus
+designed the registry and converted `noteCard` and `annotate`; Sonnet converted the other 13 features, one commit
+each, following `docs/changes/feature-registry-howto.md`. `src/features/registry.test.ts` pins the order of hosts, app
+hosts and settings sections and was not edited by any conversion commit.
+
+| Change | Why | Before | After | Impact | Revert |
+|---|---|---|---|---|---|
+| Registry and loops (`src/features/registry.ts`, `placement.ts`) | Adding a feature meant editing 4 to 6 shared files, and nothing listed what a feature touched | `ReaderSwitch`, `App` and `SettingsPanel` each had a hand-written list of feature hosts, app hosts and settings sections | One ordered `FEATURES` list of descriptors (`id`, `pref`, `Host`, `AppHost`, `SettingsSection`, `settingsGroup`, `settingsAfter`, `chords`, `touchPoints`). The three places loop over it. `registry.test.ts` checks the orders, that every `pref` exists and that no two features share a chord | Same hosts, same order. Two side effects: `AutoSync` (core, renders nothing) now mounts after the crowd-sync host instead of before it; the entry chunk grows 11 kB (622 to 633 kB, budget 685 kB) because settings of settings-only features now load with it | Restores the hand-written lists (revert the merge commit) |
+| `noteCard` and `annotate` converted | The worked examples for the howto | Inline entries in the registry | `noteCardFeature` and `annotateFeature` exported from their `index.ts`, one line each in the registry | None | Features go back to inline entries |
+| Dictionary features converted: `dictionarySearch` (Alt+D), `bookSearch` (Alt+S), `bookVocab` (Alt+V), `flashCard` (Alt+F) | Same | Inline entries with `touchPoints: []` | `<id>Feature` in each `index.ts` with `pref`, `chords` and `touchPoints` filled in; one registry line each | None. Alt+D is bound by `useSearchHotkey`, not `useChordHotkey`, and is listed anyway so the duplicate-chord test sees it | Inline entries again |
+| `picksExport` (Alt+P) and `studyDesk` (Alt+I, C, M, U, X, Shift+X) converted | Same | Inline entries | `picksExportFeature` (no preference) and `studyDeskFeature` (`studyDeskEnabled`) | None | Inline entries again |
+| Popup features converted: `verbForms`, `popupClean`, `wasitMatch`, `wasitStructure` | Same | Inline entries | One descriptor each. Prefs: `verbFormsEnabled`, `dictionaryPopupCleanLayout`, `wasitMatchHighlight`, `wasitStructureEnabled` (the on/off switches, not all named `<feature>Enabled`). Their exports used by `DictionaryPopup` stay. Each stylesheet import stays ahead of the component imports so CSS loads in the old order | None | Inline entries again |
+| App-wide features converted: `look`, `readerFont`, `crowdSync` | Same | Inline entries | `lookFeature` (`lookEnabled`), `readerFontFeature` (no `<feature>Enabled` preference, so none), `crowdSyncFeature` (`crowdSharing`). Other exports stay | None | Inline entries again |
+| Feature `localStorage` calls moved behind `src/utils/storage.ts` | Eleven feature files wrote to `localStorage` directly, each with its own try/catch | Direct `getItem` / `setItem` calls | `readString`, `writeString`, `readJSON`, `writeJSON`. A test per key family (`// @vitest-environment jsdom`) writes a value the old way and reads it back, checks writes land under the same key and format, and checks the fallbacks | None. **Every key string and stored format is unchanged**, so saved values read back | The calls go back inline |
+
+Storage moves, all with unchanged keys:
+
+| Key family | Keys | Now in | Test |
+|---|---|---|---|
+| Sheet tab memory (JSON map) | `arabic-reader:sketch-tabs` | `annotate/sheets.ts` | `annotate/sheetTabs.test.ts` |
+| Note card colour (plain string) | `noteCard.color` | `noteCard/color.ts` | `noteCard/color.test.ts` |
+| Floating shell position (JSON `{x, y}`) | `dictionarySearch.floatingPos`, `studyDesk.inboxPos`, `studyDesk.pullPos` | `dictionarySearch/shellPos.ts` | `dictionarySearch/shellPos.test.ts` |
+| Study desk memory (plain strings) | `studyDesk.docPanelMin` ('1'/'0'), `studyDesk.lastMargins`, `studyDesk.pullTarget`, `studyDesk.pdfSnap` ('on'/'off'), `studyDesk.current.<bookId>` | `studyDesk/deskMemory.ts` | `studyDesk/deskMemory.test.ts` |
+| Anki pending deletes (JSON array) | `anki.pendingDeletes` | `anki/deletions.ts` | `anki/deletions.test.ts` |
+| Added catalogue books (JSON map) | `browseLibrary.added` | `browseLibrary/added.ts` | `browseLibrary/added.test.ts` |
+| Dictionary page last tab (plain string) | `dictionaryPage.lastTab` | `dictionaryPage/lastTab.ts` | `dictionaryPage/lastTab.test.ts` |
+| Floating card position (JSON `{x, y}`) | `noteCard.floatingPos`, `flashCard.floatingPos` | `floatingCard/position.ts` | `floatingCard/position.test.ts` |
+
+Left alone (core code, not features): `CollapsibleSection`, `diagnosticsLog`, `pdf/ocr/index.ts`, `pomodoroService`,
+`PreferencesProvider`.
+
 ## Planned phases
 
-| Phase | Branch / worktree | Model | Change | Why | Before | After | Impact |
-|---|---|---|---|---|---|---|---|
-| 5. Feature registry | `refactor/phase5-feature-registry`, `Arabic-Reader-p5` | Opus for the design and the first two features, then Sonnet for the rest | Each feature declares `{id, pref, SettingsSection, Host, chords, touchPoints}`. `ReaderSwitch` and `SettingsPanel` loop over the list. Feature code stops calling `localStorage` directly | 23 `*Enabled` flags, overlays and settings groups are wired by hand. 12 files call `localStorage` directly instead of `src/utils/storage.ts` | Adding a feature touches 4 to 6 shared files | One folder plus one registry line | No visible change. Values already stored in `localStorage` must be read and migrated, not lost |
+Phases 3 (dictionaries as packs), 4 (popup split), 6 (routing) and 7 (colour tokens) are planned separately.
