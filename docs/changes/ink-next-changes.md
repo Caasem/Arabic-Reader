@@ -20,3 +20,23 @@ Thresholds are named constants at the top of `src/annotate/gestures.ts`, in word
 Not done: bracket notes and strike-through (left out on purpose); PDF pages (their word finding is a separate
 path, `src/pdf/pages/wordAtPoint.ts`, and was not wired); a toast for the tick of its own (the reader's quick-save
 toast stands in).
+
+## D. Sketches you review (0.99.0)
+
+Flashcards from diagram sheets, image occlusion, and a practice walk-through. Cards are the existing hand-written
+cards (`custom: true`), so there is no new table and no schema change: one optional field,
+`VocabularyItem.sketch = { sketchId, nodeIds, occlude? }`. All the logic (card text, targets, tree order, hiding a
+label) is in `src/annotate/sketchCards.ts` with tests in `sketchCards.test.ts`.
+
+| Change | Why | Before | After | Files | Off switch / revert |
+|---|---|---|---|---|---|
+| Card logic | Test the rules without a screen | Nothing | `cardFromNodes` (front = first selected node, back = its children in edge order, else the other selected nodes; empty back refused with a reason), `occlusionTargets` (selected labelled nodes, else all, in tree order), `occlusionCard` (text fallback: "?", sheet name, parent; back = the label), `treeOrder` (roots top to bottom, children in edge order, every node once, loops end), `walkOrder`, `hiddenFor`, `hiddenAfter` | `src/annotate/sketchCards.ts`, `src/annotate/sketchCards.test.ts` | Revert the commit |
+| Hidden labels in the sheet picture | Occlusion and the walk-through need a sheet with a blank box | `sketchSvg(sheet)` drew every label | `sketchSvg(sheet, { hide })` draws a dashed blank box for each hidden node | `src/annotate/toMargin.ts` | Revert the commit |
+| `sketch` on cards | A card remembers its sheet | Custom cards had no link to a sheet | Optional `sketch` field; `saveCustomCard` takes it and, for sheet cards, does not mark the front as a saved word. Anki: the note's Source says "Sketch". No picture in Anki yet (it would need the sheet as a PNG media upload; `svgToPng` exists in `toMargin.ts`, so it is a small addition later) | `src/types/vocabulary.ts`, `src/vocabulary/vocabularyService.ts`, `src/anki/noteType.ts` | Revert the commit; cards made stay as plain text cards |
+| Make card | A node and its children are a question and an answer | Cards were typed by hand (Alt+F) | **Make card** in the diagram toolbar; disabled with the reason as its hint; toast *Card made* with Undo (removes the card) | `src/annotate/SketchPanel.tsx`, `src/annotate/sketchSurface.ts` (`selectedIds`) | Revert the commit; Undo removes a card |
+| Make occlusion cards | Learn a tree by recalling one label at a time | No | Sheet ⋯ menu, **Make occlusion cards**: a card per selected node, or per labelled node (confirm above 20); toast with Undo for the batch | `src/annotate/SketchPanel.tsx` | Revert the commit; Undo removes the batch |
+| Review draws the sheet | See the diagram, not just words | Review showed text only | An occlusion card shows the sheet (label hidden on the front, shown on the back) when the sheet is on this device, else its text; **Open sheet** opens the book and that sheet (PDF places become `pdf:page=N`). Make-card cards stay text, since their front would show the answer | `src/components/review/Review.tsx`, `Review.css`, `src/annotate/sketchCardView.tsx` (loaded on demand), `src/App.tsx` | Revert the commit |
+| Review sheet | Practise a whole diagram | No | Sheet ⋯ menu, **Review sheet**: labels hidden, Space/Enter/tap reveals the next in tree order, Backspace goes back, Esc ends; no grading, nothing saved | `src/annotate/SheetWalk.tsx`, `src/annotate/SketchPanel.tsx`, `src/annotate/annotate.css` | Revert the commit |
+
+Not done: sheets do not sync yet, so on another device a sketch card is its text; the Anki note has no picture;
+cards made with Make card never show the picture.

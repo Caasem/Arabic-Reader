@@ -31,6 +31,23 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.99.0 — 2026-10-11
+
+- **Sketches you review.** A diagram sheet can now feed your flashcards.
+  - **Make card** (diagram toolbar): select a box and press it. The box's words are the front; the boxes it points
+    to (its children) are the back. Select several boxes and the first one is the front; with no children, the
+    others are the back. It is greyed out, with the reason in its hint, when there is nothing to answer with.
+    A note at the bottom says *Card made* with **Undo**.
+  - **Make occlusion cards** (the sheet's ⋯ menu): one card for each selected box, or for every box with words
+    when none is selected (it asks first above 20). The front is the sheet with that box's words hidden, the back
+    is the whole sheet. Where the sheet is not on this device (sheets are not synced yet), the card shows
+    "?", the sheet's name and the box's parent instead, and the box's words as the answer.
+  - **In Review**, an occlusion card draws the sheet; **Open sheet** takes you to the book and that sheet. Cards
+    made with Make card stay text. All of them are ordinary hand-written cards: scheduled like the rest, counted
+    in your daily goal, backed up, and sent to Anki as text.
+  - **Review sheet** (the sheet's ⋯ menu): every box is hidden; Space, Enter or a tap shows the next one in tree
+    order, Backspace goes back, Esc ends. Nothing is graded or scheduled.
+
 ## v0.98.0 — 2026-10-11
 
 - **Ink gestures (off by default).** Switch on *Gestures* under Settings → Ink and sketches, then, with Write on

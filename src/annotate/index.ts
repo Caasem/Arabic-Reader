@@ -19,5 +19,6 @@ export const annotateFeature: FeatureDescriptor = {
     'its ink database (INK_DB) in the storage registry (src/storage/registry.ts) and the full export (src/dataExport/stores.ts)',
     "the `inkGesturesEnabled` preference, and `addHighlight` on the reader marks bridge (src/readerChords/readerMarks.ts), implemented by src/quietReader/QuietReader.tsx",
     "the study desk's margins and PDF pages, which draw and select ink with its geometry and ink UI (src/studyDesk: marginInk, MarginLayer, PdfMargin, PdfSelect, docxExport)",
+    "sketch cards: the optional `sketch` field on VocabularyItem and saveCustomCard (src/types/vocabulary.ts, src/vocabulary/vocabularyService.ts), Review drawing the sheet and its Open sheet link (src/components/review/Review.tsx, src/App.tsx), and the note's Source in src/anki/noteType.ts",
   ],
 };
