@@ -17,6 +17,7 @@ import { MorphValue } from './dictionaryPopup/MorphValue';
 import { SentenceInBook } from './dictionaryPopup/SentenceInBook';
 import { OcrNote } from './dictionaryPopup/OcrNote';
 import { EditableWord } from './dictionaryPopup/EditableWord';
+import { groupEntriesByProvider, type EntryGroup } from './dictionaryPopup/entryGroups';
 
 /** Dictionaries whose senses carry examples: the verb-form tag leads the entry, its words can be
  * selected and saved on their own, and long ones fold (Baranov, and a file the reader loaded). */
@@ -43,26 +44,6 @@ const NARROW_BREAKPOINT_PX = 480;
 // the same tap just opened. Ignoring a dismiss-click in the first instant
 // after mount avoids that without delaying a genuine later dismiss tap.
 const IGNORE_DISMISS_MS = 400;
-
-type EntryGroup = { providerId: string; providerName: string; entries: { entry: DictionaryEntry; index: number }[] };
-
-/** Folds consecutive same-provider entries into one group so the popup can
- * show the provider name once per group instead of once per entry. Keeps
- * each entry's original index (needed for the per-entry save-state Set,
- * which is keyed by position in the flat `result.entries` array). */
-function groupEntriesByProvider(entries: DictionaryEntry[]): EntryGroup[] {
-  const groups: EntryGroup[] = [];
-  for (let i = 0; i < entries.length; i++) {
-    const entry = entries[i];
-    const last = groups[groups.length - 1];
-    if (last && last.providerId === entry.providerId) {
-      last.entries.push({ entry, index: i });
-    } else {
-      groups.push({ providerId: entry.providerId, providerName: entry.providerName, entries: [{ entry, index: i }] });
-    }
-  }
-  return groups;
-}
 
 export function DictionaryPopup({
   word,
