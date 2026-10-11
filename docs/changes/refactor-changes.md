@@ -2,8 +2,7 @@
 
 The plan from 2026-10-10: tidy the repo, put the readers on one shared core, keep only the new reader and PDF pages
 (decided 2026-10-11), and replace hand-wired feature switches with a registry. One phase per branch and worktree, one PR each, green CI before merge.
-Order: **0 → 2a → 1 → 2b → 5**. Phases 3 (dictionaries as packs), 4 (popup split), 6 (routing) and 7 (colour
-tokens) are planned separately.
+Order: **0 → 2a → 1 → 2b → 5**. Phases 3 (dictionaries as packs), 4 (popup split) and 7 (colour tokens) are planned separately.
 
 To undo a phase, revert its merge commit. Each row says what a revert leaves behind.
 
@@ -141,6 +140,18 @@ Branch `refactor/phase4-popup-split`, worktree `Arabic-Reader-p4`. Nothing users
 
 Left inline: the positioning code (`recalcPosition` and its layout effect), the add-dictionary panel state, the split-column wheel handling and the footer. Each depends on the popup's own refs, props and render order, so moving them risked more than it saved. `DictionaryPopup.tsx` is 678 lines (from 1,301), above the 500-line target.
 
+## Phase 6: routing (done)
+
+Branch `refactor/phase6-routing`, version 0.97.0. Users can see this.
+
+| Change | Why | Before | After | Impact | Revert |
+|---|---|---|---|---|---|
+| Hash routes (`src/routing`: `parseRoute`, `formatRoute`, `useHashRoute`) | The address never changed, so Back and Forward did nothing useful and a reload always landed on the Library | The screen lived only in `App` state | `#/library` (also no hash), `#/read/<bookId>`, `#/read/<bookId>/levels`, `#/vocabulary`, `#/highlights`, `#/review`, `#/dashboard`, `#/speedReader`, `#/dictionary?q=<word>`. Unknown or garbled hashes are the Library. Hash only, so it works from file:// and Capacitor | Back and Forward move between screens; a reload stays on the screen | Revert the merge commit, or delete `src/routing` and the two routing effects in `App.tsx` |
+| `App` wiring | Keep the existing state and handlers | `view`, `activeBook`, `vocabPanelOpen`, `dictRequest` set by `handleNav`, `openBook`, `backToLibrary` and the dictionary listener | A change of address is applied to that state (loading a `#/read/<id>` book through `libraryService`); a change of state is written to the address (a new history entry). A book that no longer exists replaces the hash with `#/library`. First-run onboarding is untouched | The dictionary's Back button adds a history entry like any other navigation. Each Vocab Levels toggle and each dictionary lookup also adds one. A reading position and Settings are not in the address; `#/dictionary?q=` carries the word only, not its book or tab | As above |
+
+Not done: Android's hardware back button. Nothing in `src` or `android` listens for Capacitor's `backButton`, so it
+still behaves as before (the WebView history now has entries to go back through).
+
 ## Planned phases
 
-Phases 6 (routing), 7 (colour tokens) and 3 (dictionaries as packs, not planned for now) are planned separately.
+Phases 7 (colour tokens) and 3 (dictionaries as packs, not planned for now) are planned separately.
