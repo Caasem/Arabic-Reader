@@ -80,7 +80,7 @@
   box-sizing: border-box;
 }
 
-html,
+html:root,
 body,
 #root {
   height: 100%;
@@ -159,12 +159,12 @@ a {
   border-color: var(--ink);
 }
 
-/* The desktop app has no scrollbars: panels and lists still scroll with the
-   wheel, trackpad and keys. Book pages get the same rule injected separately. */
-html[data-desktop],
-html[data-desktop] * {
+/* No scrollbars anywhere (desktop app, browser, phones; desktop app only before
+   0.97.0): panels and lists still scroll with the wheel, trackpad, touch and keys. */
+html:root,
+html:root * {
   scrollbar-width: none;
 }
-html[data-desktop] ::-webkit-scrollbar {
+html:root ::-webkit-scrollbar {
   display: none;
 }

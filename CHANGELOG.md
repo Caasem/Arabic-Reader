@@ -12,6 +12,8 @@ release.
   address is no longer in your Library, you land on the Library.
 - First-run setup: *Use recommended settings* now switches on Al-Muʿjam al-Wasīṭ (Arabic–Arabic) as well as the
   English dictionary. *Skip for now* still sets up the English dictionary only.
+- No scrollbars on any device: the browser and phones now hide them like the desktop app already did. Everything
+  still scrolls with the wheel, trackpad, touch and keys.
 
 ## v0.96.0 — 2026-10-11
 
