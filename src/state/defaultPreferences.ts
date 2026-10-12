@@ -73,6 +73,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   subEntryScroll: true,
   wasitStructureEnabled: true,
   wasitStructureExamples: 'dim',
+  wasitLabelsEnabled: true,
   libraryShelves: [],
   libraryView: 'grid',
   librarySort: 'lastRead',

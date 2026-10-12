@@ -300,7 +300,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                           }
                           onPointerDown={(e) => handleTokenPointerDown(i, t.globalIdx, e)}
                         >
-                          {t.text}
+                          {word?.display ?? t.text}
                         </span>
                       );
                     })}

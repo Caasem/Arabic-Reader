@@ -314,10 +314,10 @@ export function DictionaryPopup({
     const map = new Map<number, ReturnType<typeof annotateEntry>>();
     if (!prefs.wasitStructureEnabled) return map;
     result?.entries.forEach((e, i) => {
-      if (e.providerId === 'alwasit') map.set(i, annotateEntry(e));
+      if (e.providerId === 'alwasit') map.set(i, annotateEntry(e, prefs.wasitLabelsEnabled));
     });
     return map;
-  }, [result, prefs.wasitStructureEnabled]);
+  }, [result, prefs.wasitStructureEnabled, prefs.wasitLabelsEnabled]);
 
 const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,    activeSelection,    clearEntrySelection,    handleTokenPointerDown,    handleTokensPointerMove,  } = useTokenSelection(word, entryTokenData, exampleTokenData);
   /** The main "Save Vocabulary" (and its header-shortcut twin) button's

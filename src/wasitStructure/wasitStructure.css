@@ -18,10 +18,25 @@
   color: var(--ink-soft);
 }
 
+.dict-popup__token.wasit-role--tag,
+.dict-popup__token.wasit-role--plural-mark {
+  font-size: 0.78em;
+  line-height: 1.3;
+  padding: 0 5px;
+  border-radius: 6px;
+  vertical-align: 0.1em;
+  cursor: help;
+}
+
 .dict-popup__token.wasit-role--tag {
-  font-size: 0.82em;
   color: var(--accent);
   background: var(--accent-soft);
+}
+
+/* Plural: a quiet outlined chip, so the forms after it carry the weight. */
+.dict-popup__token.wasit-role--plural-mark {
+  color: var(--ink-soft);
+  border: 1px solid var(--border);
 }
 
 .wasit-examples--dim .dict-popup__token.wasit-role--example {

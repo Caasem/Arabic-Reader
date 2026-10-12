@@ -183,6 +183,8 @@ export interface ReaderPreferences {
   /** Prototype: draw Al-Wasit's internal structure in the popup. */
   wasitStructureEnabled: boolean;
   wasitStructureExamples: 'dim' | 'normal';
+  /** Show Al-Wasit's (مج) (مو) (مع) (د) labels and (ج) plural marker as badges (src/dictionary/senseFormat/wasitLabels.ts). */
+  wasitLabelsEnabled: boolean;
   /** The reader's own shelves in the Library. */
   libraryShelves: LibraryShelf[];
   libraryView: 'grid' | 'list';

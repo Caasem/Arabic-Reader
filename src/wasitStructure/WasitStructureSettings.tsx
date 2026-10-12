@@ -17,6 +17,12 @@ export function WasitStructureSettings() {
         checked={prefs.wasitStructureEnabled}
         onChange={(value) => updatePrefs({ wasitStructureEnabled: value })}
       />
+      <ToggleRow
+        label="Show labels and plurals as badges"
+        checked={prefs.wasitLabelsEnabled}
+        disabled={!prefs.wasitStructureEnabled}
+        onChange={(value) => updatePrefs({ wasitLabelsEnabled: value })}
+      />
       {prefs.wasitStructureEnabled && (
         <SelectRow
           label="Usage examples and verses"
@@ -26,8 +32,8 @@ export function WasitStructureSettings() {
         />
       )}
       <Note>
-        Separates each derived form, indents the "و-" continuations, bolds the headword line, and marks plurals and register
-        abbreviations such as (مج). Nothing is hidden or reworded.
+        Separates each derived form, indents the "و-" continuations, bolds the headword line, and marks plurals (ج) and the labels (مج) (مو) (مع) (د)
+        as small badges; hover one for its meaning. Nothing is hidden or reworded.
       </Note>
     </SettingsSection>
   );
