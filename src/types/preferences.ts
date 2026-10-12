@@ -145,6 +145,20 @@ export interface ReaderPreferences {
   studyDeskCards: 'open' | 'folded';
   /** Margin notes go to the inbox when you leave them (auto) or only when you send them (ask). */
   studyDeskMarginsToInbox: 'ask' | 'auto';
+  /** The thinking desk (src/thinking): threads, argument moves, backlinks, masāʾil, Muqābala, Revisit, Today. Off by default. */
+  thinkingFrontEnabled: boolean;
+  /** Its parts, each on by default under the main switch. */
+  thinkingThreads: boolean;
+  thinkingMoves: boolean;
+  thinkingBacklinks: boolean;
+  thinkingMasail: boolean;
+  thinkingMuqabala: boolean;
+  thinkingRevisit: boolean;
+  thinkingToday: boolean;
+  /** Ask "What changed in your mind?" when a book is closed after real activity. */
+  thinkingClosingPrompt: boolean;
+  /** Obsidian and Notion in the desk document's Export. */
+  thinkingExport: boolean;
   /** Adding a PDF reads its text and reflows it into a book (off: it is added as its pages, without trying). */
   pdfConvertToText: boolean;
   /** The Highlighter on PDF pages: a translucent cream fill over a highlighted region (off: outline only). */
