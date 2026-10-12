@@ -57,11 +57,11 @@ export const CHECKS: Check[] = [
   },
   {
     id: 'foldable',
-    title: `A list longer than ${FOLD_ABOVE} folds to the entry about the tapped word`,
+    title: `A list longer than ${FOLD_ABOVE} folds to the entry about the tapped word, with "Show all"`,
     run: ({ entries, word, analyses }) => {
       if (entries.length <= FOLD_ABOVE) return null;
       const about = entriesAboutWord(entries, word, analyses);
-      const shown = visibleEntryIndexes(entries.length, about);
+      const shown = visibleEntryIndexes(entries.map((_, i) => i), about);
       return shown.length < entries.length && [...about].every((i) => shown.includes(i)) ? null : `all ${entries.length} entries are shown`;
     },
   },
@@ -82,13 +82,13 @@ export const EXCEPTIONS: Record<string, Partial<Record<CheckId, string>>> = {
 
 /** Gaps not yet closed. Each step of the parity work removes some; it ends empty. */
 export const EXPECTED_FAILURES: Record<string, CheckId[]> = {
-  lane: ['tokenizable', 'foldable'],
-  hanswehr: ['tokenizable', 'foldable'],
-  alsihah: ['foldable'],
-  alwasit: ['foldable'],
+  lane: ['tokenizable'],
+  hanswehr: ['tokenizable'],
+  alsihah: [],
+  alwasit: [],
   aramorph: ['tokenizable'],
-  baranov: ['foldable'],
-  personal: ['foldable'],
+  baranov: [],
+  personal: [],
   almaqayis: [],
 };
 

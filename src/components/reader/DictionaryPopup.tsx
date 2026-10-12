@@ -7,6 +7,9 @@ import { IconEdit, IconChevronLeft, IconChevronRight, IconBook, IconMaximize } f
 import { buildEntryTokenSenses, buildExampleEntryTokens, reconstructSelection, type DefinitionToken, type ExampleEntryTokens } from './definitionTokens';
 import { isTokenizedProvider } from '../../dictionary/tokenizedProviders';
 import { findMatchedEntries, scrollToFirstMatches } from '../../wasitMatch';
+import { entriesAboutWord } from '../../dictionary/subEntries/match';
+import { FOLD_ABOVE, visibleEntryIndexes } from '../../dictionary/entryFeatures';
+import { entryLanguage } from '../../dictionary/providerTraits';
 import { traitsOf } from '../../dictionary/providerTraits';
 import { annotateEntry } from '../../wasitStructure';
 import { arabicEntriesStartFolded, EntryDock, entryGist, groupLabel, type DockItem } from '../../popupClean';
@@ -164,6 +167,8 @@ export function DictionaryPopup({
   const [openForms, setOpenForms] = useState<Set<number>>(new Set());
   // Clean layout: Arabic entries the reader flipped from how they started (open, or folded when there are many).
   const [foldedEntries, setFoldedEntries] = useState<Set<number>>(new Set());
+  // Dictionaries whose long list the reader opened with "Show all N entries".
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   // Clean layout: dictionaries whose whole section was saved from its heading.
   const [savedGroups, setSavedGroups] = useState<Set<string>>(new Set());
   // Entries whose examples are all shown (the rest show the first few).
@@ -174,6 +179,7 @@ export function DictionaryPopup({
     entryItemIds.current.clear();
     setSavedGroups(new Set());
     setFoldedEntries(new Set());
+    setExpandedGroups(new Set());
   }, [word]);
   const morphology = result?.morphology?.[0];
 
@@ -288,7 +294,15 @@ export function DictionaryPopup({
     });
     return map;
   }, [result]);
-  const startFolded = clean && arabicEntriesStartFolded(entryTokenData.size, prefs.collapseManyArabicEntries);
+  // Entries about the tapped word: what a long list folds down to, and what starts open when the rest fold.
+  const aboutEntries = useMemo(() => (result ? entriesAboutWord(result.entries, word, result.morphology) : new Set<number>()), [result, word]);
+  // Arabic entries on show (a long list shows only a few of its entries): too many start folded to their headword row.
+  const shownArabicEntries = allGroups.reduce((n, g) => {
+    const indexes = g.entries.map((e) => e.index);
+    const shown = g.entries.length > FOLD_ABOVE && !expandedGroups.has(g.providerId) ? visibleEntryIndexes(indexes, aboutEntries) : indexes;
+    return n + shown.filter((i) => result && entryLanguage(result.entries[i]) === 'ar').length;
+  }, 0);
+  const startFolded = clean && arabicEntriesStartFolded(shownArabicEntries, prefs.collapseManyArabicEntries);
 
   // Baranov-style entries: tokenized in reading order (sense, then each example) for word selection.
   const exampleTokenData = useMemo(() => {
@@ -431,7 +445,9 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
     const view = `${effectiveLayout}:${activeTabId ?? ''}`;
     if (landedRef.current?.result === result && landedRef.current.view === view) return;
     landedRef.current = { result, view };
-    scrollToFirstMatches(el);
+    // The popup opens at its top: a match whose first line is already on screen (the lists fold to it) is left be.
+    // The full-page dictionary keeps scrolling to bring the whole match into view.
+    scrollToFirstMatches(el, { startIsEnough: !page });
   }, [result, wasitMatches, loading, refreshing, prefs.subEntryScroll, style.visibility, page, effectiveLayout, activeTabId]);
 
   const scale = sizePct / 100;
@@ -461,6 +477,9 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
     startFoldedExamples,
     foldedEntries,
     setFoldedEntries,
+    aboutEntries,
+    expandedGroups,
+    setExpandedGroups,
     savedGroups,
     setSavedGroups,
     savedEntryKeys,
@@ -542,15 +561,17 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
             items={dockItems}
             popupRef={popupRef}
             scale={scale}
-            onJump={(i) =>
-              // Open the entry the tab points at, whether entries started folded or open.
+            onJump={(i) => {
+              // Open the entry the tab points at, whether its list is folded and whether entries started folded or open.
+              const group = allGroups.find((g) => g.entries.some((e) => e.index === i));
+              if (group) setExpandedGroups((prev) => new Set(prev).add(group.providerId));
               setFoldedEntries((prev) => {
                 const next = new Set(prev);
                 if (startFolded) next.add(i);
                 else next.delete(i);
                 return next;
-              })
-            }
+              });
+            }}
           />
         )}
 

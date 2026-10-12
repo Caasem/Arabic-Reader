@@ -9,7 +9,7 @@ To refresh it after changing a dictionary or the checklist: `UPDATE_MATRIX=1 npx
 | A long article is split into sub-entries | yes | yes | yes | yes | yes | n/a [1] | yes | yes |
 | Every entry is individually saveable (a headword and its own text) | yes | yes | yes | yes | yes | yes | yes | yes |
 | Its text can be picked word by word | not yet | not yet | not yet | yes | yes | yes | yes | yes |
-| A list longer than 3 folds to the entry about the tapped word | yes | not yet | not yet | not yet | not yet | yes | not yet | not yet |
+| A list longer than 3 folds to the entry about the tapped word, with "Show all" | yes | yes | yes | yes | yes | yes | yes | yes |
 | Landing on the word marks the expected entry | yes | yes | yes | yes | yes | yes | yes | yes |
 | Greying of readings that clash with the vowels written on the tapped word | yes | n/a [2] | n/a [2] | n/a [2] | n/a [2] | n/a [2] | n/a [2] | n/a [2] |
 

@@ -15,7 +15,12 @@ export function canSelectWords(entry: DictionaryEntry): boolean {
 /** Whether a dictionary's entries fold: a list longer than this starts folded to the entry about the tapped word. */
 export const FOLD_ABOVE = 3;
 
-/** The entries of one dictionary that show before "Show all": all of them. */
-export function visibleEntryIndexes(count: number, _about: ReadonlySet<number>): number[] {
-  return Array.from({ length: count }, (_, i) => i);
+/**
+ * Which of one dictionary's entries (their indexes in the lookup result) show before "Show all N entries": all
+ * of a short list; of a long one, the entries about the tapped word (see entriesAboutWord), else the first.
+ */
+export function visibleEntryIndexes(indexes: readonly number[], about: ReadonlySet<number>): number[] {
+  if (indexes.length <= FOLD_ABOVE) return [...indexes];
+  const matched = indexes.filter((i) => about.has(i));
+  return matched.length ? matched : [indexes[0]];
 }

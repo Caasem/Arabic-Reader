@@ -15,6 +15,7 @@ import { verseNodes } from '../../../dictionary/senseFormat/VerseTokens';
 import { HansWehrMeaning } from '../../../dictionary/senseFormat/HansWehrMeaning';
 import { SenseText } from '../../../dictionary/senseFormat/SenseText';
 import { entryLanguage, traitsOf } from '../../../dictionary/providerTraits';
+import { FOLD_ABOVE, visibleEntryIndexes } from '../../../dictionary/entryFeatures';
 import { MorphValue } from './MorphValue';
 
 /** Entries whose senses carry a lead note, a tag in front and worked examples (Baranov, a file the reader loaded). */
@@ -37,6 +38,11 @@ export interface EntryListContext {
   startFoldedExamples: boolean;
   foldedEntries: Set<number>;
   setFoldedEntries: Dispatch<SetStateAction<Set<number>>>;
+  /** Entries about the tapped word (see entriesAboutWord): what a long list folds down to. */
+  aboutEntries: ReadonlySet<number>;
+  /** Dictionaries whose whole list the reader opened with "Show all". */
+  expandedGroups: Set<string>;
+  setExpandedGroups: Dispatch<SetStateAction<Set<string>>>;
   savedGroups: Set<string>;
   setSavedGroups: Dispatch<SetStateAction<Set<string>>>;
   savedEntryKeys: Set<number>;
@@ -62,11 +68,17 @@ function drawTokens(tokens: DefinitionToken[], verses: Verse[] | null, draw: (t:
 export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
   const {
     word, clean, prefs, wasitStructure, wasitMatches, entryTokenData, exampleTokenData, tokenSelections, startFolded, startFoldedExamples,
-    foldedEntries, setFoldedEntries, savedGroups, setSavedGroups, savedEntryKeys, setSavedEntryKeys, entryItemIds,
+    aboutEntries, expandedGroups, setExpandedGroups, foldedEntries, setFoldedEntries, savedGroups, setSavedGroups, savedEntryKeys, setSavedEntryKeys, entryItemIds,
     openForms, setOpenForms, expandedExamples, setExpandedExamples, onSaveEntry, onUnsaveEntry, onSaveEntries, onSaveSelection,
     clearEntrySelection, handleTokenPointerDown, handleTokensPointerMove,
   } = ctx;
-  return groups.map((group) => (
+  return groups.map((group) => {
+    // A long list shows the entries about the tapped word (else the first) until the reader opens it all.
+    const foldable = group.entries.length > FOLD_ABOVE;
+    const opened = expandedGroups.has(group.providerId);
+    const shown = foldable && !opened ? new Set(visibleEntryIndexes(group.entries.map((e) => e.index), aboutEntries)) : null;
+    const shownEntries = shown ? group.entries.filter((e) => shown.has(e.index)) : group.entries;
+    return (
     <div className="dict-popup__group" key={group.providerId}>
       <div className="dict-popup__group-header">
         {clean ? groupLabel(group) : group.providerName}
@@ -75,7 +87,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
             className="dict-popup__sense-add dict-popup__group-add"
             disabled={savedGroups.has(group.providerId)}
             onClick={() => {
-              onSaveEntries(group.entries.map((e) => e.entry));
+              onSaveEntries(shownEntries.map((e) => e.entry));
               setSavedGroups((prev) => new Set(prev).add(group.providerId));
             }}
             aria-label="Add this whole section to vocabulary"
@@ -85,7 +97,8 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
           </button>
         )}
       </div>
-      {group.entries.map(({ entry, index: i }, gk) => {
+      {shownEntries.map(({ entry, index: i }) => {
+        const gk = group.entries.findIndex((e) => e.index === i);
         // Non-contiguous word selection (click to toggle, drag to add a
         // range) -- the root-keyed Arabic-Arabic dictionaries only (see
         // isTokenizedProvider), and only while a save-selection callback
@@ -376,6 +389,23 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
           </div>
         );
       })}
+      {foldable && (
+        <button
+          type="button"
+          className="dict-popup__show-all"
+          aria-expanded={opened}
+          onClick={() =>
+            setExpandedGroups((prev) => {
+              const next = new Set(prev);
+              if (!next.delete(group.providerId)) next.add(group.providerId);
+              return next;
+            })
+          }
+        >
+          {opened ? 'Show fewer entries' : `Show all ${group.entries.length} entries`}
+        </button>
+      )}
     </div>
-  ));
+    );
+  });
 }

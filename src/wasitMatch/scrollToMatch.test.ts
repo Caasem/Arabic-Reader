@@ -19,4 +19,11 @@ describe('scrollTopFor', () => {
     expect(scrollTopFor(container, { top: 20, bottom: 60 }, 300)).toBe(300 - 80 - 48);
     expect(scrollTopFor(container, { top: 90, bottom: 130 }, 5)).toBe(0);
   });
+
+  it('in the popup, leaves a match alone whose first line is on screen even if its end is cut off', () => {
+    expect(scrollTopFor(container, { top: 300, bottom: 5000 }, 0, 48, true)).toBeNull();
+    expect(scrollTopFor(container, { top: 300, bottom: 5000 }, 0)).not.toBeNull();
+    // ... but still lands on one that starts below the view
+    expect(scrollTopFor(container, { top: 1000, bottom: 1040 }, 0, 48, true)).toBe(900 - 48);
+  });
 });
