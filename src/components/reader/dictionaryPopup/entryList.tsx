@@ -43,6 +43,8 @@ export interface EntryListContext {
   setExpandedGroups: Dispatch<SetStateAction<Set<string>>>;
   /** Root-filed dictionaries opened from their folded root row (see foldsBehindRoot). */
   openedRoots: Set<string>;
+  /** One dictionary per tab: a tab has the popup to itself, so it shows every entry (no root row, no folding). */
+  tabbed?: boolean;
   setOpenedRoots: Dispatch<SetStateAction<Set<string>>>;
   savedGroups: Set<string>;
   setSavedGroups: Dispatch<SetStateAction<Set<string>>>;
@@ -71,16 +73,16 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
     word, clean, prefs, wasitStructure, wasitMatches, tokensFor, tokenSelections, startFolded, startFoldedExamples,
     aboutEntries, expandedGroups, setExpandedGroups, openedRoots, setOpenedRoots, foldedEntries, setFoldedEntries, savedGroups, setSavedGroups, savedEntryKeys, setSavedEntryKeys, entryItemIds,
     openForms, setOpenForms, expandedExamples, setExpandedExamples, onSaveEntry, onUnsaveEntry, onSaveEntries, onSaveSelection,
-    clearEntrySelection, handleTokenPointerDown, handleTokensPointerMove,
+    clearEntrySelection, handleTokenPointerDown, handleTokensPointerMove, tabbed,
   } = ctx;
   return groups.map((group) => {
     // A long list shows the entries about the tapped word (else the first) until the reader opens it all.
-    const foldable = group.entries.length > FOLD_ABOVE;
+    const foldable = !tabbed && group.entries.length > FOLD_ABOVE;
     const opened = expandedGroups.has(group.providerId);
     const shown = foldable && !opened ? new Set(visibleEntryIndexes(group.entries.map((e) => e.index), aboutEntries)) : null;
     const shownEntries = shown ? group.entries.filter((e) => shown.has(e.index)) : group.entries;
     // A root-filed dictionary starts as one row naming its root(s); opening it shows the entries about the word.
-    if (foldsBehindRoot(group.providerId) && !openedRoots.has(group.providerId)) {
+    if (!tabbed && foldsBehindRoot(group.providerId) && !openedRoots.has(group.providerId)) {
       const roots = [...new Set(group.entries.map((e) => e.entry.root || e.entry.headword).filter(Boolean))];
       const count = group.entries.length;
       return (
@@ -431,8 +433,10 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
       {foldable && (
         <button
           type="button"
-          className="dict-popup__show-all"
+          className={'dict-popup__show-all' + (opened ? ' dict-popup__show-all--open' : '')}
           aria-expanded={opened}
+          aria-label={opened ? 'Hide the other entries' : `Show all ${group.entries.length} entries`}
+          title={opened ? 'Hide the other entries' : `Show all ${group.entries.length} entries`}
           onClick={() =>
             setExpandedGroups((prev) => {
               const next = new Set(prev);
@@ -441,7 +445,20 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
             })
           }
         >
-          {opened ? 'Show fewer entries' : `Show all ${group.entries.length} entries`}
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            style={{ display: 'block', transform: opened ? 'rotate(180deg)' : undefined }}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
         </button>
       )}
     </div>

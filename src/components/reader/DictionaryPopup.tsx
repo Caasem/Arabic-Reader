@@ -674,7 +674,7 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
                     </button>
                   ))}
                 </div>
-                {renderGroupList(entryListContext, allGroups.filter((g) => g.providerId === activeTabId))}
+                {renderGroupList({ ...entryListContext, tabbed: true }, allGroups.filter((g) => g.providerId === activeTabId))}
               </>
             ) : (
               <div className="dict-popup__split-cols">
