@@ -50,7 +50,8 @@
 }
 .dict-lane-sigla {
   font-size: 0.78em;
-  color: var(--ink-faint);
+  /* --ink-soft, not --ink-faint: at this size faint fell below 3:1. */
+  color: var(--ink-soft);
   white-space: normal;
 }
 

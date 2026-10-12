@@ -2,7 +2,8 @@
 .dict-hw-form {
   display: inline-block;
   color: var(--ink-soft);
-  border: 1px solid var(--border);
+  /* --border vanished against the dark popup; the faint ink keeps the outline visible. */
+  border: 1px solid var(--ink-faint);
   border-radius: 999px;
   padding: 0 7px;
   font-size: 0.78em;
