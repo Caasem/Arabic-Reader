@@ -1,16 +1,16 @@
 import type { DeskItem } from '../../studyDesk/types';
 import { buildArgument, type ArgNode } from '../argument';
+import { wordsOf } from '../labels';
+import { isOpen } from '../masail';
 import { moveInfo } from '../moves';
 import { citeOf, isPassage, isThought, thoughtText } from '../passages';
 import { threadMembers } from '../threads';
 import type { ThinkingData } from '../useThinkingData';
 
-const openQuestion = (byId: Map<string, DeskItem>) => (q: DeskItem) => !q.answer || !byId.has(q.answer);
-
 /** The thread's argument, from the moves tagged on its members: definitions, claims and what bears on them. */
 export function ArgumentTab({ threadId, data, onGoTo }: { threadId: string; data: ThinkingData; onGoTo(item: DeskItem): void }) {
   const members = threadMembers(threadId, data.items);
-  const arg = buildArgument(members, data.byId, data.links, openQuestion(data.byId));
+  const arg = buildArgument(members, data.byId, data.links, (q) => isOpen(q, data.byId));
   const empty = !arg.definitions.length && !arg.claims.length && !arg.loose.length;
   return (
     <div className="th-amap">
@@ -35,7 +35,7 @@ export function ArgumentTab({ threadId, data, onGoTo }: { threadId: string; data
       {arg.questions.length > 0 && <h3 className="th-amap__h">Open masāʾil</h3>}
       {arg.questions.map((q) => (
         <p key={q.id} className="th-tension th-tension--q" dir="auto">
-          {q.text}
+          {wordsOf(q)}
         </p>
       ))}
     </div>
@@ -71,7 +71,7 @@ function Node({ node, onGoTo }: { node: ArgNode; onGoTo(item: DeskItem): void })
         <div className="th-kids">
           {node.questions.map((q) => (
             <p key={q.id} className="th-tension th-tension--q" dir="auto">
-              Open masʾala sits here: {q.text}
+              Open masʾala sits here: {wordsOf(q)}
             </p>
           ))}
           {node.kids.map((k) => (

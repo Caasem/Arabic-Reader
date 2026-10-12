@@ -33,3 +33,22 @@ export function newThought(passage: DeskItem, book: BookMeta, text: string, opts
     ...(opts.links?.length ? { links: opts.links } : {}),
   };
 }
+
+/**
+ * A new masʾala: on a passage (level with it, tied to it), or at a place on the page. Its words are kept as a Ḥāshiya
+ * question keeps them, in the body, so it shows beside the passage and in the inbox.
+ */
+export function newQuestion(book: BookMeta, text: string, at: { passage?: DeskItem; location?: string }): NewDeskItem {
+  const location = at.passage ? thoughtPlace(at.passage) : at.location;
+  return {
+    type: 'question',
+    text: '',
+    body: text.trim(),
+    ar: looksArabic(text),
+    source: { bookId: book.id, bookTitle: book.title, location, chapterLabel: at.passage?.source?.chapterLabel },
+    ...(location ? { pin: { bookId: book.id, location, side: 'right' as const } } : {}),
+    fromMargin: true,
+    inInbox: true,
+    ...(at.passage ? { tie: at.passage.id } : {}),
+  };
+}

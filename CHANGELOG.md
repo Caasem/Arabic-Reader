@@ -45,6 +45,18 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.116.0 — 2026-10-12
+
+- **Thinking desk, masāʾil.** Questions have an open or answered state. **Alt+Q** (or Ask a masʾala in the passage bar)
+  asks one on the passage, or at this place on the page; it sits in the Ḥāshiya beside the passage and in the inbox, and
+  joins the active thread.
+- **The Masāʾil screen** (Masāʾil in the dock): how many are still open and how long the oldest has waited, Open,
+  Answered and All, and for each when and where it was asked, its threads, and its answer with its citation.
+- **Find the answer** opens the book it was asked in, with a bar naming the question. Click a passage's handle (Yes, this
+  answers it / Not this one) or select new words (These words answer the masʾala): the answer is saved with its citation,
+  with Undo. Cancel or Esc stops looking. Answered masāʾil can be reopened.
+- The Thread screen's Masāʾil tab and Touching this passage offer Find the answer too.
+
 ## v0.115.0 — 2026-10-12
 
 - **Thinking desk, backlinks.** A dark count beside each passage that something touches: your gloss on it, thoughts at its

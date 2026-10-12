@@ -7,12 +7,17 @@ import { stripBox } from './geometry';
 import { citeOf, isThought, short, thoughtText } from './passages';
 import { say } from './say';
 import { thinkingState } from './state';
-import { newThought } from './thoughts';
+import { newQuestion, newThought } from './thoughts';
 import { threadLabel } from './threads';
 
-/** A new thought in the Ḥāshiya strip: what do you make of it? Optionally your claim, and linked to other thoughts. */
+/**
+ * A new thought in the Ḥāshiya strip: what do you make of it? Optionally your claim, and linked to other thoughts.
+ * Or a new masʾala (`kind` question): what do you want to know? On a passage, or at a place on the page.
+ */
 export function Composer({
+  kind = 'thought',
   passage,
+  place,
   book,
   deskId,
   items,
@@ -21,7 +26,10 @@ export function Composer({
   extra,
   onClose,
 }: {
-  passage: DeskItem;
+  kind?: 'thought' | 'question';
+  passage?: DeskItem;
+  /** A masʾala with no passage: the place on the page it was asked at. */
+  place?: string;
   book: BookMeta;
   deskId: string;
   items: DeskItem[];
@@ -40,6 +48,7 @@ export function Composer({
   const ta = useRef<HTMLTextAreaElement>(null);
   useEffect(() => ta.current?.focus(), []);
   const active = desks.find((d) => d.id === thinkingState().active && d.kind === 'thread');
+  const asking = kind === 'question' || !passage;
 
   const found = useMemo(() => {
     const q = find.trim().toLowerCase();
@@ -51,6 +60,12 @@ export function Composer({
     if (!text.trim() || busy) return;
     setBusy(true);
     try {
+      if (kind === 'question' || !passage) {
+        await capture(book, deskId, newQuestion(book, text, { passage, location: place }));
+        say(active ? `Masʾala added to ${threadLabel(active)}. It stays open until a passage answers it.` : 'Masʾala added. It stays open until a passage answers it.');
+        onClose();
+        return;
+      }
       const item = await capture(book, deskId, { ...newThought(passage, book, text, { claim, links, toInbox }), ...extra?.() });
       // Links are kept on both thoughts.
       const others = items.filter((i) => links.includes(i.id));
@@ -66,7 +81,7 @@ export function Composer({
     <div
       className="th-composer"
       role="dialog"
-      aria-label="New thought"
+      aria-label={asking ? 'New masʾala' : 'New thought'}
       style={{ left: box.left, top: Math.max(box.top + 12, 64), width: box.right - box.left }}
       onKeyDown={(e) => {
         e.stopPropagation();
@@ -78,13 +93,25 @@ export function Composer({
       }}
     >
       <div className="th-composer__top">
-        <span className="th-kind th-kind--note">New thought</span>
-        <span className="th-cite">{citeOf(passage)}</span>
+        <span className={'th-kind ' + (asking ? 'th-kind--q' : 'th-kind--note')}>{asking ? 'New masʾala' : 'New thought'}</span>
+        <span className="th-cite">{passage ? citeOf(passage) : book.title}</span>
       </div>
-      <p className={'th-excerpt' + (passage.ar ? ' th-ar' : '')} dir="auto">
-        {short(passage.text, 110)}
-      </p>
-      <textarea ref={ta} className="th-input th-composer__text" dir="auto" rows={4} value={text} placeholder="What do you make of it?" aria-label="Your thought" onChange={(e) => setText(e.target.value)} />
+      {passage && (
+        <p className={'th-excerpt' + (passage.ar ? ' th-ar' : '')} dir="auto">
+          {short(passage.text, 110)}
+        </p>
+      )}
+      <textarea
+        ref={ta}
+        className="th-input th-composer__text"
+        dir="auto"
+        rows={asking ? 3 : 4}
+        value={text}
+        placeholder={asking ? 'What do you want to know?' : 'What do you make of it?'}
+        aria-label={asking ? 'Your masʾala' : 'Your thought'}
+        onChange={(e) => setText(e.target.value)}
+      />
+      {!asking && <>
       <label className="th-check">
         <input type="checkbox" checked={claim} onChange={(e) => setClaim(e.target.checked)} />
         This is my claim <span className="th-ar">دعوى</span>
@@ -122,6 +149,7 @@ export function Composer({
           </div>
         )}
       </div>
+      </>}
       {active && (
         <p className="th-faint th-composer__note">
           Joins the <bdi>{threadLabel(active)}</bdi> thread.

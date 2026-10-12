@@ -8,6 +8,7 @@ import { usePdfDesk } from '../studyDesk/pdfDesk';
 import type { DeskItem, DeskMove } from '../studyDesk/types';
 import { moveForKey, moveInfo, MOVES, movePatch, tieCandidates, tieKind, tieQuestion } from './moves';
 import { citeOf, short } from './passages';
+import { answerWith } from './actions';
 import { say } from './say';
 import { setThinking, thinkingState } from './state';
 
@@ -102,20 +103,29 @@ export function PassageMoves({ item, items, collect }: { item: DeskItem; items: 
   );
 }
 
-/** Words chosen but not kept yet: a move keeps them as a quote with that move and opens its bar to ask the tie. */
-function PendingRow({ keep, collect }: { keep(extra: Partial<DeskItem>): Promise<DeskItem | null>; collect: boolean }) {
+/**
+ * Words chosen but not kept yet: a move keeps them as a quote with that move and opens its bar to ask the tie. While a
+ * masʾala is hunted, they can answer it instead.
+ */
+function PendingRow({ keep, collect, answering }: { keep(extra: Partial<DeskItem>): Promise<DeskItem | null>; collect: boolean; answering?: DeskItem }) {
   const pick = (move: DeskMove) =>
     void keep({ move }).then(async (item) => {
       if (!item) return;
       await afterMove(item, move, collect);
       setThinking({ selected: item.id, touch: null, askTie: tieKind(move) ? item.id : null });
     });
-  useMoveKeys(true, pick);
+  useMoveKeys(!answering, pick);
+  if (answering)
+    return (
+      <button type="button" className="sd-btn sd-btn--pri th-answer" onClick={() => void keep({}).then((p) => p && answerWith(answering, p))}>
+        These words answer the masʾala
+      </button>
+    );
   return <MoveButtons onPick={pick} />;
 }
 
 /** On PDF pages: the moves just under the Highlighter's bar, while words wait there. */
-export function PdfPendingMoves({ collect }: { collect: boolean }) {
+export function PdfPendingMoves({ collect, answering }: { collect: boolean; answering?: DeskItem }) {
   const { pending } = usePdfDesk();
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
@@ -135,7 +145,7 @@ export function PdfPendingMoves({ collect }: { collect: boolean }) {
   if (!pending) return null;
   return (
     <div ref={ref} className="th-selmoves" style={pos ?? { left: -9999, top: -9999 }} onPointerDown={(e) => e.stopPropagation()}>
-      <PendingRow keep={pending} collect={collect} />
+      <PendingRow keep={pending} collect={collect} answering={answering} />
     </div>
   );
 }
@@ -171,7 +181,7 @@ function readSelection(): QuietSelection | null {
  * In the quiet reader: a slim bar of moves under selected text (the reader's highlight colours stay above it). A move
  * keeps the words as a quote on the current desk, with that move, and opens its passage bar.
  */
-export function QuietPendingMoves({ book, deskId, toInbox, collect }: { book: BookMeta; deskId: string; toInbox: boolean; collect: boolean }) {
+export function QuietPendingMoves({ book, deskId, toInbox, collect, answering }: { book: BookMeta; deskId: string; toInbox: boolean; collect: boolean; answering?: DeskItem }) {
   const [sel, setSel] = useState<QuietSelection | null>(null);
   useEffect(() => {
     let raf = 0;
@@ -217,7 +227,7 @@ export function QuietPendingMoves({ book, deskId, toInbox, collect }: { book: Bo
   };
   return (
     <div ref={ref} className="th-selmoves" style={pos ?? { left: -9999, top: -9999 }} onPointerDown={(e) => e.preventDefault()}>
-      <PendingRow keep={keep} collect={collect} />
+      <PendingRow keep={keep} collect={collect} answering={answering} />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { ThinkingToast } from './toast';
 import './thinking.css';
 
 const ThreadScreen = lazy(() => import('./screens/ThreadScreen').then((m) => ({ default: m.ThreadScreen })));
+const MasailScreen = lazy(() => import('./screens/MasailScreen').then((m) => ({ default: m.MasailScreen })));
 
 /**
  * The thinking desk across the whole app: new things join the active thread wherever they are made, the screens
@@ -47,6 +48,7 @@ export function AppHost({ onOpenBook }: AppHostProps) {
       {screen && (
         <Suspense fallback={<div className="th-screen th-screen--loading" role="status">Loading…</div>}>
           {screen.kind === 'thread' && prefs.thinkingThreads && <ThreadScreen screen={screen} onOpenBook={onOpenBook} />}
+          {screen.kind === 'masail' && prefs.thinkingMasail && <MasailScreen onOpenBook={onOpenBook} />}
         </Suspense>
       )}
       <ThinkingToast />

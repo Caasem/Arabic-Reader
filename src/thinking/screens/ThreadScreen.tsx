@@ -11,7 +11,10 @@ import { openScreen, setThinking, useThinking, type Screen, type ThreadTab } fro
 import { byBook, joinedAt, namesFromTyped, summarise, threadLabel, threadMembers, threadSummaries } from '../threads';
 import { say } from '../say';
 import { useThinkingData, type ThinkingData } from '../useThinkingData';
+import { findAnswer, reopenQuestion } from '../actions';
+import { isOpen } from '../masail';
 import { ArgumentTab } from './ArgumentTab';
+import { MasalaRow } from './MasalaRow';
 import { Frame, Tabs } from './Frame';
 import { ItemLine } from './parts';
 
@@ -37,7 +40,7 @@ export function ThreadScreen({ screen, onOpenBook }: { screen: Extract<Screen, {
   const summary = summarise(thread, data.items);
   const goTo = (item: DeskItem) => void goToItem(item, onOpenBook);
   const questions = threadMembers(thread.id, data.items).filter((i) => i.type === 'question');
-  const open = questions.filter((q) => !q.answer || !data.byId.has(q.answer)).length;
+  const open = questions.filter((q) => isOpen(q, data.byId)).length;
 
   return (
     <Frame
@@ -105,10 +108,18 @@ export function ThreadScreen({ screen, onOpenBook }: { screen: Extract<Screen, {
       {tab === 'argument' && prefs.thinkingMoves && <ArgumentTab threadId={thread.id} data={data} onGoTo={goTo} />}
       {tab === 'gathered' && <Gathered thread={thread} data={data} onGoTo={goTo} />}
       {tab === 'masail' && (
-        <div className="th-list">
+        <div className="th-masail">
           {!questions.length && <p className="th-empty">No masāʾil in this thread yet. Ask one on a passage while it is collecting.</p>}
           {questions.map((q) => (
-            <ItemLine key={q.id} item={q} dim={!!q.answer} acts={q.source?.location ? <button type="button" className="th-link" onClick={() => goTo(q)}>Open page ↗</button> : undefined} />
+            <MasalaRow
+              key={q.id}
+              item={q}
+              answer={!isOpen(q, data.byId) ? data.byId.get(q.answer!) : undefined}
+              threads={[]}
+              onFind={(item) => void findAnswer(item, onOpenBook)}
+              onReopen={(item) => void reopenQuestion(item)}
+              onOpen={goTo}
+            />
           ))}
         </div>
       )}

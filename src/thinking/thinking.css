@@ -955,3 +955,114 @@
   border-color: var(--accent);
   color: var(--ink);
 }
+/* --- Masāʾil --- */
+.th-masail {
+  display: grid;
+}
+.th-masala {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.th-masala__mark {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-top: 2px;
+  border: 1.5px dashed var(--th-question);
+  border-radius: 50%;
+  color: var(--th-question);
+  font: 600 16px/1 var(--font-arabic);
+}
+.th-masala--answered .th-masala__mark {
+  border-style: solid;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font: 600 14px/1 var(--font-ui);
+}
+.th-masala__main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.th-masala__q {
+  margin: 0;
+  font: 600 16px/1.5 var(--font-ui);
+  overflow-wrap: anywhere;
+}
+.th-masala__q.th-ar {
+  font: 400 21px/1.8 var(--font-arabic);
+}
+.th-masala__thread {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+.th-masala__thread .th-ar {
+  font-size: 14px;
+}
+.th-masala__answer {
+  margin-top: 6px;
+  padding: 8px 12px;
+  border-inline-start: 3px solid var(--accent);
+  background: var(--bg-elevated);
+  border-radius: 0 10px 10px 0;
+}
+.th-masala__words {
+  margin: 0;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.th-masala__words.th-ar {
+  font-size: 19px;
+  line-height: 1.8;
+}
+.th-masala__answer .th-link {
+  margin-left: 8px;
+}
+.th-masala__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+@media (max-width: 600px) {
+  .th-masala {
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .th-masala__acts .sd-btn {
+    flex: 1 1 auto;
+  }
+}
+
+/* --- hunting for an answer ---------------------------------------------------------------------------------------- */
+.th-hunt {
+  box-shadow: 0 0 0 1.5px var(--th-question), var(--shadow);
+}
+.th-hunt .th-collect__name {
+  max-width: 34ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.th-answer {
+  width: 100%;
+}
+.th-acts kbd {
+  margin-left: 4px;
+  font: 500 11px var(--font-ui);
+  color: var(--ink-faint);
+}
+/* Below the bars under the reader's header (active thread, hunting). */
+.th-toast {
+  top: calc(112px + env(safe-area-inset-top, 0px));
+}

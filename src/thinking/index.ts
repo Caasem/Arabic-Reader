@@ -16,7 +16,7 @@ export const thinkingFeature: FeatureDescriptor = {
   AppHost: ThinkingAppHost,
   SettingsSection: ThinkingSettings,
   settingsGroup: 'reading',
-  chords: ['Alt+T'],
+  chords: ['Alt+T', 'Alt+Q'],
   touchPoints: [
     'the `thinking*` preferences (src/types/preferences.ts, src/state/defaultPreferences.ts)',
     "the study desk's data: the thinking fields on DeskItem and Desk, the links and journal tables, desk database version 2 and their store functions (src/studyDesk: types, db, deskStore), in the storage registry and the full export",

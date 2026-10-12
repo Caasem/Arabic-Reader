@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from 'react';
 import type { DeskItem } from '../studyDesk/types';
 import { stripBox } from './geometry';
+import { wordsOf } from './labels';
 import { ago, citeOf, short, thoughtText } from './passages';
 import { setThinking } from './state';
 import type { Touch } from './touching';
@@ -69,7 +70,7 @@ export function TouchingPanel({
           );
         const item = t.item;
         const label = t.kind === 'gloss' ? 'Your gloss' : t.kind === 'question' ? (item.answer ? 'Masʾala · answered' : 'Masʾala · open') : 'Thought';
-        const words = t.kind === 'gloss' ? (item.body ?? '') : t.kind === 'question' ? item.text : thoughtText(item);
+        const words = t.kind === 'gloss' ? (item.body ?? '') : t.kind === 'question' ? wordsOf(item) : thoughtText(item);
         return (
           <div key={t.kind + item.id} className={'th-card' + (t.kind === 'question' ? ' th-card--q' : '')}>
             <div className="th-card__top">

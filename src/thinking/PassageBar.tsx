@@ -17,6 +17,7 @@ export function PassageBar({
   active,
   showThreads,
   onNewThread,
+  title = 'What is this passage doing?',
   children,
 }: {
   item: DeskItem;
@@ -24,6 +25,7 @@ export function PassageBar({
   active: string | null;
   showThreads: boolean;
   onNewThread(): void;
+  title?: string;
   children?: ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -73,7 +75,7 @@ export function PassageBar({
       onPointerDown={(e) => e.stopPropagation()}
     >
       <div className="th-bar-passage__head">
-        <span className="th-eyebrow">What is this passage doing?</span>
+        <span className="th-eyebrow">{title}</span>
         <span className="th-cite" dir="auto">
           {citeOf(item)}
         </span>
