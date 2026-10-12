@@ -112,8 +112,8 @@ It is not a parallel system. Everything is a desk, a desk item or a desk documen
   optional sheet: pages, minutes, moves, thoughts, masāʾil and items added to threads, and "What changed in your
   mind?" in one line, with Skip and Save. Saved lines form the reading journal, which feeds On this day.
 
-**Export**
-- The desk document's Export adds Obsidian (.md: front matter with title, kind, guiding question, tags and date;
+**Export (not built yet: phase 8 was set aside)**
+- The desk document's Export would add Obsidian (.md: front matter with title, kind, guiding question, tags and date;
   citations as `[[Book#p. N]]`; linked thoughts as backlinks) and Notion (.md: quotes with citations; open masāʾil
   as to-dos, answered ones ticked), next to Markdown and Word.
 
@@ -211,6 +211,8 @@ Settings → Reading → Thinking desk:
 - **Size.** Everything new loads on demand; the entry script and styles were within 12 kB and 1.3 kB of their budgets.
 
 ## 8. Not yet
+
+- Phase 8, Obsidian and Notion export, was set aside before it was folded in; `thinkingExport` exists but does nothing yet.
 
 - Sync of the new tables (they follow the desk tables).
 - Moves inside epub (iframe) books; rendering two live readers in Muqābala.

@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import type { AppHostProps, HostProps } from '../features/registry';
+import type { AppHostProps, HostProps, LibraryTopProps } from '../features/registry';
 import { usePreferences } from '../state/PreferencesContext';
 import { thinkingOn } from './switches';
 
@@ -10,6 +10,7 @@ import { thinkingOn } from './switches';
 
 const ReaderHost = lazy(() => import('./ReaderHost').then((m) => ({ default: m.ReaderHost })));
 const AppHost = lazy(() => import('./AppHost').then((m) => ({ default: m.AppHost })));
+const TodayPanel = lazy(() => import('./TodayPanel').then((m) => ({ default: m.TodayPanel })));
 
 export function ThinkingHost(props: HostProps) {
   const { prefs } = usePreferences();
@@ -27,6 +28,17 @@ export function ThinkingAppHost(props: AppHostProps) {
   return (
     <Suspense fallback={null}>
       <AppHost {...props} />
+    </Suspense>
+  );
+}
+
+/** Today, above the Library's shelves. */
+export function ThinkingToday(props: LibraryTopProps) {
+  const { prefs } = usePreferences();
+  if (!thinkingOn(prefs) || !prefs.thinkingToday) return null;
+  return (
+    <Suspense fallback={null}>
+      <TodayPanel {...props} />
     </Suspense>
   );
 }

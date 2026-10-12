@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef } from 'react';
 import type { AppHostProps } from '../features/registry';
 import { usePreferences } from '../state/PreferencesContext';
 import { joinThread, onItemAdded } from '../studyDesk/deskStore';
+import { ClosingSheet } from './ClosingSheet';
 import { closeScreen, thinkingState, useThinking } from './state';
 import { joinsActiveThread } from './threads';
 import { ThinkingToast } from './toast';
@@ -56,6 +57,7 @@ export function AppHost({ onOpenBook }: AppHostProps) {
         </Suspense>
       )}
       <ThinkingToast />
+      <ClosingSheet />
     </>
   );
 }

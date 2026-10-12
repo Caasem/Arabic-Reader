@@ -475,7 +475,7 @@
       "effort": 4,
       "deps": ["study-desk"],
       "branch": "claude/thinking-desk-threads-moves-yr6wq6",
-      "notes": "Built on the study desk in eight phases, one commit each, behind thinkingFrontEnabled (off by default) and a switch per part. Revert matrix: docs/changes/thinking-front-changes.md.",
+      "notes": "Built on the study desk in phases, one commit each, behind thinkingFrontEnabled (off by default) and a switch per part; phases 1–7 done, phase 8 (Obsidian and Notion export) set aside. Revert matrix: docs/changes/thinking-front-changes.md.",
       "brief": "features/thinking-front.md",
       "milestone": "M2"
     }

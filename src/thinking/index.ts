@@ -6,7 +6,7 @@
  * folder, its registry line and those touch points. Everything here loads on demand (gates.tsx).
  */
 import type { FeatureDescriptor } from '../features/registry';
-import { ThinkingAppHost, ThinkingHost } from './gates';
+import { ThinkingAppHost, ThinkingHost, ThinkingToday } from './gates';
 import { ThinkingSettings } from './ThinkingSettings';
 
 export const thinkingFeature: FeatureDescriptor = {
@@ -14,6 +14,7 @@ export const thinkingFeature: FeatureDescriptor = {
   pref: 'thinkingFrontEnabled',
   Host: ThinkingHost,
   AppHost: ThinkingAppHost,
+  LibraryTop: ThinkingToday,
   SettingsSection: ThinkingSettings,
   settingsGroup: 'reading',
   chords: ['Alt+T', 'Alt+Q', 'Alt+J'],

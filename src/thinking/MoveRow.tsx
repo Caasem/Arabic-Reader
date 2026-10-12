@@ -9,6 +9,7 @@ import type { DeskItem, DeskMove } from '../studyDesk/types';
 import { moveForKey, moveInfo, MOVES, movePatch, tieCandidates, tieKind, tieQuestion } from './moves';
 import { citeOf, short } from './passages';
 import { answerWith } from './actions';
+import { countMove } from './session';
 import { say } from './say';
 import { setThinking, thinkingState } from './state';
 
@@ -63,6 +64,7 @@ export function PassageMoves({ item, items, collect }: { item: DeskItem; items: 
   }, [item.id]);
   const pick = (move: DeskMove) => {
     const patch = movePatch(item, move);
+    if (patch.move) countMove();
     void updateItem(item.id, patch).then(() => afterMove(item, patch.move, collect));
     setAsking(patch.move && tieKind(patch.move) ? patch.move : null);
   };

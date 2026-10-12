@@ -14,6 +14,7 @@ import { PassageBar } from './PassageBar';
 import { publishPassages } from './marksStore';
 import { PdfPassageLayer, QuietPassageLayer } from './PassageMarks';
 import { isPassage } from './passages';
+import { useReadingSession } from './session';
 import { openScreen, setReadingBook, setThinking, thinkingState, useThinking } from './state';
 import { ThreadBar } from './ThreadBar';
 import { ThreadPicker } from './ThreadPicker';
@@ -55,6 +56,7 @@ const IconCompare = () => (
 
 /** The thinking desk beside the open book: the active thread's bar, passage handles and their bar, the thread picker. */
 export function ReaderHost({ book, onOpenBook }: HostProps) {
+  useReadingSession(book);
   const { prefs } = usePreferences();
   const data = useThinkingData();
   const st = useThinking();

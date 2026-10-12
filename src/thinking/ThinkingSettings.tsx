@@ -12,6 +12,12 @@ const PARTS: { key: PartKey; label: string; note: string }[] = [
   { key: 'thinkingBacklinks', label: 'Backlinks', note: 'A count beside each passage that something touches: thoughts on it, thoughts linked to those, masāʾil, Muqābala links. Click it to see them in the Ḥāshiya.' },
   { key: 'thinkingMasail', label: 'Masāʾil (Alt+Q)', note: 'Ask a question on a passage and keep it open until another passage answers it. See them all, with how long each has waited.' },
   { key: 'thinkingRevisit', label: 'Revisit', note: 'Bring your thoughts back after a while to agree, revise or drop them, and send them to Anki.' },
+  { key: 'thinkingToday', label: 'Today', note: 'Above the Library: what you read a year ago, thoughts to revisit, open masāʾil and your threads.' },
+  {
+    key: 'thinkingClosingPrompt',
+    label: 'Ask what changed when a book closes',
+    note: 'After 5 minutes or more, or anything made. Saved lines form your reading journal, shown on Today.',
+  },
 ];
 
 export function ThinkingSettings() {

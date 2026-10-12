@@ -45,6 +45,16 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.119.0 — 2026-10-12
+
+- **Thinking desk, Today.** Above the Library, when there is anything to show: On this day (what you read a year ago, and
+  six months ago; a thought from then that you later revised, then and now side by side; that day's closing line),
+  thoughts due for a revisit, open masāʾil, and your threads with a sparkline of their growth.
+- **The closing prompt.** Closing a book after real activity (5 minutes or more, or anything made) offers an optional
+  sheet over the Library: pages, minutes, moves, thoughts, masāʾil and items added to threads, and "What changed in your
+  mind?" in one line, with Skip and Save. Saved lines form your reading journal, which feeds On this day. Never during a
+  capture trip. Off switch: Settings → Reading → Thinking desk → Ask what changed when a book closes.
+
 ## v0.118.0 — 2026-10-12
 
 - **Thinking desk, Revisit.** Thoughts written in the passage bar come back a week later, scheduled with the same FSRS
