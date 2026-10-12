@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import type { DefinitionToken } from '../definitionTokens';
 
 /** What the hook needs of an entry's tokens: the flat stream, to know which indices are words. */
-type TokenStreams = ReadonlyMap<number, { flat: DefinitionToken[] }>;
+type TokensFor = (entryIdx: number) => { flat: DefinitionToken[] } | undefined;
 
 /**
  * Word selection inside dictionary entries: click toggles one word, drag adds a range, the
  * selection is kept per entry and cleared when the popup moves to a new word.
  */
-export function useTokenSelection(word: string, entryTokenData: TokenStreams, exampleTokenData: TokenStreams) {
+export function useTokenSelection(word: string, tokensFor: TokensFor) {
   // Select-and-save: for a long entry (Al-Wasit's own paragraphs commonly
   // run several sub-senses together) where only part of it is relevant,
   // clicking/dragging across its words builds a (possibly non-contiguous)
@@ -42,7 +42,7 @@ export function useTokenSelection(word: string, entryTokenData: TokenStreams, ex
   }
 
   function addTokenRange(entryIdx: number, lo: number, hi: number) {
-    const tokens = entryTokenData.get(entryIdx)?.flat ?? exampleTokenData.get(entryIdx)?.flat;
+    const tokens = tokensFor(entryIdx)?.flat;
     if (!tokens) return;
     setTokenSelections((prev) => {
       const next = new Map(prev);

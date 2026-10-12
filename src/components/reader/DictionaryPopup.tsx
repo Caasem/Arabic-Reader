@@ -4,8 +4,7 @@ import { getWordRarity, isRarityDataReady, TIER_LABELS } from '../../vocabRarity
 import { normalize } from '../../reader/tokenizer/arabicTokenizer';
 import { usePreferences } from '../../state/PreferencesContext';
 import { IconEdit, IconChevronLeft, IconChevronRight, IconBook, IconMaximize } from '../shared/icons';
-import { buildEntryTokenSenses, buildExampleEntryTokens, reconstructSelection, type DefinitionToken, type ExampleEntryTokens } from './definitionTokens';
-import { isTokenizedProvider } from '../../dictionary/tokenizedProviders';
+import { buildEntryTokens, reconstructSelection, type ExampleEntryTokens } from './definitionTokens';
 import { findMatchedEntries, scrollToFirstMatches } from '../../wasitMatch';
 import { entriesAboutWord } from '../../dictionary/subEntries/match';
 import { FOLD_ABOVE, visibleEntryIndexes } from '../../dictionary/entryFeatures';
@@ -287,32 +286,35 @@ export function DictionaryPopup({
   // max-height/overflow-y in the stylesheet) rather than growing off-screen.
   const popupRef = useRef<HTMLDivElement>(null);
 
-  const entryTokenData = useMemo(() => {
-    const map = new Map<number, { flat: DefinitionToken[]; bySense: DefinitionToken[][] }>();
-    result?.entries.forEach((e, i) => {
-      if (isTokenizedProvider(e.providerId)) map.set(i, buildEntryTokenSenses(e));
-    });
-    return map;
-  }, [result]);
   // Entries about the tapped word: what a long list folds down to, and what starts open when the rest fold.
   const aboutEntries = useMemo(() => (result ? entriesAboutWord(result.entries, word, result.morphology) : new Set<number>()), [result, word]);
-  // Arabic entries on show (a long list shows only a few of its entries): too many start folded to their headword row.
-  const shownArabicEntries = allGroups.reduce((n, g) => {
-    const indexes = g.entries.map((e) => e.index);
-    const shown = g.entries.length > FOLD_ABOVE && !expandedGroups.has(g.providerId) ? visibleEntryIndexes(indexes, aboutEntries) : indexes;
-    return n + shown.filter((i) => result && entryLanguage(result.entries[i]) === 'ar').length;
-  }, 0);
-  const startFolded = clean && arabicEntriesStartFolded(shownArabicEntries, prefs.collapseManyArabicEntries);
+  // Entries on show (a long list shows only a few of its entries) that satisfy `test`.
+  const shownCount = (test: (e: DictionaryEntry) => boolean) =>
+    allGroups.reduce((n, g) => {
+      const indexes = g.entries.map((e) => e.index);
+      const shown = g.entries.length > FOLD_ABOVE && !expandedGroups.has(g.providerId) ? visibleEntryIndexes(indexes, aboutEntries) : indexes;
+      return n + shown.filter((i) => result && test(result.entries[i])).length;
+    }, 0);
+  // Too many Arabic entries on show start folded to their headword row, and so do too many Baranov-style ones.
+  const startFolded = clean && arabicEntriesStartFolded(shownCount((e) => entryLanguage(e) === 'ar'), prefs.collapseManyArabicEntries);
+  const startFoldedExamples = clean && arabicEntriesStartFolded(shownCount((e) => hasRichSenses(e.providerId)), prefs.collapseManyArabicEntries);
 
-  // Baranov-style entries: tokenized in reading order (sense, then each example) for word selection.
-  const exampleTokenData = useMemo(() => {
-    const map = new Map<number, ExampleEntryTokens>();
-    result?.entries.forEach((e, i) => {
-      if (hasRichSenses(e.providerId)) map.set(i, buildExampleEntryTokens(e));
-    });
-    return map;
-  }, [result]);
-  const startFoldedExamples = clean && arabicEntriesStartFolded(exampleTokenData.size, prefs.collapseManyArabicEntries);
+  // An entry's text as word tokens (sense by sense, then each example) for picking words to save, cut the first time
+  // it is wanted: Lane's articles are huge, and only the entries on show are ever asked for.
+  const tokenCache = useMemo(() => new WeakMap<DictionaryEntry, ExampleEntryTokens>(), []);
+  const tokensFor = useCallback(
+    (entryIdx: number): ExampleEntryTokens | undefined => {
+      const entry = result?.entries[entryIdx];
+      if (!entry) return undefined;
+      let tokens = tokenCache.get(entry);
+      if (!tokens) {
+        tokens = buildEntryTokens(entry);
+        tokenCache.set(entry, tokens);
+      }
+      return tokens;
+    },
+    [result, tokenCache],
+  );
 
   // Which senses of the root dictionaries' articles are the word that was looked up (see wasitMatch).
   const wasitMatches = useMemo(() => {
@@ -330,7 +332,7 @@ export function DictionaryPopup({
     return map;
   }, [result, prefs.wasitStructureEnabled, prefs.wasitLabelsEnabled]);
 
-const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,    activeSelection,    clearEntrySelection,    handleTokenPointerDown,    handleTokensPointerMove,  } = useTokenSelection(word, entryTokenData, exampleTokenData);
+const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,    activeSelection,    clearEntrySelection,    handleTokenPointerDown,    handleTokensPointerMove,  } = useTokenSelection(word, tokensFor);
   /** The main "Save Vocabulary" (and its header-shortcut twin) button's
    * click handler -- when a selection is active, saves *only* that
    * selection instead of the whole lookup, so the safety this feature
@@ -339,9 +341,9 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
   function handleMainSave() {
     if (activeSelectionEntry !== null && activeSelection && activeSelection.size > 0 && onSaveSelection) {
       const entry = result?.entries[activeSelectionEntry];
-      const tokens = entryTokenData.get(activeSelectionEntry)?.flat;
+      const tokens = tokensFor(activeSelectionEntry);
       if (entry && tokens) {
-        onSaveSelection(entry, reconstructSelection(tokens, activeSelection));
+        onSaveSelection(entry, reconstructSelection(tokens.flat, activeSelection));
         clearEntrySelection(activeSelectionEntry);
         return;
       }
@@ -470,8 +472,7 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
     prefs,
     wasitStructure,
     wasitMatches,
-    entryTokenData,
-    exampleTokenData,
+    tokensFor,
     tokenSelections,
     startFolded,
     startFoldedExamples,
@@ -567,7 +568,7 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
               if (group) setExpandedGroups((prev) => new Set(prev).add(group.providerId));
               setFoldedEntries((prev) => {
                 const next = new Set(prev);
-                if (startFolded) next.add(i);
+                if (startFolded && !aboutEntries.has(i)) next.add(i);
                 else next.delete(i);
                 return next;
               });

@@ -8,6 +8,21 @@ export interface DefinitionToken {
   text: string;
   isWord: boolean;
   globalIdx: number;
+  /** Where the token starts in the whole text it was cut from (a sense's gloss), so styled runs can be matched to tokens. */
+  at: number;
+}
+
+/** Appends the tokens of `text` (words and the whitespace between them) to `flat`; `base` is where `text` starts in its whole. */
+function tokenizeInto(flat: DefinitionToken[], text: string, base: number): DefinitionToken[] {
+  const out: DefinitionToken[] = [];
+  let at = base;
+  for (const part of text.split(/(\s+)/).filter((t) => t.length > 0)) {
+    const token: DefinitionToken = { text: part, isWord: !!part.trim(), globalIdx: flat.length, at };
+    flat.push(token);
+    out.push(token);
+    at += part.length;
+  }
+  return out;
 }
 
 /** The text of a sense as drawn under the entry's headword: the first sense without the headword it opens with (see DictionaryEntry.headLength). */
@@ -23,14 +38,8 @@ export function buildEntryTokenSenses(entry: DictionaryEntry): { flat: Definitio
   const flat: DefinitionToken[] = [];
   const bySense: DefinitionToken[][] = [];
   entry.senses.forEach((_, si) => {
-    if (si > 0) flat.push({ text: ' ', isWord: false, globalIdx: flat.length });
-    const senseTokens: DefinitionToken[] = [];
-    for (const part of senseBody(entry, si).split(/(\s+)/).filter((t) => t.length > 0)) {
-      const token: DefinitionToken = { text: part, isWord: !!part.trim(), globalIdx: flat.length };
-      flat.push(token);
-      senseTokens.push(token);
-    }
-    bySense.push(senseTokens);
+    if (si > 0) flat.push({ text: ' ', isWord: false, globalIdx: flat.length, at: 0 });
+    bySense.push(tokenizeInto(flat, senseBody(entry, si), si === 0 ? (entry.headLength ?? 0) : 0));
   });
   return { flat, bySense };
 }
@@ -67,26 +76,20 @@ export interface ExampleEntryTokens {
 
 export function buildExampleEntryTokens(entry: DictionaryEntry): ExampleEntryTokens {
   const flat: DefinitionToken[] = [];
-  const space = () => flat.push({ text: ' ', isWord: false, globalIdx: flat.length });
-  const tokenize = (text: string): DefinitionToken[] => {
-    const out: DefinitionToken[] = [];
-    for (const part of text.split(/(\s+)/).filter((t) => t.length > 0)) {
-      const token: DefinitionToken = { text: part, isWord: !!part.trim(), globalIdx: flat.length };
-      flat.push(token);
-      out.push(token);
-    }
-    return out;
-  };
+  const space = () => flat.push({ text: ' ', isWord: false, globalIdx: flat.length, at: 0 });
   const senses = entry.senses.map((s, si) => {
     if (flat.length) space();
-    const gloss = tokenize(senseBody(entry, si));
+    const gloss = tokenizeInto(flat, senseBody(entry, si), si === 0 ? (entry.headLength ?? 0) : 0);
     const examples = (s.examples ?? []).map((ex) => {
       if (flat.length) space();
-      const ar = tokenize(ex.ar);
+      const ar = tokenizeInto(flat, ex.ar, 0);
       space();
-      return { ar, gloss: tokenize(ex.gloss) };
+      return { ar, gloss: tokenizeInto(flat, ex.gloss, 0) };
     });
     return { gloss, examples };
   });
   return { flat, senses };
 }
+
+/** Every entry's text as word tokens in reading order (a sense, then each of its examples), for picking words to save. */
+export const buildEntryTokens = buildExampleEntryTokens;

@@ -839,3 +839,9 @@
 .dict-popup__show-all:hover {
   text-decoration: underline;
 }
+
+/* Words picked inside running English text keep its spacing and look: the token only adds the hover and selection tint. */
+.dict-popup__sense--en .dict-popup__token {
+  padding: 0;
+  border-radius: 2px;
+}

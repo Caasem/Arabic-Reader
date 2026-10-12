@@ -1,15 +1,16 @@
 import type { DictionaryEntry } from '../types';
-import { traitsOf } from './providerTraits';
-import { isTokenizedProvider } from './tokenizedProviders';
 
 /**
  * What the popup does with an entry, decided here from the entry's shape and used by both the popup and the
  * conformance test (src/dictionary/conformance.test.ts), so the two cannot drift apart.
  */
 
-/** Whether the entry's text can be picked word by word and saved as the meaning. */
+/**
+ * Whether the entry's text can be picked word by word and saved as the meaning (the headword being the word):
+ * any entry with text, Arabic or Latin, in any dictionary.
+ */
 export function canSelectWords(entry: DictionaryEntry): boolean {
-  return isTokenizedProvider(entry.providerId) || !!traitsOf(entry.providerId).richSenses;
+  return entry.senses.some((s) => s.gloss.trim() !== '');
 }
 
 /** Whether a dictionary's entries fold: a list longer than this starts folded to the entry about the tapped word. */

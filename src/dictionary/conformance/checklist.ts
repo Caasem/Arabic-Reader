@@ -82,11 +82,11 @@ export const EXCEPTIONS: Record<string, Partial<Record<CheckId, string>>> = {
 
 /** Gaps not yet closed. Each step of the parity work removes some; it ends empty. */
 export const EXPECTED_FAILURES: Record<string, CheckId[]> = {
-  lane: ['tokenizable'],
-  hanswehr: ['tokenizable'],
+  lane: [],
+  hanswehr: [],
   alsihah: [],
   alwasit: [],
-  aramorph: ['tokenizable'],
+  aramorph: [],
   baranov: [],
   personal: [],
   almaqayis: [],

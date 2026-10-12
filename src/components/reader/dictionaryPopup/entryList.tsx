@@ -1,7 +1,6 @@
 import type { Dispatch, MutableRefObject, PointerEvent, ReactNode, SetStateAction } from 'react';
 import type { DictionaryEntry } from '../../../types';
 import { normalize } from '../../../reader/tokenizer/arabicTokenizer';
-import { isTokenizedProvider } from '../../../dictionary/tokenizedProviders';
 import { SUB_ENTRY_MATCH_ATTR, WASIT_MATCH_CLASS } from '../../../wasitMatch';
 import type { annotateEntry } from '../../../wasitStructure';
 import { VerbFormInfo, VerbFormMark } from '../../../verbForms';
@@ -9,13 +8,12 @@ import { groupLabel } from '../../../popupClean';
 import { vowelScore } from '../../../dictionary/providers/personal/vowels';
 import { reconstructSelection, senseBody, type DefinitionToken, type ExampleEntryTokens } from '../definitionTokens';
 import type { EntryGroup } from './entryGroups';
-import { LaneMeaning } from '../../../dictionary/senseFormat/LaneMeaning';
 import { findVerses, type Verse } from '../../../dictionary/senseFormat/sihahVerses';
 import { verseNodes } from '../../../dictionary/senseFormat/VerseTokens';
 import { HansWehrMeaning } from '../../../dictionary/senseFormat/HansWehrMeaning';
-import { SenseText } from '../../../dictionary/senseFormat/SenseText';
+import { SenseText, type WordPicking } from '../../../dictionary/senseFormat/SenseText';
 import { entryLanguage, traitsOf } from '../../../dictionary/providerTraits';
-import { FOLD_ABOVE, visibleEntryIndexes } from '../../../dictionary/entryFeatures';
+import { canSelectWords, FOLD_ABOVE, visibleEntryIndexes } from '../../../dictionary/entryFeatures';
 import { MorphValue } from './MorphValue';
 
 /** Entries whose senses carry a lead note, a tag in front and worked examples (Baranov, a file the reader loaded). */
@@ -31,8 +29,8 @@ export interface EntryListContext {
   prefs: { morphDisplayStyle: string; verbFormsEnabled: boolean; wasitStructureExamples: string; sihahVerseLayout: boolean };
   wasitStructure: Map<number, ReturnType<typeof annotateEntry>>;
   wasitMatches: Map<number, Set<number>>;
-  entryTokenData: Map<number, { flat: DefinitionToken[]; bySense: DefinitionToken[][] }>;
-  exampleTokenData: Map<number, ExampleEntryTokens>;
+  /** An entry's text as word tokens, cut the first time it is asked for (only entries on show are). */
+  tokensFor: (entryIdx: number) => ExampleEntryTokens | undefined;
   tokenSelections: Map<number, Set<number>>;
   startFolded: boolean;
   startFoldedExamples: boolean;
@@ -67,7 +65,7 @@ function drawTokens(tokens: DefinitionToken[], verses: Verse[] | null, draw: (t:
 
 export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
   const {
-    word, clean, prefs, wasitStructure, wasitMatches, entryTokenData, exampleTokenData, tokenSelections, startFolded, startFoldedExamples,
+    word, clean, prefs, wasitStructure, wasitMatches, tokensFor, tokenSelections, startFolded, startFoldedExamples,
     aboutEntries, expandedGroups, setExpandedGroups, foldedEntries, setFoldedEntries, savedGroups, setSavedGroups, savedEntryKeys, setSavedEntryKeys, entryItemIds,
     openForms, setOpenForms, expandedExamples, setExpandedExamples, onSaveEntry, onUnsaveEntry, onSaveEntries, onSaveSelection,
     clearEntrySelection, handleTokenPointerDown, handleTokensPointerMove,
@@ -99,25 +97,25 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
       </div>
       {shownEntries.map(({ entry, index: i }) => {
         const gk = group.entries.findIndex((e) => e.index === i);
-        // Non-contiguous word selection (click to toggle, drag to add a
-        // range) -- the root-keyed Arabic-Arabic dictionaries only (see
-        // isTokenizedProvider), and only while a save-selection callback
-        // actually exists to hand it to. Every other provider's entries
-        // keep the plain, non-interactive sense list below.
+        // Non-contiguous word selection (click to toggle, drag to add a range) works in every entry that has text.
         // The line before this one in the same article: Al-Ṣiḥāḥ's verses follow a line that introduces them.
         const before = gk > 0 ? group.entries[gk - 1].entry : undefined;
         const prevGloss = before && before.articleKey !== undefined && before.articleKey === entry.articleKey ? before.senses[before.senses.length - 1]?.gloss : undefined;
-        const tokenData = isTokenizedProvider(entry.providerId) ? entryTokenData.get(i) : undefined;
-        const exTokens = hasRichSenses(entry.providerId) ? exampleTokenData.get(i) : undefined;
-        const wordData = tokenData ?? exTokens;
-        const sel = wordData ? tokenSelections.get(i) : undefined;
+        const rich = hasRichSenses(entry.providerId);
+        const isAr = entryLanguage(entry) === 'ar';
+        const selectable = canSelectWords(entry);
+        const sel = selectable ? tokenSelections.get(i) : undefined;
         const hasSelection = !!sel && sel.size > 0;
-        // The entry the looked-up word is (see wasitMatch) starts open whatever the rest do.
-        const matchedEntry = (wasitMatches.get(i)?.size ?? 0) > 0;
-        const folded =
-          clean && ((!!tokenData && startFolded !== foldedEntries.has(i) && !(matchedEntry && startFolded && !foldedEntries.has(i))) || (!!exTokens && startFoldedExamples !== foldedEntries.has(i)));
+        // The entry about the looked-up word (see wasitMatch) starts open whatever the rest do; it is coloured only while highlighting is on.
+        const aboutThis = aboutEntries.has(i);
+        const highlighted = (wasitMatches.get(i)?.size ?? 0) > 0;
+        // Clean layout: Arabic entries and Baranov-style ones fold to their headword row when there are many; tapping the headword flips that.
+        const foldsToHead = clean && (isAr || rich);
+        const startsFolded = (isAr ? startFolded : startFoldedExamples) && !aboutThis;
+        const folded = foldsToHead && startsFolded !== foldedEntries.has(i);
+        const tokens = selectable && !folded ? tokensFor(i) : undefined;
         // The entry whose spelling (and vowels, when the tapped word has them) is the one looked up.
-        const exactMatch = !!exTokens && group.entries.length > 1 && normalize(entry.headword) === normalize(word) && vowelScore(word, entry.headword) < 2;
+        const exactMatch = rich && group.entries.length > 1 && normalize(entry.headword) === normalize(word) && vowelScore(word, entry.headword) < 2;
 
         function toggleFold() {
           clearEntrySelection(i);
@@ -129,8 +127,9 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
         }
 
         function saveThisSelection() {
-          if (!wordData || !sel || !onSaveSelection) return;
-          onSaveSelection(entry, reconstructSelection(wordData.flat, sel));
+          const picked = tokensFor(i);
+          if (!picked || !sel || !onSaveSelection) return;
+          onSaveSelection(entry, reconstructSelection(picked.flat, sel));
           clearEntrySelection(i);
         }
 
@@ -174,7 +173,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
             className={
               'dict-popup__entry' +
               (clean && entry.verbForm ? ' dict-popup__entry--tappable' : '') +
-              (clean && tokenData ? ' dict-popup__entry--subs' : '') +
+              (clean && isAr ? ' dict-popup__entry--subs' : '') +
               (exactMatch ? ' dict-popup__entry--best' : '') +
               (entry.vowelClash ? ' dict-popup__entry--clash' : '')
             }
@@ -184,7 +183,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
               clean && entry.verbForm
                 ? (e) => {
                     // Tapping the verb (not its root/form chips or buttons) opens its other forms.
-                    if ((e.target as HTMLElement).closest('.dict-popup__morph-item, button')) return;
+                    if ((e.target as HTMLElement).closest('.dict-popup__morph-item, .dict-popup__token, button')) return;
                     setOpenForms((prev) => {
                       const next = new Set(prev);
                       if (!next.delete(i)) next.add(i);
@@ -196,9 +195,9 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
           >
             {clean && saveButton}
             <div className="dict-popup__entry-head">
-              {clean && wordData ? (
+              {foldsToHead ? (
                 <span
-                  className={'dict-popup__headword dict-popup__headword--toggle' + (matchedEntry ? ' ' + WASIT_MATCH_CLASS : '')}
+                  className={'dict-popup__headword dict-popup__headword--toggle' + (highlighted ? ' ' + WASIT_MATCH_CLASS : '')}
                   role="button"
                   tabIndex={0}
                   aria-expanded={!folded}
@@ -214,7 +213,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                   {entry.headword}
                 </span>
               ) : (
-                <span className={'dict-popup__headword' + (matchedEntry ? ' ' + WASIT_MATCH_CLASS : '')}>{entry.headword}</span>
+                <span className={'dict-popup__headword' + (highlighted ? ' ' + WASIT_MATCH_CLASS : '')}>{entry.headword}</span>
               )}
               {/* Sits between the headword and the per-entry save
                   button -- root before form (read first, right next to
@@ -252,7 +251,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
             </div>
             {entry.vowelClash && <div className="dict-popup__clash-note">doesn't match the vowels in the text</div>}
             {!clean && <VerbFormInfo entry={entry} />}
-            {tokenData ? folded ? null : (
+            {isAr ? folded ? null : (
               <div
                 className={'dict-popup__tokens' + (wasitStructure.get(i) && prefs.wasitStructureExamples === 'dim' ? ' wasit-examples--dim' : '')}
                 dir="rtl"
@@ -272,7 +271,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                     key={si}
                     {...(wasitMatches.get(i)?.has(si) ? { [SUB_ENTRY_MATCH_ATTR]: '' } : {})}
                   >
-                    {drawTokens(tokenData.bySense[si], sihahVerses, (t) => {
+                    {drawTokens(tokens ? tokens.senses[si].gloss : [], sihahVerses, (t) => {
                       if (!t.isWord) return <span key={t.globalIdx}>{t.text}</span>;
                       const word = structure?.words[wordNo++];
                       return (
@@ -285,7 +284,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                             'dict-popup__token' +
                             (word ? ' wasit-role--' + word.role : '') +
                             (sel?.has(t.globalIdx) ? ' dict-popup__token--selected' : '') +
-                            (wasitMatches.get(i)?.has(si) && t === tokenData.bySense[si].find((x) => x.isWord) ? ' ' + WASIT_MATCH_CLASS : '')
+                            (wasitMatches.get(i)?.has(si) && t === tokens?.senses[si].gloss.find((x) => x.isWord) ? ' ' + WASIT_MATCH_CLASS : '')
                           }
                           onPointerDown={(e) => handleTokenPointerDown(i, t.globalIdx, e)}
                         >
@@ -298,13 +297,13 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                   );
                 })}
               </div>
-            ) : exTokens && folded ? null : (
+            ) : folded ? null : (
               <ul
-                className={'dict-popup__senses' + (exTokens ? ' dict-popup__senses--words' : '')}
-                onPointerMove={exTokens ? handleTokensPointerMove : undefined}
+                className={'dict-popup__senses' + (tokens ? ' dict-popup__senses--words' : '')}
+                onPointerMove={tokens ? handleTokensPointerMove : undefined}
               >
                 {entry.senses.map((s, si) => {
-                  const st = exTokens?.senses[si];
+                  const st = tokens?.senses[si];
                   const shown = !s.examples ? 0 : expandedExamples.has(i) ? s.examples.length : EXAMPLES_SHOWN;
                   const renderWords = (tokens: DefinitionToken[]) =>
                     tokens.map((t) =>
@@ -324,15 +323,16 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                     );
                   // The line about the looked-up word is marked for the scroll to land on (see wasitMatch).
                   const matched = wasitMatches.get(i)?.has(si);
-                  // English-language dictionaries read left to right, with their Arabic words set apart (see SenseText).
+                  // These dictionaries read left to right, with their Arabic words set apart (see SenseText).
                   const traits = traitsOf(entry.providerId);
-                  const english = entryLanguage(entry) === 'en';
                   // An entry cut from an article has its headword in the head row; its first sense is drawn without it.
                   const from = si === 0 ? (entry.headLength ?? 0) : 0;
+                  const picking: WordPicking | undefined = st ? { tokens: st.gloss, entryIdx: i, selected: sel, onPointerDown: handleTokenPointerDown } : undefined;
                   return (
                     <li
                       key={si}
-                      {...(english ? { className: 'dict-popup__sense--en', dir: traits.autoDirection ? 'auto' : 'ltr' } : {})}
+                      className="dict-popup__sense--en"
+                      dir={traits.autoDirection ? 'auto' : 'ltr'}
                       {...(matched ? { [SUB_ENTRY_MATCH_ATTR]: '' } : {})}
                     >
                       {traits.richSenses ? (
@@ -365,12 +365,10 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                         </div>
                       ) : (
                         <span className="dict-popup__sense-text">
-                          {!english ? (
-                            <LaneMeaning text={s.gloss} spans={s.italics} from={from} />
-                          ) : traits.senseStyle === 'hanswehr' && from === 0 ? (
-                            <HansWehrMeaning gloss={s.gloss} />
+                          {traits.senseStyle === 'hanswehr' && from === 0 ? (
+                            <HansWehrMeaning gloss={s.gloss} picking={picking} />
                           ) : (
-                            <SenseText text={s.gloss} style={traits.senseStyle} spans={s.italics} from={from} lead={from === 0} />
+                            <SenseText text={s.gloss} style={traits.senseStyle} spans={s.italics} from={from} lead={from === 0} picking={picking} />
                           )}
                           {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
                         </span>
