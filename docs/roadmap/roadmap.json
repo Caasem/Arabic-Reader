@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-07",
+  "updated": "2026-10-12",
   "note": "Effort is a rough estimate in working weeks of remaining work. Status: done | in-progress | built-local | planned | idea. Edit this file; the site reads it.",
   "areas": {
     "foundation": "Foundation",
@@ -465,6 +465,18 @@
       "branch": "feat/study-desk",
       "notes": "Built in phases on feat/study-desk; every phase is one commit with its own off-switch. Revert matrix: docs/changes/study-desk-changes.md. Concept: https://claude.ai/artifact/FjdxN1wKtaYzSTRLTvtKx4",
       "brief": "features/study-desk.md",
+      "milestone": "M2"
+    },
+    {
+      "id": "thinking-front",
+      "title": "Thinking desk: threads, argument moves, backlinks, masāʾil, muqābala, revisit, today",
+      "area": "reader",
+      "status": "in-progress",
+      "effort": 4,
+      "deps": ["study-desk"],
+      "branch": "claude/thinking-desk-threads-moves-yr6wq6",
+      "notes": "Built on the study desk in eight phases, one commit each, behind thinkingFrontEnabled (off by default) and a switch per part. Revert matrix: docs/changes/thinking-front-changes.md.",
+      "brief": "features/thinking-front.md",
       "milestone": "M2"
     }
   ],
