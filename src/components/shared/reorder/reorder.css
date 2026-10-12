@@ -1,0 +1,58 @@
+/* Drag-to-reorder lists (see useReorder.ts): dictionary rows with a grip, and the popup's tabs. */
+.reorder-handle {
+  /* The browser must not take a touch on the handle for a scroll or a zoom. */
+  touch-action: none;
+}
+
+.reorder-grip {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-faint);
+  cursor: grab;
+}
+
+.reorder-grip:hover,
+.reorder-grip:focus-visible {
+  color: var(--ink);
+  background: var(--accent-soft);
+}
+
+.reorder-item--dragging {
+  position: relative;
+  z-index: 1;
+  background: var(--accent-soft);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px var(--border);
+}
+
+.reorder-item--dragging .reorder-grip {
+  cursor: grabbing;
+}
+
+.reorder-list--dragging {
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grabbing;
+}
+
+/* Settings' dictionary rows: grip, then the switch taking the room, then a status badge. */
+.settings-row--dict.reorder-item {
+  gap: 8px;
+}
+
+.settings-row--dict.reorder-item > .settings-toggle {
+  flex: 1;
+}
+
+.settings-row--dict.reorder-item--dragging {
+  margin-inline: -6px;
+  padding-inline: 6px;
+}
