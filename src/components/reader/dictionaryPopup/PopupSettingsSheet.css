@@ -1,0 +1,117 @@
+/*
+ * The popup's settings sheet (PopupSettingsSheet.tsx). The rows inside are the app's own Settings rows
+ * (SettingsPanel.css), unchanged; only the sheet around them lives here.
+ */
+
+/* A popup with its sheet open is tall enough to hold it, even for a short entry. */
+.dict-popup--sheet {
+  min-height: min(60vh, 380px);
+}
+
+/* Room for the settings button beside the others, in the classic (not clean) popup. */
+.dict-popup:not(.dict-popup--clean):not(.dict-popup--page) .dict-popup__word--gear {
+  padding-right: 116px;
+}
+
+.dict-sheet {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  border-radius: inherit;
+  /* The rows are English settings, read left to right, as in Settings. */
+  direction: ltr;
+}
+
+.dict-sheet__scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--ink) 32%, transparent);
+  animation: dict-sheet-fade 160ms ease-out;
+}
+
+.dict-sheet__panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 92%;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 10px 12px 12px;
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+  border-radius: 16px 16px 0 0;
+  font-family: var(--font-ui);
+  color: var(--ink);
+  outline: none;
+  animation: dict-sheet-up 220ms ease-out;
+}
+
+.dict-sheet__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 2px 4px;
+}
+
+.dict-sheet__title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.dict-sheet__done {
+  border: 0;
+  border-radius: 8px;
+  padding: 5px 12px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Settings' cards, tighter, and rows that wrap rather than overflow the popup's width. */
+.dict-sheet .settings-section {
+  padding: 10px 12px 4px;
+}
+
+.dict-sheet .settings-section h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dict-sheet .settings-row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dict-sheet .settings-row__control--segmented {
+  flex: 1 1 100%;
+}
+
+.dict-sheet .segmented__item {
+  flex: 1;
+  padding: 6px 4px;
+}
+
+@keyframes dict-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes dict-sheet-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dict-sheet__scrim,
+  .dict-sheet__panel {
+    animation: none;
+  }
+}

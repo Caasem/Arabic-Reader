@@ -3,7 +3,7 @@ import type { DictionaryEntry, DictionaryLookupResult, WordInstance, WordOcrInfo
 import { getWordRarity, isRarityDataReady, TIER_LABELS } from '../../vocabRarity/rarity';
 import { normalize } from '../../reader/tokenizer/arabicTokenizer';
 import { usePreferences } from '../../state/PreferencesContext';
-import { IconEdit, IconChevronLeft, IconChevronRight, IconBook, IconMaximize } from '../shared/icons';
+import { IconEdit, IconChevronLeft, IconChevronRight, IconBook, IconMaximize, IconSettings } from '../shared/icons';
 import { buildEntryTokens, reconstructSelection, type ExampleEntryTokens } from './definitionTokens';
 import { findMatchedEntries, scrollToFirstMatches } from '../../wasitMatch';
 import { entriesAboutWord } from '../../dictionary/subEntries/match';
@@ -19,6 +19,7 @@ import { OcrNote } from './dictionaryPopup/OcrNote';
 import { EditableWord } from './dictionaryPopup/EditableWord';
 import { groupEntriesByProvider } from './dictionaryPopup/entryGroups';
 import { PopupTabs } from './dictionaryPopup/PopupTabs';
+import { PopupSettingsSheet } from './dictionaryPopup/PopupSettingsSheet';
 import { effectivePanelLayout } from './dictionaryPopup/panelLayout';
 import { useTokenSelection } from './dictionaryPopup/useTokenSelection';
 import { hasRichSenses, renderGroupList, type EntryListContext } from './dictionaryPopup/entryList';
@@ -143,11 +144,22 @@ export function DictionaryPopup({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+  // The popup's settings sheet (src/components/reader/dictionaryPopup/PopupSettingsSheet).
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const gearRef = useRef<HTMLButtonElement>(null);
+  function closeSettings() {
+    setSettingsOpen(false);
+    gearRef.current?.focus();
+  }
   async function addDictionary(id: string) {
-    const next = Array.from(new Set([...prefs.enabledProviderIds, id]));
+    setAddOpen(false);
+    await setDictionaryOn(id, true);
+  }
+  // On or off, as in Settings -> Dictionaries; this word is then looked up again so the entries follow.
+  async function setDictionaryOn(id: string, on: boolean) {
+    const next = on ? Array.from(new Set([...prefs.enabledProviderIds, id])) : prefs.enabledProviderIds.filter((p) => p !== id);
     updatePrefs({ enabledProviderIds: next });
     dictionaryManager.setEnabledProviders(next);
-    setAddOpen(false);
     setRefreshing(true);
     try {
       setRefreshed(await dictionaryManager.lookup(word));
@@ -155,6 +167,18 @@ export function DictionaryPopup({
       setRefreshing(false);
     }
   }
+
+  // Ordering readings by the written vowels (changed in the settings sheet) re-asks for this word, so it shows at once.
+  const vowelRankingSeen = useRef(prefs.vowelRanking);
+  useEffect(() => {
+    if (vowelRankingSeen.current === prefs.vowelRanking) return;
+    vowelRankingSeen.current = prefs.vowelRanking;
+    // After the preferences provider has passed the new setting on to the dictionary.
+    const t = window.setTimeout(() => {
+      dictionaryManager.lookup(word).then(setRefreshed, () => {});
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [prefs.vowelRanking, word]);
 
   // Purely local, resets whenever the popup moves to a new word -- not
   // meant to track "is this permanently saved" (that's `saved`, computed
@@ -443,7 +467,7 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
     // so this call catches the *start* of that resize -- the transitionend
     // handler on the popup element below catches the settled end of it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [word, loading, result, x, y, wordRect, sizePct, effectiveLayout, isNarrow]);
+  }, [word, loading, result, x, y, wordRect, sizePct, effectiveLayout, isNarrow, settingsOpen]);
 
   // Land on the looked-up word: once per result (and per Split tab), scroll each scroll container to the
   // first sub-entry coloured as matching it, unless it is already in view (see wasitMatch).
@@ -558,7 +582,8 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
           (clean ? ' dict-popup--clean' : '') +
           (page ? ' dict-popup--page' : '') +
           (effectiveLayout === 'split' && !isNarrow && !page ? ' dict-popup--split' : '') +
-          (prefs.dictionaryPopupPinFooter && !page ? ' dict-popup--pinned-footer' : '')
+          (prefs.dictionaryPopupPinFooter && !page ? ' dict-popup--pinned-footer' : '') +
+          (settingsOpen ? ' dict-popup--sheet' : '')
         }
         style={page ? undefined : { left: style.left, top: style.top, visibility: style.visibility, transform: `scale(${scale})`, transformOrigin: 'top left' }}
         onClick={(e) => e.stopPropagation()}
@@ -642,6 +667,18 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
           >
             <IconBook size={12} />
           </button>
+          {!page && (
+            <button
+              ref={gearRef}
+              className="dict-popup__header-btn"
+              onClick={() => setSettingsOpen((o) => !o)}
+              aria-label="Popup settings"
+              aria-expanded={settingsOpen}
+              title="Popup settings"
+            >
+              <IconSettings size={12} />
+            </button>
+          )}
           {onMaximise && (
             <button className="dict-popup__header-btn" onClick={onMaximise} aria-label="Open in full page" title="Open in full page (F)">
               <IconMaximize size={12} />
@@ -649,7 +686,7 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
           )}
         </div>
 
-        <div className="dict-popup__word">
+        <div className={'dict-popup__word' + (page ? '' : ' dict-popup__word--gear')}>
           {onEditWord ? <EditableWord key={word} word={word} suspect={!!ocr?.suspect} onCommit={onEditWord} /> : word}
           {rarity && (
             <span className={'dict-popup__rarity dict-popup__rarity--' + rarity.tier}>
@@ -707,6 +744,7 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
         {!prefs.dictionaryPopupPinFooter && footer}
       </div>
       {prefs.dictionaryPopupPinFooter && <div className="dict-popup__footer-pinned">{footer}</div>}
+      {settingsOpen && !page && <PopupSettingsSheet onToggleProvider={(id, on) => void setDictionaryOn(id, on)} onClose={closeSettings} />}
       </div>
     </div>
   );

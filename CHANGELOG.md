@@ -40,8 +40,19 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 | 25 | 12 Oct | #73 | Al-Ṣiḥāḥ's quoted verses set apart: one indented line per verse with the two halves side by side; can be switched off in Settings | Yes | 0.109.0 | On `refactor/integration` |
 | 26 | 12 Oct | #73 | Dictionary popup typography: sense lines wrap properly, English entries read left to right at a larger size with Arabic words in the reading font, Lane sigla and Hans Wehr transliteration styled | Yes | 0.109.1 | On `feat/popup-typography` |
 | 27 | 12 Oct | — | Every dictionary shares the same popup features: Lane, Hans Wehr, Al-Ṣiḥāḥ and Al-Wasīṭ are one entry per line (or form) with a “+” each, long lists fold to the entry you tapped with Show all, any word can be picked in any dictionary (English too), the dock and form chips follow the data, not the dictionary's name | Yes | 0.110.0 | On `feat/dict-parity` |
+| 28 | 12 Oct | — | Dictionary popup: a Tabs layout, a settings button with a sheet inside the popup (layout, text size, dictionaries on/off and order, reading switches), and dictionaries reorder by dragging a grip or a tab | Yes | 0.111.0 | On `feat/dict-parity` |
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
+
+## v0.111.0 — 2026-10-12
+
+- **A Tabs layout.** Under Multiple dictionaries, Tabs shows one dictionary at a time at any width, with a tab for each. Drag a tab sideways
+  to put its dictionary elsewhere in the order.
+- **Popup settings, inside the popup.** A gear beside the other header buttons slides a sheet up over the entry: layout, text size, clean
+  layout, which dictionaries are on and in what order, and the reading switches (the matched entry, scrolling to it, vowel ordering, badges,
+  verses). They are the same settings as in Settings, and apply as you change them. Done, a tap outside, or Escape closes it.
+- **Drag to reorder dictionaries.** Settings → Dictionaries (and the sheet) now has a grip on each row in place of the arrows; drag it, or
+  focus it and press the up and down arrow keys.
 
 ## v0.110.0 — 2026-10-12
 
