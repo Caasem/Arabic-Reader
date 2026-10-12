@@ -12,7 +12,7 @@ import { findVerses, type Verse } from '../../../dictionary/senseFormat/sihahVer
 import { verseNodes } from '../../../dictionary/senseFormat/VerseTokens';
 import { HansWehrMeaning } from '../../../dictionary/senseFormat/HansWehrMeaning';
 import { SenseText, type WordPicking } from '../../../dictionary/senseFormat/SenseText';
-import { entryLanguage, traitsOf } from '../../../dictionary/providerTraits';
+import { entryLanguage, foldsBehindRoot, traitsOf } from '../../../dictionary/providerTraits';
 import { canSelectWords, FOLD_ABOVE, visibleEntryIndexes } from '../../../dictionary/entryFeatures';
 import { MorphValue } from './MorphValue';
 
@@ -41,6 +41,9 @@ export interface EntryListContext {
   /** Dictionaries whose whole list the reader opened with "Show all". */
   expandedGroups: Set<string>;
   setExpandedGroups: Dispatch<SetStateAction<Set<string>>>;
+  /** Root-filed dictionaries opened from their folded root row (see foldsBehindRoot). */
+  openedRoots: Set<string>;
+  setOpenedRoots: Dispatch<SetStateAction<Set<string>>>;
   savedGroups: Set<string>;
   setSavedGroups: Dispatch<SetStateAction<Set<string>>>;
   savedEntryKeys: Set<number>;
@@ -66,7 +69,7 @@ function drawTokens(tokens: DefinitionToken[], verses: Verse[] | null, draw: (t:
 export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
   const {
     word, clean, prefs, wasitStructure, wasitMatches, tokensFor, tokenSelections, startFolded, startFoldedExamples,
-    aboutEntries, expandedGroups, setExpandedGroups, foldedEntries, setFoldedEntries, savedGroups, setSavedGroups, savedEntryKeys, setSavedEntryKeys, entryItemIds,
+    aboutEntries, expandedGroups, setExpandedGroups, openedRoots, setOpenedRoots, foldedEntries, setFoldedEntries, savedGroups, setSavedGroups, savedEntryKeys, setSavedEntryKeys, entryItemIds,
     openForms, setOpenForms, expandedExamples, setExpandedExamples, onSaveEntry, onUnsaveEntry, onSaveEntries, onSaveSelection,
     clearEntrySelection, handleTokenPointerDown, handleTokensPointerMove,
   } = ctx;
@@ -76,6 +79,30 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
     const opened = expandedGroups.has(group.providerId);
     const shown = foldable && !opened ? new Set(visibleEntryIndexes(group.entries.map((e) => e.index), aboutEntries)) : null;
     const shownEntries = shown ? group.entries.filter((e) => shown.has(e.index)) : group.entries;
+    // A root-filed dictionary starts as one row naming its root(s); opening it shows the entries about the word.
+    if (foldsBehindRoot(group.providerId) && !openedRoots.has(group.providerId)) {
+      const roots = [...new Set(group.entries.map((e) => e.entry.root || e.entry.headword).filter(Boolean))];
+      const count = group.entries.length;
+      return (
+        <div className="dict-popup__group" key={group.providerId}>
+          <div className="dict-popup__group-header">{clean ? groupLabel(group) : group.providerName}</div>
+          <button
+            type="button"
+            className="dict-popup__root-row"
+            aria-expanded={false}
+            onClick={() => setOpenedRoots((prev) => new Set(prev).add(group.providerId))}
+            title="Show this dictionary's entries"
+          >
+            <bdi dir="rtl" lang="ar" className="dict-popup__root-row-root">
+              {roots.join(' · ')}
+            </bdi>
+            <span className="dict-popup__root-row-count">
+              {count === 1 ? '1 entry' : `${count} entries`} <span aria-hidden="true">›</span>
+            </span>
+          </button>
+        </div>
+      );
+    }
     return (
     <div className="dict-popup__group" key={group.providerId}>
       <div className="dict-popup__group-header">

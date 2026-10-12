@@ -167,6 +167,8 @@ export function DictionaryPopup({
   const [foldedEntries, setFoldedEntries] = useState<Set<number>>(new Set());
   // Dictionaries whose long list the reader opened with "Show all N entries".
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  // Root-filed dictionaries the reader opened from their folded root row (see foldsBehindRoot).
+  const [openedRoots, setOpenedRoots] = useState<Set<string>>(new Set());
   // Clean layout: dictionaries whose whole section was saved from its heading.
   const [savedGroups, setSavedGroups] = useState<Set<string>>(new Set());
   // Entries whose examples are all shown (the rest show the first few).
@@ -178,6 +180,7 @@ export function DictionaryPopup({
     setSavedGroups(new Set());
     setFoldedEntries(new Set());
     setExpandedGroups(new Set());
+    setOpenedRoots(new Set());
   }, [word]);
   const morphology = result?.morphology?.[0];
 
@@ -473,6 +476,8 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
     aboutEntries,
     expandedGroups,
     setExpandedGroups,
+    openedRoots,
+    setOpenedRoots,
     savedGroups,
     setSavedGroups,
     savedEntryKeys,
@@ -557,7 +562,10 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
             onJump={(i) => {
               // Open the entry the tab points at, whether its list is folded and whether entries started folded or open.
               const group = allGroups.find((g) => g.entries.some((e) => e.index === i));
-              if (group) setExpandedGroups((prev) => new Set(prev).add(group.providerId));
+              if (group) {
+                setOpenedRoots((prev) => new Set(prev).add(group.providerId));
+                setExpandedGroups((prev) => new Set(prev).add(group.providerId));
+              }
               setFoldedEntries((prev) => {
                 const next = new Set(prev);
                 if (startFolded && !aboutEntries.has(i)) next.add(i);

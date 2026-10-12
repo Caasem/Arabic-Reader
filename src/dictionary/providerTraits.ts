@@ -70,6 +70,10 @@ export const hasSubEntryHeads = (providerId: string): boolean => !!traitsOf(prov
 /** Whether its lines are sub-entries worth indexing. */
 export const hasSubEntryIndex = (providerId: string): boolean => !!traitsOf(providerId).indexed;
 
+/** Whether a dictionary is filed by root (its articles are root articles): the popup shows it folded to a
+ * row naming the root until the reader opens it. AraMorph's readings are not, and stay open. */
+export const foldsBehindRoot = (providerId: string): boolean => !!traitsOf(providerId).articles;
+
 /** The heading of a dictionary's group in the clean popup. */
 export function groupHeading(group: { providerId: string; providerName: string }): string {
   return traitsOf(group.providerId).label ?? group.providerName;

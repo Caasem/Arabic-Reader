@@ -358,6 +358,40 @@
   margin-bottom: 6px;
 }
 
+/* A root-filed dictionary folded to one row naming its root (see foldsBehindRoot): tap to open. */
+.dict-popup__root-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  text-align: start;
+}
+.dict-popup__root-row-root {
+  font-family: var(--font-arabic);
+  font-size: 1.35em;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--accent);
+}
+.dict-popup__root-row-count {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.dict-popup__root-row:hover .dict-popup__root-row-count,
+.dict-popup__root-row:focus-visible .dict-popup__root-row-count {
+  color: var(--ink);
+}
+
 /* Entries within one provider's group get a lighter divider than the
    heavier one between groups (handled by .dict-popup__group's border-top
    above), so multiple definitions from the same provider still read as
