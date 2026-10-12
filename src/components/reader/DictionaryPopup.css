@@ -392,6 +392,43 @@
   color: var(--ink);
 }
 
+/* An Arabic entry cut from a root article reads as running text: the paragraph, its opening word set in the
+   text, and a faint "+" beside it that comes up when the entry is hovered or the button focused. */
+.dict-popup .dict-popup__entry--inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 6px;
+  align-items: start;
+  padding-block: 0;
+  border: 0;
+  background: none;
+}
+.dict-popup .dict-popup__entry--inline + .dict-popup__entry--inline {
+  margin-top: 6px;
+}
+.dict-popup .dict-popup__entry--inline > .dict-popup__tokens {
+  grid-column: 1;
+  grid-row: 1;
+}
+.dict-popup .dict-popup__entry--inline > .dict-popup__entry-save {
+  grid-column: 2;
+  grid-row: 1;
+  margin-top: 4px;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+.dict-popup .dict-popup__entry--inline:hover > .dict-popup__entry-save,
+.dict-popup .dict-popup__entry--inline > .dict-popup__entry-save:focus-visible,
+.dict-popup .dict-popup__entry--inline > .dict-popup__entry-save--selection {
+  opacity: 1;
+}
+.dict-popup .dict-popup__entry-morph--inline {
+  grid-column: 1 / -1;
+}
+.dict-popup__lead-word {
+  font-weight: 600;
+}
+
 /* Entries within one provider's group get a lighter divider than the
    heavier one between groups (handled by .dict-popup__group's border-top
    above), so multiple definitions from the same provider still read as

@@ -95,8 +95,9 @@ function groupEntry(lines: { text: string; spans: [number, number][] }[], i: num
   const head = unitHead(provider.id, line.text, root, i);
   // The text the headword is: Lane's and Hans Wehr's whole Arabic opening, Al-Ṣiḥāḥ's first word.
   const raw = head?.head || (head?.word ? line.text.trimStart().split(/\s+/)[0] : '');
-  // How much of the first sense is the headword (the popup does not draw it twice).
-  const headLength = raw ? line.text.length - line.text.trimStart().length + raw.length : 0;
+  // How much of the first sense is the headword, which an English dictionary's heading row draws instead.
+  // An Arabic dictionary reads as running text: its entries keep their opening word in the text (see entryList).
+  const headLength = raw && language === 'en' ? line.text.length - line.text.trimStart().length + raw.length : 0;
   const headword = raw.trim().replace(EDGE_PUNCT, '') || root;
   const formLine = hansWehrFormLine(line.text);
   // Hans Wehr's opening verb paragraph (form 0) is Form I's.

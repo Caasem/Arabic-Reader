@@ -53,7 +53,8 @@ describe('articleEntries: Al-Ṣiḥāḥ', () => {
   it('takes the opening word, without its punctuation, as the headword', () => {
     const entries = articleEntries(row('وفى', 'والوَفاةُ: الموتُ.', 'واسْتَوْفى حقّه'), provider('alsihah'));
     expect(entries.map((e) => e.headword)).toEqual(['والوَفاةُ', 'واسْتَوْفى']);
-    expect(entries[0].headLength).toBe('والوَفاةُ:'.length);
+    // An Arabic entry keeps its opening word in the text: it is drawn as running text, with no heading row.
+    expect(entries[0].headLength).toBeUndefined();
   });
 
   it('starts a new entry only at و + a word of the root; sayings, quotations and verse tails join the one before', () => {

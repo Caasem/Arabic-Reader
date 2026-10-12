@@ -136,8 +136,12 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
         // The entry about the looked-up word (see wasitMatch) starts open whatever the rest do; it is coloured only while highlighting is on.
         const aboutThis = aboutEntries.has(i);
         const highlighted = (wasitMatches.get(i)?.size ?? 0) > 0;
+        // An Arabic entry cut from a root article (Al-Ṣiḥāḥ, Al-Wasīṭ) reads as running text, as the article did:
+        // no heading row, its opening word set in the text, its "+" faint until the entry is hovered.
+        const inline = isAr && entry.articleKey !== undefined;
+        const groupRoot = group.entries[0]?.entry.root;
         // Clean layout: Arabic entries and Baranov-style ones fold to their headword row when there are many; tapping the headword flips that.
-        const foldsToHead = clean && (isAr || rich);
+        const foldsToHead = clean && (isAr || rich) && !inline;
         const startsFolded = (isAr ? startFolded : startFoldedExamples) && !aboutThis;
         const folded = foldsToHead && startsFolded !== foldedEntries.has(i);
         const tokens = selectable && !folded ? tokensFor(i) : undefined;
@@ -200,7 +204,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
             className={
               'dict-popup__entry' +
               (clean && entry.verbForm ? ' dict-popup__entry--tappable' : '') +
-              (clean && isAr ? ' dict-popup__entry--subs' : '') +
+              (inline ? ' dict-popup__entry--inline' : clean && isAr ? ' dict-popup__entry--subs' : '') +
               (exactMatch ? ' dict-popup__entry--best' : '') +
               (entry.vowelClash ? ' dict-popup__entry--clash' : '')
             }
@@ -220,7 +224,14 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                 : undefined
             }
           >
-            {clean && saveButton}
+            {(clean || inline) && saveButton}
+            {inline ? (
+              entry.root && entry.root !== groupRoot && (
+                <span className="dict-popup__entry-morph dict-popup__entry-morph--inline">
+                  <MorphValue kind="root" value={entry.root} />
+                </span>
+              )
+            ) : (
             <div className="dict-popup__entry-head">
               {foldsToHead ? (
                 <span
@@ -276,6 +287,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
               {!clean && <VerbFormMark entry={entry} />}
               {!clean && saveButton}
             </div>
+            )}
             {entry.vowelClash && <div className="dict-popup__clash-note">doesn't match the vowels in the text</div>}
             {!clean && <VerbFormInfo entry={entry} />}
             {isAr ? folded ? null : (
@@ -311,6 +323,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                             'dict-popup__token' +
                             (word ? ' wasit-role--' + word.role : '') +
                             (sel?.has(t.globalIdx) ? ' dict-popup__token--selected' : '') +
+                            (inline && si === 0 && t === tokens?.senses[0].gloss.find((x) => x.isWord) ? ' dict-popup__lead-word' : '') +
                             (wasitMatches.get(i)?.has(si) && t === tokens?.senses[si].gloss.find((x) => x.isWord) ? ' ' + WASIT_MATCH_CLASS : '')
                           }
                           onPointerDown={(e) => handleTokenPointerDown(i, t.globalIdx, e)}
