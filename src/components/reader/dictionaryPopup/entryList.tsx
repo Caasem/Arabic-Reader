@@ -97,7 +97,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
               {roots.join(' · ')}
             </bdi>
             <span className="dict-popup__root-row-count">
-              {count === 1 ? '1 entry' : `${count} entries`} <span aria-hidden="true">›</span>
+              <bdi dir="ltr">{count === 1 ? '1 entry' : `${count} entries`}</bdi> <span aria-hidden="true">›</span>
             </span>
           </button>
         </div>
