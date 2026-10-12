@@ -7,7 +7,7 @@ release.
 ## Summary: 10–11 October 2026 (the refactor pass)
 
 Everything that landed from the evening of 10 October to midday on 11 October, in order. Rows 1–7 are on `main`
-(up to 0.96.0); rows 8–22 are on `refactor/integration`
+(up to 0.96.0); rows 8–23 are on `refactor/integration`
 ([Caasem/Arabic-Reader#73](https://github.com/Caasem/Arabic-Reader/pull/73), 0.97.0), waiting to be tested before
 merging. Per-phase detail and how to revert each one: `docs/changes/refactor-changes.md`.
 
@@ -35,8 +35,16 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 | 20 | 11 Oct | #73 | Dictionary lookup: roots no longer carry AraMorph's homograph numbers (so النور, البشرية, الأحياء find their Arabic articles); Qur'anic and classical spellings are read (هَٰذَا, ٱلْكِتَٰبُ, إِسْمَٰعِيلَ, شاطيء, سليمن); readings that contradict the vowels in the text are sorted last and muted, never removed | Yes | 0.105.0 | On `refactor/integration` |
 | 21 | 11 Oct | #73 | Root dictionaries land on the word: the line about the tapped word (or its dictionary form; a verb's own form paragraph in Lane and Hans Wehr) is coloured and scrolled to in Al-Wasīṭ, Al-Ṣiḥāḥ, Lane and Hans Wehr; a word with no root (إدام, قيراط, بطيخ) opens the article the dictionary files it under | Yes | 0.106.0 | On `refactor/integration` |
 | 22 | 12 Oct | #73 | Lane's Lexicon shows its English meanings in italics again (the Arabic quotations and source notes stay upright) | Yes | 0.107.0 | On `refactor/integration` |
+| 23 | 12 Oct | #73 | Hans Wehr shows each derived form (II–X) of a verb on its own line with a small form label, and tapping a verb lands on its own form's line | Yes | 0.108.0 | On `refactor/integration` |
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
+
+## v0.108.0 — 2026-10-12
+
+- **Hans Wehr's verb forms are on their own lines.** Each derived form (II–X) now starts a new line with a small form
+  label ("VI  to envy each other") instead of running together in one paragraph. Tapping a verb lands on the line of
+  its own form (تحاسدوا on VI, يتعلم on V); form I still lands on the opening paragraph. To get the split, regenerate
+  your private Hans Wehr file with `python -I scripts/extract-lexicon-data.py <db> --hanswehr=<path>` and load it again.
 
 ## v0.107.0 — 2026-10-12
 

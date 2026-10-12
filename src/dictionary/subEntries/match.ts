@@ -140,6 +140,10 @@ export function bestMatches(
     }
     indexes.add(i);
   });
+  // Hans Wehr: the opening verb paragraph (form 0) covers every form only while no line of its own does.
+  if (tier === 4 && [...indexes].some((i) => heads[i]?.verbForm)) {
+    indexes = new Set([...indexes].filter((i) => heads[i]?.verbForm !== 0));
+  }
   if (tier === 2 || tier === 3) {
     const ranks = new Map([...indexes].map((i) => [i, readingRank(heads[i], wanted)]));
     const best = Math.min(...ranks.values());

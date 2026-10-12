@@ -1,0 +1,8 @@
+/* The derived-form numeral that opens a Hans Wehr verb-form line (VI, VIII ...). */
+.dict-hw-form {
+  color: var(--ink-faint);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  margin-inline-end: 8px;
+}

@@ -85,6 +85,12 @@ describe('unitHead: Hans Wehr', () => {
     expect(unitHead('hanswehr', 'داف (دوف) dāfa u (dauf) to mix, mingle', 'دوف')?.verbForm).toBe(0);
   });
 
+  it('reads a derived-form line by its numeral', () => {
+    expect(unitHead('hanswehr', 'VI to envy each other', 'حسد')).toEqual({ head: '', keys: [], looseKeys: [], verbForm: 6 });
+    expect(unitHead('hanswehr', 'V and XII احدودب iḥaudaba to be crooked', 'حدب')?.verbForm).toBe(5);
+    expect(unitHead('hanswehr', 'Victory is near', 'نصر')?.verbForm).toBeUndefined();
+  });
+
   it('marks a pointer elsewhere as a cross-reference', () => {
     expect(unitHead('hanswehr', 'ارغن look up alphabetically', 'رغن')?.crossRef).toBe(true);
     expect(unitHead('hanswehr', 'ترجم, ترجمة look up alphabetically', 'رجم')?.crossRef).toBe(true);

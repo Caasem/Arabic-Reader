@@ -84,7 +84,27 @@ def clean_html(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def extract_tree(db: sqlite3.Connection, table: str, out: Path, join_headless: bool = False) -> None:
+# Hans Wehr marks a verb's derived forms in bold (<b>II</b> ... <b>X</b>); bold is used for nothing else there.
+# `<b>V</b> and <b>XII</b>` shares one paragraph between two forms.
+FORM_TAG = r"<b>\s*([IVX]{1,4})\s*</b>"
+FORM_RE = re.compile(FORM_TAG + r"((?:\s*(?:and|,)\s*" + FORM_TAG + r")*)")
+FORM_MARK = "\x00"
+
+
+def form_units(text: str) -> list[str]:
+    """Hans Wehr paragraph -> its units: the opening paragraph, then one unit per derived form, starting with
+    the form's Roman numeral ("VI to envy each other", "V and XII ...")."""
+
+    def mark(m: re.Match) -> str:
+        label = " and ".join([m.group(1), *re.findall(FORM_TAG, m.group(2))])
+        return f"{FORM_MARK}{label} "
+
+    return [u for u in (clean_html(p) for p in FORM_RE.sub(mark, text).split(FORM_MARK)) if u]
+
+
+def extract_tree(
+    db: sqlite3.Connection, table: str, out: Path, join_headless: bool = False, split_forms: bool = False
+) -> None:
     """Rows grouped by parent_id -> word<TAB>units, merged by root spelling.
 
     A root row (is_root=1) and its sub-entries share a parent_id. In Lane that
@@ -96,13 +116,13 @@ def extract_tree(db: sqlite3.Connection, table: str, out: Path, join_headless: b
         f"SELECT is_root, parent_id, word, meanings FROM {table} ORDER BY id"
     ):
         words, units = groups.setdefault(parent_id, ([], []))
-        unit = clean_html(meanings or "")
+        parts = form_units(meanings or "") if split_forms else [clean_html(meanings or "")]
+        unit = parts[0] if parts else ""
         if is_root:
             words.append(one_line(word or ""))
             if " " not in unit:  # Lane's root rows only repeat the root (بأس)
                 continue
-        if unit:
-            units.append(unit)
+        units.extend(p for p in parts if p)
     merged: dict[str, list[str]] = {}
     roots = 0
     last_root = ""
@@ -132,11 +152,11 @@ def main() -> None:
     public = Path(__file__).resolve().parent.parent / "public"
     if hanswehr and "=" in hanswehr[0]:
         # Hans Wehr only, to a path of your choice (e.g. outside the repo).
-        extract_tree(db, "hanswehr", Path(hanswehr[0].split("=", 1)[1]), join_headless=True)
+        extract_tree(db, "hanswehr", Path(hanswehr[0].split("=", 1)[1]), join_headless=True, split_forms=True)
         return
     extract_tree(db, "lanelexcon", public / "lane-data" / "lane.tsv")
     if hanswehr:
-        extract_tree(db, "hanswehr", public / "hanswehr-data" / "hanswehr.tsv", join_headless=True)
+        extract_tree(db, "hanswehr", public / "hanswehr-data" / "hanswehr.tsv", join_headless=True, split_forms=True)
         print("\n*** WARNING: Hans Wehr is under copyright. public/hanswehr-data/hanswehr.tsv now holds the real")
         print("*** text. Use it locally only. NEVER commit it (git checkout -- that file before committing)."+"\n")
     for rel, table in TABLES.items():

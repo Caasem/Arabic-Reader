@@ -1,4 +1,5 @@
 import { stripItalics } from '../senseFormat/laneItalics';
+import { hansWehrFormLine } from '../senseFormat/hansWehrForms';
 import { articleVariants, containsRoot, subEntryKey } from './keys';
 
 /** What a dictionary sub-entry (one line of a root article) is about: the word(s) it opens with. */
@@ -13,7 +14,8 @@ export interface SubEntryHead {
   looseKeys: string[];
   /**
    * A verb sub-entry: the verb form it is about (1-15, Lane's numbers), or 0 when it covers every form of
-   * the root (Hans Wehr's opening verb paragraph).
+   * the root (Hans Wehr's opening verb paragraph). A Hans Wehr derived-form line ("VI to envy each other") has
+   * its form here (the first, for "V and XII").
    */
   verbForm?: number;
   /** A pointer to another place ("look up alphabetically") -- highlighted, but not where the word is filed. */
@@ -94,6 +96,8 @@ const HW_VERB_RE = /^\s*(?:\([^)]*\)\s*)?[^\s()]*[aā]\s+[uai](?:\s|,|$)/;
  * opening paragraph (`كتب kataba u (katb …) to write … II to make write …`) holds every verb form.
  */
 function hansWehrHead(unit: string, root?: string): SubEntryHead | null {
+  const formLine = hansWehrFormLine(unit);
+  if (formLine) return { head: '', keys: [], looseKeys: [], verbForm: formLine.forms[0] };
   const { words, end } = leadingRun(unit);
   if (!words.length) return null;
   const rest = unit.slice(end);
