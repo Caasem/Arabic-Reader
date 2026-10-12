@@ -6,6 +6,10 @@ import { refreshReaderTools, registerReaderTool } from '../readerTools/tools';
 import { usePreferences } from '../state/PreferencesContext';
 import { goToPdfPlace, parsePdfLocation } from '../studyDesk/pageGeometry';
 import { useDeskTrip } from '../studyDesk/trip';
+import { currentDeskId } from '../studyDesk/deskMemory';
+import { bookDeskId } from '../studyDesk/deskStore';
+import { Composer } from './Composer';
+import { PassageMoves, PdfPendingMoves, QuietPendingMoves } from './MoveRow';
 import { PassageBar } from './PassageBar';
 import { publishPassages } from './marksStore';
 import { PdfPassageLayer, QuietPassageLayer } from './PassageMarks';
@@ -33,12 +37,17 @@ export function ReaderHost({ book }: HostProps) {
   const st = useThinking();
   const trip = useDeskTrip();
   const [picker, setPicker] = useState<{ forItem?: string } | null>(null);
+  /** The composer open in the Ḥāshiya strip, on a passage. */
+  const [compose, setCompose] = useState<{ on: string } | null>(null);
+  const deskId = currentDeskId(book.id) ?? bookDeskId(book.id);
+  const toInbox = prefs.studyDeskMarginsToInbox === 'auto';
+  const moves = prefs.thinkingMoves;
 
   const threads = useMemo(() => threadSummaries(data.desks, data.items), [data.desks, data.items]);
   const active = threads.find((s) => s.desk.id === st.active) ?? null;
   const passages = useMemo(() => data.items.filter(isPassage), [data.items]);
 
-  useEffect(() => publishPassages(passages), [passages]);
+  useEffect(() => publishPassages(passages, { moves }), [passages, moves]);
   useEffect(() => registerPdfPageExtension({ id: 'thinking', Layer: PdfPassageLayer }), []);
   useEffect(() => {
     setReadingBook(book);
@@ -81,13 +90,37 @@ export function ReaderHost({ book }: HostProps) {
   useEffect(() => refreshReaderTools(), [st.active]);
 
   const selected = st.selected ? data.byId.get(st.selected) : undefined;
+  const composing = compose ? data.byId.get(compose.on) : undefined;
   return (
     <>
       {prefs.thinkingThreads && active && !trip && !st.screen && <ThreadBar thread={active} />}
       <QuietPassageLayer bookId={book.id} />
-      {selected && isPassage(selected) && selected.source?.bookId === book.id && (
-        <PassageBar item={selected} threads={threads} active={active?.desk.id ?? null} showThreads={prefs.thinkingThreads} onNewThread={() => setPicker({ forItem: selected.id })} />
+      {selected && isPassage(selected) && selected.source?.bookId === book.id && !compose && (
+        <PassageBar item={selected} threads={threads} active={active?.desk.id ?? null} showThreads={prefs.thinkingThreads} onNewThread={() => setPicker({ forItem: selected.id })}>
+          {moves && <PassageMoves key={selected.id} item={selected} items={data.items} collect={prefs.thinkingThreads} />}
+          <div className="th-row th-acts">
+            <button type="button" className="sd-btn" onClick={() => setCompose({ on: selected.id })}>
+              Write a thought
+            </button>
+          </div>
+        </PassageBar>
       )}
+      {composing && (
+        <Composer
+          passage={composing}
+          book={book}
+          deskId={deskId}
+          items={data.items}
+          desks={data.desks}
+          toInbox={toInbox}
+          onClose={() => {
+            setCompose(null);
+            setThinking({ selected: null });
+          }}
+        />
+      )}
+      {moves && book.pdf && <PdfPendingMoves collect={prefs.thinkingThreads} />}
+      {moves && <QuietPendingMoves book={book} deskId={deskId} toInbox={toInbox} collect={prefs.thinkingThreads} />}
       {picker && (
         <ThreadPicker threads={threads} active={active?.desk.id ?? null} style={prefs.dictionarySearchStyle} forItem={picker.forItem} onClose={() => setPicker(null)} />
       )}

@@ -45,6 +45,21 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.114.0 — 2026-10-12
+
+- **Thinking desk, argument moves.** Name what a passage is doing, by hand: تعريف Definition (1), دعوى Claim (2),
+  دليل Evidence (3), اعتراض Objection (4), جواب Reply (5). In the passage bar, or straight from a selection: on PDF
+  pages the moves sit under the Highlighter's bar, in the quiet reader under the selected words. Pressing a move again
+  takes it off.
+- **Ties.** After Evidence or Objection the bar asks which claim it bears on; after Reply, which objection it answers
+  (the active thread's first, then this book's). Leave it loose for now is always there.
+- **On the page**, a tagged passage shows its Arabic label at its start and a coloured underline.
+- **Write a thought** from the passage bar: a card in the Ḥāshiya strip, "What do you make of it?", with This is my
+  claim and links to other thoughts from any book. The thought sits beside the passage as a Ḥāshiya note. Ctrl+Enter saves.
+- **The Thread screen's Argument tab**: definitions (with a note when they differ), then each claim with its evidence
+  and objections, replies under the objections they answer, open masāʾil under the passage they were asked on, and
+  what is not tied yet.
+
 ## v0.113.0 — 2026-10-12
 
 - **Thinking desk, threads (off by default: Settings → Reading → Thinking desk).** A thread is a desk that belongs to a

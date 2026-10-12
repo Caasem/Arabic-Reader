@@ -28,11 +28,13 @@ export interface ThinkingState {
   touch: string | null;
   /** A place to scroll to once its book is open. */
   jump: { bookId: string; location: string } | null;
+  /** A passage just given a move that ties: its bar opens asking what it ties to. */
+  askTie: string | null;
 }
 
 const ACTIVE_KEY = 'arabic-reader:thinking.activeThread';
 
-let state: ThinkingState = { active: readString(ACTIVE_KEY), selected: null, screen: null, hunting: null, touch: null, jump: null };
+let state: ThinkingState = { active: readString(ACTIVE_KEY), selected: null, screen: null, hunting: null, touch: null, jump: null, askTie: null };
 const listeners = new Set<() => void>();
 
 export function setThinking(patch: Partial<ThinkingState>): void {
@@ -63,5 +65,5 @@ export const closeScreen = (): void => setThinking({ screen: null });
 
 /** Tests only. */
 export function resetThinkingForTests(): void {
-  state = { active: null, selected: null, screen: null, hunting: null, touch: null, jump: null };
+  state = { active: null, selected: null, screen: null, hunting: null, touch: null, jump: null, askTie: null };
 }

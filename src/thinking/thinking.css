@@ -545,3 +545,307 @@
   border-radius: 50%;
   margin-right: 5px;
 }
+
+/* --- moves -------------------------------------------------------------------------------------------------------- */
+[data-m='definition'] {
+  --m: var(--th-definition);
+}
+[data-m='claim'] {
+  --m: var(--th-claim);
+}
+[data-m='evidence'] {
+  --m: var(--th-evidence);
+}
+[data-m='objection'] {
+  --m: var(--th-objection);
+}
+[data-m='reply'] {
+  --m: var(--th-reply);
+}
+.th-moves {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  width: 100%;
+}
+.th-move {
+  display: grid;
+  justify-items: center;
+  gap: 0;
+  padding: 4px 2px 5px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  color: var(--m);
+  cursor: pointer;
+}
+.th-move .th-ar {
+  font-size: 17px;
+  line-height: 1.3;
+}
+.th-move small {
+  font: 500 10.5px var(--font-ui);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.th-move kbd {
+  font: inherit;
+  color: var(--ink-faint);
+}
+.th-move:hover {
+  border-color: var(--m);
+}
+.th-move[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--m) 14%, var(--bg-elevated));
+  border-color: var(--m);
+}
+.th-ties {
+  display: grid;
+  gap: 3px;
+}
+.th-ties > button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: start;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font: 13px var(--font-ui);
+  cursor: pointer;
+}
+.th-ties > button:hover {
+  background: var(--accent-soft);
+}
+.th-ties > button .th-faint {
+  margin-left: auto;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.th-ties > button .th-ar {
+  font-size: 15px;
+}
+.th-ties__loose {
+  color: var(--ink-soft) !important;
+}
+.th-ties p {
+  margin: 0;
+  font-size: 12.5px;
+}
+.th-mchip {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--m) 14%, transparent);
+  color: var(--m);
+  font: 600 13px var(--font-arabic);
+  white-space: nowrap;
+}
+.th-acts {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+/* On a fresh selection: a slim bar of moves under the Highlighter's bar (PDF pages) or the selection (quiet reader). */
+.th-selmoves {
+  position: fixed;
+  z-index: 72;
+  width: min(380px, calc(100vw - 16px));
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+.th-underline {
+  position: absolute;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--m);
+  opacity: 0.8;
+  pointer-events: none;
+}
+.th-qrmarks .th-underline {
+  position: fixed;
+}
+.th-handle--move {
+  opacity: 0.95;
+  color: var(--m);
+  padding: 0 5px;
+  height: 18px;
+  background: color-mix(in srgb, var(--m) 12%, var(--bg));
+}
+.th-handle__ar {
+  font: 600 12.5px/1 var(--font-arabic);
+}
+
+/* --- the composer, in the Ḥāshiya strip ----------------------------------------------------------------------- */
+.th-composer {
+  position: fixed;
+  z-index: 79;
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+  font: 13px var(--font-ui);
+  color: var(--ink);
+  max-height: calc(100vh - 80px);
+  overflow: auto;
+}
+.th-composer__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.th-composer__text {
+  resize: vertical;
+  min-height: 84px;
+  line-height: 1.5;
+}
+.th-composer__note {
+  margin: 0;
+  font-size: 12px;
+}
+.th-composer__acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.th-composer kbd {
+  font: 500 11px var(--font-ui);
+  opacity: 0.75;
+  margin-left: 4px;
+}
+.th-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.th-check .th-ar {
+  font-size: 15px;
+}
+.th-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  position: relative;
+}
+.th-links__find {
+  flex: 1 1 100%;
+  font-size: 12.5px;
+  padding: 4px 8px;
+}
+.th-links__found {
+  flex-basis: 100%;
+  display: grid;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.th-links__found button {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 0;
+  background: var(--bg);
+  color: var(--ink);
+  text-align: start;
+  font: 12.5px var(--font-ui);
+  cursor: pointer;
+}
+.th-links__found button:hover {
+  background: var(--accent-soft);
+}
+
+/* --- the argument tree ---------------------------------------------------------------------------------------- */
+.th-amap {
+  display: grid;
+  gap: 8px;
+}
+.th-amap__h {
+  margin: 14px 0 2px;
+  font: 600 10.5px var(--font-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.th-anode-wrap {
+  display: grid;
+  gap: 8px;
+}
+.th-anode {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-inline-start: 3px solid var(--m);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+}
+.th-anode--yours {
+  border-style: dashed;
+  border-inline-start-style: solid;
+}
+.th-sig {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  color: var(--m);
+}
+.th-sig .th-ar {
+  font-size: 20px;
+  font-weight: 700;
+}
+.th-sig small {
+  font: 500 10.5px var(--font-ui);
+  color: var(--ink-soft);
+}
+.th-anode__text {
+  margin: 0;
+  line-height: 1.6;
+}
+.th-anode__text.th-ar {
+  font-size: 19px;
+  line-height: 1.8;
+}
+.th-anode .th-line__meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.th-kids {
+  display: grid;
+  gap: 8px;
+  margin-inline-start: 28px;
+  padding-inline-start: 14px;
+  border-inline-start: 1px dashed var(--border);
+}
+.th-tension {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px dashed var(--accent);
+  border-radius: 10px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.th-tension--q {
+  border-color: var(--th-question);
+}
+@media (max-width: 600px) {
+  .th-anode {
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 8px;
+  }
+  .th-kids {
+    margin-inline-start: 10px;
+  }
+}

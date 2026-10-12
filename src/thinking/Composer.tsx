@@ -1,0 +1,140 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { patchItems } from '../studyDesk/deskStore';
+import { capture } from '../studyDesk/useDesk';
+import type { Desk, DeskItem, NewDeskItem } from '../studyDesk/types';
+import type { BookMeta } from '../types';
+import { stripBox } from './geometry';
+import { citeOf, isThought, short, thoughtText } from './passages';
+import { say } from './say';
+import { thinkingState } from './state';
+import { newThought } from './thoughts';
+import { threadLabel } from './threads';
+
+/** A new thought in the Ḥāshiya strip: what do you make of it? Optionally your claim, and linked to other thoughts. */
+export function Composer({
+  passage,
+  book,
+  deskId,
+  items,
+  desks,
+  toInbox,
+  extra,
+  onClose,
+}: {
+  passage: DeskItem;
+  book: BookMeta;
+  deskId: string;
+  items: DeskItem[];
+  desks: Desk[];
+  toInbox: boolean;
+  /** Fields later parts add to every new thought (Revisit's first visit). */
+  extra?: () => Partial<NewDeskItem>;
+  onClose(): void;
+}) {
+  const [text, setText] = useState('');
+  const [claim, setClaim] = useState(false);
+  const [links, setLinks] = useState<string[]>([]);
+  const [find, setFind] = useState('');
+  const [busy, setBusy] = useState(false);
+  const box = stripBox();
+  const ta = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => ta.current?.focus(), []);
+  const active = desks.find((d) => d.id === thinkingState().active && d.kind === 'thread');
+
+  const found = useMemo(() => {
+    const q = find.trim().toLowerCase();
+    if (!q) return [];
+    return items.filter((i) => isThought(i) && !links.includes(i.id) && thoughtText(i).toLowerCase().includes(q)).slice(0, 5);
+  }, [find, items, links]);
+
+  async function save() {
+    if (!text.trim() || busy) return;
+    setBusy(true);
+    try {
+      const item = await capture(book, deskId, { ...newThought(passage, book, text, { claim, links, toInbox }), ...extra?.() });
+      // Links are kept on both thoughts.
+      const others = items.filter((i) => links.includes(i.id));
+      if (others.length) await patchItems(others.map((o) => ({ id: o.id, patch: { links: [...(o.links ?? []), item.id] } })));
+      say(active ? `Thought saved in ${threadLabel(active)}` : 'Thought saved beside the passage');
+      onClose();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div
+      className="th-composer"
+      role="dialog"
+      aria-label="New thought"
+      style={{ left: box.left, top: Math.max(box.top + 12, 64), width: box.right - box.left }}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === 'Escape') onClose();
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          void save();
+        }
+      }}
+    >
+      <div className="th-composer__top">
+        <span className="th-kind th-kind--note">New thought</span>
+        <span className="th-cite">{citeOf(passage)}</span>
+      </div>
+      <p className={'th-excerpt' + (passage.ar ? ' th-ar' : '')} dir="auto">
+        {short(passage.text, 110)}
+      </p>
+      <textarea ref={ta} className="th-input th-composer__text" dir="auto" rows={4} value={text} placeholder="What do you make of it?" aria-label="Your thought" onChange={(e) => setText(e.target.value)} />
+      <label className="th-check">
+        <input type="checkbox" checked={claim} onChange={(e) => setClaim(e.target.checked)} />
+        This is my claim <span className="th-ar">دعوى</span>
+      </label>
+      <div className="th-links">
+        {links.map((id) => {
+          const t = items.find((i) => i.id === id);
+          return (
+            <span key={id} className="th-chip th-chip--on">
+              <bdi>{short(t ? thoughtText(t) : '', 40)}</bdi>
+              <button type="button" className="th-x" aria-label="Unlink" onClick={() => setLinks(links.filter((l) => l !== id))}>
+                ×
+              </button>
+            </span>
+          );
+        })}
+        <input className="th-input th-links__find" dir="auto" value={find} placeholder="Link to another thought…" aria-label="Find a thought to link" onChange={(e) => setFind(e.target.value)} />
+        {found.length > 0 && (
+          <div className="th-links__found" role="listbox" aria-label="Thoughts">
+            {found.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="option"
+                aria-selected="false"
+                onClick={() => {
+                  setLinks([...links, t.id]);
+                  setFind('');
+                }}
+              >
+                <bdi>{short(thoughtText(t), 70)}</bdi>
+                <span className="th-faint">{t.source?.bookTitle ?? 'yours'}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {active && (
+        <p className="th-faint th-composer__note">
+          Joins the <bdi>{threadLabel(active)}</bdi> thread.
+        </p>
+      )}
+      <div className="th-composer__acts">
+        <button type="button" className="sd-btn" onClick={onClose}>
+          Cancel
+        </button>
+        <button type="button" className="sd-btn sd-btn--pri" disabled={!text.trim() || busy} onClick={() => void save()}>
+          Save <kbd>Ctrl Enter</kbd>
+        </button>
+      </div>
+    </div>
+  );
+}

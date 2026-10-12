@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { usePreferences } from '../../state/PreferencesContext';
 import { DeskDocument } from '../../studyDesk/DeskDocument';
 import { createThread, leaveThread, saveDeskHtml, updateDesk } from '../../studyDesk/deskStore';
 import { appendEmbed, hasEmbed } from '../../studyDesk/docHtml';
@@ -10,6 +11,7 @@ import { openScreen, setThinking, useThinking, type Screen, type ThreadTab } fro
 import { byBook, joinedAt, namesFromTyped, summarise, threadLabel, threadMembers, threadSummaries } from '../threads';
 import { say } from '../say';
 import { useThinkingData, type ThinkingData } from '../useThinkingData';
+import { ArgumentTab } from './ArgumentTab';
 import { Frame, Tabs } from './Frame';
 import { ItemLine } from './parts';
 
@@ -24,6 +26,7 @@ const BOOK_COLOURS = ['var(--th-claim)', 'var(--th-objection)', 'var(--th-eviden
 export function ThreadScreen({ screen, onOpenBook }: { screen: Extract<Screen, { kind: 'thread' }>; onOpenBook?: OpenBook }) {
   const data = useThinkingData();
   const { active } = useThinking();
+  const { prefs } = usePreferences();
   const threads = useMemo(() => threadSummaries(data.desks, data.items), [data.desks, data.items]);
   const id = screen.id && threads.some((s) => s.desk.id === screen.id) ? screen.id : (threads.find((s) => s.desk.id === active) ?? threads[0])?.desk.id;
   const thread = data.desks.find((d) => d.id === id);
@@ -80,6 +83,7 @@ export function ThreadScreen({ screen, onOpenBook }: { screen: Extract<Screen, {
         onChange={setTab}
         tabs={[
           { id: 'document', label: 'Document' },
+          ...(prefs.thinkingMoves ? [{ id: 'argument' as const, label: 'Argument' }] : []),
           { id: 'gathered', label: 'Gathered' },
           { id: 'masail', label: `Masāʾil · ${open} open` },
         ]}
@@ -98,6 +102,7 @@ export function ThreadScreen({ screen, onOpenBook }: { screen: Extract<Screen, {
           />
         </div>
       )}
+      {tab === 'argument' && prefs.thinkingMoves && <ArgumentTab threadId={thread.id} data={data} onGoTo={goTo} />}
       {tab === 'gathered' && <Gathered thread={thread} data={data} onGoTo={goTo} />}
       {tab === 'masail' && (
         <div className="th-list">
