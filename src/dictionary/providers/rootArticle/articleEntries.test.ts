@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ITALIC_CLOSE, ITALIC_OPEN } from '../../senseFormat/laneItalics';
 import { findMatchedEntries, findMatchedSenses } from '../../subEntries/match';
-import { articleEntries, romanForm, wasitSenses } from './articleEntries';
+import { articleEntries, opensNewWord, romanForm, wasitSenses } from './articleEntries';
 
 const provider = (id: string) => ({ id, name: id });
 const row = (word: string, ...units: string[]) => ({ id: 7, word, meanings: units.join('<br>') });
@@ -54,6 +54,35 @@ describe('articleEntries: Al-Ṣiḥāḥ', () => {
     const entries = articleEntries(row('وفى', 'والوَفاةُ: الموتُ.', 'واسْتَوْفى حقّه'), provider('alsihah'));
     expect(entries.map((e) => e.headword)).toEqual(['والوَفاةُ', 'واسْتَوْفى']);
     expect(entries[0].headLength).toBe('والوَفاةُ:'.length);
+  });
+
+  it('starts a new entry only at و + a word of the root; sayings, quotations and verse tails join the one before', () => {
+    const entries = articleEntries(
+      row(
+        'قلب',
+        'القَلْب: الفؤاد.',
+        'وقلبت الشئ فانقلبَ (١).',
+        'وقولهم: ما به قَلَبَةٌ.',
+        'وقال ابن الاعرابي: معناه ليست به علة.',
+        'والقَليب: البئر قبل أن تُطْوى.',
+        'عن قُلُبٍ ضُجْمٍ تُوَرِّي من سبر *',
+        '(١) الحبار بفتح الحاء.',
+        '(٢) هو كثير.',
+      ),
+      provider('alsihah'),
+    );
+    expect(entries.map((e) => e.headword)).toEqual(['القَلْب', 'وقلبت', 'والقَليب']);
+    // The saying and the quotation join وقلبت, and so does the note it cites; the uncited note joins the last entry.
+    expect(entries[1].senses.map((s) => s.gloss.split(' ')[0])).toEqual(['وقلبت', 'وقولهم:', 'وقال', '(١)']);
+    expect(entries[2].senses.map((s) => s.gloss.split(' ')[0])).toEqual(['والقَليب:', 'عن', '(٢)']);
+  });
+
+  it('tells و + a word of the root from و + a saying', () => {
+    expect(opensNewWord('وقَلَبْتُ القومَ', 'قلب')).toBe(true);
+    expect(opensNewWord('والمُنْقَلَبُ يكون مكاناً', 'قلب')).toBe(true);
+    expect(opensNewWord('وقولهم: هو عربي', 'قلب')).toBe(false);
+    expect(opensNewWord('وقال الأصمعي', 'قلب')).toBe(false);
+    expect(opensNewWord('عن قُلُبٍ', 'قلب')).toBe(false);
   });
 });
 

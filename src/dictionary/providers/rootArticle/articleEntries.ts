@@ -2,6 +2,7 @@ import type { DictionaryEntry, DictionaryEntrySense } from '../../../types';
 import { hansWehrFormLine } from '../../senseFormat/hansWehrForms';
 import { splitItalics } from '../../senseFormat/laneItalics';
 import { leadForm, unitHead } from '../../subEntries/heads';
+import { containsRoot, subEntryKey } from '../../subEntries/keys';
 import { traitsOf } from '../../providerTraits';
 import { rowToEntry, type RootArticleRow } from './rootArticleData';
 
@@ -9,7 +10,9 @@ import { rowToEntry, type RootArticleRow } from './rootArticleData';
  * The adapter from a root article (one TSV row: a root and its `<br>`-separated lines) to the shared entry shape
  * (see DictionaryEntry). How an article is cut is the dictionary's declared `articles` trait:
  *
- * - `lines` (Lane, Hans Wehr, Al-Ṣiḥāḥ): one entry per line. Its headword is the word the line opens with
+ * - `words` (Al-Ṣiḥāḥ): a new entry only where a paragraph opens with و + a word of the root; the paragraphs in
+ *   between (sayings, quotations, verse tails) and the editor's notes become further senses of an entry.
+ * - `lines` (Lane, Hans Wehr): one entry per line. Its headword is the word the line opens with
  *   (read by `unitHead`), the line stays the entry's single sense (`headLength` says how much of it is the
  *   headword, which the popup does not draw twice), the root rides along, and a verb line carries its form.
  * - `forms` (Al-Wasīṭ): one entry per lead form "(كَتَبَ) ..." with the continuations "و- ..." that follow it.
@@ -20,6 +23,8 @@ export function articleEntries(row: RootArticleRow, provider: { id: string; name
   switch (traitsOf(provider.id).articles) {
     case 'lines':
       return lineEntries(row, provider);
+    case 'words':
+      return wordEntries(row, provider);
     case 'forms':
       return formEntries(row, provider);
     default:
@@ -37,36 +42,77 @@ function rootOf(row: RootArticleRow): string {
   return row.word.split('|')[0].trim();
 }
 
-function lineEntries(row: RootArticleRow, provider: { id: string; name: string }): DictionaryEntry[] {
-  const root = rootOf(row);
-  const language = traitsOf(provider.id).language;
-  const lines = row.meanings
+function articleLines(row: RootArticleRow) {
+  return row.meanings
     .split(/<br\s*\/?>/i)
     .map(splitItalics)
     .filter((s) => s.text);
-  return lines.map((line, i) => {
-    const head = unitHead(provider.id, line.text, root, i);
-    // The text the headword is: Lane's and Hans Wehr's whole Arabic opening, Al-Ṣiḥāḥ's first word.
-    const raw = head?.head || (head?.word ? line.text.trimStart().split(/\s+/)[0] : '');
-    const headLength = raw ? line.text.length - line.text.trimStart().length + raw.length : 0;
-    const headword = raw.trim().replace(EDGE_PUNCT, '') || root;
-    const formLine = hansWehrFormLine(line.text);
-    // Hans Wehr's opening verb paragraph (form 0) is Form I's.
-    const form = formLine ? formLine.forms[0] : head?.verbForm === 0 ? 1 : head?.verbForm;
-    const verbForm = romanForm(form);
-    const sense: DictionaryEntrySense = line.spans.length ? { gloss: line.text, italics: line.spans } : { gloss: line.text };
-    return {
-      providerId: provider.id,
-      providerName: provider.name,
-      headword,
-      language,
-      articleKey: String(row.id),
-      ...(headLength ? { headLength } : {}),
-      root,
-      ...(verbForm ? { verbForm } : {}),
-      senses: [sense],
-    };
-  });
+}
+
+function lineEntries(row: RootArticleRow, provider: { id: string; name: string }): DictionaryEntry[] {
+  return articleLines(row).map((line, i) => groupEntry([line], i, row, provider));
+}
+
+/** An editor's note the extraction moved to the article's end: "(٢) قوله ...". */
+const FOOTNOTE_RE = /^\s*(\([٠-٩0-9]+\))/;
+
+/** Whether a paragraph opens with و + a word of the root ("وقَلَبْتُ", "والمُنْقَلَبُ") -- not "وقولهم:", "وقال". */
+export function opensNewWord(text: string, root: string): boolean {
+  const key = subEntryKey(text.trim().split(/\s+/)[0] ?? '');
+  if (key.length < 3 || !key.startsWith('و')) return false;
+  return containsRoot(key.slice(1), root);
+}
+
+/**
+ * Al-Ṣiḥāḥ: a new entry only where a paragraph opens with و + a word of the root. Every other paragraph (a
+ * saying, a quotation, the tail of a verse) joins the entry before it, and each editor's note joins the entry
+ * whose text cites its number, else the last one. The article's first paragraph always opens the first entry.
+ */
+function wordEntries(row: RootArticleRow, provider: { id: string; name: string }): DictionaryEntry[] {
+  const root = rootOf(row);
+  type Line = ReturnType<typeof articleLines>[number];
+  const groups: Line[][] = [];
+  const notes: { mark: string; line: Line }[] = [];
+  for (const line of articleLines(row)) {
+    const note = line.text.match(FOOTNOTE_RE);
+    if (note && groups.length) notes.push({ mark: note[1], line });
+    else if (!groups.length || opensNewWord(line.text, root)) groups.push([line]);
+    else groups[groups.length - 1].push(line);
+  }
+  for (const { mark, line } of notes) {
+    const citing = groups.find((g) => g.some((l) => l.text.includes(mark))) ?? groups[groups.length - 1];
+    citing.push(line);
+  }
+  return groups.map((lines, i) => groupEntry(lines, i, row, provider));
+}
+
+/** One entry from consecutive lines of an article: its head read from the first, each line one sense. */
+function groupEntry(lines: { text: string; spans: [number, number][] }[], i: number, row: RootArticleRow, provider: { id: string; name: string }): DictionaryEntry {
+  const root = rootOf(row);
+  const language = traitsOf(provider.id).language;
+  const senses: DictionaryEntrySense[] = lines.map((l) => (l.spans.length ? { gloss: l.text, italics: l.spans } : { gloss: l.text }));
+  const line = lines[0];
+  const head = unitHead(provider.id, line.text, root, i);
+  // The text the headword is: Lane's and Hans Wehr's whole Arabic opening, Al-Ṣiḥāḥ's first word.
+  const raw = head?.head || (head?.word ? line.text.trimStart().split(/\s+/)[0] : '');
+  // How much of the first sense is the headword (the popup does not draw it twice).
+  const headLength = raw ? line.text.length - line.text.trimStart().length + raw.length : 0;
+  const headword = raw.trim().replace(EDGE_PUNCT, '') || root;
+  const formLine = hansWehrFormLine(line.text);
+  // Hans Wehr's opening verb paragraph (form 0) is Form I's.
+  const form = formLine ? formLine.forms[0] : head?.verbForm === 0 ? 1 : head?.verbForm;
+  const verbForm = romanForm(form);
+  return {
+    providerId: provider.id,
+    providerName: provider.name,
+    headword,
+    language,
+    articleKey: String(row.id),
+    ...(headLength ? { headLength } : {}),
+    root,
+    ...(verbForm ? { verbForm } : {}),
+    senses,
+  };
 }
 
 /** A continuation of the lead form before it: "و- السقاءَ ونحوه: خرزَه". */

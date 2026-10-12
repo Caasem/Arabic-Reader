@@ -124,7 +124,8 @@ async function buildSubjects(): Promise<Subject[]> {
     },
     {
       id: 'alsihah',
-      articleEntries: SIHAH.length,
+      // Every paragraph opens with و + a word of the root except the editor's note (١), which joins an entry.
+      articleEntries: SIHAH.length - 1,
       entries: await article('alsihah', 'وفى', SIHAH, 'وفاة', [{ lemma: 'وَفاة', root: 'وفى' }]),
       word: 'وفاة',
       analyses: [{ lemma: 'وَفاة', root: 'وفى' }],

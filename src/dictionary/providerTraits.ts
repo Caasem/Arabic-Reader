@@ -24,9 +24,11 @@ export interface ProviderTraits {
   marksVerbs?: boolean;
   /**
    * How a root article becomes entries: `lines` = one entry per line; `forms` = one per lead form with its
-   * continuations (Al-Wasīṭ); `essay` = the article is one entry, its paragraphs the senses (Maqāyīs).
+   * continuations (Al-Wasīṭ); `words` = a new entry only where a paragraph opens with و + a word of the root,
+   * every other paragraph joining the entry before it and editor's notes the entry that cites them (Al-Ṣiḥāḥ);
+   * `essay` = the article is one entry, its paragraphs the senses (Maqāyīs).
    */
-  articles?: 'lines' | 'forms' | 'essay';
+  articles?: 'lines' | 'forms' | 'words' | 'essay';
   /** Al-Wasīṭ's lead/continuation structure, word roles and labels apply to the text. */
   structure?: boolean;
   /** Verses are set apart (Al-Ṣiḥāḥ). */
@@ -44,7 +46,7 @@ const DEFAULT_TRAITS: ProviderTraits = { language: 'en', senseStyle: 'plain' };
 const TRAITS: Record<string, ProviderTraits> = {
   aramorph: { label: 'English', language: 'en', senseStyle: 'plain', shortGloss: true, sharesPicks: true },
   alwasit: { label: 'Al-Mu‘jam al-Wasīṭ · Arabic', language: 'ar', senseStyle: 'plain', headReader: 'wasit', indexed: true, articles: 'forms', structure: true, sharesPicks: true },
-  alsihah: { label: 'Al-Ṣiḥāḥ · Arabic', language: 'ar', senseStyle: 'plain', headReader: 'sihah', indexed: true, articles: 'lines', verses: true, sharesPicks: true },
+  alsihah: { label: 'Al-Ṣiḥāḥ · Arabic', language: 'ar', senseStyle: 'plain', headReader: 'sihah', indexed: true, articles: 'words', verses: true, sharesPicks: true },
   almaqayis: { label: 'Maqāyīs al-Lugha · Arabic', language: 'ar', senseStyle: 'plain', headReader: 'maqayis', articles: 'essay', sharesPicks: true },
   lane: { label: 'Lane · English', language: 'en', senseStyle: 'lane', headReader: 'lane', indexed: true, marksVerbs: true, articles: 'lines', sharesPicks: true },
   hanswehr: { label: 'Hans Wehr · English', language: 'en', senseStyle: 'hanswehr', headReader: 'hanswehr', indexed: true, marksVerbs: true, articles: 'lines' },
