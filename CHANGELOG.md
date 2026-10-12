@@ -41,8 +41,25 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 | 26 | 12 Oct | #73 | Dictionary popup typography: sense lines wrap properly, English entries read left to right at a larger size with Arabic words in the reading font, Lane sigla and Hans Wehr transliteration styled | Yes | 0.109.1 | On `feat/popup-typography` |
 | 27 | 12 Oct | — | Every dictionary shares the same popup features: Lane, Hans Wehr, Al-Ṣiḥāḥ and Al-Wasīṭ are one entry per line (or form) with a “+” each, long lists fold to the entry you tapped with Show all, any word can be picked in any dictionary (English too), the dock and form chips follow the data, not the dictionary's name | Yes | 0.110.0 | On `feat/dict-parity` |
 | 28 | 12 Oct | — | Dictionary popup: a Tabs layout, a settings button with a sheet inside the popup (layout, text size, dictionaries on/off and order, reading switches), and dictionaries reorder by dragging a grip or a tab | Yes | 0.111.0 | On `feat/dict-parity` |
+| 29 | 12 Oct | — | Pull in (Alt+U) redone: results grouped by book with a preview of where each lands, several collected and placed at once, search that ignores ḥarakāt, Place in and the button at the bottom | Yes | 0.112.0 | On `feat/dict-parity` |
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
+
+## v0.112.0 — 2026-10-12
+
+- **Pull in (Alt+U), the next version.** Results are grouped by book (this book first, then the others) with a count on each
+  heading, and the kind buttons show how many of each there are. A From switch narrows to this book or the other books.
+- **A preview beside the results** (in the wide palette) shows the chosen row in full, its note or meaning, where it is from, and a
+  small page with the spot marked in the Ḥāshiya it will land in, or the inbox. The narrower panel, the drawer and the phone sheet
+  leave it out.
+- **Collect several, place once.** Shift+Enter or the tick on a row collects it; the button then reads “Place 3 in right Ḥāshiya”, and
+  they are placed in the order collected. Esc clears the collection first.
+- **Where it goes is at the bottom**, with the button that sends it there. Tab in the search box moves between Left Ḥāshiya, Right
+  Ḥāshiya and Inbox.
+- **Capture trips and an image file are pills** above the results while nothing is typed; their labels start on the same line as the
+  book headings and the titles below them. Back to <book> still comes first and chosen, so Alt+U then Enter goes again.
+- **Search ignores ḥarakāt, tatweel and hamza seats** (اعراب finds الإعراب, انما finds إنّما), and marks what matched. Rows already
+  on this desk say so.
 
 ## v0.111.0 — 2026-10-12
 

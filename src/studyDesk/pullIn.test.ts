@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BookMeta } from '../types';
 import { DeskDB } from './db';
 import { addItem, ensureBookDesk, getItem, listItems, setDeskDBForTests } from './deskStore';
-import { filterCandidates, listPullCandidates, pullIn, pullInImage } from './pullIn';
+import { filterCandidates, groupCandidates, listPullCandidates, matchRanges, pullIn, pullInImage, type PullCandidate } from './pullIn';
 
 vi.mock('../reader/annotations/annotationService', () => ({
   annotationService: {
@@ -73,5 +73,56 @@ describe('pull in', () => {
     const img = await pullInImage(book, desk.id, new Blob(['x'], { type: 'image/png' }), 'right', { bookId: 'b1', location: 'clean:1:1:1' });
     expect((await getItem(img.id))!).toMatchObject({ type: 'capture', imageHash: 'img-hash', pin: { side: 'right' } });
     expect((await listItems(desk.id)).length).toBe(2);
+  });
+
+  it('marks what is already on the desk being pulled into', async () => {
+    const desk = await ensureBookDesk(book);
+    const hl = (await listPullCandidates(book, desk.id)).find((c) => c.kind === 'highlight')!;
+    expect(hl.onDesk).toBeFalsy();
+    await pullIn(book, desk.id, hl, 'inbox', null);
+    const again = (await listPullCandidates(book, desk.id)).find((c) => c.kind === 'highlight')!;
+    expect(again.onDesk).toBe(true);
+    expect(again).toMatchObject({ bookId: 'b2', bookTitle: 'Tahafut', where: 'Ch. 1' });
+  });
+});
+
+describe('pull in search', () => {
+  const c = (key: string, text: string, bookId: string, at: number): PullCandidate => ({
+    key,
+    kind: 'highlight',
+    text,
+    ar: true,
+    from: bookId,
+    bookId,
+    bookTitle: bookId === 'b1' ? 'Here' : `Book ${bookId}`,
+    input: { type: 'quote', text },
+    at,
+  });
+
+  it('ignores ḥarakāt, tatweel and hamza seats', () => {
+    const all = [c('a', 'الإِعْرَابُ', 'b1', 1), c('b', 'مَبْنِيٌّ', 'b1', 2), c('c', 'أعلى', 'b2', 3)];
+    expect(filterCandidates(all, 'اعراب').map((x) => x.key)).toEqual(['a']);
+    expect(filterCandidates(all, 'مبني').map((x) => x.key)).toEqual(['b']);
+    expect(filterCandidates(all, 'اعلي').map((x) => x.key)).toEqual(['c']);
+  });
+
+  it('marks each word typed in the original text, vowels included', () => {
+    const s = 'الإِعْرَابُ والبناء';
+    const [r] = matchRanges(s, 'اعراب');
+    expect(s.slice(r[0], r[1])).toBe('إِعْرَابُ');
+    expect(matchRanges('group feeling', 'feel GROUP')).toEqual([
+      [0, 5],
+      [6, 10],
+    ]);
+    expect(matchRanges('abc', 'x')).toEqual([]);
+  });
+
+  it('groups by book: the open book first, then the most recent', () => {
+    const groups = groupCandidates([c('1', 'x', 'b2', 9), c('2', 'y', 'b1', 8), c('3', 'z', 'b3', 10), c('4', 'w', 'b2', 7)], 'b1');
+    expect(groups.map((g) => [g.here, g.title, g.items.map((i) => i.key).join('')])).toEqual([
+      [true, '', '2'],
+      [false, 'Book b3', '3'],
+      [false, 'Book b2', '14'],
+    ]);
   });
 });
