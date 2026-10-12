@@ -43,6 +43,14 @@ const IconQuestion = () => (
   </svg>
 );
 
+const IconCompare = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+    <rect x="2.5" y="4" width="7" height="16" rx="1.5" />
+    <rect x="14.5" y="4" width="7" height="16" rx="1.5" />
+    <path d="M9.5 9c2 0 3 3 5 3M9.5 15h5" />
+  </svg>
+);
+
 /** The thinking desk beside the open book: the active thread's bar, passage handles and their bar, the thread picker. */
 export function ReaderHost({ book, onOpenBook }: HostProps) {
   const { prefs } = usePreferences();
@@ -113,6 +121,23 @@ export function ReaderHost({ book, onOpenBook }: HostProps) {
     setCompose({ kind: 'question', on, place: on ? undefined : (cleanLocationNearCentre() ?? pdfLocationNearCentre() ?? undefined) });
   };
   useChordHotkey('KeyQ', prefs.thinkingMasail, () => (compose ? setCompose(null) : ask()));
+  // Alt+J: Muqābala, with the passage in the bar picked on the left.
+  const compare = () => openScreen({ kind: 'muqabala', a: st.selected && data.byId.get(st.selected)?.source?.bookId === book.id ? st.selected : undefined });
+  useChordHotkey('KeyJ', prefs.thinkingMuqabala, compare);
+  useEffect(() => {
+    if (!prefs.thinkingMuqabala) return;
+    return registerReaderTool({
+      id: 'thinking:muqabala',
+      label: 'Compare',
+      title: 'Muqābala: two books side by side',
+      keys: 'Alt+J',
+      group: 'desk',
+      order: 12,
+      readers: ['clean', 'pdf'],
+      icon: <IconCompare />,
+      run: () => openScreen({ kind: 'muqabala' }),
+    });
+  }, [prefs.thinkingMuqabala]);
   useEffect(() => {
     if (!prefs.thinkingMasail) return;
     return registerReaderTool({
@@ -162,6 +187,11 @@ export function ReaderHost({ book, onOpenBook }: HostProps) {
                 Ask a masʾala <kbd>Alt Q</kbd>
               </button>
             )}
+            {prefs.thinkingMuqabala && (
+              <button type="button" className="sd-btn" onClick={compare}>
+                Compare <kbd>Alt J</kbd>
+              </button>
+            )}
           </div>
         </PassageBar>
       )}
@@ -190,6 +220,10 @@ export function ReaderHost({ book, onOpenBook }: HostProps) {
             t.kind === 'question' && prefs.thinkingMasail && isOpen(t.item, data.byId) ? (
               <button type="button" className="th-link" onClick={() => void findAnswer(t.item, onOpenBook)}>
                 Find the answer
+              </button>
+            ) : t.kind === 'link' && prefs.thinkingMuqabala ? (
+              <button type="button" className="th-link" onClick={() => openScreen({ kind: 'muqabala', link: t.link.id })}>
+                Open side by side
               </button>
             ) : null
           }

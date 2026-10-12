@@ -45,6 +45,17 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.117.0 — 2026-10-12
+
+- **Thinking desk, Muqābala (Alt+J).** Two books side by side, each listing its kept passages page by page. Click a passage
+  on one side, then one on the other, and name how they relate: Same text, Supports, Differs, Explains or Quotes, with an
+  optional note.
+- **Lines join linked passages** across the gap, coloured by relation (Differs dashed), with the relation on a chip in
+  the gap; a click shows the note (edited in place), both citations and Delete link (with Undo). Under 900px the books
+  stack and the links are listed instead. All links in your library are listed below.
+- **From the reader**: Compare in the passage bar or Alt+J picks that passage on the left; Compare in the dock. Links
+  count as backlinks on both passages, with Open side by side; two definitions that differ show it in the Argument tab.
+
 ## v0.116.0 — 2026-10-12
 
 - **Thinking desk, masāʾil.** Questions have an open or answered state. **Alt+Q** (or Ask a masʾala in the passage bar)

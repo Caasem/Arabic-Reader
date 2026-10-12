@@ -4,6 +4,7 @@ import { wordsOf } from '../labels';
 import { isOpen } from '../masail';
 import { moveInfo } from '../moves';
 import { citeOf, isPassage, isThought, thoughtText } from '../passages';
+import { openScreen } from '../state';
 import { threadMembers } from '../threads';
 import type { ThinkingData } from '../useThinkingData';
 
@@ -21,7 +22,10 @@ export function ArgumentTab({ threadId, data, onGoTo }: { threadId: string; data
       ))}
       {arg.tensions.map((t) => (
         <p key={t.link.id} className="th-tension">
-          These definitions differ{t.link.note ? `: ${t.link.note}` : '.'}
+          These definitions differ{t.link.note ? `: ${t.link.note}` : '.'}{' '}
+          <button type="button" className="th-link" onClick={() => openScreen({ kind: 'muqabala', link: t.link.id })}>
+            See them side by side
+          </button>
         </p>
       ))}
       {arg.claims.length > 0 && <h3 className="th-amap__h">Claims, with what supports and resists them</h3>}
