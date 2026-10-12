@@ -8,6 +8,7 @@ type PartKey = Extract<keyof ReaderPreferences, `thinking${string}`>;
 const PARTS: { key: PartKey; label: string; note: string }[] = [
   { key: 'thinkingThreads', label: 'Threads (Alt+T)', note: 'Gather passages and thoughts from any book under one question. The active thread shows under the reader’s header.' },
   { key: 'thinkingMoves', label: 'Argument moves (1–5)', note: 'Name what a passage is doing: تعريف Definition, دعوى Claim, دليل Evidence, اعتراض Objection, جواب Reply. Tagged passages show their label and a coloured underline.' },
+  { key: 'thinkingBacklinks', label: 'Backlinks', note: 'A count beside each passage that something touches: thoughts on it, thoughts linked to those, masāʾil, Muqābala links. Click it to see them in the Ḥāshiya.' },
 ];
 
 export function ThinkingSettings() {

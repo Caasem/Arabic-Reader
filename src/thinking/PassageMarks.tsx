@@ -36,9 +36,29 @@ function Handle({ item, style, selected, moves }: { item: DeskItem; style: React
   );
 }
 
+/** A dark count beside a passage that other things touch; it shows them in the Ḥāshiya strip. */
+function Badge({ item, n, style }: { item: DeskItem; n: number; style: React.CSSProperties }) {
+  return (
+    <button
+      type="button"
+      className="th-badge"
+      style={style}
+      title={n === 1 ? '1 thing touches this passage' : `${n} things touch this passage`}
+      aria-label={`${n} touching this passage`}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        setThinking({ touch: item.id, selected: null });
+      }}
+    >
+      {n}
+    </button>
+  );
+}
+
 /** Drawn in each PDF page (registered by the reader host). */
 export function PdfPassageLayer({ book, page, width, height }: PdfPageContext) {
-  const { passages, moves } = useMarks();
+  const { passages, moves, counts } = useMarks();
   const { selected } = useThinking();
   const here = passages.flatMap((item) => {
     const at = item.source?.bookId === book.id ? parsePdfLocation(item.source.location) : null;
@@ -51,6 +71,7 @@ export function PdfPassageLayer({ book, page, width, height }: PdfPageContext) {
         <div key={item.id}>
           {moves && item.move && <div className="th-underline" data-m={item.move} style={{ left: at.x * width, top: (at.y + at.h) * height - 2, width: at.w * width }} />}
           <Handle item={item} moves={moves} selected={selected === item.id} style={{ left: (at.x + at.w) * width, top: at.y * height }} />
+          {counts.has(item.id) && <Badge item={item} n={counts.get(item.id)!} style={{ left: at.x * width, top: (at.y + at.h) * height }} />}
         </div>
       ))}
     </div>
@@ -59,7 +80,7 @@ export function PdfPassageLayer({ book, page, width, height }: PdfPageContext) {
 
 /** Over the quiet reader's text: the passages of this book whose chapter is showing. */
 export function QuietPassageLayer({ bookId }: { bookId: string }) {
-  const { passages, moves } = useMarks();
+  const { passages, moves, counts } = useMarks();
   const { selected } = useThinking();
   const [tick, setTick] = useState(0);
   // Follow the text as it scrolls and reflows.
@@ -98,6 +119,10 @@ export function QuietPassageLayer({ bookId }: { bookId: string }) {
         <div key={item.id}>
           {moves && item.move && lines.map((r, i) => <div key={i} className="th-underline" data-m={item.move} style={{ left: r.left, top: r.bottom - 2, width: r.width }} />)}
           <Handle item={item} moves={moves} selected={selected === item.id} style={{ left: x, top: y }} />
+          {counts.has(item.id) && (
+            // The passage's end: the left end of its last line in Arabic, the right end in a Latin passage.
+            <Badge item={item} n={counts.get(item.id)!} style={{ left: item.ar ? lines[lines.length - 1].left : lines[lines.length - 1].right, top: lines[lines.length - 1].bottom }} />
+          )}
         </div>
       ))}
     </div>

@@ -849,3 +849,109 @@
     margin-inline-start: 10px;
   }
 }
+
+/* --- backlinks ---------------------------------------------------------------------------------------------------- */
+.th-badge {
+  pointer-events: auto;
+  transform: translate(-50%, -30%);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--ink);
+  color: var(--bg);
+  font: 600 11px/18px var(--font-ui);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  opacity: 0.85;
+}
+.th-badge:hover,
+.th-badge:focus-visible {
+  opacity: 1;
+}
+.th-pdfmarks .th-badge {
+  position: absolute;
+}
+.th-qrmarks .th-badge {
+  position: fixed;
+}
+.th-touch {
+  position: fixed;
+  z-index: 78;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 10px;
+  overflow: auto;
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: 0 0 0 1px var(--border), var(--shadow);
+  font: 13px var(--font-ui);
+  color: var(--ink);
+}
+.th-touch__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.th-touch__head h3 {
+  margin: 0;
+  font: 600 14px var(--font-ui);
+}
+.th-card {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  box-shadow: 0 1px 2px var(--c-margin-card-shadow, rgba(40, 30, 15, 0.08));
+}
+.th-card--q {
+  border: 1px dashed var(--th-question);
+}
+.th-card--link {
+  border-inline-start: 3px solid var(--accent);
+}
+.th-card__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.th-card__via {
+  font-size: 11px;
+}
+.th-card__text {
+  margin: 0;
+  line-height: 1.5;
+}
+.th-card__text.th-ar {
+  font-size: 16px;
+  line-height: 1.7;
+}
+.th-card .th-line__meta {
+  margin: 0;
+}
+.th-kind--link::before {
+  border-radius: 2px;
+}
+.th-src {
+  margin-inline-start: auto;
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-soft);
+  font: 500 11px var(--font-ui);
+  cursor: pointer;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.th-src:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}

@@ -17,6 +17,9 @@ import { isPassage } from './passages';
 import { setReadingBook, setThinking, thinkingState, useThinking } from './state';
 import { ThreadBar } from './ThreadBar';
 import { ThreadPicker } from './ThreadPicker';
+import { touchCounts, touching } from './touching';
+import { TouchingPanel } from './TouchingPanel';
+import { goToItem } from './nav';
 import { threadSummaries } from './threads';
 import { useThinkingData } from './useThinkingData';
 import './thinking.css';
@@ -31,7 +34,7 @@ const IconThread = () => (
 );
 
 /** The thinking desk beside the open book: the active thread's bar, passage handles and their bar, the thread picker. */
-export function ReaderHost({ book }: HostProps) {
+export function ReaderHost({ book, onOpenBook }: HostProps) {
   const { prefs } = usePreferences();
   const data = useThinkingData();
   const st = useThinking();
@@ -47,7 +50,12 @@ export function ReaderHost({ book }: HostProps) {
   const active = threads.find((s) => s.desk.id === st.active) ?? null;
   const passages = useMemo(() => data.items.filter(isPassage), [data.items]);
 
-  useEffect(() => publishPassages(passages, { moves }), [passages, moves]);
+  // Backlinks: counted for this book's passages only (the badges on the page).
+  const counts = useMemo(
+    () => (prefs.thinkingBacklinks ? touchCounts(passages.filter((p) => p.source?.bookId === book.id), data.items, data.links, data.byId) : new Map<string, number>()),
+    [prefs.thinkingBacklinks, passages, book.id, data.items, data.links, data.byId]
+  );
+  useEffect(() => publishPassages(passages, { moves, counts }), [passages, moves, counts]);
   useEffect(() => registerPdfPageExtension({ id: 'thinking', Layer: PdfPassageLayer }), []);
   useEffect(() => {
     setReadingBook(book);
@@ -91,6 +99,7 @@ export function ReaderHost({ book }: HostProps) {
 
   const selected = st.selected ? data.byId.get(st.selected) : undefined;
   const composing = compose ? data.byId.get(compose.on) : undefined;
+  const touched = prefs.thinkingBacklinks && st.touch ? data.byId.get(st.touch) : undefined;
   return (
     <>
       {prefs.thinkingThreads && active && !trip && !st.screen && <ThreadBar thread={active} />}
@@ -118,6 +127,9 @@ export function ReaderHost({ book }: HostProps) {
             setThinking({ selected: null });
           }}
         />
+      )}
+      {touched && touched.source?.bookId === book.id && !compose && (
+        <TouchingPanel passage={touched} touches={touching(touched, data.items, data.links, data.byId)} onGoTo={(item) => void goToItem(item, onOpenBook)} />
       )}
       {moves && book.pdf && <PdfPendingMoves collect={prefs.thinkingThreads} />}
       {moves && <QuietPendingMoves book={book} deskId={deskId} toInbox={toInbox} collect={prefs.thinkingThreads} />}

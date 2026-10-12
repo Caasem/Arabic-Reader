@@ -6,10 +6,12 @@ interface MarksState {
   passages: DeskItem[];
   /** Show each passage's move: its Arabic label and a coloured underline. */
   moves: boolean;
+  /** How many things touch each passage (backlinks), when shown. */
+  counts: Map<string, number>;
 }
-let marks: MarksState = { passages: [], moves: false };
+let marks: MarksState = { passages: [], moves: false, counts: new Map() };
 const listeners = new Set<() => void>();
-export function publishPassages(passages: DeskItem[], opts: { moves: boolean }): void {
+export function publishPassages(passages: DeskItem[], opts: { moves: boolean; counts: Map<string, number> }): void {
   marks = { passages, ...opts };
   listeners.forEach((l) => l());
 }

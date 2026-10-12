@@ -45,6 +45,13 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.115.0 — 2026-10-12
+
+- **Thinking desk, backlinks.** A dark count beside each passage that something touches: your gloss on it, thoughts at its
+  place, thoughts linked to those (from any book), masāʾil asked on it or answered by it, and Muqābala links.
+- **Click the count** for "Touching this passage" in the Ḥāshiya strip: each as a card, thoughts that came by a link
+  marked as such, each with its source to go to. Back to the Ḥāshiya, or Esc, closes it.
+
 ## v0.114.0 — 2026-10-12
 
 - **Thinking desk, argument moves.** Name what a passage is doing, by hand: تعريف Definition (1), دعوى Claim (2),
