@@ -185,6 +185,8 @@ export interface ReaderPreferences {
   wasitStructureExamples: 'dim' | 'normal';
   /** Show Al-Wasit's (مج) (مو) (مع) (د) labels and (ج) plural marker as badges (src/dictionary/senseFormat/wasitLabels.ts). */
   wasitLabelsEnabled: boolean;
+  /** Set Al-Sihah's quoted verses apart, one line each with the halves side by side (src/dictionary/senseFormat/sihahVerses.ts). */
+  sihahVerseLayout: boolean;
   /** The reader's own shelves in the Library. */
   libraryShelves: LibraryShelf[];
   libraryView: 'grid' | 'list';

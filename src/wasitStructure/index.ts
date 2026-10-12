@@ -14,8 +14,9 @@ export const wasitStructureFeature: FeatureDescriptor = {
   SettingsSection: WasitStructureSettings,
   settingsGroup: 'dictionary',
   touchPoints: [
-    'the `wasitStructureEnabled` and `wasitStructureExamples` and `wasitLabelsEnabled` preferences (src/types/preferences.ts, src/state/defaultPreferences.ts)',
+    'the `wasitStructureEnabled` and `wasitStructureExamples` `wasitLabelsEnabled` and `sihahVerseLayout` preferences (src/types/preferences.ts, src/state/defaultPreferences.ts)',
     '`annotateEntry` in the dictionary popup (src/components/reader/DictionaryPopup.tsx)',
+    '`findVerses` and `verseNodes` in its entry list (src/components/reader/dictionaryPopup/entryList.tsx; src/dictionary/senseFormat/sihahVerses.ts)',
   ],
 };
 

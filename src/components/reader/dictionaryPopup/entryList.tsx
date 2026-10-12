@@ -10,6 +10,8 @@ import { vowelScore } from '../../../dictionary/providers/personal/vowels';
 import { reconstructSelection, type DefinitionToken, type ExampleEntryTokens } from '../definitionTokens';
 import type { EntryGroup } from './entryGroups';
 import { LaneMeaning } from '../../../dictionary/senseFormat/LaneMeaning';
+import { findVerses, type Verse } from '../../../dictionary/senseFormat/sihahVerses';
+import { verseNodes } from '../../../dictionary/senseFormat/VerseTokens';
 import { MorphValue } from './MorphValue';
 
 /** Dictionaries whose senses carry examples: the verb-form tag leads the entry, its words can be
@@ -23,7 +25,7 @@ const EXAMPLES_SHOWN = 3;
 export interface EntryListContext {
   word: string;
   clean: boolean;
-  prefs: { morphDisplayStyle: string; verbFormsEnabled: boolean; wasitStructureExamples: string };
+  prefs: { morphDisplayStyle: string; verbFormsEnabled: boolean; wasitStructureExamples: string; sihahVerseLayout: boolean };
   wasitStructure: Map<number, ReturnType<typeof annotateEntry>>;
   wasitMatches: Map<number, Set<number>>;
   entryTokenData: Map<number, { flat: DefinitionToken[]; bySense: DefinitionToken[][] }>;
@@ -88,6 +90,11 @@ export function renderSubEntries(ctx: EntryListContext, entry: DictionaryEntry, 
       </div>
     );
   });
+}
+
+/** A sense's word tokens drawn one by one, or with its Al-Sihah verses set apart. */
+function drawTokens(tokens: DefinitionToken[], verses: Verse[] | null, draw: (t: DefinitionToken) => ReactNode): ReactNode[] {
+  return verses?.length ? verseNodes(tokens, verses, draw) : tokens.map(draw);
 }
 
 export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
@@ -273,6 +280,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                 {renderSubEntries(ctx, entry, i, (s, si) => {
                   const structure = wasitStructure.get(i)?.[si];
                   let wordNo = 0;
+                  const sihahVerses = entry.providerId === 'alsihah' && prefs.sihahVerseLayout ? findVerses(s.gloss, entry.senses[si - 1]?.gloss) : null;
                   return (
                   <div
                     className={
@@ -283,7 +291,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                     key={si}
                     {...(wasitMatches.get(i)?.has(si) ? { [SUB_ENTRY_MATCH_ATTR]: '' } : {})}
                   >
-                    {tokenData.bySense[si].map((t) => {
+                    {drawTokens(tokenData.bySense[si], sihahVerses, (t) => {
                       if (!t.isWord) return <span key={t.globalIdx}>{t.text}</span>;
                       const word = structure?.words[wordNo++];
                       return (

@@ -1,0 +1,15 @@
+/* Al-Sihah verses: one indented row per verse line, the two halves side by side with a gap between. */
+.sihah-verse {
+  display: block;
+  margin-block: 0.3em;
+  padding-inline-start: 1.4em;
+  color: var(--ink);
+}
+
+.sihah-verse__half {
+  display: inline-block;
+}
+
+.sihah-verse__half + .sihah-verse__half {
+  margin-inline-start: 2.2em;
+}

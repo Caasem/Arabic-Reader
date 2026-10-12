@@ -74,6 +74,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   wasitStructureEnabled: true,
   wasitStructureExamples: 'dim',
   wasitLabelsEnabled: true,
+  sihahVerseLayout: true,
   libraryShelves: [],
   libraryView: 'grid',
   librarySort: 'lastRead',

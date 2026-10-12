@@ -11,6 +11,7 @@ export function WasitStructureSettings() {
   const { prefs, updatePrefs } = usePreferences();
 
   return (
+    <>
     <SettingsSection title="Al-Wasīṭ structured view (prototype)">
       <ToggleRow
         label="Show each entry's structure"
@@ -36,5 +37,17 @@ export function WasitStructureSettings() {
         as small badges; hover one for its meaning. Nothing is hidden or reworded.
       </Note>
     </SettingsSection>
+    <SettingsSection title="Al-Ṣiḥāḥ verses">
+      <ToggleRow
+        label="Set quoted verses apart, one line each with the two halves side by side"
+        checked={prefs.sihahVerseLayout}
+        onChange={(value) => updatePrefs({ sihahVerseLayout: value })}
+      />
+      <Note>
+        Only verses whose halves the editors closed with a star are laid out; the rest stay in the running text. Nothing
+        is reworded.
+      </Note>
+    </SettingsSection>
+    </>
   );
 }
