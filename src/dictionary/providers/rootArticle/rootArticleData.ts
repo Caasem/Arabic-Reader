@@ -2,6 +2,7 @@ import type { DictionaryEntry } from '../../../types';
 import { foldAlefHamza, normalize } from '../../../reader/tokenizer/arabicTokenizer';
 import type { AnalysisLike } from '../../subEntries/match';
 import { findRowsBySubEntry, orderBySubEntry } from '../../subEntries/subEntryIndex';
+import { splitItalics } from '../../senseFormat/laneItalics';
 import { buildLookupKeys } from '../alwasit/lookupKeys';
 
 /**
@@ -80,8 +81,8 @@ export function rowToEntry(row: RootArticleRow, provider: { id: string; name: st
     root: headword,
     senses: row.meanings
       .split(/<br\s*\/?>/i)
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map((gloss) => ({ gloss })),
+      .map(splitItalics)
+      .filter((s) => s.text)
+      .map((s) => (s.spans.length ? { gloss: s.text, italics: s.spans } : { gloss: s.text })),
   };
 }

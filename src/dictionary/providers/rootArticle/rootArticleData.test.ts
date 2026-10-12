@@ -27,6 +27,16 @@ describe('parseRootArticleTsv / findRows', () => {
   });
 });
 
+describe('rowToEntry: Lane italics', () => {
+  it('keeps the gloss marker-free and the italics as ranges', () => {
+    const data = parseRootArticleTsv('حسد\tحَسَدٌ \ue000Envy\ue001; (S)<br>\ue000x\ue001\n');
+    const { senses } = rowToEntry(data.byKey.get('حسد')![0], provider);
+    expect(senses[0].gloss).toBe('حَسَدٌ Envy; (S)');
+    expect(senses[0].gloss.slice(...senses[0].italics![0])).toBe('Envy');
+    expect(senses[1]).toEqual({ gloss: 'x', italics: [[0, 1]] });
+  });
+});
+
 describe('rowToEntry', () => {
   it('turns each <br> unit into a sense, dropping empties', () => {
     const entry = rowToEntry({ id: 0, word: 'وفى', meanings: 'أ<br> ب <br><br>ج' }, provider);

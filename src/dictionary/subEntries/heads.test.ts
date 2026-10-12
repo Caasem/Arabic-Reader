@@ -12,6 +12,12 @@ describe('subEntryKey', () => {
   });
 });
 
+describe('unitHead: Lane italic markers', () => {
+  it('reads a line that opens with an italic span', () => {
+    expect(unitHead('lane', 'حَسَدٌ Envy;', 'حسد')?.keys).toEqual(['حسد']);
+  });
+});
+
 describe('articleVariants / cliticVariants', () => {
   it('takes the article off, after a conjunction or preposition too', () => {
     expect(articleVariants('الكتاب')).toEqual(['الكتاب', 'كتاب']);

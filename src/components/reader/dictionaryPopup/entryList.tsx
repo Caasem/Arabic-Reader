@@ -9,6 +9,7 @@ import { groupLabel } from '../../../popupClean';
 import { vowelScore } from '../../../dictionary/providers/personal/vowels';
 import { reconstructSelection, type DefinitionToken, type ExampleEntryTokens } from '../definitionTokens';
 import type { EntryGroup } from './entryGroups';
+import { LaneMeaning } from '../../../dictionary/senseFormat/LaneMeaning';
 import { MorphValue } from './MorphValue';
 
 /** Dictionaries whose senses carry examples: the verb-form tag leads the entry, its words can be
@@ -370,10 +371,10 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                           {head ? (
                             <>
                               <span className={WASIT_MATCH_CLASS}>{head[0]}</span>
-                              {head[1]}
+                              <LaneMeaning text={s.gloss} spans={s.italics} from={head[0].length} />
                             </>
                           ) : (
-                            s.gloss
+                            <LaneMeaning text={s.gloss} spans={s.italics} />
                           )}
                           {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
                         </>

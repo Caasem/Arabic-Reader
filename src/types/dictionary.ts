@@ -5,6 +5,8 @@ export interface DictionaryEntrySense {
   notes?: string;
   /** Worked examples: an Arabic phrase with its gloss. */
   examples?: { ar: string; gloss: string }[];
+  /** Lane's Lexicon: [start, end) ranges of `gloss` that are its English meanings, shown in italics. */
+  italics?: [number, number][];
 }
 
 export interface DictionaryEntry {

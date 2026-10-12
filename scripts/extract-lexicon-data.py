@@ -67,11 +67,19 @@ def to_units(meanings: str) -> list[str]:
 
 
 TAG_RE = re.compile(r"<[^>]*>")
+# Lane's italic spans are its English meanings (the rest is Arabic quotation and
+# source notes). They survive as this private-use pair -- never in any shipped
+# TSV otherwise -- which src/dictionary/senseFormat/laneItalics.ts renders as <em>
+# and strips for every non-display use.
+ITALIC_OPEN = "\ue000"
+ITALIC_CLOSE = "\ue001"
 
 
 def clean_html(text: str) -> str:
     """HTML sub-entry -> one line of plain text (tags dropped, entities decoded)."""
     text = re.sub(r"<(?:br|/tr|/td|/th)[ /]*>", " ", text, flags=re.I)
+    # Lane's English meanings; edge whitespace moves outside, empty spans vanish.
+    text = re.sub(r"<i>(\s*)(.*?)(\s*)</i>", lambda m: f"{m[1]}{ITALIC_OPEN}{m[2]}{ITALIC_CLOSE}{m[3]}" if m[2] else m[1] + m[3], text, flags=re.I | re.S)
     text = html.unescape(TAG_RE.sub("", text))
     return re.sub(r"\s+", " ", text).strip()
 

@@ -1,3 +1,4 @@
+import { stripItalics } from '../senseFormat/laneItalics';
 import { articleVariants, containsRoot, subEntryKey } from './keys';
 
 /** What a dictionary sub-entry (one line of a root article) is about: the word(s) it opens with. */
@@ -146,7 +147,7 @@ function sihahHead(unit: string): SubEntryHead | null {
 export function unitHead(providerId: string, unit: string, root?: string, index = 0): SubEntryHead | null {
   switch (providerId) {
     case 'lane':
-      return laneHead(unit, root);
+      return laneHead(stripItalics(unit), root);
     case 'hanswehr':
       return hansWehrHead(unit, root);
     case 'alsihah':
