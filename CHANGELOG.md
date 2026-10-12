@@ -38,8 +38,16 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 | 23 | 12 Oct | #73 | Hans Wehr shows each derived form (II–X) of a verb on its own line with a small form label, and tapping a verb lands on its own form's line | Yes | 0.108.0 | On `refactor/integration` |
 | 24 | 12 Oct | #73 | Al-Wasīṭ's labels (مج) (مو) (مع) (د) and plural marker (ج) shown as small badges with an English tooltip; can be switched off in Settings | Yes | 0.109.0 | On `refactor/integration` |
 | 25 | 12 Oct | #73 | Al-Ṣiḥāḥ's quoted verses set apart: one indented line per verse with the two halves side by side; can be switched off in Settings | Yes | 0.109.0 | On `refactor/integration` |
+| 26 | 12 Oct | #73 | Dictionary popup typography: sense lines wrap properly, English entries read left to right at a larger size with Arabic words in the reading font, Lane sigla and Hans Wehr transliteration styled | Yes | 0.109.1 | On `feat/popup-typography` |
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
+
+## v0.109.1 — 2026-10-12
+
+- **The dictionary popup reads properly.** Lane and Hans Wehr lines wrap as normal paragraphs instead of running off the edge,
+  and English entries (English, Lane, Hans Wehr, Baranov) read left to right at a larger size, with their Arabic words in
+  your reading font. Lane's source letters (S, K, TA ...) are small and faint, its meanings stand out, Hans Wehr's
+  transliteration is muted, its form numbers are a small label, and senses have a little more room between them.
 
 ## v0.109.0 — 2026-10-12
 

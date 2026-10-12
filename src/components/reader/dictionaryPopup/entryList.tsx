@@ -13,6 +13,8 @@ import { LaneMeaning } from '../../../dictionary/senseFormat/LaneMeaning';
 import { findVerses, type Verse } from '../../../dictionary/senseFormat/sihahVerses';
 import { verseNodes } from '../../../dictionary/senseFormat/VerseTokens';
 import { HansWehrMeaning } from '../../../dictionary/senseFormat/HansWehrMeaning';
+import { SenseText } from '../../../dictionary/senseFormat/SenseText';
+import { ENGLISH_SENSE_PROVIDERS, senseStyleFor } from '../../../dictionary/senseFormat/senseRuns';
 import { MorphValue } from './MorphValue';
 
 /** Dictionaries whose senses carry examples: the verb-form tag leads the entry, its words can be
@@ -344,9 +346,15 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                     );
                   // Lane and Hans Wehr: the line about the looked-up word gets its headword coloured (see wasitMatch).
                   const matched = wasitMatches.get(i)?.has(si);
+                  // English-language dictionaries read left to right, with their Arabic words set apart (see SenseText).
+                  const english = ENGLISH_SENSE_PROVIDERS.has(entry.providerId) || entry.providerId === 'personal';
                   const head = matched ? matchedHead(entry.providerId, s.gloss, entry.root ?? entry.headword) : null;
                   return (
-                    <li key={si} {...(matched ? { [SUB_ENTRY_MATCH_ATTR]: '' } : {})}>
+                    <li
+                      key={si}
+                      {...(english ? { className: 'dict-popup__sense--en', dir: entry.providerId === 'personal' ? 'auto' : 'ltr' } : {})}
+                      {...(matched ? { [SUB_ENTRY_MATCH_ATTR]: '' } : {})}
+                    >
                       {EXAMPLE_PROVIDERS.has(entry.providerId) ? (
                         <div className="dict-popup__sense-main">
                           {s.notes && <bdi className="dict-popup__lead" dir="rtl">{s.notes}</bdi>}
@@ -376,19 +384,28 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                           )}
                         </div>
                       ) : (
-                        <>
-                          {head ? (
-                            <>
-                              <span className={WASIT_MATCH_CLASS}>{head[0]}</span>
-                              <LaneMeaning text={s.gloss} spans={s.italics} from={head[0].length} />
-                            </>
-                          ) : (
-                            <HansWehrMeaning gloss={entry.providerId === 'hanswehr' ? s.gloss : ''}>
+                        <span className="dict-popup__sense-text">
+                          {!english ? (
+                            head ? (
+                              <>
+                                <span className={WASIT_MATCH_CLASS}>{head[0]}</span>
+                                <LaneMeaning text={s.gloss} spans={s.italics} from={head[0].length} />
+                              </>
+                            ) : (
                               <LaneMeaning text={s.gloss} spans={s.italics} />
-                            </HansWehrMeaning>
+                            )
+                          ) : head ? (
+                            <>
+                              <bdi dir="rtl" lang="ar" className={WASIT_MATCH_CLASS + ' dict-sense-ar dict-sense-lead'}>{head[0]}</bdi>
+                              <SenseText text={s.gloss} style={senseStyleFor(entry.providerId)} spans={s.italics} from={head[0].length} lead={false} />
+                            </>
+                          ) : entry.providerId === 'hanswehr' ? (
+                            <HansWehrMeaning gloss={s.gloss} />
+                          ) : (
+                            <SenseText text={s.gloss} style={senseStyleFor(entry.providerId)} spans={s.italics} />
                           )}
                           {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
-                        </>
+                        </span>
                       )}
                     </li>
                   );
