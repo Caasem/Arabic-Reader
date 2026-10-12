@@ -206,6 +206,8 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
               (clean && entry.verbForm ? ' dict-popup__entry--tappable' : '') +
               (inline ? ' dict-popup__entry--inline' : clean && isAr ? ' dict-popup__entry--subs' : '') +
               (exactMatch ? ' dict-popup__entry--best' : '') +
+              // The entry about the tapped word keeps its highlight for as long as the popup is open.
+              (highlighted ? ' dict-popup__entry--about' : '') +
               (entry.vowelClash ? ' dict-popup__entry--clash' : '')
             }
             data-entry-index={i}
@@ -288,7 +290,6 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
               {!clean && saveButton}
             </div>
             )}
-            {entry.vowelClash && <div className="dict-popup__clash-note">doesn't match the vowels in the text</div>}
             {!clean && <VerbFormInfo entry={entry} />}
             {isAr ? folded ? null : (
               <div

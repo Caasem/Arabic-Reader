@@ -685,17 +685,17 @@ export class AramorphEngine {
 
   /**
    * When the word is written with vowels, flags the readings whose own vowels
-   * disagree and moves them after the others. Nothing is removed; and if every
-   * reading disagrees (a typo in the text, or a rule that is wrong for this
-   * word) nothing is flagged and the order stays.
+   * disagree, keeping the order: whether to put them last and grey them is the
+   * reader's choice (see rankByVowels in the provider). Nothing is removed; and
+   * if every reading disagrees (a typo in the text, or a rule that is wrong for
+   * this word) nothing is flagged.
    */
   private rankByWrittenVowels(word: string, results: AramorphResult[]): AramorphResult[] {
     const written = transliterate(cleanQuranicMarks(word));
     if (!harakaat.some((h) => written.includes(h))) return results;
     const flagged = results.map((r) => vowelsClash(written, transliterate(r.word)));
     if (flagged.every(Boolean) || !flagged.some(Boolean)) return results;
-    const marked = results.map((r, i) => (flagged[i] ? { ...r, vowelClash: true } : r));
-    return [...marked.filter((r) => !r.vowelClash), ...marked.filter((r) => r.vowelClash)];
+    return results.map((r, i) => (flagged[i] ? { ...r, vowelClash: true } : r));
   }
 
   lookup(word: string): AramorphResult[] {

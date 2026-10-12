@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { persistenceService } from '../persistence';
 import { dictionaryManager } from '../dictionary';
+import { aramorphProvider } from '../dictionary/providers/aramorph/AramorphDictionaryProvider';
 import { pomodoroService } from '../pomodoro';
 import type { ReaderPreferences } from '../types';
 import { readJSON, STORAGE_KEYS, writeJSON } from '../utils/storage';
@@ -95,6 +96,11 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (enabledProviderIds) dictionaryManager.setEnabledProviders(enabledProviderIds);
   }, [enabledProviderIds]);
+
+  const vowelRanking = prefs?.vowelRanking ?? false;
+  useEffect(() => {
+    aramorphProvider.setVowelRanking(vowelRanking);
+  }, [vowelRanking]);
 
   const providerOrder = prefs?.dictionaryProviderOrder;
   useEffect(() => {

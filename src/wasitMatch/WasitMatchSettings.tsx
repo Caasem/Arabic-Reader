@@ -17,6 +17,11 @@ export function WasitMatchSettings() {
         disabled={!prefs.wasitMatchHighlight}
         onChange={(value) => updatePrefs({ subEntryScroll: value })}
       />
+      <ToggleRow
+        label="Order readings by the vowels written in the text, greying the ones that don't match"
+        checked={prefs.vowelRanking}
+        onChange={(value) => updatePrefs({ vowelRanking: value })}
+      />
       <Note>
         Al-Wasīṭ, Al-Ṣiḥāḥ, Lane's Lexicon and Hans Wehr file every word of a root in one long article. This colours the
         line about the word you tapped (or its dictionary form; for a verb, its form's paragraph) and scrolls the popup to

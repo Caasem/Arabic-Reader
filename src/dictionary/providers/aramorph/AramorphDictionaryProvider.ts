@@ -37,6 +37,8 @@ export class AramorphDictionaryProvider implements DictionaryProvider, Morpholog
   private readonly readyPromise: Promise<void>;
   private readonly results = new Map<string, Promise<AramorphResult[]>>();
   private readonly dataListeners = new Set<() => void>();
+  /** Settings → put readings that match the text's vowels first and grey the rest (off by default). */
+  private vowelRanking = false;
 
   constructor() {
     let resolveReady!: () => void;
@@ -114,6 +116,13 @@ export class AramorphDictionaryProvider implements DictionaryProvider, Morpholog
     this.dataListeners.forEach((l) => l());
   }
 
+  /** Turns ordering by the text's vowels on or off; cached lookups are dropped so the popup redraws. */
+  setVowelRanking(on: boolean): void {
+    if (this.vowelRanking === on) return;
+    this.vowelRanking = on;
+    this.dataListeners.forEach((l) => l());
+  }
+
   private call(type: string, payload: Record<string, unknown> = {}): Promise<WorkerResponse> {
     if (this.crashed) return Promise.reject(new Error(this._loadError ?? 'The dictionary is unavailable.'));
     const id = this.nextId++;
@@ -164,11 +173,11 @@ export class AramorphDictionaryProvider implements DictionaryProvider, Morpholog
   }
 
   async lookup(word: string): Promise<DictionaryEntry[]> {
-    return this.groupByWord(await this.rawLookup(word));
+    return this.groupByWord(rankByVowels(await this.rawLookup(word), this.vowelRanking));
   }
 
   async analyze(word: string): Promise<MorphologicalAnalysis[]> {
-    return toAnalyses(await this.rawLookup(word));
+    return toAnalyses(rankByVowels(await this.rawLookup(word), this.vowelRanking));
   }
 
   /** analyze() for many words in one worker round-trip (book vocabulary index). */
@@ -177,7 +186,7 @@ export class AramorphDictionaryProvider implements DictionaryProvider, Morpholog
     const msg = await this.call('analyzeMany', { words });
     const out = new Map<string, MorphologicalAnalysis[]>();
     if (msg.type !== 'manyResults') return out;
-    for (const word of words) out.set(word, toAnalyses(msg.resultsByWord[word] ?? []));
+    for (const word of words) out.set(word, toAnalyses(rankByVowels(msg.resultsByWord[word] ?? [], this.vowelRanking)));
     return out;
   }
 
@@ -193,11 +202,18 @@ export class AramorphDictionaryProvider implements DictionaryProvider, Morpholog
   }
 }
 
+/**
+ * Ordering by the text's vowels, when the reader turned it on: the readings that agree with the written vowels
+ * first (so the first five analyses, and the Arabic dictionaries searching in that order, lead with them) and the
+ * others kept, flagged to be greyed. Off: the engine's order, with no flags, so nothing is greyed.
+ */
+export function rankByVowels(results: AramorphResult[], on: boolean): AramorphResult[] {
+  if (!on) return results.some((r) => r.vowelClash) ? results.map(({ vowelClash: _, ...r }) => r) : results;
+  return [...results.filter((r) => !r.vowelClash), ...results.filter((r) => r.vowelClash)];
+}
+
 function toAnalyses(results: AramorphResult[]): MorphologicalAnalysis[] {
-  // The readings that agree with the written vowels first, so the first five
-  // (and the Arabic dictionaries, which search in this order) lead with them.
-  const ranked = [...results.filter((r) => !r.vowelClash), ...results.filter((r) => r.vowelClash)];
-  return ranked.slice(0, 5).map((r) => ({
+  return results.slice(0, 5).map((r) => ({
     surfaceForm: r.word,
     lemma: r.lemma && r.lemma !== '---' ? r.lemma : r.word,
     root: r.root !== '---' ? r.root : undefined,

@@ -13,7 +13,6 @@ type Side = 'left' | 'right' | null;
 
 /** Width of an open dock tab at popup size 100%, plus a little air. */
 const DOCK_WIDTH_PX = 106;
-const FLASH_MS = 900;
 
 function scrollParent(el: HTMLElement): HTMLElement | null {
   return el.closest<HTMLElement>('.dict-popup__scroll, .dict-popup__split-col');
@@ -101,8 +100,9 @@ export function EntryDock({
       const el = entryEl(index);
       if (!el) return;
       el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      // The entry jumped to stays highlighted until the next jump (it no longer fades).
+      el.closest('.dict-popup')?.querySelectorAll('.dict-popup__entry--flash').forEach((other) => other.classList.remove('dict-popup__entry--flash'));
       el.classList.add('dict-popup__entry--flash');
-      window.setTimeout(() => el.classList.remove('dict-popup__entry--flash'), FLASH_MS);
     });
   }
 

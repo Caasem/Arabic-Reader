@@ -78,11 +78,11 @@ describe('AramorphEngine.lookup with written vowels', () => {
     expect(vowelled[1].vowelClash).toBe(true);
   });
 
-  it('puts the matching verb reading first for a vowelled word', () => {
+  it('flags the verb reading the vowels rule out, keeping the order (the provider ranks, when on)', () => {
     const e = engine();
-    const [first, second] = e.lookup('كَتَبَ');
-    expect(first).toMatchObject({ word: 'كَتَب' });
-    expect(second).toMatchObject({ word: 'كُتُب', vowelClash: true });
+    const results = e.lookup('كَتَبَ');
+    expect(results.find((r) => r.word === 'كَتَب')?.vowelClash).toBeUndefined();
+    expect(results.find((r) => r.word === 'كُتُب')).toMatchObject({ vowelClash: true });
   });
 
   it('leaves a word without vowels exactly as before', () => {
@@ -133,8 +133,17 @@ describe('the provider with written vowels', () => {
     ...(vowelClash ? { vowelClash } : {}),
   });
 
-  it('keeps the engine order, flags an entry whose readings all clash, and analyses the matching root first', async () => {
+  it('is off by default: the engine order, nothing flagged, so nothing is greyed', async () => {
+    const provider = await providerWith([reading('مُصِرّ', 'صر', true), reading('مِصْر', 'مصر')]);
+    const entries = await provider.lookup('مِصْرَ');
+    expect(entries.map((e) => e.headword)).toEqual(['مُصِرّ', 'مِصْر']);
+    expect(entries.some((e) => e.vowelClash)).toBe(false);
+    expect((await provider.analyze('مِصْرَ')).map((a) => a.root)).toEqual(['صر', 'مصر']);
+  });
+
+  it('when on: flags an entry whose readings all clash, and analyses the matching root first', async () => {
     const provider = await providerWith([reading('مِصْر', 'مصر'), reading('مُصِرّ', 'صر', true), reading('مَصَر', 'مصر', true)]);
+    provider.setVowelRanking(true);
     const entries = await provider.lookup('مِصْرَ');
     expect(entries.map((e) => e.headword)).toEqual(['مِصْر', 'مُصِرّ', 'مَصَر']);
     expect(entries.map((e) => e.vowelClash)).toEqual([undefined, true, true]);
@@ -144,6 +153,7 @@ describe('the provider with written vowels', () => {
 
   it('puts matching readings first in the analyses even if handed over in another order', async () => {
     const provider = await providerWith([reading('مُصِرّ', 'صر', true), reading('مِصْر', 'مصر')]);
+    provider.setVowelRanking(true);
     const analyses = await provider.analyze('مِصْرَ ');
     expect(analyses.map((a) => a.root)).toEqual(['مصر', 'صر']);
   });

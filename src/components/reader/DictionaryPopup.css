@@ -570,10 +570,12 @@
   opacity: 0.6;
 }
 
-.dict-popup__clash-note {
-  color: var(--ink-faint);
-  font-size: 11.5px;
-  font-style: italic;
+/* The entry about the tapped word: a soft accent ground that stays while the popup is open. */
+.dict-popup .dict-popup__entry--about {
+  background: var(--accent-soft);
+  border-radius: 8px;
+  padding-inline: 6px;
+  margin-inline: -6px;
 }
 
 .dict-popup__sense-main {

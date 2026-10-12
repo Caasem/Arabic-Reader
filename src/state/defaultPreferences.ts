@@ -71,6 +71,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   lookCustom: {},
   wasitMatchHighlight: true,
   subEntryScroll: true,
+  vowelRanking: false,
   wasitStructureEnabled: true,
   wasitStructureExamples: 'dim',
   wasitLabelsEnabled: true,

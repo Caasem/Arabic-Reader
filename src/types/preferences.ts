@@ -180,6 +180,8 @@ export interface ReaderPreferences {
   wasitMatchHighlight: boolean;
   /** Scroll the popup to that sub-entry when it is out of view. */
   subEntryScroll: boolean;
+  /** Put the readings that match the vowels written in the text first and grey the rest (off by default). */
+  vowelRanking: boolean;
   /** Prototype: draw Al-Wasit's internal structure in the popup. */
   wasitStructureEnabled: boolean;
   wasitStructureExamples: 'dim' | 'normal';
