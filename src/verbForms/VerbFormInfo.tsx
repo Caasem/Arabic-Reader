@@ -45,8 +45,10 @@ export function VerbFormInfo({ entry, clean = false, open: openProp = false }: P
   useEffect(() => {
     if (!open || family || !root) return;
     let stale = false;
+    // A root a classical dictionary spells with ى (وفى) is AraMorph's with ي.
     aramorphProvider
       .verbFamily(root)
+      .then((members) => (members.length || !root.includes('ى') ? members : aramorphProvider.verbFamily(root.replace(/ى/g, 'ي'))))
       .then((members) => !stale && setFamily(members))
       .catch(() => !stale && setFailed(true));
     return () => {

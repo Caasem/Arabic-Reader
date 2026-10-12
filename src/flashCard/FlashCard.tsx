@@ -5,6 +5,7 @@ import { getReaderMarks, subscribeReaderSelection, type MarkCapture } from '../r
 import { isCleanLocation } from '../readerCore/location';
 import type { BookMeta, VocabularyItem } from '../types';
 import { combinedMeaning, entryMeaning, vocabularyService } from '../vocabulary/vocabularyService';
+import { traitsOf } from '../dictionary/providerTraits';
 
 /** A selection this short is the word to ask about; a longer one is the sentence it came from. */
 const WORD_MAX_CHARS = 40;
@@ -99,7 +100,7 @@ export function FlashCard({ book, onClose }: { book: BookMeta; onClose(): void }
     setFilling(true);
     try {
       const result = await dictionaryManager.lookup(front);
-      const entry = result.entries.find((e) => e.providerId === 'aramorph') ?? result.entries[0];
+      const entry = result.entries.find((e) => traitsOf(e.providerId).shortGloss) ?? result.entries[0];
       if (!entry) return setStatus('nomatch');
       const meaning = result.entries.length > 1 ? combinedMeaning(result.entries.slice(0, 2)) : entryMeaning(entry);
       setForm((f) => ({

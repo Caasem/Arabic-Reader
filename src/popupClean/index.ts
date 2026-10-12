@@ -9,6 +9,7 @@
  */
 import type { FeatureDescriptor } from '../features/registry';
 import './popupClean.css';
+import { groupHeading } from '../dictionary/providerTraits';
 import { PopupCleanSettings } from './PopupCleanSettings';
 
 export const popupCleanFeature: FeatureDescriptor = {
@@ -25,6 +26,7 @@ export const popupCleanFeature: FeatureDescriptor = {
 
 export { EntryDock, type DockItem } from './EntryDock';
 export { entryGist } from './entryGist';
+export { dockItemsFor } from './dockItems';
 
 /** More Arabic (Al-Wasit, Al-Sihah, Maqayis) entries than this start folded to their headword row. */
 export const MAX_OPEN_ARABIC_ENTRIES = 2;
@@ -34,14 +36,7 @@ export function arabicEntriesStartFolded(arabicEntryCount: number, collapseEnabl
   return collapseEnabled && arabicEntryCount > MAX_OPEN_ARABIC_ENTRIES;
 }
 
-/** The group heading: AraMorph reads just "English"; every other dictionary keeps its own name. */
+/** The group heading: AraMorph reads just "English"; every other dictionary keeps its own name (see providerTraits). */
 export function groupLabel(group: { providerId: string; providerName: string }): string {
-  if (group.providerId === 'aramorph') return 'English';
-  if (group.providerId === 'alwasit') return 'Al-Mu‘jam al-Wasīṭ · Arabic';
-  if (group.providerId === 'alsihah') return 'Al-Ṣiḥāḥ · Arabic';
-  if (group.providerId === 'almaqayis') return 'Maqāyīs al-Lugha · Arabic';
-  if (group.providerId === 'lane') return 'Lane · English';
-  if (group.providerId === 'hanswehr') return 'Hans Wehr · English';
-  if (group.providerId === 'baranov') return 'Baranov · Russian';
-  return group.providerName;
+  return groupHeading(group);
 }

@@ -39,8 +39,23 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 | 24 | 12 Oct | #73 | Al-Wasīṭ's labels (مج) (مو) (مع) (د) and plural marker (ج) shown as small badges with an English tooltip; can be switched off in Settings | Yes | 0.109.0 | On `refactor/integration` |
 | 25 | 12 Oct | #73 | Al-Ṣiḥāḥ's quoted verses set apart: one indented line per verse with the two halves side by side; can be switched off in Settings | Yes | 0.109.0 | On `refactor/integration` |
 | 26 | 12 Oct | #73 | Dictionary popup typography: sense lines wrap properly, English entries read left to right at a larger size with Arabic words in the reading font, Lane sigla and Hans Wehr transliteration styled | Yes | 0.109.1 | On `feat/popup-typography` |
+| 27 | 12 Oct | — | Every dictionary shares the same popup features: Lane, Hans Wehr, Al-Ṣiḥāḥ and Al-Wasīṭ are one entry per line (or form) with a “+” each, long lists fold to the entry you tapped with Show all, any word can be picked in any dictionary (English too), the dock and form chips follow the data, not the dictionary's name | Yes | 0.110.0 | On `feat/dict-parity` |
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
+
+## v0.110.0 — 2026-10-12
+
+- **Every dictionary has the same tools.** Lane, Hans Wehr and Al-Ṣiḥāḥ no longer show a whole root as one block: each line is its own
+  entry with its own headword and its own “+”, and Al-Wasīṭ's sections are entries too. A dictionary with more than three entries opens
+  folded to the entry for the word you tapped (or its first), with “Show all N entries” to open the rest in place, so Lane's قلب no
+  longer swamps the popup, and the popup opens at the top instead of scrolling deep inside it.
+- **Pick any words, in any dictionary.** Tap or drag across words in Lane, Hans Wehr, AraMorph and the rest, English words included, and save
+  just those words as the meaning; Lane's italics, source letters and Hans Wehr's labels keep their look.
+- **The same chips and tabs everywhere.** A dictionary that answers under several roots gets the jump tabs, and Lane's numbered verb
+  paragraphs and Hans Wehr's II–X lines get the form and root chips and the other-forms list. Saved sense picks for Lane and Hans Wehr start
+  afresh because their entries are cut differently.
+- **Inside:** features follow the shape of the entries, not a dictionary's name. A conformance test runs every dictionary through one
+  checklist, a guard test stops any new code from naming a dictionary, and `docs/features/dictionary-feature-matrix.md` is generated from it.
 
 ## v0.109.1 — 2026-10-12
 

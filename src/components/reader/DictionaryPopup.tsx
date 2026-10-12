@@ -8,10 +8,9 @@ import { buildEntryTokens, reconstructSelection, type ExampleEntryTokens } from 
 import { findMatchedEntries, scrollToFirstMatches } from '../../wasitMatch';
 import { entriesAboutWord } from '../../dictionary/subEntries/match';
 import { FOLD_ABOVE, visibleEntryIndexes } from '../../dictionary/entryFeatures';
-import { entryLanguage } from '../../dictionary/providerTraits';
-import { traitsOf } from '../../dictionary/providerTraits';
+import { entryLanguage, traitsOf } from '../../dictionary/providerTraits';
 import { annotateEntry } from '../../wasitStructure';
-import { arabicEntriesStartFolded, EntryDock, entryGist, groupLabel, type DockItem } from '../../popupClean';
+import { arabicEntriesStartFolded, dockItemsFor, EntryDock, groupLabel, type DockItem } from '../../popupClean';
 import { dictionaryManager } from '../../dictionary';
 import { AddDictionaryPanel } from '../../popupAddDictionary';
 import { SentenceInBook } from './dictionaryPopup/SentenceInBook';
@@ -214,15 +213,8 @@ export function DictionaryPopup({
   // 'single' actually removes information from view.
   const allGroups = groupEntriesByProvider(result?.entries ?? []);
   const canSplit = allGroups.length > 1;
-  // Clean layout: one dock tab per root article of a dictionary cut into forms (a word with several roots has several).
-  const dockItems: DockItem[] = allGroups
-    .filter((g) => traitsOf(g.providerId).articles === 'forms')
-    .flatMap((g) => g.entries.filter(({ entry }, k) => k === 0 || entry.articleKey !== g.entries[k - 1].entry.articleKey))
-    .map(({ entry, index }) => ({
-      index,
-      headword: entry.root ?? entry.headword,
-      gist: entryGist(entry.senses[0]?.gloss ?? ''),
-    }));
+  // Clean layout: one dock tab per root, for any dictionary whose entries sit under several roots.
+  const dockItems: DockItem[] = dockItemsFor(allGroups);
   const effectiveLayout: 'merged' | 'split' | 'single' =
     prefs.dictionaryPanelLayout === 'single' ? 'single' : prefs.dictionaryPanelLayout === 'split' && canSplit ? 'split' : 'merged';
 

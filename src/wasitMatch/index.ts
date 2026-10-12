@@ -1,6 +1,6 @@
 /**
- * Lands on the looked-up word in a root dictionary's article: colours the sub-entry that matches it
- * (Al-Wasīṭ, Al-Ṣiḥāḥ, Maqāyīs, Lane, Hans Wehr) and scrolls the popup to it. The matching itself lives in
+ * Lands on the looked-up word in a root dictionary's article: colours the entry that matches it
+ * (Al-Wasīṭ, Al-Ṣiḥāḥ, Maqāyīs, Lane, Hans Wehr -- each line or form is an entry of its own) and scrolls the popup to it. The matching itself lives in
  * src/dictionary/subEntries. The app wires its Settings section through `wasitMatchFeature` in
  * src/features/registry.ts; the other touch points are listed in it. To remove the feature, delete this
  * folder, its registry line and those touch points.
@@ -17,7 +17,7 @@ export const wasitMatchFeature: FeatureDescriptor = {
   touchPoints: [
     'the `wasitMatchHighlight` and `subEntryScroll` preferences (src/types/preferences.ts, src/state/defaultPreferences.ts)',
     '`findMatchedEntries` and `scrollToFirstMatches` in the dictionary popup (src/components/reader/DictionaryPopup.tsx)',
-    '`WASIT_MATCH_CLASS`, `SUB_ENTRY_MATCH_ATTR` and `matchedHead` in its entry list (src/components/reader/dictionaryPopup/entryList.tsx)',
+    '`WASIT_MATCH_CLASS` and `SUB_ENTRY_MATCH_ATTR` in its entry list (src/components/reader/dictionaryPopup/entryList.tsx)',
   ],
 };
 

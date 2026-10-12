@@ -35,18 +35,20 @@ export interface ProviderTraits {
   richSenses?: boolean;
   /** This dictionary's first sense is a short English gloss of the word (AraMorph): flash cards and margins use it. */
   shortGloss?: boolean;
+  /** Which meaning the reader picks may be shared with the crowd ranking (never a dictionary the reader loaded). */
+  sharesPicks?: boolean;
 }
 
 const DEFAULT_TRAITS: ProviderTraits = { language: 'en', senseStyle: 'plain' };
 
 const TRAITS: Record<string, ProviderTraits> = {
-  aramorph: { label: 'English', language: 'en', senseStyle: 'plain', shortGloss: true },
-  alwasit: { label: 'Al-Mu‘jam al-Wasīṭ · Arabic', language: 'ar', senseStyle: 'plain', headReader: 'wasit', indexed: true, articles: 'forms', structure: true },
-  alsihah: { label: 'Al-Ṣiḥāḥ · Arabic', language: 'ar', senseStyle: 'plain', headReader: 'sihah', indexed: true, articles: 'lines', verses: true },
-  almaqayis: { label: 'Maqāyīs al-Lugha · Arabic', language: 'ar', senseStyle: 'plain', headReader: 'maqayis', articles: 'essay' },
-  lane: { label: 'Lane · English', language: 'en', senseStyle: 'lane', headReader: 'lane', indexed: true, marksVerbs: true, articles: 'lines' },
+  aramorph: { label: 'English', language: 'en', senseStyle: 'plain', shortGloss: true, sharesPicks: true },
+  alwasit: { label: 'Al-Mu‘jam al-Wasīṭ · Arabic', language: 'ar', senseStyle: 'plain', headReader: 'wasit', indexed: true, articles: 'forms', structure: true, sharesPicks: true },
+  alsihah: { label: 'Al-Ṣiḥāḥ · Arabic', language: 'ar', senseStyle: 'plain', headReader: 'sihah', indexed: true, articles: 'lines', verses: true, sharesPicks: true },
+  almaqayis: { label: 'Maqāyīs al-Lugha · Arabic', language: 'ar', senseStyle: 'plain', headReader: 'maqayis', articles: 'essay', sharesPicks: true },
+  lane: { label: 'Lane · English', language: 'en', senseStyle: 'lane', headReader: 'lane', indexed: true, marksVerbs: true, articles: 'lines', sharesPicks: true },
   hanswehr: { label: 'Hans Wehr · English', language: 'en', senseStyle: 'hanswehr', headReader: 'hanswehr', indexed: true, marksVerbs: true, articles: 'lines' },
-  baranov: { label: 'Baranov · Russian', language: 'en', senseStyle: 'plain', richSenses: true },
+  baranov: { label: 'Baranov · Russian', language: 'en', senseStyle: 'plain', richSenses: true, sharesPicks: true },
   personal: { language: 'en', autoDirection: true, senseStyle: 'plain', richSenses: true },
 };
 
