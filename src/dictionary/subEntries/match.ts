@@ -1,6 +1,7 @@
 import type { DictionaryEntry } from '../../types';
 import { weakLastRadicalVariants } from '../providers/alwasit/lookupKeys';
 import { hasSubEntryHeads, unitHead, type SubEntryHead } from './heads';
+import { traitsOf } from '../providerTraits';
 import { articleVariants, cliticVariants, subEntryKey, vowelsAgree } from './keys';
 
 /** The parts of an AraMorph analysis (MorphologicalAnalysis) matching reads. */
@@ -86,9 +87,6 @@ export function wantedKeys(word: string, analyses: AnalysisLike[] = []): Wanted 
   return wanted;
 }
 
-/** Dictionaries that tell a verb paragraph from a noun one (Lane's form numbers, Hans Wehr's verb paragraph). */
-const MARKS_VERBS = new Set(['lane', 'hanswehr']);
-
 /**
  * How well one sub-entry matches: 4 = the verb form (or Hans Wehr's verb paragraph) of the tapped verb's
  * root; 3 = its headword is the word or a lemma of the same kind (verb/noun); 2 = its headword is the word or
@@ -101,7 +99,7 @@ export function matchTier(head: SubEntryHead | null, wanted: Wanted, providerId:
     if (wanted.verbs.some((v) => (head.verbForm === 0 || v.form === head.verbForm) && v.roots.has(root))) return 4;
   }
   if (head.keys.some((k) => wanted.exact.has(k))) {
-    if (!MARKS_VERBS.has(providerId)) return 3;
+    if (!traitsOf(providerId).marksVerbs) return 3;
     const lemmas = head.verbForm !== undefined ? wanted.verbLemmas : wanted.nounLemmas;
     return head.keys.some((k) => lemmas.has(k)) ? 3 : 2;
   }
@@ -170,4 +168,50 @@ export function senseHeads(entry: DictionaryEntry): (SubEntryHead | null)[] {
 export function findMatchedSenses(entry: DictionaryEntry, word: string, morphology: AnalysisLike[] = []): Set<number> {
   if (!hasSubEntryHeads(entry.providerId)) return new Set();
   return bestMatches(senseHeads(entry), wantedKeys(word, morphology), entry.providerId, entry.root ?? entry.headword).indexes;
+}
+
+/**
+ * Which entries of a lookup result are about the word the reader looked up, as entry index -> the senses of it
+ * to mark (an entry cut from a root article is one line or form, so its sense 0). Entries cut from the same
+ * article (same dictionary and `articleKey`) are matched against each other, exactly as the article's lines
+ * were before it was cut; an entry that is a whole article (Maqāyīs) marks its matching paragraphs.
+ */
+export function findMatchedEntries(entries: DictionaryEntry[], word: string, morphology: AnalysisLike[] = []): Map<number, Set<number>> {
+  const out = new Map<number, Set<number>>();
+  const wanted = wantedKeys(word, morphology);
+  let i = 0;
+  while (i < entries.length) {
+    const first = entries[i];
+    if (!hasSubEntryHeads(first.providerId)) {
+      i++;
+      continue;
+    }
+    if (first.articleKey === undefined) {
+      const senses = findMatchedSenses(first, word, morphology);
+      if (senses.size) out.set(i, senses);
+      i++;
+      continue;
+    }
+    let j = i + 1;
+    while (j < entries.length && entries[j].providerId === first.providerId && entries[j].articleKey === first.articleKey) j++;
+    const root = first.root ?? first.headword;
+    const heads = entries.slice(i, j).map((e, k) => unitHead(e.providerId, e.senses[0]?.gloss ?? '', root, k));
+    for (const k of bestMatches(heads, wanted, first.providerId, root).indexes) out.set(i + k, new Set([0]));
+    i = j;
+  }
+  return out;
+}
+
+/**
+ * The entries that are about the word the reader looked up, for folding a long list down to them: those
+ * marked by findMatchedEntries, plus, in a dictionary whose lines have no headword to read (AraMorph, Baranov, a
+ * file the reader loaded), the entries whose headword is the word itself.
+ */
+export function entriesAboutWord(entries: DictionaryEntry[], word: string, morphology: AnalysisLike[] = []): Set<number> {
+  const out = new Set(findMatchedEntries(entries, word, morphology).keys());
+  const key = subEntryKey(word);
+  entries.forEach((e, i) => {
+    if (key && !hasSubEntryHeads(e.providerId) && subEntryKey(e.headword) === key) out.add(i);
+  });
+  return out;
 }

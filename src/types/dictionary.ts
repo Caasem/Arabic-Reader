@@ -9,11 +9,27 @@ export interface DictionaryEntrySense {
   italics?: [number, number][];
 }
 
+/** The language a sense's text is written in: Arabic, or a left-to-right foreign one (English; Baranov's Russian too). */
+export type SenseLanguage = 'ar' | 'en';
+
+/**
+ * One entry of a dictionary: the shared "sub-entry" shape every provider produces (see
+ * src/dictionary/providerTraits.ts and the adapters in src/dictionary/providers). A long root article is
+ * not one entry but many: one per line (Lane, Hans Wehr, Al-Ṣiḥāḥ) or per lead form with its continuations
+ * (Al-Wasīṭ), each with its own headword, so the popup can save, fold, select words in and mark each one.
+ * Al-Maqāyīs is the one exception: an article is an essay, kept as one entry whose paragraphs are the senses.
+ */
 export interface DictionaryEntry {
   providerId: string;
   providerName: string;
   headword: string; // as shown, vocalized if available
   senses: DictionaryEntrySense[];
+  /** The language the senses are written in. Absent: the provider's default (see providerTraits). */
+  language?: SenseLanguage;
+  /** Entries cut from one root article share this key (the article's row), in article order. Absent for entries that are not part of one. */
+  articleKey?: string;
+  /** The first characters of `senses[0].gloss` that are the headword itself, so the popup does not draw them twice. Absent or 0: none. */
+  headLength?: number;
   root?: string;
   /** The word's citation form (e.g. كاتَبَ for a matched كاتَبْتُهُ), as
    * opposed to `root`, the consonant skeleton (كتب) shared by every word

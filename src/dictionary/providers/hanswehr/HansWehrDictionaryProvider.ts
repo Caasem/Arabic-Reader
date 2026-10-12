@@ -29,7 +29,7 @@ class HansWehrProvider extends RootArticleProvider {
   override async lookup(word: string): Promise<DictionaryEntry[]> {
     this.empty ??= this.source().then(isEmptyHansWehr);
     if (await this.empty) {
-      return [{ providerId: this.id, providerName: this.name, headword: word, senses: [{ gloss: HANS_WEHR_MISSING_NOTE }] }];
+      return [{ providerId: this.id, providerName: this.name, headword: word, language: 'en', senses: [{ gloss: HANS_WEHR_MISSING_NOTE }] }];
     }
     return super.lookup(word);
   }

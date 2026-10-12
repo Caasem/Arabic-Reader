@@ -16,12 +16,12 @@ export const wasitMatchFeature: FeatureDescriptor = {
   settingsGroup: 'dictionary',
   touchPoints: [
     'the `wasitMatchHighlight` and `subEntryScroll` preferences (src/types/preferences.ts, src/state/defaultPreferences.ts)',
-    '`findMatchedSenses` and `scrollToFirstMatches` in the dictionary popup (src/components/reader/DictionaryPopup.tsx)',
+    '`findMatchedEntries` and `scrollToFirstMatches` in the dictionary popup (src/components/reader/DictionaryPopup.tsx)',
     '`WASIT_MATCH_CLASS`, `SUB_ENTRY_MATCH_ATTR` and `matchedHead` in its entry list (src/components/reader/dictionaryPopup/entryList.tsx)',
   ],
 };
 
-export { findMatchedSenses } from '../dictionary/subEntries/match';
+export { findMatchedEntries, findMatchedSenses } from '../dictionary/subEntries/match';
 export { SUB_ENTRY_MATCH_ATTR, scrollToFirstMatches } from './scrollToMatch';
 export { matchedHead } from '../dictionary/subEntries/heads';
 export const WASIT_MATCH_CLASS = 'wasit-match';

@@ -6,8 +6,8 @@ import { usePreferences } from '../../state/PreferencesContext';
 import { IconEdit, IconChevronLeft, IconChevronRight, IconBook, IconMaximize } from '../shared/icons';
 import { buildEntryTokenSenses, buildExampleEntryTokens, reconstructSelection, type DefinitionToken, type ExampleEntryTokens } from './definitionTokens';
 import { isTokenizedProvider } from '../../dictionary/tokenizedProviders';
-import { findMatchedSenses, scrollToFirstMatches } from '../../wasitMatch';
-import { hasSubEntryHeads } from '../../dictionary/subEntries/heads';
+import { findMatchedEntries, scrollToFirstMatches } from '../../wasitMatch';
+import { traitsOf } from '../../dictionary/providerTraits';
 import { annotateEntry } from '../../wasitStructure';
 import { arabicEntriesStartFolded, EntryDock, entryGist, groupLabel, type DockItem } from '../../popupClean';
 import { dictionaryManager } from '../../dictionary';
@@ -17,7 +17,7 @@ import { OcrNote } from './dictionaryPopup/OcrNote';
 import { EditableWord } from './dictionaryPopup/EditableWord';
 import { groupEntriesByProvider } from './dictionaryPopup/entryGroups';
 import { useTokenSelection } from './dictionaryPopup/useTokenSelection';
-import { EXAMPLE_PROVIDERS, renderGroupList, type EntryListContext } from './dictionaryPopup/entryList';
+import { hasRichSenses, renderGroupList, type EntryListContext } from './dictionaryPopup/entryList';
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
@@ -162,8 +162,6 @@ export function DictionaryPopup({
   // Clean layout (src/popupClean): which verb entries have their other forms open.
   const clean = prefs.dictionaryPopupCleanLayout;
   const [openForms, setOpenForms] = useState<Set<number>>(new Set());
-  // Clean layout: Al-Wasit sub-entries (a lead sense and its continuations) saved on their own, keyed "entry:group".
-  const [savedSubKeys, setSavedSubKeys] = useState<Set<string>>(new Set());
   // Clean layout: Arabic entries the reader flipped from how they started (open, or folded when there are many).
   const [foldedEntries, setFoldedEntries] = useState<Set<number>>(new Set());
   // Clean layout: dictionaries whose whole section was saved from its heading.
@@ -211,12 +209,15 @@ export function DictionaryPopup({
   // 'single' actually removes information from view.
   const allGroups = groupEntriesByProvider(result?.entries ?? []);
   const canSplit = allGroups.length > 1;
-  // Clean layout: one dock tab per Al-Wasit entry (a word with several roots has several).
-  const dockItems: DockItem[] = (allGroups.find((g) => g.providerId === 'alwasit')?.entries ?? []).map(({ entry, index }) => ({
-    index,
-    headword: entry.headword,
-    gist: entryGist(entry.senses[0]?.gloss ?? ''),
-  }));
+  // Clean layout: one dock tab per root article of a dictionary cut into forms (a word with several roots has several).
+  const dockItems: DockItem[] = allGroups
+    .filter((g) => traitsOf(g.providerId).articles === 'forms')
+    .flatMap((g) => g.entries.filter(({ entry }, k) => k === 0 || entry.articleKey !== g.entries[k - 1].entry.articleKey))
+    .map(({ entry, index }) => ({
+      index,
+      headword: entry.root ?? entry.headword,
+      gist: entryGist(entry.senses[0]?.gloss ?? ''),
+    }));
   const effectiveLayout: 'merged' | 'split' | 'single' =
     prefs.dictionaryPanelLayout === 'single' ? 'single' : prefs.dictionaryPanelLayout === 'split' && canSplit ? 'split' : 'merged';
 
@@ -293,7 +294,7 @@ export function DictionaryPopup({
   const exampleTokenData = useMemo(() => {
     const map = new Map<number, ExampleEntryTokens>();
     result?.entries.forEach((e, i) => {
-      if (EXAMPLE_PROVIDERS.has(e.providerId)) map.set(i, buildExampleEntryTokens(e));
+      if (hasRichSenses(e.providerId)) map.set(i, buildExampleEntryTokens(e));
     });
     return map;
   }, [result]);
@@ -301,12 +302,8 @@ export function DictionaryPopup({
 
   // Which senses of the root dictionaries' articles are the word that was looked up (see wasitMatch).
   const wasitMatches = useMemo(() => {
-    const map = new Map<number, Set<number>>();
-    if (!prefs.wasitMatchHighlight) return map;
-    result?.entries.forEach((e, i) => {
-      if (hasSubEntryHeads(e.providerId)) map.set(i, findMatchedSenses(e, word, result.morphology));
-    });
-    return map;
+    if (!prefs.wasitMatchHighlight || !result) return new Map<number, Set<number>>();
+    return findMatchedEntries(result.entries, word, result.morphology);
   }, [result, word, prefs.wasitMatchHighlight]);
 
   // Al-Wasit's internal structure (see wasitStructure); null = render plain.
@@ -314,7 +311,7 @@ export function DictionaryPopup({
     const map = new Map<number, ReturnType<typeof annotateEntry>>();
     if (!prefs.wasitStructureEnabled) return map;
     result?.entries.forEach((e, i) => {
-      if (e.providerId === 'alwasit') map.set(i, annotateEntry(e, prefs.wasitLabelsEnabled));
+      if (traitsOf(e.providerId).structure) map.set(i, annotateEntry(e, prefs.wasitLabelsEnabled));
     });
     return map;
   }, [result, prefs.wasitStructureEnabled, prefs.wasitLabelsEnabled]);
@@ -464,8 +461,6 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
     startFoldedExamples,
     foldedEntries,
     setFoldedEntries,
-    savedSubKeys,
-    setSavedSubKeys,
     savedGroups,
     setSavedGroups,
     savedEntryKeys,

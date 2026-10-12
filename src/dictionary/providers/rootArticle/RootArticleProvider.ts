@@ -1,7 +1,8 @@
 import type { DictionaryEntry, DictionaryProvider } from '../../../types';
 import { headwordWindow } from '../../headwords';
 import { aramorphProvider } from '../aramorph/AramorphDictionaryProvider';
-import { findArticles, parseRootArticleTsv, rowToEntry, type RootArticleData } from './rootArticleData';
+import { articleEntries } from './articleEntries';
+import { findArticles, parseRootArticleTsv, type RootArticleData } from './rootArticleData';
 
 /**
  * An optional Arabic-Arabic dictionary filed by root. Like Al-Wasit it can't
@@ -44,6 +45,6 @@ export class RootArticleProvider implements DictionaryProvider {
     } catch {
       // AraMorph unavailable -- fall back to matching the raw surface form only.
     }
-    return findArticles(data, this.id, word, analyses).map((row) => rowToEntry(row, this));
+    return findArticles(data, this.id, word, analyses).flatMap((row) => articleEntries(row, this));
   }
 }

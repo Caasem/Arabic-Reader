@@ -10,12 +10,14 @@ vi.mock('../aramorph/AramorphDictionaryProvider', () => ({ aramorphProvider: { a
 const FIXTURE = 'حسد\tحَسَدٌ Envy; the wishing that a blessing may depart.<br>He envied him.\nكتب\tTo write.\n';
 
 describe("Lane's Lexicon provider shape", () => {
-  it('finds a root article from a TSV and shows sub-entries as plain-text senses', async () => {
+  it('finds a root article from a TSV and cuts it into one entry per line', async () => {
     const lane = new RootArticleProvider('lane', "Lane's Lexicon (Arabic-English)", async () => FIXTURE);
     const entries = await lane.lookup('حسد');
-    expect(entries).toHaveLength(1);
-    expect(entries[0].providerId).toBe('lane');
-    expect(entries[0].senses.map((s) => s.gloss)).toEqual(['حَسَدٌ Envy; the wishing that a blessing may depart.', 'He envied him.']);
+    expect(entries).toHaveLength(2);
+    expect(entries.map((e) => e.providerId)).toEqual(['lane', 'lane']);
+    expect(entries.map((e) => e.senses[0].gloss)).toEqual(['حَسَدٌ Envy; the wishing that a blessing may depart.', 'He envied him.']);
+    expect(entries.map((e) => e.headword)).toEqual(['حَسَدٌ', 'حسد']);
+    expect(entries.every((e) => e.root === 'حسد' && e.articleKey === entries[0].articleKey)).toBe(true);
   });
 });
 

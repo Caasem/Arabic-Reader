@@ -1,5 +1,6 @@
 import type { DictionaryEntry, DictionaryProvider, MorphologicalAnalysis, MorphologyProvider, VerbFamilyMember } from '../../../types';
 import type { AramorphResult, AramorphTables } from './engine';
+import { groupAramorphResults } from './groupResults';
 import { DICT_FILE_NAMES, readDictFileList, type DictFileName } from './dictFileNames';
 
 type TableSizes = Record<keyof AramorphTables, number>;
@@ -188,28 +189,7 @@ export class AramorphDictionaryProvider implements DictionaryProvider, Morpholog
   }
 
   private groupByWord(results: AramorphResult[]): DictionaryEntry[] {
-    const byWord = new Map<string, AramorphResult[]>();
-    for (const r of results) {
-      if (r.hidden) continue; // made-up verbal nouns only feed analyze()'s roots
-      const list = byWord.get(r.word);
-      if (list) list.push(r);
-      else byWord.set(r.word, [r]);
-    }
-    return Array.from(byWord.entries()).map(([word, entries]) => ({
-      providerId: this.id,
-      providerName: this.name,
-      headword: word,
-      root: entries.find((e) => e.root && e.root !== '---')?.root,
-      lemma: entries.find((e) => e.lemma && e.lemma !== '---' && e.lemma !== word)?.lemma,
-      verbForm: entries.find((e) => e.verbForm)?.verbForm,
-      imperfectVowel: entries.find((e) => e.verbForm === 'I' && e.imperfectVowel)?.imperfectVowel,
-      // Readings arrive with the ones that agree with the written vowels first.
-      ...(entries.every((e) => e.vowelClash) ? { vowelClash: true } : {}),
-      // `pos` here is AraMorph's raw affix analysis ("+at/PVSUFF_SUBJ:3FS"),
-      // not a readable part of speech, so it's not shown; the gloss already
-      // spells out the grammatical role in English.
-      senses: entries.map((e) => ({ gloss: e.def || '(no gloss available)' })),
-    }));
+    return groupAramorphResults(results, this.id, this.name);
   }
 }
 

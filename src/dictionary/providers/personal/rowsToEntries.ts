@@ -1,4 +1,5 @@
 import type { DictionaryEntry } from '../../../types';
+import { traitsOf } from '../../providerTraits';
 import { formatDefinition, verbPrefix } from './formatDefinition';
 import type { PersonalRow } from './parse';
 
@@ -13,6 +14,7 @@ export function rowsToEntries(rows: Iterable<PersonalRow>, providerId: string, p
       providerId,
       providerName,
       headword,
+      language: traitsOf(providerId).language,
       senses: formatDefinition(headword, definition),
       ...(verb ? { verbForm: verb.form, imperfectVowel: verb.vowel, lemma: headword, ...(root ? { root } : {}) } : {}),
     };

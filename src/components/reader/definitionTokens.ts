@@ -10,16 +10,22 @@ export interface DefinitionToken {
   globalIdx: number;
 }
 
+/** The text of a sense as drawn under the entry's headword: the first sense without the headword it opens with (see DictionaryEntry.headLength). */
+export function senseBody(entry: DictionaryEntry, si: number): string {
+  const gloss = entry.senses[si].gloss;
+  return si === 0 && entry.headLength ? gloss.slice(entry.headLength) : gloss;
+}
+
 /** Flattens every sense of an entry into one token stream (senses joined by
  * a single space so a selection spanning two senses doesn't run their text
  * together), plus the same token objects grouped per sense for rendering. */
 export function buildEntryTokenSenses(entry: DictionaryEntry): { flat: DefinitionToken[]; bySense: DefinitionToken[][] } {
   const flat: DefinitionToken[] = [];
   const bySense: DefinitionToken[][] = [];
-  entry.senses.forEach((s, si) => {
+  entry.senses.forEach((_, si) => {
     if (si > 0) flat.push({ text: ' ', isWord: false, globalIdx: flat.length });
     const senseTokens: DefinitionToken[] = [];
-    for (const part of s.gloss.split(/(\s+)/).filter((t) => t.length > 0)) {
+    for (const part of senseBody(entry, si).split(/(\s+)/).filter((t) => t.length > 0)) {
       const token: DefinitionToken = { text: part, isWord: !!part.trim(), globalIdx: flat.length };
       flat.push(token);
       senseTokens.push(token);
@@ -71,9 +77,9 @@ export function buildExampleEntryTokens(entry: DictionaryEntry): ExampleEntryTok
     }
     return out;
   };
-  const senses = entry.senses.map((s) => {
+  const senses = entry.senses.map((s, si) => {
     if (flat.length) space();
-    const gloss = tokenize(s.gloss);
+    const gloss = tokenize(senseBody(entry, si));
     const examples = (s.examples ?? []).map((ex) => {
       if (flat.length) space();
       const ar = tokenize(ex.ar);

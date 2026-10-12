@@ -4,6 +4,7 @@
  * and faint, Hans Wehr's transliteration muted. Nothing here changes the text itself -- the segments always
  * concatenate back to `text.slice(from, to)` -- so what is copied, saved or searched is untouched.
  */
+import { traitsOf } from '../providerTraits';
 import { italicPieces, type ItalicSpan } from './laneItalics';
 
 export type SenseKind = 'plain' | 'italic' | 'sigla' | 'translit';
@@ -110,7 +111,9 @@ export function senseSegments(
   if (!slice) return [];
   const shift = (rs: [number, number][]): [number, number][] => rs.map(([a, b]) => [a + from, b + from]);
   const sigla = style === 'lane' ? shift(siglaRanges(slice)) : [];
-  const translit = style === 'hanswehr' ? shift(translitRanges(slice)) : [];
+  // Read on the whole line too, so a line drawn without its opening headword keeps the transliteration that follows it.
+  const wholeTranslit = style === 'hanswehr' && from > 0 ? translitRanges(text).filter(([a, b]) => b > from && a < to).map(([a, b]): [number, number] => [Math.max(a, from), Math.min(b, to)]) : [];
+  const translit = style === 'hanswehr' ? mergeRanges([...shift(translitRanges(slice)), ...wholeTranslit]) : [];
   const leadAt = style !== 'plain' && lead ? leadRun(slice) : null;
   const leadRange: [number, number] | null = leadAt ? [leadAt[0] + from, leadAt[1] + from] : null;
 
@@ -146,10 +149,7 @@ export function senseSegments(
   return out;
 }
 
-/** Dictionaries whose sense lines are English: shown left to right, with their Arabic words set apart. */
-export const ENGLISH_SENSE_PROVIDERS = new Set(['aramorph', 'lane', 'hanswehr', 'baranov']);
-
 /** The style a provider's lines get. */
 export function senseStyleFor(providerId: string): SenseStyle {
-  return providerId === 'lane' ? 'lane' : providerId === 'hanswehr' ? 'hanswehr' : 'plain';
+  return traitsOf(providerId).senseStyle;
 }

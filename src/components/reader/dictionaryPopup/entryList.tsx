@@ -2,24 +2,23 @@ import type { Dispatch, MutableRefObject, PointerEvent, ReactNode, SetStateActio
 import type { DictionaryEntry } from '../../../types';
 import { normalize } from '../../../reader/tokenizer/arabicTokenizer';
 import { isTokenizedProvider } from '../../../dictionary/tokenizedProviders';
-import { matchedHead, SUB_ENTRY_MATCH_ATTR, WASIT_MATCH_CLASS } from '../../../wasitMatch';
+import { SUB_ENTRY_MATCH_ATTR, WASIT_MATCH_CLASS } from '../../../wasitMatch';
 import type { annotateEntry } from '../../../wasitStructure';
 import { VerbFormInfo, VerbFormMark } from '../../../verbForms';
 import { groupLabel } from '../../../popupClean';
 import { vowelScore } from '../../../dictionary/providers/personal/vowels';
-import { reconstructSelection, type DefinitionToken, type ExampleEntryTokens } from '../definitionTokens';
+import { reconstructSelection, senseBody, type DefinitionToken, type ExampleEntryTokens } from '../definitionTokens';
 import type { EntryGroup } from './entryGroups';
 import { LaneMeaning } from '../../../dictionary/senseFormat/LaneMeaning';
 import { findVerses, type Verse } from '../../../dictionary/senseFormat/sihahVerses';
 import { verseNodes } from '../../../dictionary/senseFormat/VerseTokens';
 import { HansWehrMeaning } from '../../../dictionary/senseFormat/HansWehrMeaning';
 import { SenseText } from '../../../dictionary/senseFormat/SenseText';
-import { ENGLISH_SENSE_PROVIDERS, senseStyleFor } from '../../../dictionary/senseFormat/senseRuns';
+import { entryLanguage, traitsOf } from '../../../dictionary/providerTraits';
 import { MorphValue } from './MorphValue';
 
-/** Dictionaries whose senses carry examples: the verb-form tag leads the entry, its words can be
- * selected and saved on their own, and long ones fold (Baranov, and a file the reader loaded). */
-export const EXAMPLE_PROVIDERS = new Set(['baranov', 'personal']);
+/** Entries whose senses carry a lead note, a tag in front and worked examples (Baranov, a file the reader loaded). */
+export const hasRichSenses = (providerId: string): boolean => !!traitsOf(providerId).richSenses;
 /** Examples shown before the "N more examples" button. */
 const EXAMPLES_SHOWN = 3;
 
@@ -38,8 +37,6 @@ export interface EntryListContext {
   startFoldedExamples: boolean;
   foldedEntries: Set<number>;
   setFoldedEntries: Dispatch<SetStateAction<Set<number>>>;
-  savedSubKeys: Set<string>;
-  setSavedSubKeys: Dispatch<SetStateAction<Set<string>>>;
   savedGroups: Set<string>;
   setSavedGroups: Dispatch<SetStateAction<Set<string>>>;
   savedEntryKeys: Set<number>;
@@ -57,44 +54,6 @@ export interface EntryListContext {
   handleTokenPointerDown: (entryIdx: number, idx: number, e: PointerEvent) => void;
   handleTokensPointerMove: (e: PointerEvent) => void;
 }
-/** Al-Wasit's senses. Clean layout groups each lead sense with its continuations into a
- * sub-entry with its own round "+", which saves just that section. */
-export function renderSubEntries(ctx: EntryListContext, entry: DictionaryEntry, entryIndex: number, renderSense: (s: DictionaryEntry['senses'][number], si: number) => ReactNode) {
-  const { clean, wasitStructure, savedSubKeys, setSavedSubKeys, onSaveEntry } = ctx;
-  // Only Al-Wasit has lead/continuation structure to group by; the other
-  // root-keyed dictionaries' lines would each get their own "+".
-  if (!clean || entry.providerId !== 'alwasit') return entry.senses.map(renderSense);
-  const groups: number[][] = [];
-  entry.senses.forEach((_, si) => {
-    const structure = wasitStructure.get(entryIndex)?.[si];
-    if (!groups.length || structure?.isLead || !structure?.isContinuation) groups.push([si]);
-    else groups[groups.length - 1].push(si);
-  });
-  return groups.map((group, gi) => {
-    const key = `${entryIndex}:${gi}`;
-    const done = savedSubKeys.has(key);
-    return (
-      <div className="dict-popup__subentry" key={gi}>
-        {onSaveEntry && groups.length > 1 && (
-          <button
-            className="dict-popup__sense-add"
-            disabled={done}
-            onClick={() => {
-              onSaveEntry({ ...entry, senses: group.map((si) => entry.senses[si]) });
-              setSavedSubKeys((prev) => new Set(prev).add(key));
-            }}
-            aria-label="Add just this section to vocabulary"
-            title={done ? 'Added' : 'Add just this section'}
-          >
-            {done ? '✓' : '+'}
-          </button>
-        )}
-        <div className="dict-popup__sense-body">{group.map((si) => renderSense(entry.senses[si], si))}</div>
-      </div>
-    );
-  });
-}
-
 /** A sense's word tokens drawn one by one, or with its Al-Sihah verses set apart. */
 function drawTokens(tokens: DefinitionToken[], verses: Verse[] | null, draw: (t: DefinitionToken) => ReactNode): ReactNode[] {
   return verses?.length ? verseNodes(tokens, verses, draw) : tokens.map(draw);
@@ -111,7 +70,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
     <div className="dict-popup__group" key={group.providerId}>
       <div className="dict-popup__group-header">
         {clean ? groupLabel(group) : group.providerName}
-        {clean && onSaveEntries && (isTokenizedProvider(group.providerId) || EXAMPLE_PROVIDERS.has(group.providerId)) && group.entries.length > 1 && (
+        {clean && onSaveEntries && group.entries.length > 1 && (
           <button
             className="dict-popup__sense-add dict-popup__group-add"
             disabled={savedGroups.has(group.providerId)}
@@ -126,18 +85,24 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
           </button>
         )}
       </div>
-      {group.entries.map(({ entry, index: i }) => {
+      {group.entries.map(({ entry, index: i }, gk) => {
         // Non-contiguous word selection (click to toggle, drag to add a
         // range) -- the root-keyed Arabic-Arabic dictionaries only (see
         // isTokenizedProvider), and only while a save-selection callback
         // actually exists to hand it to. Every other provider's entries
         // keep the plain, non-interactive sense list below.
+        // The line before this one in the same article: Al-Ṣiḥāḥ's verses follow a line that introduces them.
+        const before = gk > 0 ? group.entries[gk - 1].entry : undefined;
+        const prevGloss = before && before.articleKey !== undefined && before.articleKey === entry.articleKey ? before.senses[before.senses.length - 1]?.gloss : undefined;
         const tokenData = isTokenizedProvider(entry.providerId) ? entryTokenData.get(i) : undefined;
-        const exTokens = EXAMPLE_PROVIDERS.has(entry.providerId) ? exampleTokenData.get(i) : undefined;
+        const exTokens = hasRichSenses(entry.providerId) ? exampleTokenData.get(i) : undefined;
         const wordData = tokenData ?? exTokens;
         const sel = wordData ? tokenSelections.get(i) : undefined;
         const hasSelection = !!sel && sel.size > 0;
-        const folded = clean && ((!!tokenData && startFolded !== foldedEntries.has(i)) || (!!exTokens && startFoldedExamples !== foldedEntries.has(i)));
+        // The entry the looked-up word is (see wasitMatch) starts open whatever the rest do.
+        const matchedEntry = (wasitMatches.get(i)?.size ?? 0) > 0;
+        const folded =
+          clean && ((!!tokenData && startFolded !== foldedEntries.has(i) && !(matchedEntry && startFolded && !foldedEntries.has(i))) || (!!exTokens && startFoldedExamples !== foldedEntries.has(i)));
         // The entry whose spelling (and vowels, when the tapped word has them) is the one looked up.
         const exactMatch = !!exTokens && group.entries.length > 1 && normalize(entry.headword) === normalize(word) && vowelScore(word, entry.headword) < 2;
 
@@ -220,7 +185,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
             <div className="dict-popup__entry-head">
               {clean && wordData ? (
                 <span
-                  className="dict-popup__headword dict-popup__headword--toggle"
+                  className={'dict-popup__headword dict-popup__headword--toggle' + (matchedEntry ? ' ' + WASIT_MATCH_CLASS : '')}
                   role="button"
                   tabIndex={0}
                   aria-expanded={!folded}
@@ -236,7 +201,7 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                   {entry.headword}
                 </span>
               ) : (
-                <span className="dict-popup__headword">{entry.headword}</span>
+                <span className={'dict-popup__headword' + (matchedEntry ? ' ' + WASIT_MATCH_CLASS : '')}>{entry.headword}</span>
               )}
               {/* Sits between the headword and the per-entry save
                   button -- root before form (read first, right next to
@@ -280,10 +245,10 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                 dir="rtl"
                 onPointerMove={handleTokensPointerMove}
               >
-                {renderSubEntries(ctx, entry, i, (s, si) => {
+                {entry.senses.map((s, si) => {
                   const structure = wasitStructure.get(i)?.[si];
                   let wordNo = 0;
-                  const sihahVerses = entry.providerId === 'alsihah' && prefs.sihahVerseLayout ? findVerses(s.gloss, entry.senses[si - 1]?.gloss) : null;
+                  const sihahVerses = traitsOf(entry.providerId).verses && prefs.sihahVerseLayout ? findVerses(senseBody(entry, si), si > 0 ? entry.senses[si - 1]?.gloss : prevGloss) : null;
                   return (
                   <div
                     className={
@@ -344,18 +309,20 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                         <span key={t.globalIdx}>{t.text}</span>
                       ),
                     );
-                  // Lane and Hans Wehr: the line about the looked-up word gets its headword coloured (see wasitMatch).
+                  // The line about the looked-up word is marked for the scroll to land on (see wasitMatch).
                   const matched = wasitMatches.get(i)?.has(si);
                   // English-language dictionaries read left to right, with their Arabic words set apart (see SenseText).
-                  const english = ENGLISH_SENSE_PROVIDERS.has(entry.providerId) || entry.providerId === 'personal';
-                  const head = matched ? matchedHead(entry.providerId, s.gloss, entry.root ?? entry.headword) : null;
+                  const traits = traitsOf(entry.providerId);
+                  const english = entryLanguage(entry) === 'en';
+                  // An entry cut from an article has its headword in the head row; its first sense is drawn without it.
+                  const from = si === 0 ? (entry.headLength ?? 0) : 0;
                   return (
                     <li
                       key={si}
-                      {...(english ? { className: 'dict-popup__sense--en', dir: entry.providerId === 'personal' ? 'auto' : 'ltr' } : {})}
+                      {...(english ? { className: 'dict-popup__sense--en', dir: traits.autoDirection ? 'auto' : 'ltr' } : {})}
                       {...(matched ? { [SUB_ENTRY_MATCH_ATTR]: '' } : {})}
                     >
-                      {EXAMPLE_PROVIDERS.has(entry.providerId) ? (
+                      {traits.richSenses ? (
                         <div className="dict-popup__sense-main">
                           {s.notes && <bdi className="dict-popup__lead" dir="rtl">{s.notes}</bdi>}
                           {(s.pos || s.gender) && (
@@ -386,23 +353,11 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                       ) : (
                         <span className="dict-popup__sense-text">
                           {!english ? (
-                            head ? (
-                              <>
-                                <span className={WASIT_MATCH_CLASS}>{head[0]}</span>
-                                <LaneMeaning text={s.gloss} spans={s.italics} from={head[0].length} />
-                              </>
-                            ) : (
-                              <LaneMeaning text={s.gloss} spans={s.italics} />
-                            )
-                          ) : head ? (
-                            <>
-                              <bdi dir="rtl" lang="ar" className={WASIT_MATCH_CLASS + ' dict-sense-ar dict-sense-lead'}>{head[0]}</bdi>
-                              <SenseText text={s.gloss} style={senseStyleFor(entry.providerId)} spans={s.italics} from={head[0].length} lead={false} />
-                            </>
-                          ) : entry.providerId === 'hanswehr' ? (
+                            <LaneMeaning text={s.gloss} spans={s.italics} from={from} />
+                          ) : traits.senseStyle === 'hanswehr' && from === 0 ? (
                             <HansWehrMeaning gloss={s.gloss} />
                           ) : (
-                            <SenseText text={s.gloss} style={senseStyleFor(entry.providerId)} spans={s.italics} />
+                            <SenseText text={s.gloss} style={traits.senseStyle} spans={s.italics} from={from} lead={from === 0} />
                           )}
                           {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
                         </span>

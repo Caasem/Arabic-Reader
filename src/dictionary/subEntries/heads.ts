@@ -1,6 +1,9 @@
 import { stripItalics } from '../senseFormat/laneItalics';
 import { hansWehrFormLine } from '../senseFormat/hansWehrForms';
+import { hasSubEntryHeads, hasSubEntryIndex, traitsOf } from '../providerTraits';
 import { articleVariants, containsRoot, subEntryKey } from './keys';
+
+export { hasSubEntryHeads, hasSubEntryIndex };
 
 /** What a dictionary sub-entry (one line of a root article) is about: the word(s) it opens with. */
 export interface SubEntryHead {
@@ -21,13 +24,6 @@ export interface SubEntryHead {
   /** A pointer to another place ("look up alphabetically") -- highlighted, but not where the word is filed. */
   crossRef?: boolean;
 }
-
-/** Dictionaries whose lines open with a headword this module can read. */
-const HEADED = new Set(['alwasit', 'alsihah', 'almaqayis', 'lane', 'hanswehr']);
-export const hasSubEntryHeads = (providerId: string): boolean => HEADED.has(providerId);
-/** Dictionaries whose lines are sub-entries worth indexing -- Maqāyīs articles are essays opening with the root only. */
-const INDEXED = new Set(['alwasit', 'alsihah', 'lane', 'hanswehr']);
-export const hasSubEntryIndex = (providerId: string): boolean => INDEXED.has(providerId);
 
 const ARABIC_WORD_RE = /^[؀-ۿ]*[ء-ي][؀-ۿ]*$/;
 /** Punctuation that can cling to either end of a word in the running text. */
@@ -149,16 +145,16 @@ function sihahHead(unit: string): SubEntryHead | null {
  * (a continuation, an editor's note). `root` (the article's) picks the headword out of a multi-word opening.
  */
 export function unitHead(providerId: string, unit: string, root?: string, index = 0): SubEntryHead | null {
-  switch (providerId) {
+  switch (traitsOf(providerId).headReader) {
     case 'lane':
       return laneHead(stripItalics(unit), root);
     case 'hanswehr':
       return hansWehrHead(unit, root);
-    case 'alsihah':
+    case 'sihah':
       return sihahHead(unit);
-    case 'alwasit':
+    case 'wasit':
       return parenHead(unit);
-    case 'almaqayis':
+    case 'maqayis':
       return index === 0 ? parenHead(unit) : null;
     default:
       return null;
