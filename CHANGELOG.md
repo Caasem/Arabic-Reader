@@ -7,7 +7,7 @@ release.
 ## Summary: 10–11 October 2026 (the refactor pass)
 
 Everything that landed from the evening of 10 October to midday on 11 October, in order. Rows 1–7 are on `main`
-(up to 0.96.0); rows 8–21 are on `refactor/integration`
+(up to 0.96.0); rows 8–22 are on `refactor/integration`
 ([Caasem/Arabic-Reader#73](https://github.com/Caasem/Arabic-Reader/pull/73), 0.97.0), waiting to be tested before
 merging. Per-phase detail and how to revert each one: `docs/changes/refactor-changes.md`.
 
@@ -34,8 +34,15 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 | 19 | 11 Oct | #73 | Roots whose و/ي is in doubt are searched under both spellings, led by the one the verb's present tense shows; about 1,000 rootless weak-verb entries get a root, and 2,435 entries under AraMorph's "و or ي" headings (e.g. `nfw/y`) find their articles again | Yes | 0.103.0 | On `refactor/integration` |
 | 20 | 11 Oct | #73 | Dictionary lookup: roots no longer carry AraMorph's homograph numbers (so النور, البشرية, الأحياء find their Arabic articles); Qur'anic and classical spellings are read (هَٰذَا, ٱلْكِتَٰبُ, إِسْمَٰعِيلَ, شاطيء, سليمن); readings that contradict the vowels in the text are sorted last and muted, never removed | Yes | 0.105.0 | On `refactor/integration` |
 | 21 | 11 Oct | #73 | Root dictionaries land on the word: the line about the tapped word (or its dictionary form; a verb's own form paragraph in Lane and Hans Wehr) is coloured and scrolled to in Al-Wasīṭ, Al-Ṣiḥāḥ, Lane and Hans Wehr; a word with no root (إدام, قيراط, بطيخ) opens the article the dictionary files it under | Yes | 0.106.0 | On `refactor/integration` |
+| 22 | 12 Oct | #73 | Lane's Lexicon shows its English meanings in italics again (the Arabic quotations and source notes stay upright) | Yes | 0.107.0 | On `refactor/integration` |
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
+
+## v0.107.0 — 2026-10-12
+
+- **Lane's meanings are in italics again.** In Lane's Lexicon the italic text is the actual English meaning, and the
+  rest is Arabic quotation and source notes (S, K, TA…). The italics had been lost when the dictionary was prepared;
+  they are back, so the meaning stands out on each line. Copying, flashcards, vocabulary and search still get plain text.
 
 ## v0.106.0 — 2026-10-11
 
