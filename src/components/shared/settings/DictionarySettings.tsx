@@ -19,6 +19,7 @@ const PANEL_LAYOUTS: Option<DictionaryPanelLayout>[] = [
   { id: 'merged', label: 'Merged' },
   { id: 'split', label: 'Split' },
   { id: 'single', label: 'Single' },
+  { id: 'tabs', label: 'Tabs' },
 ];
 
 export function DictionarySettings() {
@@ -82,7 +83,8 @@ export function DictionarySettings() {
         When more than one dictionary has an entry for a word: <strong>Merged</strong> stacks every dictionary's
         entries together (the default) — <strong>Split</strong> shows the exact same entries side by side instead (a
         switcher between them on narrow screens), for comparing sources directly — <strong>Single</strong> shows only
-        one dictionary and hides the rest
+        one dictionary and hides the rest — <strong>Tabs</strong> shows one dictionary at a time at any width, with a
+        tab for each (drag a tab to reorder them).
       </Note>
       {prefs.dictionaryPanelLayout === 'single' && (
         <SelectRow

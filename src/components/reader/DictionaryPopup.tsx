@@ -9,6 +9,7 @@ import { findMatchedEntries, scrollToFirstMatches } from '../../wasitMatch';
 import { entriesAboutWord } from '../../dictionary/subEntries/match';
 import { FOLD_ABOVE, visibleEntryIndexes } from '../../dictionary/entryFeatures';
 import { entryLanguage, traitsOf } from '../../dictionary/providerTraits';
+import { orderProviders, reorderSubset } from '../../dictionary/providerOrder';
 import { annotateEntry } from '../../wasitStructure';
 import { arabicEntriesStartFolded, dockItemsFor, EntryDock, groupLabel, type DockItem } from '../../popupClean';
 import { dictionaryManager } from '../../dictionary';
@@ -17,6 +18,8 @@ import { SentenceInBook } from './dictionaryPopup/SentenceInBook';
 import { OcrNote } from './dictionaryPopup/OcrNote';
 import { EditableWord } from './dictionaryPopup/EditableWord';
 import { groupEntriesByProvider } from './dictionaryPopup/entryGroups';
+import { PopupTabs } from './dictionaryPopup/PopupTabs';
+import { effectivePanelLayout } from './dictionaryPopup/panelLayout';
 import { useTokenSelection } from './dictionaryPopup/useTokenSelection';
 import { hasRichSenses, renderGroupList, type EntryListContext } from './dictionaryPopup/entryList';
 import './DictionaryPopup.css';
@@ -214,12 +217,15 @@ export function DictionaryPopup({
   // for a real side-by-side split); 'single' filters down to one chosen
   // provider. Nothing is ever hidden by 'merged' or 'split' -- only
   // 'single' actually removes information from view.
-  const allGroups = groupEntriesByProvider(result?.entries ?? []);
+  // In the order chosen in Settings, so reordering dictionaries (here or there) shows at once.
+  const allGroups = orderProviders(
+    groupEntriesByProvider(result?.entries ?? []).map((g) => ({ ...g, id: g.providerId })),
+    prefs.dictionaryProviderOrder ?? [],
+  );
   const canSplit = allGroups.length > 1;
   // Clean layout: one dock tab per root, for any dictionary whose entries sit under several roots.
   const dockItems: DockItem[] = dockItemsFor(allGroups);
-  const effectiveLayout: 'merged' | 'split' | 'single' =
-    prefs.dictionaryPanelLayout === 'single' ? 'single' : prefs.dictionaryPanelLayout === 'split' && canSplit ? 'split' : 'merged';
+  const effectiveLayout = effectivePanelLayout(prefs.dictionaryPanelLayout, canSplit);
 
   const singleGroups =
     effectiveLayout === 'single'
@@ -239,6 +245,12 @@ export function DictionaryPopup({
     return () => mql.removeEventListener('change', apply);
   }, []);
 
+  // A tab dragged to a new place: the dictionaries' whole order, with the tabs' slots refilled.
+  function reorderTabs(tabIds: string[]) {
+    const all = orderProviders(dictionaryManager.getProviders(), prefs.dictionaryProviderOrder ?? []).map((p) => p.id);
+    updatePrefs({ dictionaryProviderOrder: reorderSubset(all, tabIds) });
+  }
+
   // Which dictionary's entries the narrow-screen tab switcher currently
   // shows -- resets to the first provider whenever the popup moves to a
   // new word, same as savedEntryKeys above.
@@ -246,7 +258,7 @@ export function DictionaryPopup({
   useEffect(() => {
     setActiveTab(null);
   }, [word]);
-  const activeTabId = activeTab ?? primaryGroup?.providerId;
+  const activeTabId = allGroups.some((g) => g.providerId === activeTab) ? (activeTab ?? undefined) : primaryGroup?.providerId;
 
   // Split view: each column scrolls independently (a long Al-Wasit entry
   // shouldn't force AraMorph's shorter column to match its height) --
@@ -554,7 +566,7 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
           if (e.propertyName === 'width') recalcPosition();
         }}
       >
-        {clean && !isNarrow && dockItems.length > 1 && (
+        {clean && !isNarrow && effectiveLayout !== 'tabs' && dockItems.length > 1 && (
           <EntryDock
             items={dockItems}
             popupRef={popupRef}
@@ -576,7 +588,7 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
           />
         )}
 
-        {canSplit && effectiveLayout !== 'single' && !page && (
+        {canSplit && effectiveLayout !== 'single' && effectiveLayout !== 'tabs' && !page && (
           <button
             className="dict-popup__chevron"
             onClick={toggleSplit}
@@ -660,32 +672,25 @@ const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,   
         {!loading && !refreshing && !result?.entries.length && <div className="dict-popup__empty">No entry found for this word yet.</div>}
 
         {!loading && !refreshing && result?.entries.length ? (
-          effectiveLayout === 'split' ? (
-            isNarrow ? (
-              <>
-                <div className="dict-popup__tabs">
-                  {allGroups.map((g) => (
-                    <button
-                      key={g.providerId}
-                      className={'dict-popup__tab' + (g.providerId === activeTabId ? ' dict-popup__tab--active' : '')}
-                      onClick={() => setActiveTab(g.providerId)}
-                    >
-                      {clean ? groupLabel(g) : g.providerName}
-                    </button>
-                  ))}
-                </div>
-                {renderGroupList({ ...entryListContext, tabbed: true }, allGroups.filter((g) => g.providerId === activeTabId))}
-              </>
-            ) : (
-              <div className="dict-popup__split-cols">
-                <div className="dict-popup__split-col" ref={primaryColRef} onWheel={(e) => handleColumnWheel(e, true)}>
-                  {renderGroupList(entryListContext, primaryGroup ? [primaryGroup] : [])}
-                </div>
-                <div className="dict-popup__split-col" ref={secondaryColRef} onWheel={(e) => handleColumnWheel(e, false)}>
-                  {renderGroupList(entryListContext, secondaryGroups)}
-                </div>
+          effectiveLayout === 'tabs' || (effectiveLayout === 'split' && isNarrow) ? (
+            <>
+              <PopupTabs
+                tabs={allGroups.map((g) => ({ id: g.providerId, label: clean ? groupLabel(g) : g.providerName }))}
+                activeId={activeTabId}
+                onSelect={setActiveTab}
+                onReorder={reorderTabs}
+              />
+              {renderGroupList({ ...entryListContext, tabbed: true }, allGroups.filter((g) => g.providerId === activeTabId))}
+            </>
+          ) : effectiveLayout === 'split' ? (
+            <div className="dict-popup__split-cols">
+              <div className="dict-popup__split-col" ref={primaryColRef} onWheel={(e) => handleColumnWheel(e, true)}>
+                {renderGroupList(entryListContext, primaryGroup ? [primaryGroup] : [])}
               </div>
-            )
+              <div className="dict-popup__split-col" ref={secondaryColRef} onWheel={(e) => handleColumnWheel(e, false)}>
+                {renderGroupList(entryListContext, secondaryGroups)}
+              </div>
+            </div>
           ) : effectiveLayout === 'single' ? (
             renderGroupList(entryListContext, singleGroups)
           ) : (

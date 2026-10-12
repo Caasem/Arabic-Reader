@@ -13,8 +13,9 @@ export type MorphDisplayStyle = 'caption' | 'badges';
 /** How the dictionary popup arranges several providers' results: 'merged'
  * stacks them, 'split' shows them side by side (a switcher on narrow
  * screens), 'single' shows only one provider (see
- * `dictionaryPanelSingleProviderId`). */
-export type DictionaryPanelLayout = 'merged' | 'split' | 'single';
+ * `dictionaryPanelSingleProviderId`), 'tabs' shows one provider at a time
+ * under a tab switcher at any width. */
+export type DictionaryPanelLayout = 'merged' | 'split' | 'single' | 'tabs';
 
 export type PomodoroNotification = 'toast' | 'sound' | 'silent';
 
