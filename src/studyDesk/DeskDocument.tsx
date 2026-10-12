@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta } from '../types';
-import { createOwnDesk, ensureBookDesk, getDesk, renameDesk, saveDeskHtml, updateItem } from './deskStore';
+import { addItem, createOwnDesk, ensureBookDesk, getDesk, renameDesk, saveDeskHtml, updateItem } from './deskStore';
 import './deskDocument.css';
 import { applyLineStart, lineStart, runFormat, type FormatCommand } from './docFormat';
 import { documentBlocks } from './docExport';
@@ -17,7 +17,8 @@ import type { Desk, DeskItem } from './types';
 import { docPanelMinimised, rememberDocPanelMinimised } from './deskMemory';
 
 interface Props {
-  book: BookMeta;
+  /** The open book; absent when a thread's document is shown outside a reader (src/thinking). */
+  book?: BookMeta;
   data: DeskData;
   /** Desk to show; the current capture desk when absent. */
   deskId: string;
@@ -25,12 +26,14 @@ interface Props {
   focusItem?: string;
   onClose(): void;
   onSwitchDesk(id: string): void;
-  /** Close the document, capture a region of the page, and come back. */
-  onCapture(): void;
+  /** Close the document, capture a region of the page, and come back. Absent: no Capture buttons. */
+  onCapture?(): void;
   onPullIn?(): void;
   /** Go to where an item came from (this book or another). */
   onGoToSource?(item: DeskItem): void;
   onToast(m: string): void;
+  /** Inside another screen (a thread's Document tab): no Back, desk tabs or title; the screen has its own. */
+  embedded?: boolean;
 }
 
 const FORMATS: { cmd: FormatCommand; label: string; title: string; icon: React.ReactNode }[] = [
@@ -52,7 +55,7 @@ export function shownInDocument(item: DeskItem, mode: 'all' | 'chosen' | 'none')
 }
 
 /** The desk as one notepad, with the inbox beside it to reorder, file and hide items. */
-export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchDesk, onCapture, onPullIn, onGoToSource, onToast }: Props) {
+export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchDesk, onCapture, onPullIn, onGoToSource, onToast, embedded }: Props) {
   const { prefs } = usePreferences();
   const docMode = prefs.studyDeskMarginsInDocument;
   const [desk, setDesk] = useState<Desk | null>(null);
@@ -64,7 +67,8 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
   const saveTimer = useRef<number>(0);
   const loadedFor = useRef<string | null>(null);
   const itemsById = useMemo(() => new Map(data.items.map((i) => [i.id, i])), [data.items]);
-  const deskItems = useMemo(() => data.items.filter((i) => i.deskId === deskId), [data.items, deskId]);
+  // A thread's members stay on their own desks (src/thinking).
+  const deskItems = useMemo(() => data.items.filter((i) => i.deskId === deskId || !!i.threads?.includes(deskId)), [data.items, deskId]);
 
   const bump = () => setVersion((v) => v + 1);
 
@@ -72,7 +76,7 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const d = (await getDesk(deskId)) ?? (deskId.startsWith('book:') ? await ensureBookDesk(book) : null);
+      const d = (await getDesk(deskId)) ?? (deskId.startsWith('book:') && book ? await ensureBookDesk(book) : null);
       if (alive) setDesk(d ?? null);
     })();
     return () => {
@@ -103,9 +107,9 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
       // Leave a note being typed alone; it is redrawn once saved.
       if (id === editing.current && el.querySelector('textarea')) return;
       const item = itemsById.get(id);
-      fillEmbed(el, item, { shown: !!item && shownInDocument(item, docMode), editing: id === editing.current, bookId: book.id });
+      fillEmbed(el, item, { shown: !!item && shownInDocument(item, docMode), editing: id === editing.current, bookId: book?.id ?? '' });
     });
-  }, [itemsById, docMode, book.id]);
+  }, [itemsById, docMode, book?.id]);
 
   // Put the document into the editor once per desk; after that the editor owns it.
   useLayoutEffect(() => {
@@ -419,7 +423,7 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
     const item = itemsById.get(id);
     editing.current = null;
     if (keep && ta && item && ta.value !== (item.body ?? '')) void updateItem(id, { body: ta.value });
-    if (item) fillEmbed(el, item, { shown: shownInDocument(item, docMode), editing: false, bookId: book.id });
+    if (item) fillEmbed(el, item, { shown: shownInDocument(item, docMode), editing: false, bookId: book?.id ?? '' });
   }
   function onEditorClick(e: React.MouseEvent<HTMLDivElement>) {
     const target = e.target as HTMLElement;
@@ -452,7 +456,7 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
       const open = editing.current && edRef.current?.querySelector<HTMLElement>(`.${EMBED_CLASS}[data-item="${editing.current}"]`);
       if (open && open !== host) finishNote(open, true);
       editing.current = id;
-      fillEmbed(host, item, { shown: true, editing: true, bookId: book.id });
+      fillEmbed(host, item, { shown: true, editing: true, bookId: book?.id ?? '' });
       const ta = host.querySelector('textarea');
       if (ta) {
         ta.addEventListener('blur', () => editing.current === id && finishNote(host, true));
@@ -481,7 +485,8 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
   async function addConcept() {
     const t = filter.trim();
     if (!t) return;
-    await capture(book, deskId, { type: 'concept', text: t, ar: looksArabic(t), source: { bookId: book.id, bookTitle: book.title } });
+    if (book) await capture(book, deskId, { type: 'concept', text: t, ar: looksArabic(t), source: { bookId: book.id, bookTitle: book.title } });
+    else await addItem(deskId, { type: 'concept', text: t, ar: looksArabic(t) });
     setFilter('');
     onToast('Concept added at the end');
   }
@@ -495,16 +500,17 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
   const [listOpen, setListOpen] = useState(false);
   const tabDesks = useMemo(() => {
     const own = data.desks.filter((d) => d.kind === 'own').sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4);
-    return data.desks.filter((d) => (d.kind === 'book' && d.bookId === book.id) || own.includes(d) || d.id === deskId);
-  }, [data.desks, book.id, deskId]);
-  const deskLabel = (d: Desk) => (d.kind === 'book' && d.bookId === book.id ? 'This book' : d.title);
+    return data.desks.filter((d) => (d.kind === 'book' && d.bookId === book?.id) || own.includes(d) || d.id === deskId);
+  }, [data.desks, book?.id, deskId]);
+  const deskLabel = (d: Desk) => (d.kind === 'book' && d.bookId === book?.id ? 'This book' : d.title);
   let n = 0;
 
   return (
-    <div className="sd-doc" role="dialog" aria-label="Desk document">
+    <div className={'sd-doc' + (embedded ? ' sd-doc--embedded' : '')} role="dialog" aria-label="Desk document">
       <div className="sd-doc__main">
         <div className="sd-doc__paper">
           <div className="sd-doc__top">
+            {!embedded && (<>
             <button type="button" className="sd-pill" onClick={() => (save(), onClose())}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M15 18l-6-6 6-6" />
@@ -524,6 +530,7 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
                 All desks <span>{data.desks.length}</span>
               </button>
             </div>
+            </>)}
             <ExportMenu
               title={desk?.title || 'Desk'}
               blocks={() => {
@@ -534,13 +541,13 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
             />
           </div>
           <div className="sd-doc__status">
-            <p className="sd-eyebrow">{desk?.kind === 'own' ? 'Your desk · captures from any book' : 'Book desk'}</p>
+            <p className="sd-eyebrow">{desk?.kind === 'own' ? 'Your desk · captures from any book' : desk?.kind === 'thread' ? 'Thread · gathers from any book' : 'Book desk'}</p>
             <span className="sd-doc__count">{words === 1 ? '1 word' : `${words.toLocaleString()} words`}</span>
             <span className={'sd-doc__saved sd-doc__saved--' + saved} role="status" aria-live="polite">
               {saved === 'saving' ? 'Saving…' : saved === 'saved' ? 'Saved' : saved === 'failed' ? 'Not saved: no space left?' : ''}
             </span>
           </div>
-          <h2
+          {!embedded && <h2
             className="sd-doc__title"
             contentEditable
             suppressContentEditableWarning
@@ -555,7 +562,7 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
             }}
           >
             {desk?.title}
-          </h2>
+          </h2>}
           <div className="sd-fmt" role="toolbar" aria-label="Formatting">
             {FORMATS.map((f) => (
               <button key={f.cmd} type="button" title={f.title} aria-label={f.label} onMouseDown={(e) => e.preventDefault()} onClick={() => format(f.cmd)}>
@@ -592,12 +599,12 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
               desks={data.desks}
               items={data.items}
               current={deskId}
-              bookId={book.id}
+              bookId={book?.id ?? ''}
               onOpen={(id) => {
                 setListOpen(false);
                 if (id !== deskId) onSwitchDesk(id);
               }}
-              onDeleted={(id) => id === deskId && onSwitchDesk(`book:${book.id}`)}
+              onDeleted={(id) => id === deskId && book && onSwitchDesk(`book:${book.id}`)}
               onClose={() => setListOpen(false)}
               onToast={onToast}
             />
@@ -629,9 +636,9 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
               <IconInbox />
               <span>{deskItems.length}</span>
             </button>
-            <button type="button" onClick={onCapture} title="Capture a region (Alt+X)" aria-label="Capture a region">
+            {onCapture && <button type="button" onClick={onCapture} title="Capture a region (Alt+X)" aria-label="Capture a region">
               <IconCapture />
-            </button>
+            </button>}
             {onPullIn && (
               <button type="button" onClick={onPullIn} title="Pull in (Alt+U)" aria-label="Pull in">
                 <IconPull />
@@ -660,9 +667,9 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
               <button type="button" className="sd-btn" onClick={() => void addConcept()} disabled={!filter.trim()}>
                 Add concept
               </button>
-              <button type="button" className="sd-btn" onClick={onCapture}>
+              {onCapture && <button type="button" className="sd-btn" onClick={onCapture}>
                 Capture
-              </button>
+              </button>}
               {onPullIn && (
                 <button type="button" className="sd-btn" onClick={onPullIn}>
                   Pull in

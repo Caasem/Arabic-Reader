@@ -1,0 +1,55 @@
+import { lazy, Suspense, useEffect, useRef } from 'react';
+import type { AppHostProps } from '../features/registry';
+import { usePreferences } from '../state/PreferencesContext';
+import { joinThread, onItemAdded } from '../studyDesk/deskStore';
+import { closeScreen, thinkingState, useThinking } from './state';
+import { joinsActiveThread } from './threads';
+import { ThinkingToast } from './toast';
+import './thinking.css';
+
+const ThreadScreen = lazy(() => import('./screens/ThreadScreen').then((m) => ({ default: m.ThreadScreen })));
+
+/**
+ * The thinking desk across the whole app: new things join the active thread wherever they are made, the screens
+ * (Thread, and the parts that add theirs) open over the app, and the one toast shows.
+ */
+export function AppHost({ onOpenBook }: AppHostProps) {
+  const { prefs } = usePreferences();
+  const { screen } = useThinking();
+  const prefsRef = useRef(prefs);
+  useEffect(() => void (prefsRef.current = prefs));
+
+  // While a thread is active, new thoughts, masāʾil and moves join it, from the passage bar, the Ḥāshiya or the desk.
+  useEffect(
+    () =>
+      onItemAdded((item) => {
+        const active = thinkingState().active;
+        if (active && prefsRef.current.thinkingThreads && joinsActiveThread(item)) void joinThread([item.id], active);
+      }),
+    []
+  );
+
+  // Esc closes a screen, unless something inside it (a menu, a note being typed) takes it first.
+  useEffect(() => {
+    if (!screen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      if ((e.target as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      if (document.querySelector('.sd-export__menu, .sd-zoom, .sd-picker')) return;
+      closeScreen();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [screen]);
+
+  return (
+    <>
+      {screen && (
+        <Suspense fallback={<div className="th-screen th-screen--loading" role="status">Loading…</div>}>
+          {screen.kind === 'thread' && prefs.thinkingThreads && <ThreadScreen screen={screen} onOpenBook={onOpenBook} />}
+        </Suspense>
+      )}
+      <ThinkingToast />
+    </>
+  );
+}

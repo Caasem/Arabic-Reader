@@ -45,6 +45,20 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.113.0 — 2026-10-12
+
+- **Thinking desk, threads (off by default: Settings → Reading → Thinking desk).** A thread is a desk that belongs to a
+  question instead of a book. It has an Arabic and/or English name and a guiding question, and gathers from any book.
+- **Alt+T** opens the threads in the Alt+D palette's style: each with how many items it holds and when it was last added
+  to. Type to filter or to start a new thread; Enter collects into it; Stop collecting turns it off. Thread is also in the dock.
+- **The active thread** shows as a bar under the reader's header. While it is on, new thoughts, Ḥāshiya notes and masāʾil
+  join it, wherever they are made.
+- **Passages on the page** (quotes and captures) have a small handle at their start. It opens the passage bar, with a
+  +/✓ button for each thread (the active one, then the most recent), so a passage can be in several threads.
+- **The Thread screen**: a thread switcher, the names and guiding question edited in place, counts, Collect while reading,
+  and tabs: Document (the thread's own desk document, with headings, the "/" picker and export), Gathered (a timeline of
+  what was added, coloured by book, and everything grouped by book) and Masāʾil.
+
 ## v0.112.0 — 2026-10-12
 
 - **Pull in (Alt+U), the next version.** Results are grouped by book (this book first, then the others) with a count on each

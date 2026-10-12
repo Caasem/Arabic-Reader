@@ -7,6 +7,7 @@ import { noteCardFeature } from '../noteCard';
 import { flashCardFeature } from '../flashCard';
 import { picksExportFeature } from '../picksExport';
 import { studyDeskFeature } from '../studyDesk';
+import { thinkingFeature } from '../thinking';
 import { annotateFeature } from '../annotate';
 import { verbFormsFeature } from '../verbForms';
 import { popupCleanFeature } from '../popupClean';
@@ -75,6 +76,7 @@ export const FEATURES: FeatureDescriptor[] = [
   flashCardFeature,
   picksExportFeature,
   studyDeskFeature,
+  thinkingFeature,
   annotateFeature,
   verbFormsFeature,
   popupCleanFeature,
