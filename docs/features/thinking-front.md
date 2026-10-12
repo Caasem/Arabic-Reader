@@ -86,10 +86,20 @@ It is not a parallel system. Everything is a desk, a desk item or a desk documen
 - Answered questions can be reopened.
 
 **Muqābala (Alt+J)**
-- Two books side by side, each pane listing that book's passages page by page. Click a passage on one side, then one
-  on the other, then pick a relation (Same text, Supports, Differs, Explains, Quotes) and write an optional note.
+- Two live books side by side: each pane shows the book itself, its text chapter by chapter (rendered as the quiet
+  reader renders it, so `clean:` places line up) or, for a book added from a PDF, its pages (pdf.js, with the text
+  layer). A PDF book whose text reflowed can be shown either way (Text / PDF pages). Any book in the library can be
+  opened; books with kept passages come first.
+- Passages kept from the book are marked in place (in their move's colour). Click a mark on one side, then one on the
+  other; or select words in either pane and press Keep these words, which keeps them as a quote on the book's desk
+  (as the reader's Highlighter would) and picks them. On a scanned page, drag a box round the words. Then pick a
+  relation (Same text, Supports, Differs, Explains, Quotes) and write an optional note.
+- Each pane has a chapter list (text) or the page it is on (PDF), and "Kept here" to jump to a passage. A passage
+  kept in the other view of a PDF book is counted under the pane, and opening one of its links switches the view.
 - Lines join linked passages across the gap, coloured by relation (Differs dashed), with the relation's label on a
-  chip in the gap. Clicking a chip or line shows the link's note and both citations.
+  chip in the gap, and follow both panes as they scroll. When one end is scrolled away (or in another chapter) the
+  line points at the pane's top or bottom edge, dotted. Clicking a chip shows the link's note and both citations and
+  scrolls both panes to its passages. "Links between these two books" lists them all under the panes.
 - Under 900px wide the panes stack and the links are listed instead of drawn.
 - "All links in your library" lists every link; opening one shows its two books.
 - Alt+J (or Compare in the passage bar) opens Muqābala with that passage picked on the left.
@@ -197,8 +207,10 @@ Settings → Reading → Thinking desk:
   handle at its start (its move label, or a dot), and a new passage from a selection, as the Highlighter does.
 - **Labels "inline".** The quiet reader's text is never changed (its offsets are the `clean:` places), so labels and
   underlines are drawn over the text, just before the passage's first word, not inserted into it.
-- **Muqābala panes list passages**, page by page, rather than rendering two whole books: linking needs passages on the
-  desk anyway, and two live PDF readers side by side would double the pages view. Pick more in the reader, then link.
+- **Muqābala panes are live books** (0.120.0; at first they only listed kept passages). They are light readers of their
+  own (`src/thinking/live/`), not two copies of the quiet reader or the pages view: one chapter at a time for text, and
+  for PDFs only the pages near the view are drawn. No dictionary, highlights or dock inside them; the reader is one
+  click away from any link (the citations in the link panel).
 - **Thread membership** is `threads` on the item (plus `joined` dates for the growth chart), not a copy: the item stays
   on its own desk and is embedded in the thread's document.
 - **A thought's history** keeps earlier wordings in `versions`; the item's own text is the current one.
@@ -215,5 +227,5 @@ Settings → Reading → Thinking desk:
 - Phase 8, Obsidian and Notion export, was set aside before it was folded in; `thinkingExport` exists but does nothing yet.
 
 - Sync of the new tables (they follow the desk tables).
-- Moves inside epub (iframe) books; rendering two live readers in Muqābala.
+- Moves inside epub (iframe) books; looking words up inside a Muqābala pane.
 - Hash addresses for the new screens.

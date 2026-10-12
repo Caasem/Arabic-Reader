@@ -1107,45 +1107,6 @@
   padding-bottom: 6px;
   border-bottom: 1px solid var(--border);
 }
-.th-pane__head .th-switch {
-  width: 100%;
-}
-.th-pane__page {
-  margin: 8px 2px 0;
-  font: 600 10.5px var(--font-ui);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-.th-cmp-psg {
-  display: block;
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--ink);
-  text-align: start;
-  font: 14px/1.6 var(--font-ui);
-  cursor: pointer;
-}
-.th-cmp-psg .th-ar {
-  font-size: 18px;
-  line-height: 1.8;
-}
-.th-cmp-psg img {
-  display: block;
-  max-width: 100%;
-  border-radius: 6px;
-}
-.th-cmp-psg:hover {
-  background: var(--bg);
-  border-color: var(--border);
-}
-.th-cmp-psg[aria-pressed='true'] {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
 .th-wires {
   position: absolute;
   inset: 0;
@@ -1182,6 +1143,9 @@
 .th-relchip[aria-pressed='true'] {
   background: var(--rel);
   color: var(--bg-elevated);
+}
+.th-wire[data-off='true'] {
+  stroke-dasharray: 2 5;
 }
 .th-cmp-list {
   display: grid;
@@ -1221,8 +1185,214 @@
 .th-linknote__text {
   font: 16px/1.5 var(--font-ui);
 }
-.th-cmp-psg > span {
+
+/* --- Muqābala: live panes ------------------------------------------------------------------------------------------ */
+.th-cmp--live .th-pane {
+  align-content: start;
+}
+.th-pane__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.th-pane__head .th-switch {
+  flex: 1 1 200px;
+  width: auto;
+}
+.th-seg {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.th-seg button {
+  padding: 4px 11px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font: 12.5px var(--font-ui);
+  cursor: pointer;
+}
+.th-seg button[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+.th-live {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.th-live__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font: 12.5px var(--font-ui);
+}
+.th-live__chapter {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+.th-live__go {
+  flex: 1 1 140px;
+  min-width: 0;
+  margin-inline-start: auto;
+}
+.th-live__note {
+  margin: 0;
+  font-size: 12px;
+}
+.th-live__scroll {
+  position: relative;
+  height: max(360px, calc(100vh - 290px));
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: 10px;
+  background: var(--bg);
+}
+.th-cmp--narrow .th-live__scroll {
+  height: 58vh;
+}
+.th-live__sheet {
+  position: relative;
+  min-height: 100%;
+}
+.th-live__msg {
+  padding: 24px;
+  text-align: center;
+}
+.th-live__chapterwrap {
+  position: relative;
+  padding: 14px 18px 40px;
+}
+.th-live__text {
+  color: var(--ink);
+  font: 19px/1.9 var(--font-arabic);
+  text-align: justify;
+}
+.th-live__text p {
+  margin: 0 0 0.5em;
+  white-space: pre-line;
+}
+.th-live__text .clean-reader__title {
+  margin: 0 0 0.75em;
+  font-size: 1.3em;
+  font-weight: 700;
+  line-height: 1.6;
+}
+.th-live__text sup button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+}
+.th-live__marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.th-live__mark {
+  position: absolute;
+  --m: var(--accent);
+  border-bottom: 2px solid var(--m);
+  background: color-mix(in srgb, var(--m) 14%, transparent);
+  border-radius: 3px;
+  pointer-events: none;
+}
+.th-live__mark[data-linked='true'] {
+  background: color-mix(in srgb, var(--m) 22%, transparent);
+}
+.th-live__mark[data-on='true'],
+.th-live__mark[data-picked='true'] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.th-live__keep {
+  position: absolute;
+  z-index: 2;
+  white-space: nowrap;
+}
+.th-live__pages {
+  display: grid;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px;
+}
+.th-live__page {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.12);
+}
+.th-live__page[data-scanned='true'] {
+  cursor: crosshair;
+  touch-action: none;
+}
+.th-live__canvas {
+  position: absolute;
+  inset: 0;
   display: block;
+}
+.th-live__pagenum {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #999;
+  font: 14px var(--font-ui);
+}
+.th-live__drag {
+  position: absolute;
+  border: 2px dashed var(--accent);
+  background: var(--accent-soft);
+  pointer-events: none;
+}
+/* pdf.js's text layer, as the pages view draws it (pdfPages.css, .pdfp-text). */
+.th-live-text {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  line-height: 1;
+  text-align: initial;
+  transform-origin: 0 0;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+.th-live-text :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+.th-live-text > :not(.markedContent),
+.th-live-text .markedContent span:not(.markedContent) {
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+.th-live-text .markedContent {
+  display: contents;
+}
+.th-live-text ::selection {
+  background: var(--accent-soft, rgb(156 122 79 / 0.3));
+}
+.th-cmp-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+}
+.th-cmp-dock:empty {
+  display: none;
+}
+.th-cmp-dock .th-panel {
+  box-shadow: 0 -6px 24px rgb(0 0 0 / 0.12);
 }
 
 

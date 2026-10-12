@@ -1,12 +1,19 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { addLink, deleteLink, restoreLink, updateLink } from '../../studyDesk/deskStore';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { libraryService } from '../../library/libraryService';
+import { hasPdfChoice, loadPdfView } from '../../pdf/pages/pdfView';
+import { usePreferences } from '../../state/PreferencesContext';
+import { currentDeskId } from '../../studyDesk/deskMemory';
+import { addLink, bookDeskId, deleteLink, restoreLink, updateLink } from '../../studyDesk/deskStore';
 import type { DeskItem, DeskLink, DeskRel } from '../../studyDesk/types';
-import { useDeskImage } from '../../studyDesk/useDesk';
+import { capture, looksArabic } from '../../studyDesk/useDesk';
+import type { BookMeta } from '../../types';
+import { LivePane, type Kept, type LivePaneHandle } from '../live/LivePane';
+import { anchorIn, viewFor, type LiveView } from '../live/places';
 import { bookPassages, booksWithPassages, linksAcross, pickPassage, relLabel, RELATIONS, wirePath, type Pick } from '../muqabala';
 import { goToItem, type OpenBook } from '../nav';
-import { citeOf, pageOf, short } from '../passages';
+import { citeOf, short } from '../passages';
 import { say } from '../say';
-import type { Screen } from '../state';
+import { readingBook, type Screen } from '../state';
 import { useThinkingData } from '../useThinkingData';
 import { Frame } from './Frame';
 
@@ -29,149 +36,249 @@ interface Wire {
   d: string;
   x: number;
   y: number;
+  /** One end is scrolled out of its pane: the line points at the pane's edge. */
+  off: boolean;
 }
 
+type Side = 'a' | 'b';
+/** What one pane shows: a book, in which view, opening at which passage (`n` remounts it to open there again). */
+interface Pane {
+  bookId?: string;
+  view: LiveView;
+  start?: string;
+  n: number;
+}
+
+const viewOf = (book: BookMeta | undefined, item?: DeskItem): LiveView => (book?.pdf ? (hasPdfChoice(book) ? viewFor(item, loadPdfView(book)) : 'pages') : 'text');
+
 /**
- * Muqābala: two books side by side, each pane its passages page by page. Click a passage on one side, then one on the
- * other, and name how they relate. Lines join linked passages across the gap, with the relation on a chip; under 900px
- * the panes stack and the links are listed instead.
+ * Muqābala: two books open side by side, live: their own text, or their PDF pages. Passages kept from each are marked;
+ * click one on each side (or select new words and keep them), then name how they relate. Lines join linked passages
+ * across the gap and follow both sides as they scroll, with the relation on a chip; under 900px the panes stack and
+ * the links are listed instead.
  */
 export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen, { kind: 'muqabala' }>; onOpenBook?: OpenBook }) {
   const data = useThinkingData();
+  const { prefs } = usePreferences();
   const narrow = useNarrow();
-  const books = useMemo(() => booksWithPassages(data.items), [data.items]);
-  const [chosen, setChosen] = useState<{ a?: string; b?: string }>({});
+  const [library, setLibrary] = useState<BookMeta[] | null>(null);
+  useEffect(() => {
+    void libraryService.listBooks().then((all) => setLibrary([...all].sort((x, y) => (y.updatedAt ?? y.addedAt) - (x.updatedAt ?? x.addedAt))));
+  }, []);
+  const counts = useMemo(() => new Map(booksWithPassages(data.items).map((b) => [b.bookId, b.passages])), [data.items]);
+  // Books with kept passages first, most first; then the rest, most recent first.
+  const books = useMemo(() => (library ? [...library].sort((x, y) => (counts.get(y.id) ?? 0) - (counts.get(x.id) ?? 0)) : []), [library, counts]);
+  const bookOf = useCallback((id?: string) => books.find((x) => x.id === id), [books]);
+
+  const [panes, setPanes] = useState<Record<Side, Pane> | null>(null);
   const [pick, setPick] = useState<Pick>({ pick: null, pair: null });
   const [active, setActive] = useState<string | null>(screen.link ?? null);
-  const [started, setStarted] = useState(false);
 
-  // Where the screen starts: a link's two books, or a passage picked on the left (Compare, Alt+J).
-  if (data.loaded && !started) {
-    setStarted(true);
+  // Where the screen starts: a link's two books, a passage on the left (Compare, Alt+J), else the book being read (or
+  // the one most kept from) beside the next most kept from.
+  if (data.loaded && library && !panes) {
     const link = screen.link ? data.links.find((l) => l.id === screen.link) : undefined;
-    const from = screen.a ? data.byId.get(screen.a) : undefined;
-    if (link) setChosen({ a: data.byId.get(link.a)?.source?.bookId, b: data.byId.get(link.b)?.source?.bookId });
-    else if (from?.source) {
-      setChosen({ a: from.source.bookId, b: books.find((x) => x.bookId !== from.source!.bookId)?.bookId });
-      setPick({ pick: { id: from.id, side: 'a' }, pair: null });
-    }
+    const x = link ? data.byId.get(link.a) : screen.a ? data.byId.get(screen.a) : undefined;
+    const y = link ? data.byId.get(link.b) : undefined;
+    const a = x?.source?.bookId ?? bookOf(readingBook()?.id)?.id ?? books[0]?.id;
+    const b = y?.source?.bookId ?? books.find((k) => k.id !== a)?.id ?? a;
+    setPanes({ a: { bookId: a, view: viewOf(bookOf(a), x), start: x?.id, n: 0 }, b: { bookId: b, view: viewOf(bookOf(b), y), start: y?.id, n: 0 } });
+    if (x && !link) setPick({ pick: { id: x.id, side: 'a' }, pair: null });
   }
-  const a = chosen.a ?? books[0]?.bookId;
-  const b = chosen.b ?? books.find((x) => x.bookId !== a)?.bookId ?? a;
+  const a = panes?.a.bookId;
+  const b = panes?.b.bookId;
   const left = useMemo(() => (a ? bookPassages(data.items, a) : []), [data.items, a]);
   const right = useMemo(() => (b ? bookPassages(data.items, b) : []), [data.items, b]);
   const across = useMemo(() => (a && b ? linksAcross(data.links, data.byId, a, b) : []), [data.links, data.byId, a, b]);
-  const titleOf = (id?: string) => books.find((x) => x.bookId === id)?.title ?? 'A book';
+  const titleOf = (id?: string) => bookOf(id)?.title ?? 'A book';
 
-  // The lines: measured once the panes are laid out, again when they change size.
+  // The lines: from each passage's height in its pane, redrawn as either pane scrolls or lays out again.
   const boxRef = useRef<HTMLDivElement>(null);
+  const paneA = useRef<LivePaneHandle>(null);
+  const paneB = useRef<LivePaneHandle>(null);
   const [wires, setWires] = useState<Wire[]>([]);
-  const [tick, setTick] = useState(0);
+  const raf = useRef(0);
+  const draw = useCallback(() => {
+    cancelAnimationFrame(raf.current);
+    raf.current = requestAnimationFrame(() => {
+      const box = boxRef.current?.getBoundingClientRect();
+      const ra = paneA.current?.box();
+      const rb = paneB.current?.box();
+      if (!box || !ra || !rb || narrow) return setWires([]);
+      const out: Wire[] = [];
+      for (const { link, left: l, right: r } of across) {
+        const ea = anchorIn(paneA.current!.yOf(l.id), paneA.current!.before(l.id), ra.top, ra.bottom);
+        const eb = anchorIn(paneB.current!.yOf(r.id), paneB.current!.before(r.id), rb.top, rb.bottom);
+        if (ea.off && eb.off && link.id !== active) continue;
+        const x1 = ra.right - box.left;
+        const y1 = ea.y - box.top;
+        const x2 = rb.left - box.left;
+        const y2 = eb.y - box.top;
+        out.push({ id: link.id, rel: link.rel, d: wirePath(x1, y1, x2, y2), x: (x1 + x2) / 2, y: (y1 + y2) / 2, off: ea.off || eb.off });
+      }
+      setWires(out);
+    });
+  }, [across, narrow, active]);
   useEffect(() => {
-    const box = boxRef.current;
-    if (!box || narrow) return;
-    const ro = new ResizeObserver(() => setTick((t) => t + 1));
-    ro.observe(box);
-    return () => ro.disconnect();
-  }, [narrow]);
-  useLayoutEffect(() => {
-    const box = boxRef.current;
-    if (!box || narrow) return setWires([]);
-    const r0 = box.getBoundingClientRect();
-    const paneA = box.querySelector('[data-side="a"]')?.getBoundingClientRect();
-    const paneB = box.querySelector('[data-side="b"]')?.getBoundingClientRect();
-    if (!paneA || !paneB) return setWires([]);
-    const out: Wire[] = [];
-    for (const { link, left: l, right: r } of across) {
-      const ea = box.querySelector(`[data-side="a"] [data-psg="${l.id}"]`)?.getBoundingClientRect();
-      const eb = box.querySelector(`[data-side="b"] [data-psg="${r.id}"]`)?.getBoundingClientRect();
-      if (!ea || !eb) continue;
-      const x1 = paneA.right - r0.left;
-      const y1 = ea.top + Math.min(ea.height / 2, 28) - r0.top;
-      const x2 = paneB.left - r0.left;
-      const y2 = eb.top + Math.min(eb.height / 2, 28) - r0.top;
-      out.push({ id: link.id, rel: link.rel, d: wirePath(x1, y1, x2, y2), x: (x1 + x2) / 2, y: (y1 + y2) / 2 });
-    }
-    setWires(out);
-  }, [across, narrow, tick, left, right]);
+    draw();
+    window.addEventListener('resize', draw);
+    return () => {
+      window.removeEventListener('resize', draw);
+      cancelAnimationFrame(raf.current);
+    };
+  }, [draw, left, right]);
 
-  if (!data.loaded) return <div className="th-screen th-screen--loading" role="status">Loading…</div>;
+  if (!data.loaded || !library || !panes) return <div className="th-screen th-screen--loading" role="status">Loading…</div>;
   if (books.length === 0)
     return (
       <Frame eyebrow="Muqābala" title="Two books side by side">
-        <p className="th-sub">Muqābala links passages you have kept from two books. Highlight a passage or two in each book first (or tag them with a move), then come back.</p>
+        <p className="th-sub">Muqābala opens two books side by side. Add a book to your library first.</p>
       </Frame>
     );
 
-  const click = (id: string, side: 'a' | 'b') => {
-    const next = pickPassage(pick, id, side);
-    setPick(next);
-    if (next.pair) setActive(null);
+  const handle = (side: Side) => (side === 'a' ? paneA : paneB).current;
+  const setPane = (side: Side, pane: Partial<Pane>) => setPanes((p) => p && { ...p, [side]: { ...p[side], ...pane, n: p[side].n + 1 } });
+  /** Shows a passage in its pane: scrolls to it, or opens the view it was kept in. */
+  const show = (side: Side, item: DeskItem) => {
+    if (handle(side)?.reveal(item.id)) return;
+    const book = bookOf(item.source?.bookId);
+    setPane(side, { view: viewOf(book, item), start: item.id });
+  };
+  const choose = (id: string | null) => {
+    setActive(id);
+    const found = id ? across.find((x) => x.link.id === id) : undefined;
+    if (found) {
+      show('a', found.left);
+      show('b', found.right);
+    }
+  };
+  const click = (id: string, side: Side) => {
+    setPick((was) => {
+      const next = pickPassage(was, id, side);
+      if (next.pair) setActive(null);
+      return next;
+    });
+  };
+  const keep = async (side: Side, kept: Kept) => {
+    const book = bookOf(panes[side].bookId);
+    if (!book) return;
+    const item = await capture(
+      book,
+      currentDeskId(book.id) ?? bookDeskId(book.id),
+      {
+        type: kept.text ? 'quote' : 'capture',
+        text: kept.text || `Region of ${kept.chapterLabel.toLowerCase()}`,
+        ar: looksArabic(kept.text),
+        source: { bookId: book.id, bookTitle: book.title, location: kept.location, chapterLabel: kept.chapterLabel },
+        inInbox: prefs.studyDeskMarginsToInbox === 'auto',
+      },
+      kept.image
+    );
+    say('Kept');
+    click(item.id, side);
   };
   const link = active ? data.links.find((l) => l.id === active) : undefined;
-  const hint = pick.pair ? 'Name how they relate, below.' : pick.pick ? 'Now click a passage on the other side.' : 'Click a passage, then one on the other side, to link them.';
+  const on = new Set(link ? [link.a, link.b] : []);
+  const linked = new Set(across.flatMap((x) => [x.left.id, x.right.id]));
+  const hint = pick.pair
+    ? 'Name how they relate, below.'
+    : pick.pick
+      ? 'Now pick a passage on the other side: click a marked one, or select words and keep them.'
+      : 'Click a marked passage on one side, then one on the other, to link them. Select words to keep new ones.';
 
-  const pane = (side: 'a' | 'b', bookId: string | undefined, list: DeskItem[]) => (
-    <section className="th-pane" data-side={side} aria-label={titleOf(bookId)}>
-      <div className="th-pane__head">
-        <select
-          className="th-switch"
-          aria-label={side === 'a' ? 'Book on the left' : 'Book on the right'}
-          value={bookId}
-          onChange={(e) => {
-            setChosen({ ...chosen, a, b, [side]: e.target.value });
-            setPick({ pick: null, pair: null });
-          }}
-        >
-          {books.map((x) => (
-            <option key={x.bookId} value={x.bookId}>
-              {x.title} ({x.passages})
-            </option>
-          ))}
-        </select>
-      </div>
-      {list.map((item, i) => (
-        <div key={item.id}>
-          {(i === 0 || pageOf(list[i - 1]) !== pageOf(item)) && <p className="th-pane__page">{item.source?.chapterLabel || citeOf(item)}</p>}
-          <PanePassage item={item} picked={pick.pick?.id === item.id || pick.pair?.[side] === item.id} onClick={() => click(item.id, side)} />
+  const pane = (side: Side) => {
+    const p = panes[side];
+    const book = bookOf(p.bookId);
+    return (
+      <section className="th-pane th-pane--live" data-side={side} aria-label={titleOf(p.bookId)}>
+        <div className="th-pane__head">
+          <select
+            className="th-switch"
+            aria-label={side === 'a' ? 'Book on the left' : 'Book on the right'}
+            value={p.bookId}
+            onChange={(e) => {
+              const next = bookOf(e.target.value);
+              setPane(side, { bookId: e.target.value, view: viewOf(next), start: undefined });
+              setPick({ pick: null, pair: null });
+            }}
+          >
+            {books.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.title}
+                {counts.get(x.id) ? ` (${counts.get(x.id)} kept)` : ''}
+              </option>
+            ))}
+          </select>
+          {book && hasPdfChoice(book) && (
+            <div className="th-seg" role="group" aria-label="Show as">
+              {(['text', 'pages'] as const).map((v) => (
+                <button key={v} type="button" aria-pressed={p.view === v} onClick={() => p.view !== v && setPane(side, { view: v, start: undefined })}>
+                  {v === 'text' ? 'Text' : 'PDF pages'}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      ))}
-      {!list.length && <p className="th-empty">No passages kept from this book yet.</p>}
-    </section>
-  );
+        {book && (
+          <LivePane
+            key={`${book.id}:${p.view}:${p.n}`}
+            ref={side === 'a' ? paneA : paneB}
+            book={book}
+            view={p.view}
+            passages={side === 'a' ? left : right}
+            picked={pick.pick?.side === side ? pick.pick.id : (pick.pair?.[side] ?? null)}
+            linked={linked}
+            on={on}
+            start={p.start}
+            onPick={(id) => click(id, side)}
+            onKeep={(kept) => keep(side, kept)}
+            onMove={draw}
+          />
+        )}
+      </section>
+    );
+  };
 
   return (
     <Frame eyebrow="Muqābala" title={`${titleOf(a)} beside ${titleOf(b)}`} wide>
       <p className="th-sub">{hint}</p>
-      <div className={'th-cmp' + (narrow ? ' th-cmp--narrow' : '')} ref={boxRef}>
-        {pane('a', a, left)}
+      <div className={'th-cmp th-cmp--live' + (narrow ? ' th-cmp--narrow' : '')} ref={boxRef}>
+        {pane('a')}
         {!narrow && <div className="th-cmp__gap" aria-hidden="true" />}
-        {pane('b', b, right)}
+        {pane('b')}
         {!narrow && (
           <svg className="th-wires" aria-hidden="true">
             {wires.map((w) => (
-              <path key={w.id} className="th-wire" data-rel={w.rel} d={w.d} data-on={w.id === active} />
+              <path key={w.id} className="th-wire" data-rel={w.rel} d={w.d} data-on={w.id === active} data-off={w.off || undefined} />
             ))}
           </svg>
         )}
         {!narrow &&
           wires.map((w) => (
-            <button key={w.id} type="button" className="th-relchip" data-rel={w.rel} style={{ left: w.x, top: w.y }} aria-pressed={w.id === active} onClick={() => setActive(w.id === active ? null : w.id)}>
+            <button key={w.id} type="button" className="th-relchip" data-rel={w.rel} style={{ left: w.x, top: w.y }} aria-pressed={w.id === active} onClick={() => choose(w.id === active ? null : w.id)}>
               {relLabel(w.rel)}
             </button>
           ))}
       </div>
-      {narrow && across.length > 0 && (
-        <div className="th-cmp-list">
-          {across.map(({ link: l, left: x, right: y }) => (
-            <button key={l.id} type="button" className="th-cmp-list__row" aria-pressed={l.id === active} onClick={() => setActive(l.id === active ? null : l.id)}>
-              <b>{relLabel(l.rel)}</b> <bdi>{short(x.text, 34)}</bdi> ↔ <bdi>{short(y.text, 34)}</bdi>
-            </button>
-          ))}
-        </div>
+      <div className="th-cmp-dock">
+        {pick.pair && <NewLink pair={pick.pair} byId={data.byId} onDone={(id) => (setPick({ pick: null, pair: null }), setActive(id))} onCancel={() => setPick({ pick: null, pair: null })} />}
+        {link && !pick.pair && <LinkNote key={link.id} link={link} byId={data.byId} onGoTo={(item) => void goToItem(item, onOpenBook)} onDeleted={() => setActive(null)} onClose={() => setActive(null)} />}
+      </div>
+      {across.length > 0 && (
+        <section className="th-panel">
+          <h2 className="th-h2">Links between these two books</h2>
+          <div className="th-cmp-list">
+            {across.map(({ link: l, left: x, right: y }) => (
+              <button key={l.id} type="button" className="th-cmp-list__row" aria-pressed={l.id === active} onClick={() => choose(l.id === active ? null : l.id)}>
+                <span>
+                  <b>{relLabel(l.rel)}</b> <bdi>{short(x.text, 40)}</bdi> ↔ <bdi>{short(y.text, 40)}</bdi>
+                </span>
+                {l.note && <span className="th-faint">{short(l.note, 90)}</span>}
+              </button>
+            ))}
+          </div>
+        </section>
       )}
-      {pick.pair && <NewLink pair={pick.pair} byId={data.byId} onDone={(id) => (setPick({ pick: null, pair: null }), setActive(id))} onCancel={() => setPick({ pick: null, pair: null })} />}
-      {link && !pick.pair && <LinkNote key={link.id} link={link} byId={data.byId} onGoTo={(item) => void goToItem(item, onOpenBook)} onDeleted={() => setActive(null)} />}
       <section className="th-panel">
         <h2 className="th-h2">All links in your library</h2>
         {!data.links.length && <p className="th-empty">None yet.</p>}
@@ -186,7 +293,9 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
                 type="button"
                 className="th-cmp-all"
                 onClick={() => {
-                  setChosen({ a: x.source?.bookId, b: y.source?.bookId });
+                  const bx = bookOf(x.source?.bookId);
+                  const by = bookOf(y.source?.bookId);
+                  setPanes((p) => p && { a: { bookId: bx?.id, view: viewOf(bx, x), start: x.id, n: p.a.n + 1 }, b: { bookId: by?.id, view: viewOf(by, y), start: y.id, n: p.b.n + 1 } });
                   setPick({ pick: null, pair: null });
                   setActive(l.id);
                 }}
@@ -201,15 +310,6 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
         </div>
       </section>
     </Frame>
-  );
-}
-
-function PanePassage({ item, picked, onClick }: { item: DeskItem; picked: boolean; onClick(): void }) {
-  const img = useDeskImage(item.type === 'capture' ? item.imageHash : undefined);
-  return (
-    <button type="button" className="th-cmp-psg" data-psg={item.id} aria-pressed={picked} onClick={onClick}>
-      {img ? <img src={img} alt={item.text} /> : <span className={item.ar ? 'th-ar' : undefined} dir="auto">{item.text}</span>}
-    </button>
   );
 }
 
@@ -249,7 +349,7 @@ function NewLink({ pair, byId, onDone, onCancel }: { pair: { a: string; b: strin
 }
 
 /** The chosen link: its relation, its note (edited in place), both passages, and Delete with Undo. */
-function LinkNote({ link, byId, onGoTo, onDeleted }: { link: DeskLink; byId: Map<string, DeskItem>; onGoTo(item: DeskItem): void; onDeleted(): void }) {
+function LinkNote({ link, byId, onGoTo, onDeleted, onClose }: { link: DeskLink; byId: Map<string, DeskItem>; onGoTo(item: DeskItem): void; onDeleted(): void; onClose(): void }) {
   const [note, setNote] = useState(link.note);
   const x = byId.get(link.a);
   const y = byId.get(link.b);
@@ -295,6 +395,9 @@ function LinkNote({ link, byId, onGoTo, onDeleted }: { link: DeskLink; byId: Map
           }
         >
           Delete link
+        </button>
+        <button type="button" className="sd-btn th-btn--ghost" onClick={onClose}>
+          Close
         </button>
       </div>
     </section>

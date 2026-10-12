@@ -45,6 +45,15 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.120.0 — 2026-10-12
+
+- **Muqābala shows two live books.** Each side is now the book itself, not a list of kept passages: its text chapter by
+  chapter, or its PDF pages (books added from a PDF whose text reflowed can switch between Text and PDF pages). Kept
+  passages are marked in place; click one on each side to link them, or select words in either book and press Keep
+  these words. On a scanned page, drag a box round the words. The lines follow both books as they scroll, and point at
+  the edge when a passage is out of sight; click a chip to scroll both books to its passages. Any book in the library
+  can be opened on either side.
+
 ## v0.119.0 — 2026-10-12
 
 - **Thinking desk, Today.** Above the Library, when there is anything to show: On this day (what you read a year ago, and
