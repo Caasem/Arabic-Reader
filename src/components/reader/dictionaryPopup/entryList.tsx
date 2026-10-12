@@ -12,6 +12,7 @@ import type { EntryGroup } from './entryGroups';
 import { LaneMeaning } from '../../../dictionary/senseFormat/LaneMeaning';
 import { findVerses, type Verse } from '../../../dictionary/senseFormat/sihahVerses';
 import { verseNodes } from '../../../dictionary/senseFormat/VerseTokens';
+import { HansWehrMeaning } from '../../../dictionary/senseFormat/HansWehrMeaning';
 import { MorphValue } from './MorphValue';
 
 /** Dictionaries whose senses carry examples: the verb-form tag leads the entry, its words can be
@@ -382,7 +383,9 @@ export function renderGroupList(ctx: EntryListContext, groups: EntryGroup[]) {
                               <LaneMeaning text={s.gloss} spans={s.italics} from={head[0].length} />
                             </>
                           ) : (
-                            <LaneMeaning text={s.gloss} spans={s.italics} />
+                            <HansWehrMeaning gloss={entry.providerId === 'hanswehr' ? s.gloss : ''}>
+                              <LaneMeaning text={s.gloss} spans={s.italics} />
+                            </HansWehrMeaning>
                           )}
                           {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
                         </>

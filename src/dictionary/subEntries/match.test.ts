@@ -163,6 +163,25 @@ describe('Hans Wehr', () => {
     expect([...findMatchedSenses(hw, 'تحاسدوا', [{ lemma: 'تَحاسَد', root: 'حسد', form: 'VI' }])]).toEqual([0]);
   });
 
+  it('lands a derived form on its own line, and form I on the verb paragraph', () => {
+    const split: DictionaryEntry = {
+      ...hw,
+      senses: [
+        { gloss: 'علم ʿalima a (ʿilm) to know' },
+        { gloss: 'II to teach' },
+        { gloss: 'V to learn' },
+        { gloss: 'VI and VIII to know each other' },
+        { gloss: 'علم ʿilm knowledge' },
+      ],
+      headword: 'علم',
+      root: 'علم',
+    };
+    expect([...findMatchedSenses(split, 'يتعلم', [{ lemma: 'تَعَلَّم', root: 'علم', form: 'V' }])]).toEqual([2]);
+    expect([...findMatchedSenses(split, 'علم', [{ lemma: 'عَلِم', root: 'علم', form: 'I' }])]).toEqual([0]);
+    // a form without a line of its own still falls back to the verb paragraph
+    expect([...findMatchedSenses(split, 'استعلم', [{ lemma: 'اِسْتَعْلَم', root: 'علم', form: 'X' }])]).toEqual([0]);
+  });
+
   it('lands nouns on their own line', () => {
     expect([...findMatchedSenses(hw, 'حسود', [{ lemma: 'حَسُود', root: 'حسد' }])]).toEqual([2]);
     expect([...findMatchedSenses(hw, 'التحاسد', [{ lemma: 'تَحاسُد', root: 'حسد' }])]).toEqual([3]);
