@@ -34,7 +34,7 @@
 
 .backup-reminder__btn--primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--c-backup-ink);
   border-color: var(--accent);
 }
 

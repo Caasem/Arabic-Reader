@@ -556,7 +556,7 @@
   display: grid;
   place-items: center;
   padding: 32px;
-  background: rgb(20 18 15 / 0.72);
+  background: var(--c-desk-lightbox-backdrop);
   cursor: zoom-out;
 }
 .sd-zoom img {
@@ -564,19 +564,19 @@
   max-height: calc(100vh - 110px);
   object-fit: contain;
   border-radius: 8px;
-  box-shadow: 0 10px 40px rgb(0 0 0 / 0.4);
-  background: #fff;
+  box-shadow: 0 10px 40px var(--c-desk-lightbox-shadow);
+  background: var(--c-desk-lightbox-bg);
 }
 .sd-zoom__bar {
   display: flex;
   gap: 14px;
   align-items: center;
   margin-top: 12px;
-  color: #f1ece4;
+  color: var(--c-desk-lightbox-ink);
   font: 13px var(--font-ui);
 }
 .sd-zoom__bar button {
-  border: 1px solid rgb(255 255 255 / 0.4);
+  border: 1px solid var(--c-desk-lightbox-border);
   background: none;
   color: inherit;
   border-radius: 999px;
@@ -736,7 +736,7 @@
   font-variant-numeric: tabular-nums;
 }
 .sd-doc__saved--failed {
-  color: #b4472f;
+  color: var(--c-desk-alert-ink);
 }
 
 /* The side panel as an outline: headings divide it, with how many items each holds; titles get the width. */
@@ -978,8 +978,8 @@
   cursor: pointer;
 }
 .sd-dl__del {
-  background: #b4472f;
-  color: #fff;
+  background: var(--c-desk-alert-fill);
+  color: var(--c-desk-alert-fill-ink);
 }
 .sd-dl__keep {
   background: var(--bg);

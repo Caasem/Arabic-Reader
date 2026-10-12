@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { dictionaryManager } from '../dictionary';
+import { traitsOf } from '../dictionary/providerTraits';
 import { normalize } from '../reader/tokenizer/arabicTokenizer';
 import type { BookMeta, VocabTier, VocabularyItem } from '../types';
 import { saveFile } from '../utils/saveFile';
@@ -27,7 +28,7 @@ function glossOf(word: string): Promise<string> {
   if (!cached) {
     cached = dictionaryManager
       .lookup(word)
-      .then((r) => (r.entries.find((e) => e.providerId === 'aramorph') ?? r.entries[0])?.senses[0]?.gloss ?? '')
+      .then((r) => (r.entries.find((e) => traitsOf(e.providerId).shortGloss) ?? r.entries[0])?.senses[0]?.gloss ?? '')
       .catch(() => '');
     glossCache.set(word, cached);
   }

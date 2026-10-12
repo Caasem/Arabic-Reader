@@ -9,6 +9,9 @@ import { goToPlace, placeRects } from './placeLinks';
 import { TEMPLATES } from './templates';
 import { HIGHLIGHTER_PRESETS } from '../studyDesk/highlighterColour';
 import { bookSketches, deleteSketch, isEmptySketch, newSketch, onInkChange, saveSketch } from './inkStore';
+import { vocabularyService } from '../vocabulary';
+import { SheetWalk } from './SheetWalk';
+import { cardFromNodes, occlusionCard, occlusionTargets, OCCLUSION_CONFIRM_ABOVE, walkOrder, type SketchCardSpec } from './sketchCards';
 import { refreshSketchCards, sendSketchToMargin, sketchOutline, sketchPng, sketchSvgBlob, type SendHow } from './toMargin';
 import { usePreferences } from '../state/PreferencesContext';
 import { COLOR_NAMES, inkUi, keyOwner, PEN_WIDTHS, setInkUi, THEME_COLORS, useInkUi } from './inkUi';
@@ -44,6 +47,11 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
   const [pinned, setPinned] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
   const [undoDelete, setUndoDelete] = useState<Sketch | null>(null);
+  /** Cards just made from the sheet (ids), so the toast can undo them. */
+  const [madeCards, setMadeCards] = useState<string[] | null>(null);
+  /** The sheet Review sheet is running on, over the stage. */
+  const [walkOf, setWalkOf] = useState<string | null>(null);
+  const walkingRef = useRef(false);
   /** The line from a pointed-at quote to its words on the page. */
   const [lead, setLead] = useState<string | null>(null);
   const hostRef = useRef<HTMLDivElement>(null);
@@ -375,7 +383,7 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
     const onKey = (e: KeyboardEvent) => {
       const s = surface.current;
       const t = e.target as HTMLElement;
-      if (!s || !ours.current || e.altKey) return;
+      if (!s || !ours.current || e.altKey || walkingRef.current) return;
       // Ctrl+Tab and Ctrl+Shift+Tab go through the tabs.
       if (e.ctrlKey && e.key === 'Tab') {
         e.preventDefault();
@@ -447,6 +455,61 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
       (e: Error) => setSent(e.message || 'Could not send it')
     );
   };
+  /** Flashcards from the sheet (sketchCards.ts): ordinary hand-written cards that remember their sheet. */
+  const saveCards = async (specs: SketchCardSpec[]) => {
+    const c = sheet.current;
+    if (!c || !specs.length) return;
+    flush();
+    try {
+      const made = [];
+      for (const spec of specs) made.push(await vocabularyService.saveCustomCard({ front: spec.front, back: spec.back, book, location: c.sketch.location, sketch: spec.sketch }));
+      setMadeCards(made.map((m) => m.id));
+      setSent(null);
+    } catch {
+      setSent('Could not make the card');
+    }
+  };
+
+  /** The selected node(s) as one card; null with the reason when it cannot be made. */
+  const cardNow = (): { spec: SketchCardSpec | null; why: string } => {
+    const c = sheet.current;
+    if (!c || !state?.nodes) return { spec: null, why: 'Select a node first (Shift-click for more)' };
+    const r = cardFromNodes(c.sketch, surface.current?.selectedIds() ?? []);
+    return r.ok ? { spec: r.spec, why: 'Make a flashcard: this node asks, its child nodes answer' } : { spec: null, why: r.why };
+  };
+  const makeCard = () => {
+    const { spec } = cardNow();
+    if (spec) void saveCards([spec]);
+  };
+
+  const sheetLabel = () => {
+    const c = sheet.current;
+    return c ? sheetName(c.sketch, Math.max(0, shown.findIndex((t) => t.id === c.sketch.id))) : '';
+  };
+
+  /** One card per selected node (or every labelled node): the sheet with that label hidden. */
+  const makeOcclusion = () => {
+    setTabMenu(false);
+    const c = sheet.current;
+    if (!c) return;
+    const ids = occlusionTargets(c.sketch, surface.current?.selectedIds() ?? []);
+    if (!ids.length) return setSent('Add nodes with words first');
+    if (ids.length > OCCLUSION_CONFIRM_ABOVE && !window.confirm(`Make ${ids.length} cards, one for each label on this sheet?`)) return;
+    const name = sheetLabel();
+    void saveCards(ids.map((id) => occlusionCard(c.sketch, name, id)).filter((x): x is SketchCardSpec => !!x));
+  };
+
+  const undoCards = () => {
+    const ids = madeCards;
+    setMadeCards(null);
+    if (ids) void Promise.all(ids.map((id) => vocabularyService.removeFromVocabulary(id))).then(() => setSent(ids.length > 1 ? 'Cards removed' : 'Card removed'));
+  };
+  useEffect(() => {
+    if (!madeCards) return;
+    const t = window.setTimeout(() => setMadeCards(null), 8000);
+    return () => window.clearTimeout(t);
+  }, [madeCards]);
+
   useEffect(() => {
     if (!sent) return;
     const t = window.setTimeout(() => setSent(null), 2600);
@@ -460,6 +523,8 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
 
   const mode = state?.mode ?? 'draw';
   const current = sheet.current?.sketch;
+  const walking = !!walkOf && walkOf === current?.id;
+  walkingRef.current = walking;
   const pdf = current ? current.key.startsWith('pdf:') : place?.kind === 'pdf';
   const all = useMemo(
     () => (sketches ?? []).filter((s) => s.key.startsWith(place?.kind === 'clean' ? 'clean:' : 'pdf:')).sort((a, b) => b.updatedAt - a.updatedAt),
@@ -652,6 +717,18 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
           <button type="button" role="menuitem" onClick={() => (setTabMenu(false), duplicate())}>
             <b>Duplicate</b>
           </button>
+          {walkOrder(current).length > 0 && (
+            <button type="button" role="menuitem" onClick={() => (setTabMenu(false), setWalkOf(current.id))} title="Practise: every label is hidden, Space reveals the next one">
+              <b>Review sheet</b>
+              <span>Reveal the boxes one by one</span>
+            </button>
+          )}
+          {current.nodes.length > 0 && (
+            <button type="button" role="menuitem" onClick={makeOcclusion} title="One flashcard per selected box (or every box with words): the sheet with that label hidden">
+              <b>Make occlusion cards</b>
+              <span>{state?.nodes ? `For the ${state.nodes} selected box${state.nodes === 1 ? '' : 'es'}` : 'One for every box with words'}</span>
+            </button>
+          )}
           {pdf && (
             <button type="button" role="menuitem" onClick={() => setMoveTo(String(sheetUnit(current)))}>
               <b>Move to another page…</b>
@@ -801,6 +878,9 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
           <button type="button" className="ink-ib ink-ib--wide" disabled={state?.empty} aria-label="Tidy the diagram" title="Lay the diagram out as a tree" onClick={() => surface.current?.tidy()}>
             Tidy
           </button>
+          <button type="button" className="ink-ib ink-ib--wide" disabled={!cardNow().spec} aria-label="Make a flashcard from the selected node" title={cardNow().why} onClick={makeCard}>
+            Make card
+          </button>
           <span className="sk-send">
             <button type="button" className="ink-ib ink-ib--wide" aria-haspopup="menu" aria-expanded={templates} onClick={() => setTemplates(!templates)}>
               Templates ▾
@@ -843,6 +923,7 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
 
       <div className="sk-stage">
         <div ref={hostRef} />
+        {walking && current && <SheetWalk sketch={current} onClose={() => setWalkOf(null)} />}
         {state?.empty && (
           <div className="sk-empty">
             {mode === 'draw' ? (
@@ -888,6 +969,13 @@ export function SketchPanel({ book, place }: { book: BookMeta; place: Place | nu
                 void saveSketch(s).then(() => setInkUi({ openSketch: s.id }));
               }}
             >
+              Undo
+            </button>
+          </span>
+        ) : madeCards ? (
+          <span role="status">
+            {madeCards.length > 1 ? `${madeCards.length} cards made` : 'Card made'} ·{' '}
+            <button type="button" className="sk-foot__undo" onClick={undoCards}>
               Undo
             </button>
           </span>

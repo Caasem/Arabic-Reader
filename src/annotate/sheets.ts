@@ -1,5 +1,6 @@
 import { parseCleanLocation } from '../readerCore/location';
 import { normalizeForSearch } from '../reader/tokenizer/arabicTokenizer';
+import { readJSON, writeJSON } from '../utils/storage';
 import type { Sketch, SketchScope } from './types';
 
 /**
@@ -74,24 +75,19 @@ export function rangeScope(s: Pick<Sketch, 'key'>, from: number, to: number): Sk
 }
 
 // --- the tab last used at each place, per book (this device) ---------------------------------------------
+/** The key string predates the registry and must not change. */
 const TAB_KEY = 'arabic-reader:sketch-tabs';
 
 function readTabs(): Record<string, string> {
-  try {
-    return JSON.parse(localStorage.getItem(TAB_KEY) ?? '{}') as Record<string, string>;
-  } catch {
-    return {};
-  }
+  const all = readJSON<Record<string, string>>(TAB_KEY);
+  return all && typeof all === 'object' ? all : {};
 }
 
+/** Remembering the tab is a nicety: it is lost quietly if storage is unavailable. */
 export function rememberTab(bookId: string, p: Place, sketchId: string): void {
-  try {
-    const all = readTabs();
-    all[`${bookId}|${placeKey(p)}`] = sketchId;
-    localStorage.setItem(TAB_KEY, JSON.stringify(all));
-  } catch {
-    // Remembering the tab is a nicety.
-  }
+  const all = readTabs();
+  all[`${bookId}|${placeKey(p)}`] = sketchId;
+  writeJSON(TAB_KEY, all);
 }
 
 export function recallTab(bookId: string, p: Place): string | undefined {

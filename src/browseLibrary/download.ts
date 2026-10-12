@@ -2,6 +2,7 @@ import { escapeXml, writeEpub, type Chapter } from '../importFormats/epubWriter'
 import { decodeText } from '../importFormats/text';
 import { DuplicateBookError, libraryService } from '../library/libraryService';
 import type { BookMeta } from '../types';
+import { readAdded, rememberAdded } from './added';
 import { BROWSE_SOURCES, datasetUrl, type BrowseBook } from './catalog';
 
 /** Pages per chapter in the converted book: the contents list stays short, and page markers keep citations by page. */
@@ -67,32 +68,14 @@ export function volumeTitle(title: string, volume: number, volumeCount: number):
   return volumeCount > 1 ? `${title} — المجلد ${volume + 1}` : title;
 }
 
-/** Remembers which catalogue entries became library books, so a second visit says "In your library". */
-const ADDED_KEY = 'browseLibrary.added';
-
 /** Key of one added file: a book, a format and a volume (or `all` for a combined book). */
 export function addedKey(book: BrowseBook, format: BrowseFormat, volume: number | 'all'): string {
   return `${book.key}#${format}#${volume}`;
 }
 
-function readAdded(): Record<string, string> {
-  try {
-    return JSON.parse(localStorage.getItem(ADDED_KEY) ?? '{}') as Record<string, string>;
-  } catch {
-    return {};
-  }
-}
-
+/** Remembers which catalogue entries became library books, so a second visit says "In your library". */
 export function addedBookIds(): Record<string, string> {
   return readAdded();
-}
-
-function rememberAdded(key: string, bookId: string) {
-  try {
-    localStorage.setItem(ADDED_KEY, JSON.stringify({ ...readAdded(), [key]: bookId }));
-  } catch {
-    // Without storage the only cost is losing the "In your library" hint.
-  }
 }
 
 function sourceOf(book: BrowseBook) {

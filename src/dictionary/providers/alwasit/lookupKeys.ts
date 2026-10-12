@@ -20,19 +20,22 @@ export function weakLastRadicalVariants(root: string): string[] {
 
 interface AnalysisLike {
   root?: string;
+  altRoot?: string;
   lemma?: string;
 }
 
 /**
  * Every key the tapped word could be filed under in Al-Wasit: the word itself,
- * each root and dictionary form AraMorph found for it, and the weak-letter
- * spellings of those roots.
+ * each root and dictionary form AraMorph found for it, the other spelling of a
+ * disputed root (altRoot), and the weak-letter spellings of those roots.
  */
 export function buildLookupKeys(word: string, analyses: AnalysisLike[]): Set<string> {
   const keys = new Set<string>([normalize(word)]);
   for (const a of analyses) {
-    if (a.root) {
-      const root = normalize(a.root);
+    // The leading root first, then its other spellings, so its articles come first.
+    for (const r of [a.root, a.altRoot]) {
+      if (!r) continue;
+      const root = normalize(r);
       keys.add(root);
       for (const variant of weakLastRadicalVariants(root)) keys.add(variant);
     }

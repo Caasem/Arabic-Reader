@@ -18,6 +18,9 @@ export default defineConfig({
       'virtual:alwasit-data': path.join(root, 'src/test/virtualText.ts'),
       'virtual:alsihah-data': path.join(root, 'src/test/virtualText.ts'),
       'virtual:almaqayis-data': path.join(root, 'src/test/virtualText.ts'),
+      'virtual:lane-data': path.join(root, 'src/test/virtualText.ts'),
+      'virtual:hanswehr-data': path.join(root, 'src/test/virtualText.ts'),
+      'virtual:baranov-data': path.join(root, 'src/test/virtualText.ts'),
     },
   },
   define: {

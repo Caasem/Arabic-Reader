@@ -1,13 +1,6 @@
 import { lazy } from 'react';
 import type { BookMeta } from '../types';
-import { DictionarySearchHost } from '../dictionarySearch';
-import { BookSearchHost } from '../bookSearch';
-import { BookVocabHost } from '../bookVocab';
-import { NoteHost } from '../noteCard';
-import { FlashHost } from '../flashCard';
-import { PicksExportHost } from '../picksExport';
-import { DeskHost } from '../studyDesk';
-import { AnnotateHost } from '../annotate';
+import { FEATURES } from '../features/registry';
 import { FocusHost } from '../readerTools';
 import { usePdfView } from '../pdf/pages/pdfView';
 
@@ -38,17 +31,11 @@ interface ReaderSwitchProps {
 export function ReaderSwitch({ onFocusChromeChange, onOpenSettings, ...props }: ReaderSwitchProps) {
   const [pdfView, setPdfView] = usePdfView(props.book);
 
-  // Alt+D, Alt+S, Alt+V, Alt+N, Alt+F and Alt+P open their palettes and cards over whichever reader is showing.
+  // The features' palettes, cards and overlays (Alt+D, Alt+S, Alt+V, ...) over whichever reader is showing, in
+  // registry order (src/features/registry.ts).
   const hosts = (
     <>
-      <DictionarySearchHost book={props.book} />
-      <BookSearchHost book={props.book} />
-      <BookVocabHost book={props.book} />
-      <NoteHost />
-      <FlashHost book={props.book} />
-      <PicksExportHost book={props.book} />
-      <DeskHost book={props.book} onOpenBook={props.onOpenBookAt} />
-      <AnnotateHost book={props.book} />
+      {FEATURES.map(({ id, Host }) => Host && <Host key={id} book={props.book} onOpenBook={props.onOpenBookAt} />)}
     </>
   );
 

@@ -37,7 +37,7 @@
   direction: ltr;
   font-size: 10px;
   color: var(--danger);
-  background: rgba(179, 84, 63, 0.12);
+  background: var(--c-focus-danger-wash);
   border-radius: 999px;
   padding: 2px 7px;
   flex-shrink: 0;

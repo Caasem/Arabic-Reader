@@ -1,3 +1,4 @@
+import { tourEvents } from '../gettingStarted/events';
 import { useCallback, useEffect, useState } from 'react';
 import { annotationService } from '../reader/annotations';
 import { bookmarkService } from '../reader/bookmarks';
@@ -36,6 +37,7 @@ export function useMarks(book: BookMeta) {
   const addHighlight = useCallback(
     async (params: { location: string; text: string; color: HighlightColor; chapterHref: string; chapterLabel: string; note?: string }) => {
       const created = await annotationService.create({ book, cfiRange: params.location, ...params });
+      if (params.note?.trim()) tourEvents.emit('write-note');
       setHighlights((prev) => [...prev, created]);
       return created;
     },

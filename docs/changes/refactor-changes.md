@@ -2,8 +2,7 @@
 
 The plan from 2026-10-10: tidy the repo, put the readers on one shared core, keep only the new reader and PDF pages
 (decided 2026-10-11), and replace hand-wired feature switches with a registry. One phase per branch and worktree, one PR each, green CI before merge.
-Order: **0 → 2a → 1 → 2b → 5**. Phases 3 (dictionaries as packs), 4 (popup split), 6 (routing) and 7 (colour
-tokens) are planned separately.
+Order: **0 → 2a → 1 → 2b → 5**. Phases 3 (dictionaries as packs), 4 (popup split) and 7 (colour tokens) are planned separately.
 
 To undo a phase, revert its merge commit. Each row says what a revert leaves behind.
 
@@ -95,8 +94,75 @@ Accepted losses (each is a `fixme` test that still documents it):
 | A `script-src 'none'` CSP per section | `untrusted-epub.spec.ts` | No section iframe exists; book markup never reaches the page (the ported test checks that) |
 | Collapsing the Vocab Levels panel to a strip | `vocab-levels.spec.ts` | The margin's Levels panel opens and closes; the dock reopens it |
 
+## Phase 5: feature registry (done)
+
+Branch `refactor/phase5-feature-registry`, worktree `Arabic-Reader-p5`. Nothing users can see; no version bump. Opus
+designed the registry and converted `noteCard` and `annotate`; Sonnet converted the other 13 features, one commit
+each, following `docs/changes/feature-registry-howto.md`. `src/features/registry.test.ts` pins the order of hosts, app
+hosts and settings sections and was not edited by any conversion commit.
+
+| Change | Why | Before | After | Impact | Revert |
+|---|---|---|---|---|---|
+| Registry and loops (`src/features/registry.ts`, `placement.ts`) | Adding a feature meant editing 4 to 6 shared files, and nothing listed what a feature touched | `ReaderSwitch`, `App` and `SettingsPanel` each had a hand-written list of feature hosts, app hosts and settings sections | One ordered `FEATURES` list of descriptors (`id`, `pref`, `Host`, `AppHost`, `SettingsSection`, `settingsGroup`, `settingsAfter`, `chords`, `touchPoints`). The three places loop over it. `registry.test.ts` checks the orders, that every `pref` exists and that no two features share a chord | Same hosts, same order. Two side effects: `AutoSync` (core, renders nothing) now mounts after the crowd-sync host instead of before it; the entry chunk grows 11 kB (622 to 633 kB, budget 685 kB) because settings of settings-only features now load with it | Restores the hand-written lists (revert the merge commit) |
+| `noteCard` and `annotate` converted | The worked examples for the howto | Inline entries in the registry | `noteCardFeature` and `annotateFeature` exported from their `index.ts`, one line each in the registry | None | Features go back to inline entries |
+| Dictionary features converted: `dictionarySearch` (Alt+D), `bookSearch` (Alt+S), `bookVocab` (Alt+V), `flashCard` (Alt+F) | Same | Inline entries with `touchPoints: []` | `<id>Feature` in each `index.ts` with `pref`, `chords` and `touchPoints` filled in; one registry line each | None. Alt+D is bound by `useSearchHotkey`, not `useChordHotkey`, and is listed anyway so the duplicate-chord test sees it | Inline entries again |
+| `picksExport` (Alt+P) and `studyDesk` (Alt+I, C, M, U, X, Shift+X) converted | Same | Inline entries | `picksExportFeature` (no preference) and `studyDeskFeature` (`studyDeskEnabled`) | None | Inline entries again |
+| Popup features converted: `verbForms`, `popupClean`, `wasitMatch`, `wasitStructure` | Same | Inline entries | One descriptor each. Prefs: `verbFormsEnabled`, `dictionaryPopupCleanLayout`, `wasitMatchHighlight`, `wasitStructureEnabled` (the on/off switches, not all named `<feature>Enabled`). Their exports used by `DictionaryPopup` stay. Each stylesheet import stays ahead of the component imports so CSS loads in the old order | None | Inline entries again |
+| App-wide features converted: `look`, `readerFont`, `crowdSync` | Same | Inline entries | `lookFeature` (`lookEnabled`), `readerFontFeature` (no `<feature>Enabled` preference, so none), `crowdSyncFeature` (`crowdSharing`). Other exports stay | None | Inline entries again |
+| Feature `localStorage` calls moved behind `src/utils/storage.ts` | Eleven feature files wrote to `localStorage` directly, each with its own try/catch | Direct `getItem` / `setItem` calls | `readString`, `writeString`, `readJSON`, `writeJSON`. A test per key family (`// @vitest-environment jsdom`) writes a value the old way and reads it back, checks writes land under the same key and format, and checks the fallbacks | None. **Every key string and stored format is unchanged**, so saved values read back | The calls go back inline |
+
+Storage moves, all with unchanged keys:
+
+| Key family | Keys | Now in | Test |
+|---|---|---|---|
+| Sheet tab memory (JSON map) | `arabic-reader:sketch-tabs` | `annotate/sheets.ts` | `annotate/sheetTabs.test.ts` |
+| Note card colour (plain string) | `noteCard.color` | `noteCard/color.ts` | `noteCard/color.test.ts` |
+| Floating shell position (JSON `{x, y}`) | `dictionarySearch.floatingPos`, `studyDesk.inboxPos`, `studyDesk.pullPos` | `dictionarySearch/shellPos.ts` | `dictionarySearch/shellPos.test.ts` |
+| Study desk memory (plain strings) | `studyDesk.docPanelMin` ('1'/'0'), `studyDesk.lastMargins`, `studyDesk.pullTarget`, `studyDesk.pdfSnap` ('on'/'off'), `studyDesk.current.<bookId>` | `studyDesk/deskMemory.ts` | `studyDesk/deskMemory.test.ts` |
+| Anki pending deletes (JSON array) | `anki.pendingDeletes` | `anki/deletions.ts` | `anki/deletions.test.ts` |
+| Added catalogue books (JSON map) | `browseLibrary.added` | `browseLibrary/added.ts` | `browseLibrary/added.test.ts` |
+| Dictionary page last tab (plain string) | `dictionaryPage.lastTab` | `dictionaryPage/lastTab.ts` | `dictionaryPage/lastTab.test.ts` |
+| Floating card position (JSON `{x, y}`) | `noteCard.floatingPos`, `flashCard.floatingPos` | `floatingCard/position.ts` | `floatingCard/position.test.ts` |
+
+Left alone (core code, not features): `CollapsibleSection`, `diagnosticsLog`, `pdf/ocr/index.ts`, `pomodoroService`,
+`PreferencesProvider`.
+
+## Phase 4: dictionary popup split (done)
+
+Branch `refactor/phase4-popup-split`, worktree `Arabic-Reader-p4`. Nothing users can see; no version bump. Same DOM, class names, props, event handling and effect order. `DictionaryPopup.tsx` stays the entry point (every import is unchanged); `DictionaryPopup.css` is untouched.
+
+| Change | Why | Before | After | Impact | Revert |
+|---|---|---|---|---|---|
+| Small components moved to `components/reader/dictionaryPopup/` | One 1,301-line file held five components, a helper and the popup | `MorphValue`, `SentenceInBook`, `Alternative`, `OcrNote`, `EditableWord` defined in `DictionaryPopup.tsx` | One file each, moved as they were (only `export` added) | None | Move them back |
+| `groupEntriesByProvider` in `entryGroups.ts` | A pure helper deserves a test | Private function and `EntryGroup` type in the popup | Exported with its type; `entryGroups.test.ts` pins how it folds consecutive entries and keeps flat indices | None | Move back, drop the test |
+| Token selection in `useTokenSelection.ts` | The click and drag selection logic is its own concern | State, reset effect, `toggleToken`, `addTokenRange`, `clearEntrySelection`, the pointer handlers and the window `pointerup` effect inline | A hook taking `word` and the two token maps. Its effects sit in the same position relative to the popup's other effects (nothing between them before) | None | Inline the hook again |
+| Entry list rendering in `entryList.tsx` | About 320 lines of JSX inside the popup | `renderSubEntries` and `renderGroupList` closed over about 30 values | Plain functions (not components, so the element tree is the same) taking one `EntryListContext` object that the popup builds each render | Two new `only-export-components` lint warnings in `entryList.tsx` | Inline the functions again |
+
+Left inline: the positioning code (`recalcPosition` and its layout effect), the add-dictionary panel state, the split-column wheel handling and the footer. Each depends on the popup's own refs, props and render order, so moving them risked more than it saved. `DictionaryPopup.tsx` is 678 lines (from 1,301), above the 500-line target.
+
+## Phase 6: routing (done)
+
+Branch `refactor/phase6-routing`, version 0.97.0. Users can see this.
+
+| Change | Why | Before | After | Impact | Revert |
+|---|---|---|---|---|---|
+| Hash routes (`src/routing`: `parseRoute`, `formatRoute`, `useHashRoute`) | The address never changed, so Back and Forward did nothing useful and a reload always landed on the Library | The screen lived only in `App` state | `#/library` (also no hash), `#/read/<bookId>`, `#/read/<bookId>/levels`, `#/vocabulary`, `#/highlights`, `#/review`, `#/dashboard`, `#/speedReader`, `#/dictionary?q=<word>`. Unknown or garbled hashes are the Library. Hash only, so it works from file:// and Capacitor | Back and Forward move between screens; a reload stays on the screen | Revert the merge commit, or delete `src/routing` and the two routing effects in `App.tsx` |
+| `App` wiring | Keep the existing state and handlers | `view`, `activeBook`, `vocabPanelOpen`, `dictRequest` set by `handleNav`, `openBook`, `backToLibrary` and the dictionary listener | A change of address is applied to that state (loading a `#/read/<id>` book through `libraryService`); a change of state is written to the address (a new history entry). A book that no longer exists replaces the hash with `#/library`. First-run onboarding is untouched | The dictionary's Back button adds a history entry like any other navigation. Each Vocab Levels toggle and each dictionary lookup also adds one. A reading position and Settings are not in the address; `#/dictionary?q=` carries the word only, not its book or tab | As above |
+
+Not done: Android's hardware back button. Nothing in `src` or `android` listens for Capacitor's `backButton`, so it
+still behaves as before (the WebView history now has entries to go back through).
+
+## Phase 7: colour tokens (done)
+
+Branch `refactor/phase7-colour-tokens`, worktree `Arabic-Reader-p7`. Nothing users can see; no version bump. Every token's value is the literal it replaced, so the rendered colours are the same in every theme.
+
+| Change | Why | Before | After | Impact | Revert |
+|---|---|---|---|---|---|
+| `src/theme/palette.css` (111 `--c-*` tokens), imported first in `src/index.css` | Hard-coded colours were scattered through 26 component CSS files | `#rgb`, `#rrggbb`, `rgb()` and `rgba()` written inline | Named by role and place (`--c-popup-warn`, `--c-settings-backdrop`), grouped by area, defined once on `:root`. Not per theme, so they never change with the theme | None | Revert the six phase 7 commits |
+| Component CSS uses `var(--c-...)` | One place to read and change them | 126 inline literals | 126 `var(--c-...)` uses, nothing else on the line changed. Same literal for the same purpose shares a token; the same value for a different purpose has its own | None | As above |
+
+Left alone: colours in `.ts` / `.tsx`; the theme blocks in `index.css`, `quietReader.css`, `readerTools.css`, `annotate.css`, `onboarding.css`, `BrowseLibraryPanel.css` and the palettes in `src/look/`; literals already inside a `var(--x, #fallback)` fallback; the per-theme `::highlight(qr-hl-yellow)` colours and the theme swatches in `quietReader.css`; the `conic-gradient` colour wheel in `pdfHighlighterSettings.css`.
+
 ## Planned phases
 
-| Phase | Branch / worktree | Model | Change | Why | Before | After | Impact |
-|---|---|---|---|---|---|---|---|
-| 5. Feature registry | `refactor/phase5-feature-registry`, `Arabic-Reader-p5` | Opus for the design and the first two features, then Sonnet for the rest | Each feature declares `{id, pref, SettingsSection, Host, chords, touchPoints}`. `ReaderSwitch` and `SettingsPanel` loop over the list. Feature code stops calling `localStorage` directly | 23 `*Enabled` flags, overlays and settings groups are wired by hand. 12 files call `localStorage` directly instead of `src/utils/storage.ts` | Adding a feature touches 4 to 6 shared files | One folder plus one registry line | No visible change. Values already stored in `localStorage` must be read and migrated, not lost |
+Only phase 3 (dictionaries as packs) remains, and it is not planned for now.

@@ -123,7 +123,7 @@
 
 .vocab-card__icon-btn--danger:hover {
   color: var(--danger);
-  background: rgba(179, 84, 63, 0.12);
+  background: var(--c-vocab-danger-wash);
 }
 
 .vocab-card__word {

@@ -18,6 +18,7 @@ export const STORAGE_KEYS = {
   diagnosticsLog: 'arabic-reader:diagnostics',
   onboardingDone: 'arabic-reader:onboardingDone',
   starterBookAdded: 'arabic-reader:starterBookAdded',
+  gettingStarted: 'arabic-reader:gettingStarted',
 } as const;
 
 export function readString(key: string): string | null {

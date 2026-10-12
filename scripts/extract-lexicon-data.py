@@ -1,4 +1,4 @@
-"""Extracts Al-Ṣiḥāḥ and Maqāyīs al-Lugha from the arabic_lexicons SQLite database
+"""Extracts Al-Ṣiḥāḥ, Maqāyīs al-Lugha and Lane's Lexicon from the arabic_lexicons SQLite database
 (https://github.com/wizsk/arabic_lexicons, GPL-3.0; the file is
 assets/data/db/db.sqlite.zip in the repo) into the tab-separated format the
 app's optional dictionaries read -- the same shape as public/alwasit-data:
@@ -7,7 +7,22 @@ app's optional dictionaries read -- the same shape as public/alwasit-data:
 
 `word` is the root, `meanings` separates sub-entries with `<br>`.
 
-Usage:  python scripts/extract-lexicon-data.py path/to/db.sqlite
+Usage:  python scripts/extract-lexicon-data.py path/to/db.sqlite [--hanswehr | --hanswehr=OUT.tsv]
+
+Lane's Lexicon (public domain) goes to public/lane-data/lane.tsv. Its table
+(`lanelexcon`) is shaped differently: a row with is_root=1 is a root and its
+sub-entries are the rows with parent_id = that root's id, in id order. Each
+sub-entry holds HTML (<i>, <h>, <center>, a few tables, entities such as
+&darr;), which is flattened here to plain text so the app never has to render
+markup; one root becomes one line, sub-entries joined with `<br>`. Roots that
+share a spelling are merged into one line, in id order.
+
+--hanswehr also writes public/hanswehr-data/hanswehr.tsv from the `hanswehr`
+table (grouped the same way; see extract_tree). Hans Wehr is UNDER COPYRIGHT:
+that file is for your own machine only and must NEVER be committed -- the
+repository holds an empty placeholder there. Without the flag the script does
+not touch that file. --hanswehr=OUT.tsv writes only Hans Wehr, to OUT.tsv (for
+example a folder outside the repository), and nothing else.
 
 Differences from the raw tables (verified against the full data):
   * `|` marks a new line/paragraph in the source; it becomes `<br>`. Empty
@@ -18,6 +33,7 @@ Differences from the raw tables (verified against the full data):
     follow as the article's last sub-entries -- the same treatment the
     arabic_lexicons app gives them.
 """
+import html
 import re
 import sqlite3
 import sys
@@ -50,11 +66,101 @@ def to_units(meanings: str) -> list[str]:
     return units
 
 
+TAG_RE = re.compile(r"<[^>]*>")
+# Lane's italic spans are its English meanings (the rest is Arabic quotation and
+# source notes). They survive as this private-use pair -- never in any shipped
+# TSV otherwise -- which src/dictionary/senseFormat/laneItalics.ts renders as <em>
+# and strips for every non-display use.
+ITALIC_OPEN = "\ue000"
+ITALIC_CLOSE = "\ue001"
+
+
+def clean_html(text: str) -> str:
+    """HTML sub-entry -> one line of plain text (tags dropped, entities decoded)."""
+    text = re.sub(r"<(?:br|/tr|/td|/th)[ /]*>", " ", text, flags=re.I)
+    # Lane's English meanings; edge whitespace moves outside, empty spans vanish.
+    text = re.sub(r"<i>(\s*)(.*?)(\s*)</i>", lambda m: f"{m[1]}{ITALIC_OPEN}{m[2]}{ITALIC_CLOSE}{m[3]}" if m[2] else m[1] + m[3], text, flags=re.I | re.S)
+    text = html.unescape(TAG_RE.sub("", text))
+    return re.sub(r"\s+", " ", text).strip()
+
+
+# Hans Wehr marks a verb's derived forms in bold (<b>II</b> ... <b>X</b>); bold is used for nothing else there.
+# `<b>V</b> and <b>XII</b>` shares one paragraph between two forms.
+FORM_TAG = r"<b>\s*([IVX]{1,4})\s*</b>"
+FORM_RE = re.compile(FORM_TAG + r"((?:\s*(?:and|,)\s*" + FORM_TAG + r")*)")
+FORM_MARK = "\x00"
+
+
+def form_units(text: str) -> list[str]:
+    """Hans Wehr paragraph -> its units: the opening paragraph, then one unit per derived form, starting with
+    the form's Roman numeral ("VI to envy each other", "V and XII ...")."""
+
+    def mark(m: re.Match) -> str:
+        label = " and ".join([m.group(1), *re.findall(FORM_TAG, m.group(2))])
+        return f"{FORM_MARK}{label} "
+
+    return [u for u in (clean_html(p) for p in FORM_RE.sub(mark, text).split(FORM_MARK)) if u]
+
+
+def extract_tree(
+    db: sqlite3.Connection, table: str, out: Path, join_headless: bool = False, split_forms: bool = False
+) -> None:
+    """Rows grouped by parent_id -> word<TAB>units, merged by root spelling.
+
+    A root row (is_root=1) and its sub-entries share a parent_id. In Lane that
+    is the root row's own id and the root row holds just the root (dropped); in Hans Wehr
+    it is a separate number and the root row holds the verb's entry, which is
+    kept as the first unit."""
+    groups: dict[int, tuple[list[str], list[str]]] = {}
+    for is_root, parent_id, word, meanings in db.execute(
+        f"SELECT is_root, parent_id, word, meanings FROM {table} ORDER BY id"
+    ):
+        words, units = groups.setdefault(parent_id, ([], []))
+        parts = form_units(meanings or "") if split_forms else [clean_html(meanings or "")]
+        if is_root:
+            words.append(one_line(word or ""))
+            # Lane's root rows only repeat the root (بأس): drop that bare word. A
+            # Hans Wehr verb with no Form I (اصد II to close) splits into the bare
+            # root and its form lines; only the bare root goes, the forms stay.
+            if parts and " " not in parts[0]:
+                parts = parts[1:]
+        units.extend(p for p in parts if p)
+    merged: dict[str, list[str]] = {}
+    roots = 0
+    last_root = ""
+    for words, units in groups.values():  # in order of first row id
+        roots += len(words)
+        if words and words[0]:
+            last_root = words[0]
+        # Hans Wehr splits شرق's article in two, the second half with no root
+        # row, so there a headless group joins the root before it. Lane's few
+        # headless rows are unrelated strays (شرس, نصب...) and are left out.
+        root = words[0] if words and words[0] else (last_root if join_headless else "")
+        if root and units:
+            merged.setdefault(root, []).extend(units)
+    lines = [f"{w}\t{'<br>'.join(u)}" for w, u in merged.items()]
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    print(f"{out.name}: {len(lines)} roots (of {roots} root rows), {out.stat().st_size:,} bytes")
+
+
 def main() -> None:
-    if len(sys.argv) != 2:
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    flags = [a for a in sys.argv[1:] if a.startswith("--")]
+    hanswehr = [f for f in flags if f == "--hanswehr" or f.startswith("--hanswehr=")]
+    if len(args) != 1 or len(hanswehr) != len(flags) or len(hanswehr) > 1:
         sys.exit(__doc__)
-    db = sqlite3.connect(f"file:{sys.argv[1]}?mode=ro", uri=True)
+    db = sqlite3.connect(f"file:{args[0]}?mode=ro", uri=True)
     public = Path(__file__).resolve().parent.parent / "public"
+    if hanswehr and "=" in hanswehr[0]:
+        # Hans Wehr only, to a path of your choice (e.g. outside the repo).
+        extract_tree(db, "hanswehr", Path(hanswehr[0].split("=", 1)[1]), join_headless=True, split_forms=True)
+        return
+    extract_tree(db, "lanelexcon", public / "lane-data" / "lane.tsv")
+    if hanswehr:
+        extract_tree(db, "hanswehr", public / "hanswehr-data" / "hanswehr.tsv", join_headless=True, split_forms=True)
+        print("\n*** WARNING: Hans Wehr is under copyright. public/hanswehr-data/hanswehr.tsv now holds the real")
+        print("*** text. Use it locally only. NEVER commit it (git checkout -- that file before committing)."+"\n")
     for rel, table in TABLES.items():
         out = public / rel
         out.parent.mkdir(parents=True, exist_ok=True)

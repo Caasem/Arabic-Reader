@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { usePreferences } from '../../../state/PreferencesContext';
 import { dictionaryManager } from '../../../dictionary';
-import { moveProviderId, orderProviders } from '../../../dictionary/providerOrder';
+import { orderProviders } from '../../../dictionary/providerOrder';
+import { ProviderOrderList } from './ProviderOrderList';
 import { aramorphProvider } from '../../../dictionary/providers/aramorph/AramorphDictionaryProvider';
 import type { DictionaryPanelLayout, MorphDisplayStyle } from '../../../types';
 import { AramorphDataSettings } from './AramorphDataSettings';
@@ -18,6 +19,7 @@ const PANEL_LAYOUTS: Option<DictionaryPanelLayout>[] = [
   { id: 'merged', label: 'Merged' },
   { id: 'split', label: 'Split' },
   { id: 'single', label: 'Single' },
+  { id: 'tabs', label: 'Tabs' },
 ];
 
 export function DictionarySettings() {
@@ -36,10 +38,6 @@ export function DictionarySettings() {
       cancelled = true;
     };
   }, []);
-
-  function moveProvider(id: string, delta: -1 | 1) {
-    updatePrefs({ dictionaryProviderOrder: moveProviderId(providers.map((p) => p.id), id, delta) });
-  }
 
   function toggleProvider(id: string, on: boolean) {
     const next = on ? Array.from(new Set([...prefs.enabledProviderIds, id])) : prefs.enabledProviderIds.filter((p) => p !== id);
@@ -85,7 +83,8 @@ export function DictionarySettings() {
         When more than one dictionary has an entry for a word: <strong>Merged</strong> stacks every dictionary's
         entries together (the default) — <strong>Split</strong> shows the exact same entries side by side instead (a
         switcher between them on narrow screens), for comparing sources directly — <strong>Single</strong> shows only
-        one dictionary and hides the rest.
+        one dictionary and hides the rest — <strong>Tabs</strong> shows one dictionary at a time at any width, with a
+        tab for each (drag a tab to reorder them).
       </Note>
       {prefs.dictionaryPanelLayout === 'single' && (
         <SelectRow
@@ -149,32 +148,21 @@ export function DictionarySettings() {
         dictionary and the headwords around it.
       </ToggleRow>
 
-      <Note>The order below is the order dictionaries appear in the popup (and which one is first in Split). Use the arrows to change it.</Note>
-      {providers.map((p, idx) => (
-        <div className="settings-row settings-row--dict" key={p.id}>
-          <label className="settings-toggle">
-            <input
-              type="checkbox"
-              checked={prefs.enabledProviderIds.includes(p.id)}
-              onChange={(e) => toggleProvider(p.id, e.target.checked)}
-            />
-            <span className="settings-toggle__label">{p.name}</span>
-          </label>
-          <span className="settings-order">
-            <button type="button" className="settings-order__btn" disabled={idx === 0} onClick={() => moveProvider(p.id, -1)} aria-label={`Move ${p.name} up`} title="Move up">
-              ↑
-            </button>
-            <button type="button" className="settings-order__btn" disabled={idx === providers.length - 1} onClick={() => moveProvider(p.id, 1)} aria-label={`Move ${p.name} down`} title="Move down">
-              ↓
-            </button>
-          </span>
-          {p.id === 'aramorph' && (
+      <Note>The order below is the order dictionaries appear in the popup (and which one is first in Split). Drag the grip to change it (or focus it and press the up and down arrow keys).</Note>
+      <ProviderOrderList
+        providers={providers}
+        enabledIds={prefs.enabledProviderIds}
+        onToggle={toggleProvider}
+        onReorder={(dictionaryProviderOrder) => updatePrefs({ dictionaryProviderOrder })}
+        extra={(id) =>
+          id === 'aramorph' && (
             <span className={'settings-badge' + (aramorphReady ? ' settings-badge--ready' : '')}>
               {aramorphReady ? 'Data loaded' : aramorphProvider.status === 'failed' ? 'Failed to load' : 'No data loaded'}
             </span>
-          )}
-        </div>
-      ))}
+          )
+        }
+      />
+
       <Note>
         Al-Muʿjam al-Wasīṭ is off by default: its data (~6,700 entries, looked up by root via the AraMorph analysis
         above) is only downloaded the first time you switch it on, and its licensing status is less clear-cut than
@@ -186,6 +174,13 @@ export function DictionarySettings() {
         by default. Both are filed by root, so a lookup resolves the tapped word to its root through AraMorph and shows that
         root's article — about 5,650 roots in Al-Ṣiḥāḥ, 5,270 in Maqāyīs. Their data downloads the first time you switch
         each one on; see <code>alsihah-data/SOURCE-README.md</code> and <code>almaqayis-data/SOURCE-README.md</code>.
+      </Note>
+
+      <Note>
+        Lane's Lexicon (Arabic–English, 1863–93, public domain) is also off by default and filed by root the same way
+        — about 5,060 roots, a large download the first time you switch it on; see <code>lane-data/SOURCE-README.md</code>.
+        Hans Wehr is listed too, but it is under copyright, so the app ships it empty: switching it on shows a note
+        explaining how to add your own copy (<code>hanswehr-data/SOURCE-README.md</code>).
       </Note>
 
       <PackRow id="alsihah" />

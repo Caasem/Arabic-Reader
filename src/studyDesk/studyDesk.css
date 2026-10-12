@@ -292,27 +292,360 @@
   opacity: 0.7;
 }
 
-/* Pull in (Alt+U). Above the desk document when opened from it. */
+/*
+ * Pull in (Alt+U). Above the desk document when opened from it. Wider as a palette, for the preview beside the
+ * results; the floating panel, the drawer and the sheet are narrower and drop the preview (container query).
+ * The pills' labels, the book headings and the row titles all start at one column, --pull-indent from a row's
+ * edge (the row's padding, the tick, the gap); a pill's icon hangs in the ticks' gutter.
+ */
 .sd-pull-layer {
   position: relative;
   z-index: 68;
 }
-.sd-pull__bar {
-  flex-wrap: wrap;
+.sd-pull-layer .dsearch--palette {
+  width: min(720px, calc(100vw - 24px));
 }
-.sd-pull__kinds {
+.sd-pull {
+  --pull-indent: 38px;
+  container-type: inline-size;
+}
+.sd-pull__filters {
+  flex-wrap: wrap;
+  row-gap: 6px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.sd-pull__scope {
   margin-left: auto;
+}
+.sd-pull__count {
+  margin-left: 4px;
+  font-weight: 500;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.sd-seg button[aria-pressed='true'] .sd-pull__count {
+  color: var(--accent);
 }
 .sd-pull__note {
   margin: 6px 14px 0;
 }
-.sd-pull__detail {
-  margin-top: 2px;
+.sd-pull__main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+@container (min-width: 600px) {
+  .sd-pull__main {
+    grid-template-columns: minmax(0, 1fr) 236px;
+  }
+}
+.sd-pull__list {
+  min-height: 0;
+}
+
+/* Capture trips and an image file: pills over the results while nothing is typed. */
+.sd-pull__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  /* Less the pill's border, left padding, icon and gap, so the label lines up with the titles. */
+  padding: 6px 12px 10px calc(var(--pull-indent) - 31px);
+}
+.sd-pull__act {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 12px 4px 10px;
   font-size: 12.5px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.sd-pull__act svg {
+  flex: none;
+}
+.sd-pull__act-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sd-pull__act.is-active {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--ink);
+}
+.sd-pull__act--again {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+.sd-pull__act-ar {
+  font-family: var(--font-arabic);
+  font-size: 14px;
+}
+
+/* A book's heading over its rows. */
+.sd-pull__group {
+  position: sticky;
+  top: -6px;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px 4px var(--pull-indent);
+  background: var(--bg-elevated);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+.sd-pull__group bdi {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0;
+  color: var(--ink-soft);
+}
+.sd-pull__group-ar {
+  /* Arabic letters read smaller: 14px sits with the 11px Latin labels, as the pills' titles do. */
+  font-family: var(--font-arabic);
+  font-size: 14px;
+}
+.sd-pull__group i {
+  font-style: normal;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.sd-pull__row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 10px;
+}
+.sd-pull__tick {
+  margin-top: 7px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1.5px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-elevated);
+  color: var(--bg-elevated);
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  cursor: pointer;
+}
+.sd-pull__row:hover .sd-pull__tick,
+.dsearch__entry--active .sd-pull__tick,
+.sd-pull__tick:focus-visible,
+.sd-pull__tick.is-on {
+  opacity: 1;
+}
+.sd-pull__tick.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.sd-pull__row-body {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+.sd-pull__row-body .dsearch__headword {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.sd-pull__detail {
   color: var(--ink-soft);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.sd-pull__meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.sd-pull .sd-pull__meta .dsearch__meta {
+  flex: 0 1 auto;
+  color: var(--ink-faint);
+}
+.sd-pull__ondesk {
+  flex: none;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+.sd-pull mark {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+/* The preview: the chosen row in full, and where it lands. */
+.sd-pull__preview {
+  display: none;
+  min-height: 0;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+  padding: 14px;
+  background: var(--bg);
+}
+@container (min-width: 600px) {
+  .sd-pull__preview {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+}
+.sd-pull__pv-text {
+  font-family: var(--font-arabic);
+  font-size: 19px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.sd-pull__pv-text.sd-latin {
+  line-height: 1.45;
+}
+.sd-pull__pv-note {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+.sd-pull__pv-from {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.sd-pull__pv-from bdi {
+  color: var(--ink-soft);
+}
+.sd-pull__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+.sd-pull__picked {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.sd-pull__picked-ar {
+  font-family: var(--font-arabic);
+  font-size: 15px;
+}
+.sd-pull__lands {
+  margin-top: auto;
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.sd-pull__lands svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.sd-pull__pg-page {
+  fill: var(--bg-elevated);
+  stroke: var(--border);
+}
+.sd-pull__pg-line {
+  fill: var(--border);
+}
+.sd-pull__pg-margin {
+  fill: transparent;
+  stroke: var(--border);
+  stroke-dasharray: 3 3;
+}
+.sd-pull__pg-margin.is-on {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+  stroke-dasharray: none;
+}
+.sd-pull__pg-pin {
+  fill: var(--accent);
+}
+.sd-pull__pg-tray {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+.sd-pull__pg-tray.is-on {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+}
+.sd-pull__keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.sd-pull kbd {
+  font: 500 11px var(--font-ui);
+  color: var(--ink-soft);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 0 5px;
+  background: var(--bg-elevated);
+  white-space: nowrap;
+}
+
+/* Where it goes, and the button that sends it there. */
+.sd-pull__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 8px 10px 8px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.sd-pull__place {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--bg-elevated);
+  padding: 6px 8px 6px 14px;
+  font: 600 12.5px var(--font-ui);
+  cursor: pointer;
+}
+.sd-pull__place kbd {
+  background: transparent;
+  color: inherit;
+  border-color: color-mix(in srgb, var(--bg-elevated) 45%, transparent);
+}
+.sd-pull__place:disabled {
+  background: var(--accent-soft);
+  color: var(--ink-faint);
+  cursor: default;
+}
+.sd-pull__place:focus-visible,
+.sd-pull__act:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* A capture trip in another book (TripBar). Hidden while a region is being captured. */

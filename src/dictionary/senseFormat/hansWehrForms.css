@@ -1,0 +1,18 @@
+/* The derived-form numeral that opens a Hans Wehr verb-form line (VI, VIII ...): a soft tinted tag in the
+   accent, no outline, set in the UI face so it reads as a label rather than part of the text. */
+.dict-hw-form {
+  display: inline-block;
+  min-width: 1.9em;
+  padding: 0.05em 0.5em;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-ui);
+  font-size: 0.74em;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.06em;
+  text-align: center;
+  margin-inline-end: 8px;
+  vertical-align: 0.12em;
+}

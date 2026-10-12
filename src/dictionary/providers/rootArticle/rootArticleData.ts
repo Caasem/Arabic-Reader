@@ -1,5 +1,9 @@
 import type { DictionaryEntry } from '../../../types';
 import { foldAlefHamza, normalize } from '../../../reader/tokenizer/arabicTokenizer';
+import type { AnalysisLike } from '../../subEntries/match';
+import { findRowsBySubEntry, orderBySubEntry } from '../../subEntries/subEntryIndex';
+import { splitItalics } from '../../senseFormat/laneItalics';
+import { buildLookupKeys } from '../alwasit/lookupKeys';
 
 /**
  * A dictionary filed by root: one row per root, its sub-entries (lines or
@@ -57,6 +61,17 @@ export function findRows(data: RootArticleData, keys: Iterable<string>): RootArt
   return Array.from(matched.values());
 }
 
+/**
+ * The articles for a tapped word: those filed under its roots and dictionary forms (see lookupKeys.ts),
+ * the ones holding a sub-entry for the word itself first; when none is, the article(s) the dictionary files
+ * the word under as a sub-entry (a word AraMorph gives no root for: إدام under أدم, قيراط under قرط).
+ */
+export function findArticles(data: RootArticleData, providerId: string, word: string, analyses: AnalysisLike[]): RootArticleRow[] {
+  const rows = findRows(data, buildLookupKeys(word, analyses));
+  if (rows.length) return orderBySubEntry(rows, providerId, word, analyses);
+  return findRowsBySubEntry(data, providerId, word, analyses);
+}
+
 export function rowToEntry(row: RootArticleRow, provider: { id: string; name: string }): DictionaryEntry {
   const headword = row.word.split('|')[0].trim();
   return {
@@ -66,8 +81,8 @@ export function rowToEntry(row: RootArticleRow, provider: { id: string; name: st
     root: headword,
     senses: row.meanings
       .split(/<br\s*\/?>/i)
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .map((gloss) => ({ gloss })),
+      .map(splitItalics)
+      .filter((s) => s.text)
+      .map((s) => (s.spans.length ? { gloss: s.text, italics: s.spans } : { gloss: s.text })),
   };
 }

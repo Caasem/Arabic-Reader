@@ -2,7 +2,7 @@
   position: fixed;
   inset: 0;
   z-index: 59;
-  background: rgba(28, 27, 25, 0.42);
+  background: var(--c-booksearch-backdrop);
 }
 .bsearch {
   position: fixed;
@@ -21,7 +21,7 @@
   border: 1px solid var(--border);
   border-radius: 16px;
   font-family: var(--font-ui);
-  box-shadow: 0 24px 60px rgba(28, 27, 25, 0.28);
+  box-shadow: 0 24px 60px var(--c-booksearch-shadow);
 }
 @media (max-width: 600px) {
   .bsearch {

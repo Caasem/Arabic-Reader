@@ -8,13 +8,12 @@ import type { BookMeta, DictionaryEntry, DictionaryLookupResult, WordInstance } 
 import { vocabularyService } from '../vocabulary';
 import { lookupWord, saveLookup } from '../vocabulary/lookupWord';
 import type { DictionaryPageRequest } from './events';
+import { ALL, readTab, rememberTab } from './lastTab';
 import './dictionaryPage.css';
 
 /** Cards saved with no book open are filed under this one. */
 export const DICTIONARY_BOOK: BookMeta = { id: 'dictionary', title: 'Dictionary', format: 'epub', addedAt: 0, sizeBytes: 0 };
 
-const TAB_KEY = 'dictionaryPage.lastTab';
-const ALL = 'all';
 const NEARBY = 9;
 
 interface Lookup {
@@ -25,16 +24,8 @@ interface Lookup {
   saved: boolean;
 }
 
-const readTab = () => {
-  try {
-    return localStorage.getItem(TAB_KEY) ?? ALL;
-  } catch {
-    return ALL;
-  }
-};
-
 /** Tab labels: short, as on a shelf of books. */
-const SHORT_NAMES: Record<string, string> = { aramorph: 'English', alwasit: 'Al-Wasīṭ', alsihah: 'Al-Ṣiḥāḥ', almaqayis: 'Maqāyīs', baranov: 'Baranov', personal: 'My dictionary' };
+const SHORT_NAMES: Record<string, string> = { aramorph: 'English', alwasit: 'Al-Wasīṭ', alsihah: 'Al-Ṣiḥāḥ', almaqayis: 'Maqāyīs', lane: 'Lane', hanswehr: 'Hans Wehr', baranov: 'Baranov', personal: 'My dictionary' };
 const shortName = (p: { id: string; name: string }) => SHORT_NAMES[p.id] ?? p.name;
 
 const isTyping = (target: EventTarget | null) => !!(target as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable="true"]');
@@ -130,11 +121,7 @@ export function DictionaryPage({ request, onBack, backLabel }: { request: Dictio
 
   function chooseTab(id: string) {
     setTab(id);
-    try {
-      localStorage.setItem(TAB_KEY, id);
-    } catch {
-      // Not remembered this time.
-    }
+    rememberTab(id);
   }
 
   // Saving: the same cards as the popup in a reader makes.

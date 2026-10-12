@@ -1,7 +1,7 @@
 {
   "name": "arabic-reader-app",
   "private": true,
-  "version": "0.96.0",
+  "version": "0.112.0",
   "license": "GPL-2.0",
   "type": "module",
   "main": "electron/main.cjs",
@@ -10,6 +10,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "size": "node scripts/check-bundle-size.mjs",
+    "build:tour-book": "node scripts/build-tour-book.mjs",
     "preview": "vite preview",
     "roadmap": "node scripts/roadmap-serve.mjs",
     "test": "playwright test",

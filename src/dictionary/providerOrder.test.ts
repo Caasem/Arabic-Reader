@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { moveProviderId, orderProviders } from './providerOrder';
+import { moveProviderId, orderProviders, reorderSubset } from './providerOrder';
 
 const ps = [{ id: 'aramorph' }, { id: 'alwasit' }, { id: 'custom' }];
 
@@ -12,6 +12,15 @@ describe('orderProviders', () => {
   });
   it('ignores ids that are no longer registered', () => {
     expect(orderProviders(ps, ['gone', 'alwasit']).map((p) => p.id)).toEqual(['alwasit', 'aramorph', 'custom']);
+  });
+});
+
+describe('reorderSubset', () => {
+  it('refills the subset slots and leaves the others', () => {
+    expect(reorderSubset(['a', 'b', 'c', 'd'], ['d', 'b'])).toEqual(['a', 'd', 'c', 'b']);
+  });
+  it('is the identity for an unchanged subset', () => {
+    expect(reorderSubset(['a', 'b', 'c'], ['a', 'c'])).toEqual(['a', 'b', 'c']);
   });
 });
 

@@ -77,7 +77,7 @@ export function toFields(item: VocabularyItem): NoteFields {
     Sentence: sentenceWithWord(item.sentence, item.surfaceForm),
     SentenceTranslation: '',
     Book: html(item.bookTitle),
-    Source: html(item.custom ? 'Written by hand' : providers.join(', ')),
+    Source: html(item.sketch ? 'Sketch' : item.custom ? 'Written by hand' : providers.join(', ')),
     ReaderId: item.id,
   };
 }

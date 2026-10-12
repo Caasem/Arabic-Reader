@@ -2,6 +2,7 @@ import { useCallback, useRef, type PointerEvent as ReactPointerEvent } from 'rea
 import { addStroke, deleteStrokes, restoreStrokes } from './inkStore';
 import { inkUi, MARKER_WIDTH, recordInk, setInkUi } from './inkUi';
 import { pathD, pressureWidth, r3 } from './geometry';
+import { createStraightTracker, straightPoints, type StraightTracker } from './straightLine';
 import type { InkPoint, InkStroke } from './types';
 
 /** One stroke being written: how screen points become the stroke's own units, and where it is saved. */
@@ -20,6 +21,11 @@ export interface InkSurface {
   begin(clientX: number, clientY: number): InkSession | null;
   /** The strokes the eraser touches at this point. */
   hitsAt(clientX: number, clientY: number): InkStroke[];
+  /**
+   * Offered a finished pen or marker stroke (its screen points) before it is saved. Returns true when the stroke
+   * was a gesture and has been acted on: it is then not saved as ink, unless `keep` is called (the gesture's Undo).
+   */
+  gesture?(screen: readonly (readonly number[])[], keep: () => Promise<void>): boolean;
 }
 
 /**
@@ -31,12 +37,18 @@ export function useInkDraw(surface: InkSurface, colors: Record<string, string>) 
   const liveRef = useRef<SVGPathElement>(null);
   const liveGroupRef = useRef<SVGGElement>(null);
   const active = useRef<
-    | { kind: 'ink'; id: number; session: InkSession; pts: InkPoint[]; pen: boolean; tool: 'pen' | 'marker'; width: number }
+    | { kind: 'ink'; id: number; session: InkSession; pts: InkPoint[]; screen: [number, number][]; pen: boolean; tool: 'pen' | 'marker'; width: number; cur: [number, number]; line: StraightTracker }
     | { kind: 'erase'; id: number; removed: Map<string, InkStroke> }
     | null
   >(null);
   const surfaceRef = useRef(surface);
   surfaceRef.current = surface;
+  /** What the live line shows: the stroke so far, or a straight line from its start to the pen. */
+  const drawLive = useCallback(() => {
+    const a = active.current;
+    if (!a || a.kind !== 'ink') return;
+    liveRef.current?.setAttribute('d', pathD(a.line.straight ? straightPoints(a.pts, a.cur) : a.pts));
+  }, []);
 
   const erase = useCallback((x: number, y: number) => {
     const a = active.current;
@@ -70,7 +82,9 @@ export function useInkDraw(surface: InkSurface, colors: Record<string, string>) 
       const tool = ui.tool;
       const width = r3((tool === 'marker' ? MARKER_WIDTH : ui.width) * session.unitsPerPx);
       const [x, y] = session.map(e.clientX, e.clientY);
-      active.current = { kind: 'ink', id: e.pointerId, session, pts: [[r3(x), r3(y), e.pressure || 0.5]], pen: e.pointerType === 'pen', tool, width };
+      const line = createStraightTracker({ onStraight: drawLive });
+      active.current = { kind: 'ink', id: e.pointerId, session, pts: [[r3(x), r3(y), e.pressure || 0.5]], screen: [[e.clientX, e.clientY]], pen: e.pointerType === 'pen', tool, width, cur: [x, y], line };
+      line.start(e.clientX, e.clientY);
       const live = liveRef.current;
       liveGroupRef.current?.setAttribute('transform', session.transform ?? '');
       if (live) {
@@ -80,7 +94,7 @@ export function useInkDraw(surface: InkSurface, colors: Record<string, string>) 
         live.style.strokeWidth = String(width);
       }
     },
-    [colors, erase]
+    [colors, erase, drawLive]
   );
 
   const onPointerMove = useCallback(
@@ -95,12 +109,17 @@ export function useInkDraw(surface: InkSurface, colors: Record<string, string>) 
       const events = native.getCoalescedEvents?.() ?? [];
       for (const ev of events.length ? events : [native]) {
         const [x, y] = a.session.map(ev.clientX, ev.clientY);
+        a.cur = [x, y];
+        a.line.move(ev.clientX, ev.clientY, e.shiftKey);
         const last = a.pts[a.pts.length - 1];
-        if (Math.hypot(x - last[0], y - last[1]) / a.session.unitsPerPx >= 1.5) a.pts.push([r3(x), r3(y), Math.round((ev.pressure || 0.5) * 100) / 100]);
+        if (Math.hypot(x - last[0], y - last[1]) / a.session.unitsPerPx >= 1.5) {
+          a.pts.push([r3(x), r3(y), Math.round((ev.pressure || 0.5) * 100) / 100]);
+          a.screen.push([ev.clientX, ev.clientY]);
+        }
       }
-      liveRef.current?.setAttribute('d', pathD(a.pts));
+      drawLive();
     },
-    [erase]
+    [erase, drawLive]
   );
 
   const finish = useCallback((e: ReactPointerEvent<Element>) => {
@@ -116,11 +135,22 @@ export function useInkDraw(surface: InkSurface, colors: Record<string, string>) 
         });
       return;
     }
+    const straight = a.line.straight;
+    a.line.stop();
+    if (straight) a.pts = straightPoints(a.pts, a.cur);
     const width = a.tool === 'pen' ? pressureWidth(a.width, a.pts, a.pen) : a.width;
-    void addStroke({ ...a.session.base, tool: a.tool, color: inkUi().color, width, pts: a.pts }).then((row) => {
+    const color = inkUi().color;
+    const save = () =>
+      addStroke({ ...a.session.base, tool: a.tool, color, width, pts: a.pts }).then((row) => {
+        liveRef.current?.setAttribute('d', '');
+        recordInk({ undo: () => deleteStrokes([row.id]), redo: () => restoreStrokes([row]) });
+      });
+    // A straightened line is always plain ink, never a gesture.
+    if (!straight && surfaceRef.current.gesture?.(a.screen, save)) {
       liveRef.current?.setAttribute('d', '');
-      recordInk({ undo: () => deleteStrokes([row.id]), redo: () => restoreStrokes([row]) });
-    });
+      return;
+    }
+    void save();
   }, []);
 
   return { liveRef, liveGroupRef, handlers: { onPointerDown, onPointerMove, onPointerUp: finish, onPointerCancel: finish } };

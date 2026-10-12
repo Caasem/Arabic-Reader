@@ -55,7 +55,7 @@
   justify-content: center;
   cursor: pointer;
   padding: 0;
-  box-shadow: 0 1px 4px rgba(28, 27, 25, 0.12);
+  box-shadow: 0 1px 4px var(--c-navbar-shadow);
 }
 
 .navbar__collapse-toggle:hover {

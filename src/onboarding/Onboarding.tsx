@@ -92,6 +92,8 @@ const DICTS: { id: 'aramorph' | OptionalProviderId; label: string; mark: string 
   { id: 'alwasit', label: 'Al-Wasīṭ', mark: 'و' },
   { id: 'alsihah', label: 'Al-Ṣiḥāḥ', mark: 'ص' },
   { id: 'almaqayis', label: 'Maqāyīs al-Lugha', mark: 'م' },
+  { id: 'lane', label: "Lane's Lexicon", mark: 'L' },
+  { id: 'hanswehr', label: 'Hans Wehr (bring your own copy)', mark: 'W' },
   { id: 'baranov', label: 'Baranov (Arabic–Russian)', mark: 'Р' },
 ];
 
@@ -135,7 +137,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
     onDone();
   }
 
-  const useRecommended = () => finish(detected, []);
+  // Recommended: this device's layout, English and Al-Wasīṭ. Skipping takes only the essential dictionary.
+  const useRecommended = () => finish(detected, ['alwasit']);
+  const skip = () => finish(detected, []);
   const toggleDict = (id: OptionalProviderId) =>
     setOptional((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
 
@@ -203,9 +207,15 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
                       <DictTile key={d.id} d={d} on={optional.includes(d.id as OptionalProviderId)} onToggle={() => toggleDict(d.id as OptionalProviderId)} />
                     ))}
                   </div>
+                  <p className="ob-grp">English</p>
+                  <div className="ob-dgrid">
+                    {DICTS.slice(4, 6).map((d) => (
+                      <DictTile key={d.id} d={d} on={optional.includes(d.id as OptionalProviderId)} onToggle={() => toggleDict(d.id as OptionalProviderId)} />
+                    ))}
+                  </div>
                   <p className="ob-grp">Russian</p>
                   <div className="ob-dgrid">
-                    {DICTS.slice(4).map((d) => (
+                    {DICTS.slice(6).map((d) => (
                       <DictTile key={d.id} d={d} on={optional.includes(d.id as OptionalProviderId)} onToggle={() => toggleDict(d.id as OptionalProviderId)} />
                     ))}
                   </div>
@@ -250,7 +260,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         {phase === 'setup' && (
           <div className="ob-alt">
             <button type="button" className="ob-btn ob-btn--quiet" disabled={busy} onClick={useRecommended}>Use recommended settings</button>
-            <button type="button" className="ob-btn ob-btn--quiet" disabled={busy} onClick={useRecommended}>Skip for now</button>
+            <button type="button" className="ob-btn ob-btn--quiet" disabled={busy} onClick={skip}>Skip for now</button>
           </div>
         )}
       </section>

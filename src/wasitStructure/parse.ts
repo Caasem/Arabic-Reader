@@ -1,12 +1,15 @@
 import type { DictionaryEntry } from '../types';
 import { normalize } from '../reader/tokenizer/arabicTokenizer';
+import { badgeOf } from '../dictionary/senseFormat/wasitLabels';
 
-export type WordRole = 'head' | 'body' | 'plural' | 'tag' | 'example';
+export type WordRole = 'head' | 'body' | 'plural' | 'plural-mark' | 'tag' | 'example';
 
 export interface WordAnnotation {
   role: WordRole;
   /** Tooltip spelling out an abbreviation such as (مج). */
   title?: string;
+  /** What to show instead of the token's text (the label's letters without brackets). */
+  display?: string;
 }
 
 export interface SenseAnnotation {
@@ -17,15 +20,6 @@ export interface SenseAnnotation {
   /** One entry per whitespace-separated word of the gloss, in order. */
   words: WordAnnotation[];
 }
-
-/** Source-text abbreviations, keyed by their diacritic-free spelling. */
-const TAGS: Record<string, string> = {
-  'مج': 'Approved by the Arabic Language Academy',
-  'محدثة': 'Modern coinage',
-  'مو': 'Post-classical (muwallad)',
-  'مع': 'Arabized loanword',
-  'د': 'Borrowed word (dakhīl)',
-};
 
 const PLURAL_MARKERS = new Set(['(ج)', '(جج)']);
 const HEAD_LOOKAHEAD = 14;
@@ -41,7 +35,7 @@ function exampleMarkerLength(words: string[], i: number): number {
   return 0;
 }
 
-export function annotateGloss(gloss: string): SenseAnnotation {
+export function annotateGloss(gloss: string, labels = true): SenseAnnotation {
   const words = gloss.split(/\s+/).filter(Boolean);
   const trimmed = gloss.trimStart();
   const isLead = /^\([^()]+\)/.test(trimmed);
@@ -54,6 +48,8 @@ export function annotateGloss(gloss: string): SenseAnnotation {
       headEnd = i;
       break;
     }
+    // The headword line has no full stop in it: a later colon belongs to an example ("... (مو). ويقال:").
+    if (endsSentence(words[i]) || badgeOf(key(words[i]))) break;
   }
 
   const out: WordAnnotation[] = [];
@@ -64,13 +60,19 @@ export function annotateGloss(gloss: string): SenseAnnotation {
       out.push({ role: 'head' });
       continue;
     }
+    // A bracketed letter opening the gloss is its lead form ("(د) وتُزادُ ..."), not a label.
+    const badge = labels && (i > 0 || endsSentence(w)) ? badgeOf(key(w)) : null;
+    if (badge?.kind === 'plural') {
+      mode = 'plural';
+      out.push({ role: 'plural-mark', title: badge.title, display: badge.text });
+      continue;
+    }
     if (mode === null) {
       if (PLURAL_MARKERS.has(key(w))) mode = 'plural';
       else if (exampleMarkerLength(words, i) > 0) mode = 'example';
     }
-    const tag = /^\(([^()]+)\)[.،]?$/.exec(key(w));
-    if (tag && TAGS[tag[1]]) {
-      out.push({ role: 'tag', title: TAGS[tag[1]] });
+    if (badge) {
+      out.push({ role: 'tag', title: badge.title, display: badge.text });
       continue;
     }
     out.push({ role: mode ?? 'body' });
@@ -83,7 +85,7 @@ export function annotateGloss(gloss: string): SenseAnnotation {
  * Per-sense structure for an Al-Wasit entry, or null when the entry has
  * nothing recognisable to add (the popup then renders exactly as before).
  */
-export function annotateEntry(entry: DictionaryEntry): SenseAnnotation[] | null {
-  const senses = entry.senses.map((s) => annotateGloss(s.gloss));
+export function annotateEntry(entry: DictionaryEntry, labels = true): SenseAnnotation[] | null {
+  const senses = entry.senses.map((s) => annotateGloss(s.gloss, labels));
   return senses.some((s) => s.isLead || s.isContinuation) ? senses : null;
 }

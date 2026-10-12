@@ -1,7 +1,24 @@
 /**
- * Ink and sketches (docs/features/annotate.md). Self-contained: the app touches this folder through
- * <AnnotateHost> in ReaderSwitch, <AnnotateSettings> in SettingsPanel, the `annotateEnabled` preference, and
- * its database in the storage registry and the full export. Every change is listed in docs/changes/annotate-changes.md.
+ * Ink and sketches (docs/features/annotate.md). Self-contained: the app wires it through `annotateFeature` in
+ * src/features/registry.ts, whose touch points list the rest. Every change is listed in
+ * docs/changes/annotate-changes.md.
  */
-export { AnnotateHost } from './AnnotateHost';
-export { AnnotateSettings } from './AnnotateSettings';
+import type { FeatureDescriptor } from '../features/registry';
+import { AnnotateHost } from './AnnotateHost';
+import { AnnotateSettings } from './AnnotateSettings';
+
+export const annotateFeature: FeatureDescriptor = {
+  id: 'annotate',
+  pref: 'annotateEnabled',
+  Host: AnnotateHost,
+  SettingsSection: AnnotateSettings,
+  settingsGroup: 'dictionary',
+  chords: ['Alt+W', 'Alt+K', 'Alt+Shift+K'],
+  touchPoints: [
+    'the `annotateEnabled` preference (src/types/preferences.ts, src/state/defaultPreferences.ts)',
+    'its ink database (INK_DB) in the storage registry (src/storage/registry.ts) and the full export (src/dataExport/stores.ts)',
+    "the `inkGesturesEnabled` preference, and `addHighlight` on the reader marks bridge (src/readerChords/readerMarks.ts), implemented by src/quietReader/QuietReader.tsx",
+    "the study desk's margins and PDF pages, which draw and select ink with its geometry and ink UI (src/studyDesk: marginInk, MarginLayer, PdfMargin, PdfSelect, docxExport)",
+    "sketch cards: the optional `sketch` field on VocabularyItem and saveCustomCard (src/types/vocabulary.ts, src/vocabulary/vocabularyService.ts), Review drawing the sheet and its Open sheet link (src/components/review/Review.tsx, src/App.tsx), and the note's Source in src/anki/noteType.ts",
+  ],
+};

@@ -1,25 +1,28 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DictionaryEntry, DictionaryLookupResult, WordInstance, WordOcrInfo, WordRarity } from '../../types';
-import { senseText } from '../../dictionary/senseText';
 import { getWordRarity, isRarityDataReady, TIER_LABELS } from '../../vocabRarity/rarity';
 import { normalize } from '../../reader/tokenizer/arabicTokenizer';
 import { usePreferences } from '../../state/PreferencesContext';
-import { IconEdit, IconChevronLeft, IconChevronRight, IconBook, IconMaximize } from '../shared/icons';
-import { buildEntryTokenSenses, buildExampleEntryTokens, reconstructSelection, type DefinitionToken, type ExampleEntryTokens } from './definitionTokens';
-import { isTokenizedProvider } from '../../dictionary/tokenizedProviders';
-import { findMatchedSenses, WASIT_MATCH_CLASS } from '../../wasitMatch';
+import { IconEdit, IconChevronLeft, IconChevronRight, IconBook, IconMaximize, IconSettings } from '../shared/icons';
+import { buildEntryTokens, reconstructSelection, type ExampleEntryTokens } from './definitionTokens';
+import { findMatchedEntries, scrollToFirstMatches } from '../../wasitMatch';
+import { entriesAboutWord } from '../../dictionary/subEntries/match';
+import { FOLD_ABOVE, visibleEntryIndexes } from '../../dictionary/entryFeatures';
+import { entryLanguage, traitsOf } from '../../dictionary/providerTraits';
+import { orderProviders, reorderSubset } from '../../dictionary/providerOrder';
 import { annotateEntry } from '../../wasitStructure';
-import { VerbFormInfo, VerbFormMark } from '../../verbForms';
-import { arabicEntriesStartFolded, EntryDock, entryGist, groupLabel, type DockItem } from '../../popupClean';
-import { vowelScore } from '../../dictionary/providers/personal/vowels';
+import { arabicEntriesStartFolded, dockItemsFor, EntryDock, groupLabel, type DockItem } from '../../popupClean';
 import { dictionaryManager } from '../../dictionary';
 import { AddDictionaryPanel } from '../../popupAddDictionary';
-
-/** Dictionaries whose senses carry examples: the verb-form tag leads the entry, its words can be
- * selected and saved on their own, and long ones fold (Baranov, and a file the reader loaded). */
-const EXAMPLE_PROVIDERS = new Set(['baranov', 'personal']);
-/** Examples shown before the "N more examples" button. */
-const EXAMPLES_SHOWN = 3;
+import { SentenceInBook } from './dictionaryPopup/SentenceInBook';
+import { OcrNote } from './dictionaryPopup/OcrNote';
+import { EditableWord } from './dictionaryPopup/EditableWord';
+import { groupEntriesByProvider } from './dictionaryPopup/entryGroups';
+import { PopupTabs } from './dictionaryPopup/PopupTabs';
+import { PopupSettingsSheet } from './dictionaryPopup/PopupSettingsSheet';
+import { effectivePanelLayout } from './dictionaryPopup/panelLayout';
+import { useTokenSelection } from './dictionaryPopup/useTokenSelection';
+import { hasRichSenses, renderGroupList, type EntryListContext } from './dictionaryPopup/entryList';
 import './DictionaryPopup.css';
 
 const VIEWPORT_MARGIN = 12;
@@ -40,223 +43,6 @@ const NARROW_BREAKPOINT_PX = 480;
 // the same tap just opened. Ignoring a dismiss-click in the first instant
 // after mount avoids that without delaying a genuine later dismiss tap.
 const IGNORE_DISMISS_MS = 400;
-
-type EntryGroup = { providerId: string; providerName: string; entries: { entry: DictionaryEntry; index: number }[] };
-
-/** A root/lemma value that shows the Arabic text by default; tapping it
- * crossfades to the "root"/"form" label in the exact same spot, then fades
- * back to the value after a moment. Replaces a static always-visible label
- * — the label only appears when asked for, right where the value was. */
-function MorphValue({ kind, value, label }: { kind: 'form' | 'root'; value: string; label?: string }) {
-  const [revealed, setRevealed] = useState(false);
-  const timeoutRef = useRef<number | undefined>(undefined);
-  useEffect(() => () => window.clearTimeout(timeoutRef.current), []);
-
-  function handleTap() {
-    setRevealed(true);
-    window.clearTimeout(timeoutRef.current);
-    timeoutRef.current = window.setTimeout(() => setRevealed(false), 1400);
-  }
-
-  return (
-    <span
-      className="dict-popup__morph-item"
-      data-kind={kind}
-      onClick={handleTap}
-      role="button"
-      tabIndex={0}
-      aria-label={`${kind}: ${value}`}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleTap();
-        }
-      }}
-    >
-      <span className={'dict-popup__morph-swap' + (revealed ? ' dict-popup__morph-swap--label' : '')}>
-        <bdi className="dict-popup__entry-morph-value dict-popup__morph-face" aria-hidden={revealed}>
-          {value}
-        </bdi>
-        <span className="dict-popup__morph-face dict-popup__morph-face--label" aria-hidden={!revealed}>
-          {label ?? kind}
-        </span>
-      </span>
-    </span>
-  );
-}
-
-/** Where the word was met: the sentence, with the word itself in bold. */
-function SentenceInBook({ sentence, word }: { sentence: string; word: string }) {
-  const at = sentence.indexOf(word);
-  return (
-    <div className="dict-popup__context">
-      <div className="dict-popup__group-header">In this book</div>
-      <div className="dict-popup__sentence">
-        “
-        {at === -1 ? (
-          sentence
-        ) : (
-          <>
-            {sentence.slice(0, at)}
-            <strong>{word}</strong>
-            {sentence.slice(at + word.length)}
-          </>
-        )}
-        ”
-      </div>
-    </div>
-  );
-}
-
-/** Folds consecutive same-provider entries into one group so the popup can
- * show the provider name once per group instead of once per entry. Keeps
- * each entry's original index (needed for the per-entry save-state Set,
- * which is keyed by position in the flat `result.entries` array). */
-function groupEntriesByProvider(entries: DictionaryEntry[]): EntryGroup[] {
-  const groups: EntryGroup[] = [];
-  for (let i = 0; i < entries.length; i++) {
-    const entry = entries[i];
-    const last = groups[groups.length - 1];
-    if (last && last.providerId === entry.providerId) {
-      last.entries.push({ entry, index: i });
-    } else {
-      groups.push({ providerId: entry.providerId, providerName: entry.providerName, entries: [{ entry, index: i }] });
-    }
-  }
-  return groups;
-}
-
-/** One correction offered for a misread word, with its first meaning so it can be chosen at a glance. */
-function Alternative({ word, why, index, onPick }: { word: string; why: string; index: number; onPick: (word: string) => void }) {
-  const [gloss, setGloss] = useState('');
-  useEffect(() => {
-    let cancelled = false;
-    void dictionaryManager
-      .lookup(word)
-      .then((r) => {
-        const sense = r.entries[0]?.senses[0];
-        if (!cancelled && sense) setGloss(senseText(sense));
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [word]);
-  return (
-    <button type="button" className={'dict-popup__alt' + (index === 0 ? ' dict-popup__alt--top' : '')} onClick={() => onPick(word)}>
-      <span className="dict-popup__alt-word" lang="ar" dir="rtl">
-        {word}
-      </span>
-      <span className="dict-popup__alt-gloss">{gloss}</span>
-      <kbd className="dict-popup__alt-key">{index + 1}</kbd>
-      <span className="dict-popup__alt-why">{why}</span>
-    </button>
-  );
-}
-
-/**
- * Under the headword of a word read from a scan: a warning and ranked corrections when the dictionary
- * does not know the read, a "Corrected" mark after the reader fixes it, and a note when a closer look
- * or another engine produced the word. The keys 1-3 take a correction.
- */
-function OcrNote({ ocr, onPick }: { ocr: WordOcrInfo; onPick: (word: string) => void }) {
-  const choices = useMemo(() => (ocr.suspect ? ocr.candidates : []), [ocr.suspect, ocr.candidates]);
-  useEffect(() => {
-    if (!choices.length) return;
-    function onKey(e: KeyboardEvent) {
-      const n = Number(e.key);
-      if (!Number.isInteger(n) || n < 1 || n > choices.length || e.ctrlKey || e.metaKey || e.altKey) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-      e.preventDefault();
-      onPick(choices[n - 1].word);
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [choices, onPick]);
-
-  if (ocr.corrected) return <div className="dict-popup__ocr-note dict-popup__ocr-note--ok">Corrected from the scan’s “{ocr.read}”. Remembered for this book.</div>;
-  if (ocr.suspect) {
-    return (
-      <div className="dict-popup__ocr">
-        <div className="dict-popup__ocr-note dict-popup__ocr-note--warn">Not a known word. Scans often drop a dot or merge letters; click the word to correct it{choices.length ? ', or pick one:' : '.'}</div>
-        {choices.length > 0 && (
-          <div className="dict-popup__alts" role="group" aria-label="Did you mean">
-            {choices.map((c, i) => (
-              <Alternative key={c.word} word={c.word} why={c.why} index={i} onPick={onPick} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-  if (ocr.via === 'remembered') return <div className="dict-popup__ocr-note">Remembered from your earlier correction</div>;
-  if (ocr.via !== 'first read') return <div className="dict-popup__ocr-note">Read again, {ocr.via.startsWith('a ') ? ocr.via : `by ${ocr.via}`}, to get a word</div>;
-  return null;
-}
-
-/** The popup's headword: click it to correct it (a misread scan, a typo); Enter looks up the corrected word, Esc cancels. */
-function EditableWord({ word, suspect, onCommit }: { word: string; suspect: boolean; onCommit: (word: string) => void }) {
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(word);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const cancelled = useRef(false);
-  useEffect(() => {
-    if (!editing) return;
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, [editing]);
-
-  function commit() {
-    const next = draft.trim();
-    setEditing(false);
-    if (!cancelled.current && next && next !== word) onCommit(next);
-  }
-
-  if (!editing) {
-    return (
-      <button
-        type="button"
-        className={'dict-popup__word-text' + (suspect ? ' dict-popup__word-text--suspect' : '')}
-        title="Click to correct this word"
-        aria-label={`Correct the word ${word}`}
-        onClick={() => {
-          cancelled.current = false;
-          setDraft(word);
-          setEditing(true);
-        }}
-      >
-        {word}
-      </button>
-    );
-  }
-  return (
-    <input
-      ref={inputRef}
-      className="dict-popup__word-input"
-      dir="rtl"
-      lang="ar"
-      value={draft}
-      size={Math.max(draft.length, 3)}
-      aria-label="Correct the word"
-      spellCheck={false}
-      autoComplete="off"
-      onChange={(e) => setDraft(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          inputRef.current?.blur();
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          e.stopPropagation();
-          cancelled.current = true;
-          inputRef.current?.blur();
-        }
-      }}
-      onBlur={commit}
-    />
-  );
-}
 
 export function DictionaryPopup({
   word,
@@ -358,11 +144,22 @@ export function DictionaryPopup({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+  // The popup's settings sheet (src/components/reader/dictionaryPopup/PopupSettingsSheet).
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const gearRef = useRef<HTMLButtonElement>(null);
+  function closeSettings() {
+    setSettingsOpen(false);
+    gearRef.current?.focus();
+  }
   async function addDictionary(id: string) {
-    const next = Array.from(new Set([...prefs.enabledProviderIds, id]));
+    setAddOpen(false);
+    await setDictionaryOn(id, true);
+  }
+  // On or off, as in Settings -> Dictionaries; this word is then looked up again so the entries follow.
+  async function setDictionaryOn(id: string, on: boolean) {
+    const next = on ? Array.from(new Set([...prefs.enabledProviderIds, id])) : prefs.enabledProviderIds.filter((p) => p !== id);
     updatePrefs({ enabledProviderIds: next });
     dictionaryManager.setEnabledProviders(next);
-    setAddOpen(false);
     setRefreshing(true);
     try {
       setRefreshed(await dictionaryManager.lookup(word));
@@ -370,6 +167,18 @@ export function DictionaryPopup({
       setRefreshing(false);
     }
   }
+
+  // Ordering readings by the written vowels (changed in the settings sheet) re-asks for this word, so it shows at once.
+  const vowelRankingSeen = useRef(prefs.vowelRanking);
+  useEffect(() => {
+    if (vowelRankingSeen.current === prefs.vowelRanking) return;
+    vowelRankingSeen.current = prefs.vowelRanking;
+    // After the preferences provider has passed the new setting on to the dictionary.
+    const t = window.setTimeout(() => {
+      dictionaryManager.lookup(word).then(setRefreshed, () => {});
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [prefs.vowelRanking, word]);
 
   // Purely local, resets whenever the popup moves to a new word -- not
   // meant to track "is this permanently saved" (that's `saved`, computed
@@ -381,10 +190,12 @@ export function DictionaryPopup({
   // Clean layout (src/popupClean): which verb entries have their other forms open.
   const clean = prefs.dictionaryPopupCleanLayout;
   const [openForms, setOpenForms] = useState<Set<number>>(new Set());
-  // Clean layout: Al-Wasit sub-entries (a lead sense and its continuations) saved on their own, keyed "entry:group".
-  const [savedSubKeys, setSavedSubKeys] = useState<Set<string>>(new Set());
   // Clean layout: Arabic entries the reader flipped from how they started (open, or folded when there are many).
   const [foldedEntries, setFoldedEntries] = useState<Set<number>>(new Set());
+  // Dictionaries whose long list the reader opened with "Show all N entries".
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  // Root-filed dictionaries the reader opened from their folded root row (see foldsBehindRoot).
+  const [openedRoots, setOpenedRoots] = useState<Set<string>>(new Set());
   // Clean layout: dictionaries whose whole section was saved from its heading.
   const [savedGroups, setSavedGroups] = useState<Set<string>>(new Set());
   // Entries whose examples are all shown (the rest show the first few).
@@ -395,6 +206,8 @@ export function DictionaryPopup({
     entryItemIds.current.clear();
     setSavedGroups(new Set());
     setFoldedEntries(new Set());
+    setExpandedGroups(new Set());
+    setOpenedRoots(new Set());
   }, [word]);
   const morphology = result?.morphology?.[0];
 
@@ -428,16 +241,15 @@ export function DictionaryPopup({
   // for a real side-by-side split); 'single' filters down to one chosen
   // provider. Nothing is ever hidden by 'merged' or 'split' -- only
   // 'single' actually removes information from view.
-  const allGroups = groupEntriesByProvider(result?.entries ?? []);
+  // In the order chosen in Settings, so reordering dictionaries (here or there) shows at once.
+  const allGroups = orderProviders(
+    groupEntriesByProvider(result?.entries ?? []).map((g) => ({ ...g, id: g.providerId })),
+    prefs.dictionaryProviderOrder ?? [],
+  );
   const canSplit = allGroups.length > 1;
-  // Clean layout: one dock tab per Al-Wasit entry (a word with several roots has several).
-  const dockItems: DockItem[] = (allGroups.find((g) => g.providerId === 'alwasit')?.entries ?? []).map(({ entry, index }) => ({
-    index,
-    headword: entry.headword,
-    gist: entryGist(entry.senses[0]?.gloss ?? ''),
-  }));
-  const effectiveLayout: 'merged' | 'split' | 'single' =
-    prefs.dictionaryPanelLayout === 'single' ? 'single' : prefs.dictionaryPanelLayout === 'split' && canSplit ? 'split' : 'merged';
+  // Clean layout: one dock tab per root, for any dictionary whose entries sit under several roots.
+  const dockItems: DockItem[] = dockItemsFor(allGroups);
+  const effectiveLayout = effectivePanelLayout(prefs.dictionaryPanelLayout, canSplit);
 
   const singleGroups =
     effectiveLayout === 'single'
@@ -457,6 +269,12 @@ export function DictionaryPopup({
     return () => mql.removeEventListener('change', apply);
   }, []);
 
+  // A tab dragged to a new place: the dictionaries' whole order, with the tabs' slots refilled.
+  function reorderTabs(tabIds: string[]) {
+    const all = orderProviders(dictionaryManager.getProviders(), prefs.dictionaryProviderOrder ?? []).map((p) => p.id);
+    updatePrefs({ dictionaryProviderOrder: reorderSubset(all, tabIds) });
+  }
+
   // Which dictionary's entries the narrow-screen tab switcher currently
   // shows -- resets to the first provider whenever the popup moves to a
   // new word, same as savedEntryKeys above.
@@ -464,7 +282,7 @@ export function DictionaryPopup({
   useEffect(() => {
     setActiveTab(null);
   }, [word]);
-  const activeTabId = activeTab ?? primaryGroup?.providerId;
+  const activeTabId = allGroups.some((g) => g.providerId === activeTab) ? (activeTab ?? undefined) : primaryGroup?.providerId;
 
   // Split view: each column scrolls independently (a long Al-Wasit entry
   // shouldn't force AraMorph's shorter column to match its height) --
@@ -499,52 +317,40 @@ export function DictionaryPopup({
   // max-height/overflow-y in the stylesheet) rather than growing off-screen.
   const popupRef = useRef<HTMLDivElement>(null);
 
-  // Select-and-save: for a long entry (Al-Wasit's own paragraphs commonly
-  // run several sub-senses together) where only part of it is relevant,
-  // clicking/dragging across its words builds a (possibly non-contiguous)
-  // selection to save instead of the whole entry -- see DefinitionToken and
-  // buildEntryTokenSenses above. Keyed by entry index (the same flat index
-  // into result.entries savedEntryKeys already uses) so a scattered
-  // selection in one entry survives switching to look at another entry;
-  // only a genuinely new word/lookup clears it.
-  const [tokenSelections, setTokenSelections] = useState<Map<number, Set<number>>>(new Map());
-  // Which entry a footer/header-level "Save" action should act on when more
-  // than one entry could theoretically have an active selection at once --
-  // always the entry most recently touched, mirroring how there's only ever
-  // one *effectively current* selection even though the Map can hold more.
-  const [activeSelectionEntry, setActiveSelectionEntry] = useState<number | null>(null);
-  useEffect(() => {
-    setTokenSelections(new Map());
-    setActiveSelectionEntry(null);
-  }, [word]);
+  // Entries about the tapped word: what a long list folds down to, and what starts open when the rest fold.
+  const aboutEntries = useMemo(() => (result ? entriesAboutWord(result.entries, word, result.morphology) : new Set<number>()), [result, word]);
+  // Entries on show (a long list shows only a few of its entries) that satisfy `test`.
+  const shownCount = (test: (e: DictionaryEntry) => boolean) =>
+    allGroups.reduce((n, g) => {
+      const indexes = g.entries.map((e) => e.index);
+      const shown = g.entries.length > FOLD_ABOVE && !expandedGroups.has(g.providerId) ? visibleEntryIndexes(indexes, aboutEntries) : indexes;
+      return n + shown.filter((i) => result && test(result.entries[i])).length;
+    }, 0);
+  // Too many Arabic entries on show start folded to their headword row, and so do too many Baranov-style ones.
+  const startFolded = clean && arabicEntriesStartFolded(shownCount((e) => entryLanguage(e) === 'ar'), prefs.collapseManyArabicEntries);
+  const startFoldedExamples = clean && arabicEntriesStartFolded(shownCount((e) => hasRichSenses(e.providerId)), prefs.collapseManyArabicEntries);
 
-  const entryTokenData = useMemo(() => {
-    const map = new Map<number, { flat: DefinitionToken[]; bySense: DefinitionToken[][] }>();
-    result?.entries.forEach((e, i) => {
-      if (isTokenizedProvider(e.providerId)) map.set(i, buildEntryTokenSenses(e));
-    });
-    return map;
-  }, [result]);
-  const startFolded = clean && arabicEntriesStartFolded(entryTokenData.size, prefs.collapseManyArabicEntries);
+  // An entry's text as word tokens (sense by sense, then each example) for picking words to save, cut the first time
+  // it is wanted: Lane's articles are huge, and only the entries on show are ever asked for.
+  const tokenCache = useMemo(() => new WeakMap<DictionaryEntry, ExampleEntryTokens>(), []);
+  const tokensFor = useCallback(
+    (entryIdx: number): ExampleEntryTokens | undefined => {
+      const entry = result?.entries[entryIdx];
+      if (!entry) return undefined;
+      let tokens = tokenCache.get(entry);
+      if (!tokens) {
+        tokens = buildEntryTokens(entry);
+        tokenCache.set(entry, tokens);
+      }
+      return tokens;
+    },
+    [result, tokenCache],
+  );
 
-  // Baranov-style entries: tokenized in reading order (sense, then each example) for word selection.
-  const exampleTokenData = useMemo(() => {
-    const map = new Map<number, ExampleEntryTokens>();
-    result?.entries.forEach((e, i) => {
-      if (EXAMPLE_PROVIDERS.has(e.providerId)) map.set(i, buildExampleEntryTokens(e));
-    });
-    return map;
-  }, [result]);
-  const startFoldedExamples = clean && arabicEntriesStartFolded(exampleTokenData.size, prefs.collapseManyArabicEntries);
-
-  // Which Al-Wasit senses are the form that was looked up (see wasitMatch).
+  // Which senses of the root dictionaries' articles are the word that was looked up (see wasitMatch).
   const wasitMatches = useMemo(() => {
-    const map = new Map<number, Set<number>>();
-    if (!prefs.wasitMatchHighlight) return map;
-    result?.entries.forEach((e, i) => {
-      if (isTokenizedProvider(e.providerId)) map.set(i, findMatchedSenses(e, word, result.morphology));
-    });
-    return map;
+    if (!prefs.wasitMatchHighlight || !result) return new Map<number, Set<number>>();
+    return findMatchedEntries(result.entries, word, result.morphology);
   }, [result, word, prefs.wasitMatchHighlight]);
 
   // Al-Wasit's internal structure (see wasitStructure); null = render plain.
@@ -552,103 +358,12 @@ export function DictionaryPopup({
     const map = new Map<number, ReturnType<typeof annotateEntry>>();
     if (!prefs.wasitStructureEnabled) return map;
     result?.entries.forEach((e, i) => {
-      if (e.providerId === 'alwasit') map.set(i, annotateEntry(e));
+      if (traitsOf(e.providerId).structure) map.set(i, annotateEntry(e, prefs.wasitLabelsEnabled));
     });
     return map;
-  }, [result, prefs.wasitStructureEnabled]);
+  }, [result, prefs.wasitStructureEnabled, prefs.wasitLabelsEnabled]);
 
-  function toggleToken(entryIdx: number, idx: number) {
-    setTokenSelections((prev) => {
-      const next = new Map(prev);
-      const set = new Set(next.get(entryIdx) ?? []);
-      if (set.has(idx)) set.delete(idx);
-      else set.add(idx);
-      if (set.size === 0) next.delete(entryIdx);
-      else next.set(entryIdx, set);
-      return next;
-    });
-    setActiveSelectionEntry(entryIdx);
-  }
-
-  function addTokenRange(entryIdx: number, lo: number, hi: number) {
-    const tokens = entryTokenData.get(entryIdx)?.flat ?? exampleTokenData.get(entryIdx)?.flat;
-    if (!tokens) return;
-    setTokenSelections((prev) => {
-      const next = new Map(prev);
-      const set = new Set(next.get(entryIdx) ?? []);
-      for (let idx = lo; idx <= hi; idx++) {
-        if (tokens[idx]?.isWord) set.add(idx);
-      }
-      next.set(entryIdx, set);
-      return next;
-    });
-    setActiveSelectionEntry(entryIdx);
-  }
-
-  function clearEntrySelection(entryIdx: number) {
-    setTokenSelections((prev) => {
-      const next = new Map(prev);
-      next.delete(entryIdx);
-      return next;
-    });
-    setActiveSelectionEntry((prev) => (prev === entryIdx ? null : prev));
-  }
-
-  // Drag tracking mirrors VocabularyEditModal's own pointer-based range
-  // selection (see its own comment for why plain refs, not state, and why
-  // touch needs elementFromPoint rather than per-token pointerenter) --
-  // except a plain click here must *toggle* the one token under it rather
-  // than always adding, so pointerdown only records the anchor; pointerup
-  // decides which happened based on whether the pointer ever actually moved
-  // to a different token in between.
-  const dragAnchorRef = useRef<{ entry: number; idx: number } | null>(null);
-  const dragMovedRef = useRef(false);
-  const draggingRef = useRef(false);
-
-  function handleTokenPointerDown(entryIdx: number, idx: number, e: React.PointerEvent) {
-    e.preventDefault();
-    dragAnchorRef.current = { entry: entryIdx, idx };
-    dragMovedRef.current = false;
-    draggingRef.current = true;
-  }
-
-  function handleTokensPointerMove(e: React.PointerEvent) {
-    if (!draggingRef.current || !dragAnchorRef.current) return;
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    const tokenEl = (el as HTMLElement | null)?.closest<HTMLElement>('[data-idx]');
-    if (!tokenEl) return;
-    const entryAttr = tokenEl.dataset.entry;
-    const idxAttr = tokenEl.dataset.idx;
-    if (entryAttr == null || idxAttr == null) return;
-    const entry = Number(entryAttr);
-    if (entry !== dragAnchorRef.current.entry) return; // never extend a drag across entries
-    const idx = Number(idxAttr);
-    if (idx === dragAnchorRef.current.idx && !dragMovedRef.current) return;
-    dragMovedRef.current = true;
-    addTokenRange(entry, Math.min(dragAnchorRef.current.idx, idx), Math.max(dragAnchorRef.current.idx, idx));
-  }
-
-  useEffect(() => {
-    function stop() {
-      if (draggingRef.current && dragAnchorRef.current && !dragMovedRef.current) {
-        toggleToken(dragAnchorRef.current.entry, dragAnchorRef.current.idx);
-      }
-      draggingRef.current = false;
-      dragAnchorRef.current = null;
-      dragMovedRef.current = false;
-    }
-    window.addEventListener('pointerup', stop);
-    window.addEventListener('pointercancel', stop);
-    return () => {
-      window.removeEventListener('pointerup', stop);
-      window.removeEventListener('pointercancel', stop);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const activeSelection = activeSelectionEntry !== null ? tokenSelections.get(activeSelectionEntry) : undefined;
-  const activeSelectionCount = activeSelection?.size ?? 0;
-
+const {    tokenSelections,    activeSelectionEntry,    activeSelectionCount,    activeSelection,    clearEntrySelection,    handleTokenPointerDown,    handleTokensPointerMove,  } = useTokenSelection(word, tokensFor);
   /** The main "Save Vocabulary" (and its header-shortcut twin) button's
    * click handler -- when a selection is active, saves *only* that
    * selection instead of the whole lookup, so the safety this feature
@@ -657,9 +372,9 @@ export function DictionaryPopup({
   function handleMainSave() {
     if (activeSelectionEntry !== null && activeSelection && activeSelection.size > 0 && onSaveSelection) {
       const entry = result?.entries[activeSelectionEntry];
-      const tokens = entryTokenData.get(activeSelectionEntry)?.flat;
+      const tokens = tokensFor(activeSelectionEntry);
       if (entry && tokens) {
-        onSaveSelection(entry, reconstructSelection(tokens, activeSelection));
+        onSaveSelection(entry, reconstructSelection(tokens.flat, activeSelection));
         clearEntrySelection(activeSelectionEntry);
         return;
       }
@@ -752,7 +467,21 @@ export function DictionaryPopup({
     // so this call catches the *start* of that resize -- the transitionend
     // handler on the popup element below catches the settled end of it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [word, loading, result, x, y, wordRect, sizePct, effectiveLayout, isNarrow]);
+  }, [word, loading, result, x, y, wordRect, sizePct, effectiveLayout, isNarrow, settingsOpen]);
+
+  // Land on the looked-up word: once per result (and per Split tab), scroll each scroll container to the
+  // first sub-entry coloured as matching it, unless it is already in view (see wasitMatch).
+  const landedRef = useRef<{ result: unknown; view: string } | null>(null);
+  useEffect(() => {
+    const el = popupRef.current;
+    if (!el || !prefs.subEntryScroll || loading || refreshing || !result || (!page && style.visibility !== 'visible')) return;
+    const view = `${effectiveLayout}:${activeTabId ?? ''}`;
+    if (landedRef.current?.result === result && landedRef.current.view === view) return;
+    landedRef.current = { result, view };
+    // The popup opens at its top: a match whose first line is already on screen (the lists fold to it) is left be.
+    // The full-page dictionary keeps scrolling to bring the whole match into view.
+    scrollToFirstMatches(el, { startIsEnough: !page });
+  }, [result, wasitMatches, loading, refreshing, prefs.subEntryScroll, style.visibility, page, effectiveLayout, activeTabId]);
 
   const scale = sizePct / 100;
 
@@ -768,331 +497,40 @@ export function DictionaryPopup({
   function toggleSplit() {
     updatePrefs({ dictionaryPanelLayout: prefs.dictionaryPanelLayout === 'split' ? 'merged' : 'split' });
   }
-
-  /** Al-Wasit's senses. Clean layout groups each lead sense with its continuations into a
-   * sub-entry with its own round "+", which saves just that section. */
-  function renderSubEntries(entry: DictionaryEntry, entryIndex: number, renderSense: (s: DictionaryEntry['senses'][number], si: number) => ReactNode) {
-    // Only Al-Wasit has lead/continuation structure to group by; the other
-    // root-keyed dictionaries' lines would each get their own "+".
-    if (!clean || entry.providerId !== 'alwasit') return entry.senses.map(renderSense);
-    const groups: number[][] = [];
-    entry.senses.forEach((_, si) => {
-      const structure = wasitStructure.get(entryIndex)?.[si];
-      if (!groups.length || structure?.isLead || !structure?.isContinuation) groups.push([si]);
-      else groups[groups.length - 1].push(si);
-    });
-    return groups.map((group, gi) => {
-      const key = `${entryIndex}:${gi}`;
-      const done = savedSubKeys.has(key);
-      return (
-        <div className="dict-popup__subentry" key={gi}>
-          {onSaveEntry && groups.length > 1 && (
-            <button
-              className="dict-popup__sense-add"
-              disabled={done}
-              onClick={() => {
-                onSaveEntry({ ...entry, senses: group.map((si) => entry.senses[si]) });
-                setSavedSubKeys((prev) => new Set(prev).add(key));
-              }}
-              aria-label="Add just this section to vocabulary"
-              title={done ? 'Added' : 'Add just this section'}
-            >
-              {done ? '✓' : '+'}
-            </button>
-          )}
-          <div className="dict-popup__sense-body">{group.map((si) => renderSense(entry.senses[si], si))}</div>
-        </div>
-      );
-    });
-  }
-
-  function renderGroupList(groups: EntryGroup[]) {
-    return groups.map((group) => (
-      <div className="dict-popup__group" key={group.providerId}>
-        <div className="dict-popup__group-header">
-          {clean ? groupLabel(group) : group.providerName}
-          {clean && onSaveEntries && (isTokenizedProvider(group.providerId) || EXAMPLE_PROVIDERS.has(group.providerId)) && group.entries.length > 1 && (
-            <button
-              className="dict-popup__sense-add dict-popup__group-add"
-              disabled={savedGroups.has(group.providerId)}
-              onClick={() => {
-                onSaveEntries(group.entries.map((e) => e.entry));
-                setSavedGroups((prev) => new Set(prev).add(group.providerId));
-              }}
-              aria-label="Add this whole section to vocabulary"
-              title={savedGroups.has(group.providerId) ? 'Added' : 'Add this whole section'}
-            >
-              {savedGroups.has(group.providerId) ? '✓' : '+'}
-            </button>
-          )}
-        </div>
-        {group.entries.map(({ entry, index: i }) => {
-          // Non-contiguous word selection (click to toggle, drag to add a
-          // range) -- the root-keyed Arabic-Arabic dictionaries only (see
-          // isTokenizedProvider), and only while a save-selection callback
-          // actually exists to hand it to. Every other provider's entries
-          // keep the plain, non-interactive sense list below.
-          const tokenData = isTokenizedProvider(entry.providerId) ? entryTokenData.get(i) : undefined;
-          const exTokens = EXAMPLE_PROVIDERS.has(entry.providerId) ? exampleTokenData.get(i) : undefined;
-          const wordData = tokenData ?? exTokens;
-          const sel = wordData ? tokenSelections.get(i) : undefined;
-          const hasSelection = !!sel && sel.size > 0;
-          const folded = clean && ((!!tokenData && startFolded !== foldedEntries.has(i)) || (!!exTokens && startFoldedExamples !== foldedEntries.has(i)));
-          // The entry whose spelling (and vowels, when the tapped word has them) is the one looked up.
-          const exactMatch = !!exTokens && group.entries.length > 1 && normalize(entry.headword) === normalize(word) && vowelScore(word, entry.headword) < 2;
-
-          function toggleFold() {
-            clearEntrySelection(i);
-            setFoldedEntries((prev) => {
-              const next = new Set(prev);
-              if (!next.delete(i)) next.add(i);
-              return next;
-            });
-          }
-
-          function saveThisSelection() {
-            if (!wordData || !sel || !onSaveSelection) return;
-            onSaveSelection(entry, reconstructSelection(wordData.flat, sel));
-            clearEntrySelection(i);
-          }
-
-          // Shown for a single entry too, so saving one entry (and recording it as the reader's pick) always works the same way.
-          const saveButton =
-            onSaveEntry ? (
-              <button
-                className={'dict-popup__entry-save' + (hasSelection ? ' dict-popup__entry-save--selection' : '')}
-                onClick={() => {
-                  if (hasSelection) {
-                    saveThisSelection();
-                    return;
-                  }
-                  if (savedEntryKeys.has(i)) {
-                    const itemId = entryItemIds.current.get(i);
-                    if (!itemId || !onUnsaveEntry) return;
-                    entryItemIds.current.delete(i);
-                    setSavedEntryKeys((prev) => {
-                      const next = new Set(prev);
-                      next.delete(i);
-                      return next;
-                    });
-                    void onUnsaveEntry(itemId);
-                    return;
-                  }
-                  setSavedEntryKeys((prev) => new Set(prev).add(i));
-                  void Promise.resolve(onSaveEntry(entry)).then((itemId) => {
-                    if (itemId) entryItemIds.current.set(i, itemId);
-                  });
-                }}
-                disabled={!hasSelection && savedEntryKeys.has(i) && !onUnsaveEntry}
-                aria-label={hasSelection ? `Save just the ${sel!.size} selected words for "${entry.headword}"` : `Add just "${entry.headword}" to vocabulary`}
-                title={hasSelection ? 'Will save only the selected words, not the full definition' : savedEntryKeys.has(i) && onUnsaveEntry ? 'Remove this definition' : 'Add just this definition'}
-              >
-                {hasSelection ? '✓ sel' : savedEntryKeys.has(i) ? '✓' : '+'}
-              </button>
-            ) : null;
-
-          return (
-            <div
-              className={
-                'dict-popup__entry' +
-                (clean && entry.verbForm ? ' dict-popup__entry--tappable' : '') +
-                (clean && tokenData ? ' dict-popup__entry--subs' : '') +
-                (exactMatch ? ' dict-popup__entry--best' : '')
-              }
-              data-entry-index={i}
-              key={entry.providerId + i}
-              onClick={
-                clean && entry.verbForm
-                  ? (e) => {
-                      // Tapping the verb (not its root/form chips or buttons) opens its other forms.
-                      if ((e.target as HTMLElement).closest('.dict-popup__morph-item, button')) return;
-                      setOpenForms((prev) => {
-                        const next = new Set(prev);
-                        if (!next.delete(i)) next.add(i);
-                        return next;
-                      });
-                    }
-                  : undefined
-              }
-            >
-              {clean && saveButton}
-              <div className="dict-popup__entry-head">
-                {clean && wordData ? (
-                  <span
-                    className="dict-popup__headword dict-popup__headword--toggle"
-                    role="button"
-                    tabIndex={0}
-                    aria-expanded={!folded}
-                    title={folded ? 'Show the definition' : 'Hide the definition'}
-                    onClick={toggleFold}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        toggleFold();
-                      }
-                    }}
-                  >
-                    {entry.headword}
-                  </span>
-                ) : (
-                  <span className="dict-popup__headword">{entry.headword}</span>
-                )}
-                {/* Sits between the headword and the per-entry save
-                    button -- root before form (read first, right next to
-                    the headword it belongs to), both smaller than the
-                    headword since they're a secondary identifier, not
-                    the entry's main content. Different entries in the
-                    same provider's group can genuinely come from
-                    different roots/lemmas (e.g. an unvocalized verb form
-                    ambiguous between Form I and Form IV), so this stays
-                    per-entry rather than folded into the group header.
-                    Only shown when it says something the headword
-                    doesn't already -- a plain root-keyed entry (e.g.
-                    Al-Wasit) would otherwise repeat its own headword
-                    right back as "root". */}
-                {((entry.lemma && entry.lemma !== entry.headword) || (entry.root && entry.root !== entry.headword)) && (
-                  <span
-                    className={
-                      'dict-popup__entry-morph' + (prefs.morphDisplayStyle === 'badges' ? ' dict-popup__entry-morph--badges' : '')
-                    }
-                  >
-                    {/* Clean layout: dictionary form first, then the root; pressing a verb's root shows its form. */}
-                    {clean && entry.lemma && entry.lemma !== entry.headword && <MorphValue kind="form" value={entry.lemma} />}
-                    {entry.root && entry.root !== entry.headword && (
-                      <MorphValue
-                        kind="root"
-                        value={entry.root}
-                        label={clean && prefs.verbFormsEnabled && entry.verbForm ? `Form ${entry.verbForm}` : undefined}
-                      />
-                    )}
-                    {!clean && entry.lemma && entry.lemma !== entry.headword && <MorphValue kind="form" value={entry.lemma} />}
-                  </span>
-                )}
-                {!clean && <VerbFormMark entry={entry} />}
-                {!clean && saveButton}
-              </div>
-              {!clean && <VerbFormInfo entry={entry} />}
-              {tokenData ? folded ? null : (
-                <div
-                  className={'dict-popup__tokens' + (wasitStructure.get(i) && prefs.wasitStructureExamples === 'dim' ? ' wasit-examples--dim' : '')}
-                  dir="rtl"
-                  onPointerMove={handleTokensPointerMove}
-                >
-                  {renderSubEntries(entry, i, (s, si) => {
-                    const structure = wasitStructure.get(i)?.[si];
-                    let wordNo = 0;
-                    return (
-                    <div
-                      className={
-                        'dict-popup__token-sense' +
-                        (structure?.isLead ? ' wasit-sense--lead' : '') +
-                        (structure?.isContinuation ? ' wasit-sense--cont' : '')
-                      }
-                      key={si}
-                    >
-                      {tokenData.bySense[si].map((t) => {
-                        if (!t.isWord) return <span key={t.globalIdx}>{t.text}</span>;
-                        const word = structure?.words[wordNo++];
-                        return (
-                          <span
-                            key={t.globalIdx}
-                            data-entry={i}
-                            data-idx={t.globalIdx}
-                            title={word?.title}
-                            className={
-                              'dict-popup__token' +
-                              (word ? ' wasit-role--' + word.role : '') +
-                              (sel?.has(t.globalIdx) ? ' dict-popup__token--selected' : '') +
-                              (wasitMatches.get(i)?.has(si) && t === tokenData.bySense[si].find((x) => x.isWord) ? ' ' + WASIT_MATCH_CLASS : '')
-                            }
-                            onPointerDown={(e) => handleTokenPointerDown(i, t.globalIdx, e)}
-                          >
-                            {t.text}
-                          </span>
-                        );
-                      })}
-                      {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
-                    </div>
-                    );
-                  })}
-                </div>
-              ) : exTokens && folded ? null : (
-                <ul
-                  className={'dict-popup__senses' + (exTokens ? ' dict-popup__senses--words' : '')}
-                  onPointerMove={exTokens ? handleTokensPointerMove : undefined}
-                >
-                  {entry.senses.map((s, si) => {
-                    const st = exTokens?.senses[si];
-                    const shown = !s.examples ? 0 : expandedExamples.has(i) ? s.examples.length : EXAMPLES_SHOWN;
-                    const renderWords = (tokens: DefinitionToken[]) =>
-                      tokens.map((t) =>
-                        t.isWord ? (
-                          <span
-                            key={t.globalIdx}
-                            data-entry={i}
-                            data-idx={t.globalIdx}
-                            className={'dict-popup__token' + (sel?.has(t.globalIdx) ? ' dict-popup__token--selected' : '')}
-                            onPointerDown={(e) => handleTokenPointerDown(i, t.globalIdx, e)}
-                          >
-                            {t.text}
-                          </span>
-                        ) : (
-                          <span key={t.globalIdx}>{t.text}</span>
-                        ),
-                      );
-                    return (
-                      <li key={si}>
-                        {EXAMPLE_PROVIDERS.has(entry.providerId) ? (
-                          <div className="dict-popup__sense-main">
-                            {s.notes && <bdi className="dict-popup__lead" dir="rtl">{s.notes}</bdi>}
-                            {(s.pos || s.gender) && (
-                              <span className="dict-popup__tag dict-popup__tag--lead">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>
-                            )}
-                            {st ? renderWords(st.gloss) : s.gloss}
-                            {s.examples && (
-                              <ul className="dict-popup__examples">
-                                {s.examples.slice(0, shown).map((ex, ei) => (
-                                  <li key={ei}>
-                                    <bdi lang="ar" dir="rtl" className="dict-popup__example-ar">{st ? renderWords(st.examples[ei].ar) : ex.ar}</bdi>
-                                    <span className="dict-popup__example-gloss">{st ? renderWords(st.examples[ei].gloss) : ex.gloss}</span>
-                                  </li>
-                                ))}
-                                {s.examples.length > shown && (
-                                  <li className="dict-popup__examples-more">
-                                    <button
-                                      type="button"
-                                      onClick={() => setExpandedExamples((prev) => new Set(prev).add(i))}
-                                    >
-                                      {s.examples.length - shown} more example{s.examples.length - shown === 1 ? '' : 's'}
-                                    </button>
-                                  </li>
-                                )}
-                              </ul>
-                            )}
-                          </div>
-                        ) : (
-                          <>
-                            {s.gloss}
-                            {(s.pos || s.gender) && <span className="dict-popup__tag">{[s.pos, s.gender].filter(Boolean).join(' · ')}</span>}
-                          </>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              {clean && <VerbFormInfo entry={entry} clean open={openForms.has(i)} />}
-              {hasSelection && (
-                <button className="dict-popup__save-selection" onClick={saveThisSelection}>
-                  + Save selection ({sel!.size})
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    ));
-  }
+  const entryListContext: EntryListContext = {
+    word,
+    clean,
+    prefs,
+    wasitStructure,
+    wasitMatches,
+    tokensFor,
+    tokenSelections,
+    startFolded,
+    startFoldedExamples,
+    foldedEntries,
+    setFoldedEntries,
+    aboutEntries,
+    expandedGroups,
+    setExpandedGroups,
+    openedRoots,
+    setOpenedRoots,
+    savedGroups,
+    setSavedGroups,
+    savedEntryKeys,
+    setSavedEntryKeys,
+    entryItemIds,
+    openForms,
+    setOpenForms,
+    expandedExamples,
+    setExpandedExamples,
+    onSaveEntry,
+    onUnsaveEntry,
+    onSaveEntries,
+    onSaveSelection,
+    clearEntrySelection,
+    handleTokenPointerDown,
+    handleTokensPointerMove,
+  };
 
   const footer = (
     <>
@@ -1144,7 +582,8 @@ export function DictionaryPopup({
           (clean ? ' dict-popup--clean' : '') +
           (page ? ' dict-popup--page' : '') +
           (effectiveLayout === 'split' && !isNarrow && !page ? ' dict-popup--split' : '') +
-          (prefs.dictionaryPopupPinFooter && !page ? ' dict-popup--pinned-footer' : '')
+          (prefs.dictionaryPopupPinFooter && !page ? ' dict-popup--pinned-footer' : '') +
+          (settingsOpen ? ' dict-popup--sheet' : '')
         }
         style={page ? undefined : { left: style.left, top: style.top, visibility: style.visibility, transform: `scale(${scale})`, transformOrigin: 'top left' }}
         onClick={(e) => e.stopPropagation()}
@@ -1152,24 +591,29 @@ export function DictionaryPopup({
           if (e.propertyName === 'width') recalcPosition();
         }}
       >
-        {clean && !isNarrow && dockItems.length > 1 && (
+        {clean && !isNarrow && effectiveLayout !== 'tabs' && dockItems.length > 1 && (
           <EntryDock
             items={dockItems}
             popupRef={popupRef}
             scale={scale}
-            onJump={(i) =>
-              // Open the entry the tab points at, whether entries started folded or open.
+            onJump={(i) => {
+              // Open the entry the tab points at, whether its list is folded and whether entries started folded or open.
+              const group = allGroups.find((g) => g.entries.some((e) => e.index === i));
+              if (group) {
+                setOpenedRoots((prev) => new Set(prev).add(group.providerId));
+                setExpandedGroups((prev) => new Set(prev).add(group.providerId));
+              }
               setFoldedEntries((prev) => {
                 const next = new Set(prev);
-                if (startFolded) next.add(i);
+                if (startFolded && !aboutEntries.has(i)) next.add(i);
                 else next.delete(i);
                 return next;
-              })
-            }
+              });
+            }}
           />
         )}
 
-        {canSplit && effectiveLayout !== 'single' && !page && (
+        {canSplit && effectiveLayout !== 'single' && effectiveLayout !== 'tabs' && !page && (
           <button
             className="dict-popup__chevron"
             onClick={toggleSplit}
@@ -1223,6 +667,18 @@ export function DictionaryPopup({
           >
             <IconBook size={12} />
           </button>
+          {!page && (
+            <button
+              ref={gearRef}
+              className="dict-popup__header-btn"
+              onClick={() => setSettingsOpen((o) => !o)}
+              aria-label="Popup settings"
+              aria-expanded={settingsOpen}
+              title="Popup settings"
+            >
+              <IconSettings size={12} />
+            </button>
+          )}
           {onMaximise && (
             <button className="dict-popup__header-btn" onClick={onMaximise} aria-label="Open in full page" title="Open in full page (F)">
               <IconMaximize size={12} />
@@ -1230,7 +686,7 @@ export function DictionaryPopup({
           )}
         </div>
 
-        <div className="dict-popup__word">
+        <div className={'dict-popup__word' + (page ? '' : ' dict-popup__word--gear')}>
           {onEditWord ? <EditableWord key={word} word={word} suspect={!!ocr?.suspect} onCommit={onEditWord} /> : word}
           {rarity && (
             <span className={'dict-popup__rarity dict-popup__rarity--' + rarity.tier}>
@@ -1253,36 +709,29 @@ export function DictionaryPopup({
         {!loading && !refreshing && !result?.entries.length && <div className="dict-popup__empty">No entry found for this word yet.</div>}
 
         {!loading && !refreshing && result?.entries.length ? (
-          effectiveLayout === 'split' ? (
-            isNarrow ? (
-              <>
-                <div className="dict-popup__tabs">
-                  {allGroups.map((g) => (
-                    <button
-                      key={g.providerId}
-                      className={'dict-popup__tab' + (g.providerId === activeTabId ? ' dict-popup__tab--active' : '')}
-                      onClick={() => setActiveTab(g.providerId)}
-                    >
-                      {clean ? groupLabel(g) : g.providerName}
-                    </button>
-                  ))}
-                </div>
-                {renderGroupList(allGroups.filter((g) => g.providerId === activeTabId))}
-              </>
-            ) : (
-              <div className="dict-popup__split-cols">
-                <div className="dict-popup__split-col" ref={primaryColRef} onWheel={(e) => handleColumnWheel(e, true)}>
-                  {renderGroupList(primaryGroup ? [primaryGroup] : [])}
-                </div>
-                <div className="dict-popup__split-col" ref={secondaryColRef} onWheel={(e) => handleColumnWheel(e, false)}>
-                  {renderGroupList(secondaryGroups)}
-                </div>
+          effectiveLayout === 'tabs' || (effectiveLayout === 'split' && isNarrow) ? (
+            <>
+              <PopupTabs
+                tabs={allGroups.map((g) => ({ id: g.providerId, label: clean ? groupLabel(g) : g.providerName }))}
+                activeId={activeTabId}
+                onSelect={setActiveTab}
+                onReorder={reorderTabs}
+              />
+              {renderGroupList({ ...entryListContext, tabbed: true }, allGroups.filter((g) => g.providerId === activeTabId))}
+            </>
+          ) : effectiveLayout === 'split' ? (
+            <div className="dict-popup__split-cols">
+              <div className="dict-popup__split-col" ref={primaryColRef} onWheel={(e) => handleColumnWheel(e, true)}>
+                {renderGroupList(entryListContext, primaryGroup ? [primaryGroup] : [])}
               </div>
-            )
+              <div className="dict-popup__split-col" ref={secondaryColRef} onWheel={(e) => handleColumnWheel(e, false)}>
+                {renderGroupList(entryListContext, secondaryGroups)}
+              </div>
+            </div>
           ) : effectiveLayout === 'single' ? (
-            renderGroupList(singleGroups)
+            renderGroupList(entryListContext, singleGroups)
           ) : (
-            renderGroupList(allGroups)
+            renderGroupList(entryListContext, allGroups)
           )
         ) : null}
 
@@ -1295,6 +744,7 @@ export function DictionaryPopup({
         {!prefs.dictionaryPopupPinFooter && footer}
       </div>
       {prefs.dictionaryPopupPinFooter && <div className="dict-popup__footer-pinned">{footer}</div>}
+      {settingsOpen && !page && <PopupSettingsSheet onToggleProvider={(id, on) => void setDictionaryOn(id, on)} onClose={closeSettings} />}
       </div>
     </div>
   );

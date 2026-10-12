@@ -29,7 +29,7 @@ const errorMessage = (err: unknown) => (err instanceof Error ? err.message : Str
  * cache is only an optimization: failing to read or write it (quota, private
  * mode, a corrupt row) falls back to parsing and never fails the load. */
 /** Bump when createDictTable starts keeping something new, so older cached parses are discarded. */
-const PARSER_VERSION = 'verb-forms-1';
+const PARSER_VERSION = 'homograph-roots-1';
 
 async function buildTables(texts: Record<DictFileName, string>, dataFingerprint = fingerprintDictTexts(texts)): Promise<void> {
   const fingerprint = `${dataFingerprint}#${PARSER_VERSION}`;

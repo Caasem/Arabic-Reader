@@ -4,6 +4,260 @@ Versions are tracked here plus in the `VERSION` file, kept in step with
 `package.json`. Bump `VERSION` and add an entry here for each user-visible
 release.
 
+## Summary: 10–11 October 2026 (the refactor pass)
+
+Everything that landed from the evening of 10 October to midday on 11 October, in order. Rows 1–7 are on `main`
+(up to 0.96.0); rows 8–25 are on `refactor/integration`
+([Caasem/Arabic-Reader#73](https://github.com/Caasem/Arabic-Reader/pull/73), 0.97.0), waiting to be tested before
+merging. Per-phase detail and how to revert each one: `docs/changes/refactor-changes.md`.
+
+| # | When | Where | What changed | Users see it? | Version | Status |
+|---|---|---|---|---|---|---|
+| 1 | 10 Oct 17:41 | [#65](https://github.com/Caasem/Arabic-Reader/pull/65) | Sketch and margin pass: margin piles, PDF ink on Night pages, searching sheets in All sheets | Yes | 0.82 – 0.93 | Merged |
+| 2 | 11 Oct 03:10 | [#66](https://github.com/Caasem/Arabic-Reader/pull/66) | The margins are renamed the Ḥāshiya everywhere | Yes | 0.94.0 | Merged |
+| 3 | 11 Oct 03:29 | [#67](https://github.com/Caasem/Arabic-Reader/pull/67), phase 0 | Housekeeping: one Baranov data file, docs moved into `docs/changes/`, a bundle size check added to CI | No | — | Merged |
+| 4 | 11 Oct 04:11 | [#69](https://github.com/Caasem/Arabic-Reader/pull/69), phase 2a | Phones and tablets switch to the new reader; a one-time notice offered Switch back, and old readers were marked Legacy | Yes | 0.95.0 | Merged |
+| 5 | 11 Oct 05:38 | [#71](https://github.com/Caasem/Arabic-Reader/pull/71) | Two study-desk e2e tests made reliable (they now wait properly) | No | — | Merged |
+| 6 | 11 Oct 05:40 | [#70](https://github.com/Caasem/Arabic-Reader/pull/70), phase 1 | Code shared by the new reader and PDF pages moves into `src/readerCore` | No | — | Merged |
+| 7 | 11 Oct 08:30 | [#72](https://github.com/Caasem/Arabic-Reader/pull/72), phase 2b | One reader: Original layout and the old clean reader are removed, with their settings and the Switch back notice; old bookmarks open on the right word; footnotes no longer show script text | Yes | 0.96.0 | Merged |
+| 8 | 11 Oct 10:04–11:54 | [#73](https://github.com/Caasem/Arabic-Reader/pull/73), phase 5 | Feature registry: all 15 features come from one list; saved settings use shared storage code, with keys unchanged | No | — | On `refactor/integration` |
+| 9 | 11 Oct 12:15–12:23 | #73, phase 4 | Dictionary popup split from 1,301 to 678 lines | No | — | On `refactor/integration` |
+| 10 | 11 Oct ~12:20 | #73, phase 6 | Hash routing: every screen has an address, Back and Forward work, a reload keeps your place | Yes | 0.97.0 | On `refactor/integration` |
+| 11 | 11 Oct 12:26–12:31 | #73, phase 7 | Colour tokens: 126 hard-coded colours become 111 named tokens with the same values | No (intended) | — | On `refactor/integration` |
+| 12 | 11 Oct 12:45 | #73, fix | The popup stylesheet loads again (phase 4 had dropped its import, so the popup had no backdrop or styling) | Fixes a regression | — | On `refactor/integration` |
+| 13 | 11 Oct 12:49 | #73 | *Use recommended settings* also switches on Al-Wasīṭ; *Skip for now* stays English-only | Yes | 0.97.0 | On `refactor/integration` |
+| 14 | 11 Oct 12:56 | #73 | No scrollbars on any device (before, only the desktop app hid them) | Yes | 0.97.0 | On `refactor/integration` |
+| 15 | 11 Oct | #73, fix | A word with ال whose noun AraMorph lacks (التحاسد) now finds the verb and its root instead of nothing | Yes | 0.97.1 | On `refactor/integration` |
+| 16 | 11 Oct | #73 | Form V/VI verbal nouns missing from AraMorph (about 340, e.g. تَحاسُد) are made as hidden entries: they find the root for the Arabic dictionaries but are never shown | Yes | 0.99.1 | On `refactor/integration` |
+| 17 | 11 Oct | #73 | Lane's Lexicon (Arabic–English) added as an optional dictionary, off by default; Hans Wehr listed too but empty because of copyright, with a note on how to add your own copy | Yes | 0.100.0 | On `refactor/integration` |
+| 18 | 11 Oct | #73 | About 6,400 AraMorph entries that had no root get one from their group's verb (e.g. التباعد → بعد, التنافس → نفس), so the Arabic dictionaries and root search find them | Yes | 0.102.1 | On `refactor/integration` |
+| 19 | 11 Oct | #73 | Roots whose و/ي is in doubt are searched under both spellings, led by the one the verb's present tense shows; about 1,000 rootless weak-verb entries get a root, and 2,435 entries under AraMorph's "و or ي" headings (e.g. `nfw/y`) find their articles again | Yes | 0.103.0 | On `refactor/integration` |
+| 20 | 11 Oct | #73 | Dictionary lookup: roots no longer carry AraMorph's homograph numbers (so النور, البشرية, الأحياء find their Arabic articles); Qur'anic and classical spellings are read (هَٰذَا, ٱلْكِتَٰبُ, إِسْمَٰعِيلَ, شاطيء, سليمن); readings that contradict the vowels in the text are sorted last and muted, never removed | Yes | 0.105.0 | On `refactor/integration` |
+| 21 | 11 Oct | #73 | Root dictionaries land on the word: the line about the tapped word (or its dictionary form; a verb's own form paragraph in Lane and Hans Wehr) is coloured and scrolled to in Al-Wasīṭ, Al-Ṣiḥāḥ, Lane and Hans Wehr; a word with no root (إدام, قيراط, بطيخ) opens the article the dictionary files it under | Yes | 0.106.0 | On `refactor/integration` |
+| 22 | 12 Oct | #73 | Lane's Lexicon shows its English meanings in italics again (the Arabic quotations and source notes stay upright) | Yes | 0.107.0 | On `refactor/integration` |
+| 23 | 12 Oct | #73 | Hans Wehr shows each derived form (II–X) of a verb on its own line with a small form label, and tapping a verb lands on its own form's line | Yes | 0.108.0 | On `refactor/integration` |
+| 24 | 12 Oct | #73 | Al-Wasīṭ's labels (مج) (مو) (مع) (د) and plural marker (ج) shown as small badges with an English tooltip; can be switched off in Settings | Yes | 0.109.0 | On `refactor/integration` |
+| 25 | 12 Oct | #73 | Al-Ṣiḥāḥ's quoted verses set apart: one indented line per verse with the two halves side by side; can be switched off in Settings | Yes | 0.109.0 | On `refactor/integration` |
+| 26 | 12 Oct | #73 | Dictionary popup typography: sense lines wrap properly, English entries read left to right at a larger size with Arabic words in the reading font, Lane sigla and Hans Wehr transliteration styled | Yes | 0.109.1 | On `refactor/integration` |
+| 27 | 12 Oct | — | Every dictionary shares the same popup features: Lane, Hans Wehr, Al-Ṣiḥāḥ and Al-Wasīṭ are one entry per line (or form) with a “+” each, long lists fold to the entry you tapped with Show all, any word can be picked in any dictionary (English too), the dock and form chips follow the data, not the dictionary's name | Yes | 0.110.0 | On `refactor/integration` |
+| 28 | 12 Oct | — | Dictionary popup: a Tabs layout, a settings button with a sheet inside the popup (layout, text size, dictionaries on/off and order, reading switches), and dictionaries reorder by dragging a grip or a tab | Yes | 0.111.0 | On `refactor/integration` |
+| 29 | 12 Oct | — | Pull in (Alt+U) redone: results grouped by book with a preview of where each lands, several collected and placed at once, search that ignores ḥarakāt, Place in and the button at the bottom | Yes | 0.112.0 | On `refactor/integration` |
+
+Not done: phase 3, dictionaries as downloadable packs (dropped).
+
+## v0.112.0 — 2026-10-12
+
+- **Pull in (Alt+U), the next version.** Results are grouped by book (this book first, then the others) with a count on each
+  heading, and the kind buttons show how many of each there are. A From switch narrows to this book or the other books.
+- **A preview beside the results** (in the wide palette) shows the chosen row in full, its note or meaning, where it is from, and a
+  small page with the spot marked in the Ḥāshiya it will land in, or the inbox. The narrower panel, the drawer and the phone sheet
+  leave it out.
+- **Collect several, place once.** Shift+Enter or the tick on a row collects it; the button then reads “Place 3 in right Ḥāshiya”, and
+  they are placed in the order collected. Esc clears the collection first.
+- **Where it goes is at the bottom**, with the button that sends it there. Tab in the search box moves between Left Ḥāshiya, Right
+  Ḥāshiya and Inbox.
+- **Capture trips and an image file are pills** above the results while nothing is typed; their labels start on the same line as the
+  book headings and the titles below them. Back to <book> still comes first and chosen, so Alt+U then Enter goes again.
+- **Search ignores ḥarakāt, tatweel and hamza seats** (اعراب finds الإعراب, انما finds إنّما), and marks what matched. Rows already
+  on this desk say so.
+
+## v0.111.0 — 2026-10-12
+
+- **A Tabs layout.** Under Multiple dictionaries, Tabs shows one dictionary at a time at any width, with a tab for each. Drag a tab sideways
+  to put its dictionary elsewhere in the order.
+- **Popup settings, inside the popup.** A gear beside the other header buttons slides a sheet up over the entry: layout, text size, clean
+  layout, which dictionaries are on and in what order, and the reading switches (the matched entry, scrolling to it, vowel ordering, badges,
+  verses). They are the same settings as in Settings, and apply as you change them. Done, a tap outside, or Escape closes it.
+- **Drag to reorder dictionaries.** Settings → Dictionaries (and the sheet) now has a grip on each row in place of the arrows; drag it, or
+  focus it and press the up and down arrow keys.
+
+## v0.110.0 — 2026-10-12
+
+- **Every dictionary has the same tools.** Lane, Hans Wehr and Al-Ṣiḥāḥ no longer show a whole root as one block: each line is its own
+  entry with its own headword and its own “+”, and Al-Wasīṭ's sections are entries too. A dictionary with more than three entries opens
+  folded to the entry for the word you tapped (or its first), with “Show all N entries” to open the rest in place, so Lane's قلب no
+  longer swamps the popup, and the popup opens at the top instead of scrolling deep inside it.
+- **Pick any words, in any dictionary.** Tap or drag across words in Lane, Hans Wehr, AraMorph and the rest, English words included, and save
+  just those words as the meaning; Lane's italics, source letters and Hans Wehr's labels keep their look.
+- **The same chips and tabs everywhere.** A dictionary that answers under several roots gets the jump tabs, and Lane's numbered verb
+  paragraphs and Hans Wehr's II–X lines get the form and root chips and the other-forms list. Saved sense picks for Lane and Hans Wehr start
+  afresh because their entries are cut differently.
+- **Inside:** features follow the shape of the entries, not a dictionary's name. A conformance test runs every dictionary through one
+  checklist, a guard test stops any new code from naming a dictionary, and `docs/features/dictionary-feature-matrix.md` is generated from it.
+
+## v0.109.1 — 2026-10-12
+
+- **The dictionary popup reads properly.** Lane and Hans Wehr lines wrap as normal paragraphs instead of running off the edge,
+  and English entries (English, Lane, Hans Wehr, Baranov) read left to right at a larger size, with their Arabic words in
+  your reading font. Lane's source letters (S, K, TA ...) are small and faint, its meanings stand out, Hans Wehr's
+  transliteration is muted, its form numbers are a small label, and senses have a little more room between them.
+
+## v0.109.0 — 2026-10-12
+
+- **Al-Wasīṭ's labels and plurals are badges.** The editors' labels (مج) Academy coinage, (مو) post-classical, (مع) Arabised
+  and (د) foreign now show as small chips, with the meaning when you hover; (ج) shows as a plain outlined chip before
+  the plural forms. Switch it off under Settings, Dictionary, Al-Wasīṭ structured view.
+- **Al-Ṣiḥāḥ's verses stand on their own lines.** A verse quoted after "قال الشاعر" or "قال الراجز" is indented on its own
+  line with its two halves side by side. Words in it can still be selected. Verses the editors did not close with a star
+  stay in the running text. Switch it off under Settings, Dictionary, Al-Ṣiḥāḥ verses.
+
+## v0.108.0 — 2026-10-12
+
+- **Hans Wehr's verb forms are on their own lines.** Each derived form (II–X) now starts a new line with a small form
+  label ("VI  to envy each other") instead of running together in one paragraph. Tapping a verb lands on the line of
+  its own form (تحاسدوا on VI, يتعلم on V); form I still lands on the opening paragraph. To get the split, regenerate
+  your private Hans Wehr file with `python -I scripts/extract-lexicon-data.py <db> --hanswehr=<path>` and load it again.
+
+## v0.107.0 — 2026-10-12
+
+- **Lane's meanings are in italics again.** In Lane's Lexicon the italic text is the actual English meaning, and the
+  rest is Arabic quotation and source notes (S, K, TA…). The italics had been lost when the dictionary was prepared;
+  they are back, so the meaning stands out on each line. Copying, flashcards, vocabulary and search still get plain text.
+
+## v0.106.0 — 2026-10-11
+
+- **The dictionaries land on your word.** Al-Wasīṭ, Al-Ṣiḥāḥ, Lane's Lexicon and Hans Wehr file every word of a root
+  in one long article. The line about the word you tapped is now coloured, and the popup scrolls to it if it's out
+  of view; the rest of the article is still there above and below. For a verb, Lane's paragraph for its form (تَحَاسَدُوا
+  lands on 6) and Hans Wehr's verb paragraph are the match; for a noun, its own line (الحسود on حَسُودٌ, not the verb).
+  When the word's vowels tell two lines apart (كِتَابٌ or كُتَّابٌ), the one that fits is chosen.
+- **Words with no root find their article.** About 680 words AraMorph knows but gives no root for (860 with a Hans Wehr copy),
+  such as إدام, قيراط, أرائك, بطيخ, إجاص and إزميل, now open the article each dictionary files them under, as long as
+  that's one or two roots.
+  Particles and pronouns are never looked up this way.
+- When a word finds several articles, the one that lists the word itself comes first.
+- Settings → Dictionary: the section is now *Land on the word in root dictionaries*, with a new switch to turn the
+  scrolling off and keep only the colour.
+
+## v0.105.0 — 2026-10-11
+
+- **More words find their dictionary article.** About 95 AraMorph roots carried a homograph number (such as نور(1)),
+  so words like النور, البشرية, الأحياء and الإمكان never matched an Arabic dictionary; the numbers are gone.
+- **Qur'anic and classical spellings are read.** Words with a dagger alif or alif wasla (هَٰذَا, ٱلْكِتَٰبُ,
+  الظَّٰلِمِينَ, إِسْمَٰعِيلَ, سُلَيْمَٰنَ), yaa written before hamza (شاطيء) and spellings that leave out the long ā
+  (إسمعيل, سليمن, الظلمين) used to find nothing; they now do. Where a dagger alif could be silent or an ā, both
+  readings are shown.
+- **The vowels in the text now count.** When you tap a vowelled word, readings that match its vowels come first and
+  also lead the search of the Arabic dictionaries (مِصْرَ is Egypt, not "persistent"). Readings that contradict the
+  vowels are still there, below, muted and marked "doesn't match the vowels in the text". Nothing is removed, and if
+  no reading matches, nothing is marked.
+
+## v0.104.0 — 2026-10-11
+
+- **Straight lines in ink.** Hold Shift while drawing (pen, mouse or trackpad) and the stroke becomes a straight line
+  from where it started to the pen; pressing Shift partway straightens the whole stroke, and letting go before you
+  lift keeps it straight. With no keyboard, draw and hold still for about half a second and the stroke snaps straight;
+  keep moving and the line's end follows.
+- Any angle works, but within about 5 degrees of level or plumb the line snaps exactly level or plumb, so underlines
+  come out flat.
+- Works on reader pages, PDF pages, freehand sketch sheets and Ḥāshiya ink cards. A straight line is an ordinary
+  stroke (Undo and the eraser work as usual), and it is never read as a gesture, even with Gestures on.
+
+## v0.103.0 — 2026-10-11
+
+- **Roots ending (or hinging) on و or ي are searched both ways.** Where the letter is in doubt, Al-Wasīṭ, Al-Ṣiḥāḥ,
+  Maqāyīs and Lane show the article for the spelling the verb's present tense shows first, then the other one:
+  نَفَى (يَنْفِي) leads with نفي, نَفَا (يَنْفُو) with نفو, بَدَا (يَبْدُو) with بدو.
+- About 1,000 words from weak verbs that had no root now have one (البناء → بني, أبدى → بدو, التلاوة → تلو).
+- 2,435 words filed under AraMorph's "و or ي" roots (such as نفو/نفي, سمو/سمي, ضور/ضير) used to find no Arabic
+  article at all, because the root was read literally as "نفو/ي". They now find both.
+- The dictionary rebuilds once on first launch after the update.
+
+## v0.102.2 — 2026-10-11
+
+- Lane's Lexicon: one sub-entry under خطب that was left out is now shown.
+- For developers: `scripts/extract-lexicon-data.py --hanswehr` now extracts Hans Wehr correctly (it was keeping only
+  957 of its roots), and `--hanswehr=OUT.tsv` writes Hans Wehr alone to a file outside the repository.
+
+## v0.102.1 — 2026-10-11
+
+- About 6,400 more words now have a root, so Al-Wasīṭ, Al-Ṣiḥāḥ, Maqāyīs and Lane show their article, root search
+  finds them, and vocabulary lists group them with their root. Examples: التباعد (بعد), التنافس (نفس), التباغض (بغض),
+  البرق (برق). AraMorph had filed them with no root; the app now takes the root from the verb listed with them. Words
+  with no verb beside them (loanwords such as باكتيريا, and a few nouns such as بَغْل) still show no root rather than a
+  guessed one. The dictionary rebuilds once on first launch after the update.
+
+## v0.102.0 — 2026-10-11
+
+- **"Start here", a small Arabic book that teaches the app.** Every install gets it on the shelf, first: five short
+  chapters of simple, fully vowelled Arabic (the market, the house, the family, a long day, what next). Between the
+  sentences, short task paragraphs (مُهِمَّة, with a line of English) walk through the seven things on the Getting
+  started card in the same order, so the card ticks them off as you read. It is an ordinary book: delete it from
+  the Library and it stays gone. The checklist's *Show me* now opens it.
+
+## v0.101.0 — 2026-10-11
+
+- **Getting started checklist.** A quiet card at the top of the Library with seven things to try: save a word,
+  search the dictionary (Alt+D), write a note (Alt+N), make a flashcard (Alt+F), open the Ḥāshiya (Alt+M), draw or
+  sketch, and draw on something from another source. Each ticks itself when you do it; a ring counts them. Each
+  undone one has **Show me**, which opens the right place and leaves a one-line hint. *Collapse* folds the card,
+  *Hide for good* removes it, and Settings → Library → *Getting started checklist* shows it again or starts over.
+  If you already use the app, what is provable from your data starts ticked. The card goes away by itself when all
+  seven are done.
+## v0.100.0 — 2026-10-11
+
+- **Lane's Lexicon.** Edward Lane's *Arabic-English Lexicon* (1863–93, public domain) is now available as a dictionary.
+  It is off by default: switch it on under Settings > Dictionaries (or in the first-run dictionary choice). It is filed
+  by root like Al-Ṣiḥāḥ, so tapping a word shows the article for its root, as plain text. It is a big file (about 29 MB),
+  downloaded only the first time you turn it on; it also appears as "Lane · English" in the popup and "Lane" on the
+  dictionary page.
+- **Hans Wehr is listed but empty.** Hans Wehr's dictionary is under copyright, so the app does not include it. Turning it
+  on shows one note saying so. If you have the right to use a copy, you can build your own with the extraction script's
+  `--hanswehr` option; the steps are in `public/hanswehr-data/SOURCE-README.md`. Never commit the file it makes.
+
+## v0.99.1 — 2026-10-11
+
+- Words such as التحاسد, تحاسدهم and بالتحاسد now find their root (حسد) directly, so Al-Wasīṭ, Al-Ṣiḥāḥ and Maqāyīs
+  show the right article. AraMorph lists about 340 Form V and VI verbs (تَفَعَّلَ, تَفاعَلَ) without their verbal noun;
+  the app now makes those nouns itself but keeps them hidden, in case one is wrong. The English line still shows
+  the verb.
+
+## v0.99.0 — 2026-10-11
+
+- **Sketches you review.** A diagram sheet can now feed your flashcards.
+  - **Make card** (diagram toolbar): select a box and press it. The box's words are the front; the boxes it points
+    to (its children) are the back. Select several boxes and the first one is the front; with no children, the
+    others are the back. It is greyed out, with the reason in its hint, when there is nothing to answer with.
+    A note at the bottom says *Card made* with **Undo**.
+  - **Make occlusion cards** (the sheet's ⋯ menu): one card for each selected box, or for every box with words
+    when none is selected (it asks first above 20). The front is the sheet with that box's words hidden, the back
+    is the whole sheet. Where the sheet is not on this device (sheets are not synced yet), the card shows
+    "?", the sheet's name and the box's parent instead, and the box's words as the answer.
+  - **In Review**, an occlusion card draws the sheet; **Open sheet** takes you to the book and that sheet. Cards
+    made with Make card stay text. All of them are ordinary hand-written cards: scheduled like the rest, counted
+    in your daily goal, backed up, and sent to Anki as text.
+  - **Review sheet** (the sheet's ⋯ menu): every box is hidden; Space, Enter or a tap shows the next one in tree
+    order, Backspace goes back, Esc ends. Nothing is graded or scheduled.
+
+## v0.98.0 — 2026-10-11
+
+- **Ink gestures (off by default).** Switch on *Gestures* under Settings → Ink and sketches, then, with Write on
+  (Alt+W) in the reader, some strokes act instead of staying on the page:
+  - **Underline** a run of words: they are highlighted, in yellow (or green for teal ink, red for red ink).
+  - **Circle** one word: the dictionary popup opens on it, as if you had tapped it.
+  - **Circle, then a short tick** within a second and a half: the word is saved to your vocabulary with its sentence.
+  - Each shows a note with **Undo**, which takes the action back and keeps your stroke as ordinary ink. After a
+    tick, the reader's own *Saved* note and its Undo take the word out of your vocabulary again.
+  - Anything that is not clearly one of these (handwriting, a scribble, a short dash, an open arc) is ink as before.
+  - Not on PDF pages yet. No new keys.
+
+## v0.97.1 — 2026-10-11
+
+- Words like التحاسد now show in the dictionary. AraMorph has the verb تَحاسَدَ but not its verbal noun, so the word
+  with ال matched nothing and the Arabic dictionaries had no root to look up. When that happens the lookup now tries
+  again without ال (and any و/ف/ب/ك/ل before it): you get the verb's English gloss and the root's articles (حسد).
+
+## v0.97.0 — 2026-10-11
+
+- **Back and Forward work between screens, and a reload keeps you on the screen you were on.** Each screen has its
+  own address (#/library, #/read/..., #/read/.../levels, #/vocabulary, #/highlights, #/review, #/dashboard,
+  #/dictionary?q=...). A reading position and the Settings panel are not part of the address. If a book in the
+  address is no longer in your Library, you land on the Library.
+- First-run setup: *Use recommended settings* now switches on Al-Muʿjam al-Wasīṭ (Arabic–Arabic) as well as the
+  English dictionary. *Skip for now* still sets up the English dictionary only.
+- No scrollbars on any device: the browser and phones now hide them like the desktop app already did. Everything
+  still scrolls with the wheel, trackpad, touch and keys.
+
 ## v0.96.0 — 2026-10-11
 
 - **One reader.** Every book now opens in the new reader, and a book added from a PDF can still show its own pages.

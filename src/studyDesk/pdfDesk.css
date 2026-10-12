@@ -45,7 +45,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #2e7d74;
+  background: var(--c-pdfdesk-marker);
   mix-blend-mode: normal;
 }
 /* Quoted in a sketch sheet: a small square of the sheet's paper at the box's top right corner. */
@@ -55,9 +55,9 @@
   right: -9px;
   width: 8px;
   height: 8px;
-  border: 1.5px solid #7d5a14;
+  border: 1.5px solid var(--c-pdfdesk-note-border);
   border-radius: 2px;
-  background: #fffdf8;
+  background: var(--c-pdfdesk-note-bg);
 }
 /* The margin beside the pages: a strip kept free to the right of the stage; the pages fit the rest. */
 body.sd-pdf-margin .pdfp .pdfp__body {
@@ -83,7 +83,7 @@ body.sd-pdf-margin .pdfp .pdfp__body {
   stroke-dasharray: 2 3;
 }
 .sd-pdfdesk__lines circle {
-  fill: rgb(202 138 4 / 0.8);
+  fill: var(--c-pdfdesk-pin);
 }
 .sd-pdfdesk__lines .on path {
   stroke: var(--accent);
@@ -101,11 +101,11 @@ body.sd-pdf-margin .pdfp .pdfp__body {
   pointer-events: none;
   border-radius: 3px;
   border: 1.5px dashed var(--accent);
-  background: rgb(250 204 21 / 0.12);
+  background: var(--c-pdfdesk-hl-soft);
 }
 .sd-pdfsel__box--snapped {
   border-style: solid;
-  background: rgb(250 204 21 / 0.28);
+  background: var(--c-pdfdesk-hl-strong);
   mix-blend-mode: multiply;
 }
 .sd-pdfsel__bar {

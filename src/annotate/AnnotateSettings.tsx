@@ -11,6 +11,14 @@ export function AnnotateSettings() {
         for freehand notes or a diagram of nodes and arrows, saved with that page or passage.
       </Note>
       <ToggleRow label="Enable ink and sketches" checked={prefs.annotateEnabled} onChange={(value) => updatePrefs({ annotateEnabled: value })} />
+      <ToggleRow
+        label="Gestures"
+        checked={prefs.inkGesturesEnabled}
+        disabled={!prefs.annotateEnabled}
+        onChange={(value) => updatePrefs({ inkGesturesEnabled: value })}
+      >
+        Gestures: underline to highlight, circle to look up, circle and tick to save. Only while writing.
+      </ToggleRow>
     </SettingsSection>
   );
 }

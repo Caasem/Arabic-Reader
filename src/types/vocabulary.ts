@@ -96,6 +96,12 @@ export interface VocabularyItem {
 
   /** Written by hand (Alt+F) rather than saved from a dictionary lookup: `meaning` is the back of the card and `entries` is empty. */
   custom?: boolean;
+
+  /**
+   * A custom card made from a diagram sheet (src/annotate/sketchCards.ts): the sheet, the nodes it asks about, and
+   * the node whose label is hidden on the front (image occlusion). Review draws the sheet while it is on this device.
+   */
+  sketch?: { sketchId: string; nodeIds: string[]; occlude?: string };
 }
 
 /** Portable backup of what would otherwise be trapped in one browser's

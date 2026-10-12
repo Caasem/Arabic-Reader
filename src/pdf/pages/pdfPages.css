@@ -73,23 +73,23 @@
 .pdfp-page {
   position: relative;
   flex: none;
-  background: #fff;
+  background: var(--c-pdfpage-paper);
   border-radius: 3px;
   box-shadow:
-    0 1px 3px rgb(28 27 25 / 0.12),
-    0 12px 32px rgb(28 27 25 / 0.08);
+    0 1px 3px var(--c-pdfpage-shadow-near),
+    0 12px 32px var(--c-pdfpage-shadow-far);
 }
 
 /* Display -> Pages: warmer paper, or night (the picture inverted, so dark paper with light print). */
 .pdfp--sepia .pdfp-page {
-  background: #f4ead6;
+  background: var(--c-pdfpage-paper-sepia);
 }
 .pdfp--sepia .pdfp-page__canvas {
   filter: sepia(0.35) saturate(1.1) brightness(0.97);
   mix-blend-mode: multiply;
 }
 .pdfp--night .pdfp-page {
-  background: #1d1c21;
+  background: var(--c-pdfpage-paper-night);
 }
 .pdfp--night .pdfp-page__canvas {
   filter: invert(0.9) hue-rotate(180deg);
@@ -100,7 +100,7 @@
   inset: 0;
   display: grid;
   place-items: center;
-  color: #b4b0a8;
+  color: var(--c-pdfpage-number);
   font-size: 1.6rem;
 }
 
@@ -165,6 +165,6 @@
 }
 
 .pdfp-chip--warn {
-  color: #b0701c;
-  background: rgb(176 112 28 / 0.14);
+  color: var(--c-pdfpage-warn-ink);
+  background: var(--c-pdfpage-warn-bg);
 }

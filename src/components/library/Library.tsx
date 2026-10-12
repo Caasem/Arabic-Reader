@@ -18,6 +18,7 @@ import { formatOf, IMPORTABLE_EXTENSIONS } from '../../importFormats';
 import { highlightsMarkdown } from '../../dataExport/highlightsMd';
 import { saveFile } from '../../utils/saveFile';
 import { hasPdfChoice, rememberPdfView, type PdfView } from '../../pdf/pages/pdfView';
+import { GettingStartedCard } from '../../gettingStarted';
 import { BookCover } from './BookCover';
 import { BookDetails } from './BookDetails';
 import { ContinueReading } from './ContinueReading';
@@ -463,6 +464,8 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
           </button>
         </div>
       )}
+
+      {!loading && <GettingStartedCard books={books} onOpenBook={(b) => openBook(b)} />}
 
       {!loading && (heroBook || showQuote) && (
         <section className={'lib-today' + (heroBook && showQuote ? '' : ' lib-today--single')} aria-label="Today">

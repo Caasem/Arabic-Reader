@@ -13,8 +13,9 @@ export type MorphDisplayStyle = 'caption' | 'badges';
 /** How the dictionary popup arranges several providers' results: 'merged'
  * stacks them, 'split' shows them side by side (a switcher on narrow
  * screens), 'single' shows only one provider (see
- * `dictionaryPanelSingleProviderId`). */
-export type DictionaryPanelLayout = 'merged' | 'split' | 'single';
+ * `dictionaryPanelSingleProviderId`), 'tabs' shows one provider at a time
+ * under a tab switcher at any width. */
+export type DictionaryPanelLayout = 'merged' | 'split' | 'single' | 'tabs';
 
 export type PomodoroNotification = 'toast' | 'sound' | 'silent';
 
@@ -158,6 +159,8 @@ export interface ReaderPreferences {
   pdfPageTint: 'paper' | 'sepia' | 'night';
   /** Ink and sketches (src/annotate): write on the page (Alt+W) and a sketch sheet beside it (Alt+K). */
   annotateEnabled: boolean;
+  /** Ink gestures (src/annotate/gestures.ts): while writing, underline highlights, circle looks up, circle and tick saves. Off by default. */
+  inkGesturesEnabled: boolean;
   /** Show a verb's form (I-X) and its root's other verbs in the dictionary popup (src/verbForms). */
   verbFormsEnabled: boolean;
   /** The aligned, roomier dictionary popup layout (src/popupClean). Off restores the classic popup. */
@@ -174,11 +177,19 @@ export interface ReaderPreferences {
   lookPalette: string;
   /** Colours the person picked over the preset, by role (hex). */
   lookCustom: Partial<Record<'bg' | 'surface' | 'ink' | 'accent' | 'secondary' | 'highlight' | 'warning', string>>;
-  /** Prototype: colour the Al-Wasit sense matching the looked-up word. */
+  /** Colour the sub-entry of a root dictionary's article that matches the looked-up word (src/wasitMatch). */
   wasitMatchHighlight: boolean;
+  /** Scroll the popup to that sub-entry when it is out of view. */
+  subEntryScroll: boolean;
+  /** Put the readings that match the vowels written in the text first and grey the rest (off by default). */
+  vowelRanking: boolean;
   /** Prototype: draw Al-Wasit's internal structure in the popup. */
   wasitStructureEnabled: boolean;
   wasitStructureExamples: 'dim' | 'normal';
+  /** Show Al-Wasit's (مج) (مو) (مع) (د) labels and (ج) plural marker as badges (src/dictionary/senseFormat/wasitLabels.ts). */
+  wasitLabelsEnabled: boolean;
+  /** Set Al-Sihah's quoted verses apart, one line each with the halves side by side (src/dictionary/senseFormat/sihahVerses.ts). */
+  sihahVerseLayout: boolean;
   /** The reader's own shelves in the Library. */
   libraryShelves: LibraryShelf[];
   libraryView: 'grid' | 'list';

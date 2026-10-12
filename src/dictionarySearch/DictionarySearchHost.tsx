@@ -1,3 +1,4 @@
+import { tourEvents } from '../gettingStarted/events';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta, ReaderPreferences } from '../types';
@@ -40,6 +41,7 @@ function Active({ book, style }: { book: BookMeta; style: ReaderPreferences['dic
     if (open) return close();
     returnFocusRef.current = document.activeElement as HTMLElement | null;
     setOpen({ query: selection });
+    tourEvents.emit('dictionary-search');
   });
 
   // Escape from inside the book reaches the host window (see Reader.tsx).

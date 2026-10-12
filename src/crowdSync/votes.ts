@@ -1,11 +1,12 @@
 import type { DictionaryEntry, DictionaryLookupResult } from '../types';
 import type { VoteSource } from '../../crowd-server/src/protocol';
+import { traitsOf } from '../dictionary/providerTraits';
 import { isSharingOn } from './consent';
 import { enqueue } from './queue';
 import { requestFlush } from './scheduler';
 
-/** Dictionaries whose entries are shared. A dictionary the reader loaded themselves never is. */
-const SHAREABLE = new Set(['aramorph', 'alwasit', 'alsihah', 'almaqayis', 'baranov']);
+/** Dictionaries whose entries are shared (a trait of the dictionary). A dictionary the reader loaded themselves never is. */
+const shareable = (providerId: string): boolean => !!traitsOf(providerId).sharesPicks;
 
 /** Where the entry stood among its dictionary's entries when it was shown, for position-bias correction (section 8.2). */
 export function positionOf(result: DictionaryLookupResult, entry: DictionaryEntry): number {
@@ -36,7 +37,7 @@ export async function shareSave(
   pos: number,
 ): Promise<void> {
   try {
-    if (!isSharingOn() || !SHAREABLE.has(entry.providerId)) return;
+    if (!isSharingOn() || !shareable(entry.providerId)) return;
     await enqueue({
       ...keys,
       providerId: entry.providerId,
@@ -58,7 +59,7 @@ export async function shareUnsave(keys: Keys, rows: { providerId: string; entryK
   try {
     if (!isSharingOn()) return;
     for (const row of rows) {
-      if (!SHAREABLE.has(row.providerId)) continue;
+      if (!shareable(row.providerId)) continue;
       await enqueue({ ...keys, providerId: row.providerId, entryKey: row.entryKey, senseKey: null, source: row.source, pos: 0, action: 'unsave' });
     }
     if (rows.length) requestFlush();

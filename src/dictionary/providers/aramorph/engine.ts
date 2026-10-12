@@ -94,6 +94,11 @@ interface MorphEntry {
   morph: string;
   def: string;
   pos: string;
+  /** A verbal noun the engine made up (see buildHiddenMasdars), never shown. */
+  hidden?: boolean;
+  /** The root with و and ي the other way round, where scholars or the data
+   * differ (`;--- Asw/y`, or a weak verb's last letter); `root` leads. */
+  altRoot?: string;
 }
 
 // ---------- Table parsers ----------
@@ -130,12 +135,154 @@ const POS_TAG = /<pos>([\s\S]*?)<\/pos>/;
 // dropped too, leaving the bare citation-form stem.
 const LEMMA_MARKER_RE = /^;;\s*(\S+?)(?:-([uai]{1,2}))?_\d+\s*$/;
 
+// A radical: any letter but a short vowel, long ا, ى or the other marks.
+const R = '([^aiuoA~{`FNKY])';
+// Verb citation forms whose radicals can be read straight off the letters:
+// Forms I-X and the two quadriliteral forms. Weak verbs whose radicals change
+// (قالَ, رَمَى) don't match, so they get no root rather than a wrong one.
+const VERB_ROOT_PATTERNS = [
+  `^${R}a${R}[aiu]${R}$`, // I     katab
+  `^${R}a${R}~a${R}$`, // II    kat~ab
+  `^${R}A${R}a${R}$`, // III   kAtab
+  `^>a${R}o${R}a${R}$`, // IV    >akotab
+  `^ta${R}a${R}~a${R}$`, // V     takat~ab
+  `^ta${R}A${R}a${R}$`, // VI    takAtab
+  `^\\{ino${R}a${R}a${R}$`, // VII   {inokatab
+  `^\\{i${R}o[tTd]a${R}a${R}$`, // VIII  {ikotatab
+  `^\\{isota${R}o${R}a${R}$`, // X     {isotakotab
+  `^${R}a${R}o${R}a${R}$`, // QI    tarojam
+  `^ta${R}a${R}o${R}a${R}$`, // QII   tatarojam
+].map((p) => new RegExp(p));
+// madd: the data's headers write doubled roots with two letters (md).
+const DOUBLED_FORM_I = new RegExp(`^${R}a${R}~$`);
+
+/** The root of a verb's citation form (Buckwalter), written the way the data's
+ * own root headers write roots (hamza as A, doubled roots with two letters);
+ * null when the pattern is unclear. */
+export function rootFromVerbLemma(lemma: string): string | null {
+  const radicals = [DOUBLED_FORM_I, ...VERB_ROOT_PATTERNS].map((re) => lemma.match(re)).find(Boolean)?.slice(1);
+  return radicals ? hamzaAsA(radicals.join('')) : null;
+}
+
+// The same verb forms with a weak last radical, written ى or ا in the citation
+// form (banaY, badA): only the first two radicals can be read off the letters.
+const W = '(?:aY|A)';
+const WEAK_LAST_PATTERNS = [
+  `^${R}a${R}${W}$`, // I     banaY, badA
+  `^${R}a${R}~${W}$`, // II    Dar~aY
+  `^${R}A${R}${W}$`, // III   lAqaY
+  `^>a${R}o${R}${W}$`, // IV    >abodaY
+  `^ta${R}a${R}~${W}$`, // V     talaq~aY
+  `^ta${R}A${R}${W}$`, // VI    tanAdaY
+  `^\\{ino${R}a${R}${W}$`, // VII   {inotahaY
+  `^\\{i${R}o[tTd]a${R}${W}$`, // VIII  {iqotaDaY
+  `^\\{isota${R}o${R}${W}$`, // X     {isotadoEaY
+].map((p) => new RegExp(p));
+
+const hamzaAsA = (radicals: string) => radicals.replace(/[>&<}|']/g, 'A');
+
+/**
+ * A verb with a weak last radical: its first two radicals, and the last one as
+ * the citation form suggests (ى usually ي, ا usually و). Only a Form I verb
+ * shows the real letter (see weakLetterOf): derived forms turn it into ي
+ * whatever it was (أَبْدَى, يُبْدِي from بدو).
+ */
+export function weakVerbRadicals(lemma: string): { first: string; guess: 'w' | 'y'; formI: boolean } | null {
+  for (const [i, re] of WEAK_LAST_PATTERNS.entries()) {
+    const m = lemma.match(re);
+    if (m) return { first: hamzaAsA(m[1] + m[2]), guess: lemma.endsWith('Y') ? 'y' : 'w', formI: i === 0 };
+  }
+  return null;
+}
+
+/** Which weak letter a Form I stem shows: banay-/yaboniy -> y, daEaw-/yadoEuw -> w. */
+export function weakLetterOf(stem: string): 'w' | 'y' | null {
+  if (/(?:ay|iy)$/.test(stem)) return 'y';
+  if (/(?:aw|uw)$/.test(stem)) return 'w';
+  return null;
+}
+
+/**
+ * A root header, which may give two spellings where the data notes a dispute:
+ * `Asw/y` (asw or asy), `nw/yf` (nwf or nyf), `$fh/w`, `Dwr/Dyr`. The first
+ * spelling is listed first; a bare header (`ktb`) has no alternative. A
+ * homograph number (`bn(1)`) is dropped.
+ */
+export function parseRootHeader(rawToken: string): { root: string; altRoot?: string } {
+  // Homograph numbers (`bn(1)`, `nwr(2)`) tell apart the data's roots of the
+  // same spelling; they are not part of the root.
+  const token = rawToken.replace(/\(\d+\)/g, '');
+  const slash = token.indexOf('/');
+  if (slash < 0) return { root: token };
+  const left = token.slice(0, slash);
+  const right = token.slice(slash + 1);
+  if (left.length >= 3 && right.length >= 3) return { root: left, altRoot: right };
+  return { root: left + right.slice(1), altRoot: left.slice(0, -1) + right };
+}
+
 export function createDictTable(text: string): OptimizedDictArray<MorphEntry> {
   const lines = text.split('\n');
   const table = new OptimizedDictArray<MorphEntry>();
   let root = '---';
+  let altRoot: string | undefined;
   let lemma = '---';
   let lemmaVowel: string | undefined;
+  // About 13,600 stems sit in groups with no `;--- root` header: lone `;`
+  // lines split some roots' blocks, and some roots never got a header. When
+  // such a group has a verb, its root comes from the verb (rootFromVerbLemma)
+  // and goes to every stem in the group.
+  //
+  // Where و and ي are in doubt -- a weak verb's last radical (بَنَى), or a
+  // header that gives both (`nfw/y`) -- the root leads with the letter a Form I
+  // verb in the group shows: its stems (بَنَيْتُ, يَبْنِي) and its marked
+  // present-tense vowel (badA-u: يَبْدُو). Failing that, a rootless weak verb
+  // takes the spelling the data files a root under elsewhere, then the
+  // citation form's hint. The other letter is kept as altRoot and searched too.
+  const headerRoots = new Set<string>();
+  for (const m of text.matchAll(/^;--- (\S+)/gm)) {
+    const h = parseRootHeader(m[1]);
+    headerRoots.add(h.root);
+    if (h.altRoot) headerRoots.add(h.altRoot);
+  }
+  let group: MorphEntry[] = [];
+  let inferredRoot: string | null = null;
+  let weak: { first: string; guess: 'w' | 'y'; formI: boolean } | null = null;
+  // Votes per Form I weak verb; a verb follows its own, everything else the group's.
+  const lemmaVotes = new Map<string, { w: number; y: number }>();
+  const leading = (v: { w: number; y: number } | undefined) => (!v ? null : v.y > v.w ? 'y' : v.w > v.y ? 'w' : null);
+  const endGroup = () => {
+    const total = { w: 0, y: 0 };
+    for (const v of lemmaVotes.values()) {
+      total.w += v.w;
+      total.y += v.y;
+    }
+    const shown = leading(total);
+    let alt: string | undefined;
+    if (!inferredRoot && weak) {
+      const other = weak.guess === 'y' ? 'w' : 'y';
+      const filed = headerRoots.has(weak.first + weak.guess) ? weak.guess : headerRoots.has(weak.first + other) ? other : null;
+      const last = shown ?? filed ?? weak.guess;
+      inferredRoot = weak.first + last;
+      alt = weak.first + (last === 'y' ? 'w' : 'y');
+    }
+    for (const e of group) {
+      if (e.root === '---') {
+        if (!inferredRoot) continue;
+        e.root = inferredRoot;
+        if (alt) e.altRoot = alt;
+      } else if (e.altRoot) {
+        // A disputed header (`nfw/y`): lead with the spelling the verb shows --
+        // نَفَى (يَنْفِي) under nfy, نَفا (يَنْفُو) under nfw.
+        const letter = leading(lemmaVotes.get(e.lemma)) ?? shown;
+        const i = Array.from(e.root).findIndex((c, k) => c !== e.altRoot![k]);
+        if (letter && e.altRoot[i] === letter && e.root[i] !== letter) [e.root, e.altRoot] = [e.altRoot, e.root];
+      }
+    }
+    group = [];
+    inferredRoot = null;
+    weak = null;
+    lemmaVotes.clear();
+  };
   for (const line of lines) {
     if (line !== '' && line[0] !== ';') {
       const elems = line.split(/\s/);
@@ -151,14 +298,35 @@ export function createDictTable(text: string): OptimizedDictArray<MorphEntry> {
         morph: (elems[2] || '').trim(),
         def: gloss.split(/;/).join(', '),
         pos: (posMatch?.[1] || '').trim(),
+        ...(altRoot ? { altRoot } : {}),
       };
       table.addItem(elems[0], def);
+      group.push(def);
+      const isVerb = /^(PV|IV)/.test(def.morph);
+      const weakVerb = isVerb && lemma !== '---' ? weakVerbRadicals(lemma) : null;
+      if (weakVerb?.formI) {
+        let v = lemmaVotes.get(lemma);
+        if (!v) {
+          v = { w: lemmaVowel === 'u' ? 1 : 0, y: lemmaVowel === 'i' ? 1 : 0 };
+          lemmaVotes.set(lemma, v);
+        }
+        const letter = weakLetterOf(def.word);
+        if (letter) v[letter]++;
+      }
+      if (root === '---' && !inferredRoot && def.morph.startsWith('PV') && lemma !== '---') {
+        inferredRoot = rootFromVerbLemma(lemma);
+        // A Form I weak verb replaces a derived one: only it shows the letter.
+        if (!inferredRoot && weakVerb && (!weak || (weakVerb.formI && !weak.formI))) weak = weakVerb;
+      }
     } else if (line !== '' && line.trim() === ';') {
+      endGroup();
       root = '---';
+      altRoot = undefined;
       lemma = '---';
       lemmaVowel = undefined;
     } else if (line !== '' && line.slice(0, 5) === ';--- ') {
-      root = line.split(/\s/)[1];
+      endGroup();
+      ({ root, altRoot } = parseRootHeader(line.split(/\s/)[1]));
       lemma = '---';
       lemmaVowel = undefined;
     } else {
@@ -169,6 +337,7 @@ export function createDictTable(text: string): OptimizedDictArray<MorphEntry> {
       }
     }
   }
+  endGroup();
   return table;
 }
 
@@ -238,6 +407,149 @@ export interface AramorphResult {
   verbForm?: string;
   /** Form I only: the imperfect vowel(s) the dictionary marks (`u`, `a`, `i`). */
   imperfectVowel?: string;
+  /** Matched a made-up verbal noun: use it for the root, don't show it. Its
+   * `lemma` and `def` are the verb's. */
+  hidden?: boolean;
+  /** Another spelling of `root` (و and ي swapped) where scholars or the data differ; `root` leads. */
+  altRoot?: string;
+  /** The word was written with vowels and this reading's vowels disagree with
+   * them. Such readings are kept, just sorted after the ones that agree. */
+  vowelClash?: boolean;
+}
+
+// ---------- Spelling variants (Qur'anic and classical orthography) ----------
+// Qur'anic annotation marks U+06D6-U+06ED (the Qur'anic sukun U+06E1 is kept as a plain sukun).
+const QURANIC_MARKS_RE = /[ۖ-ۭ]/g;
+const QURANIC_SUKUN_RE = /ۡ/g;
+const TATWEEL_RE = /ـ/g;
+const DAGGER_RE = /ٰ/g;
+
+/** The word with Qur'anic annotation marks and tatweel removed, ٱ written ا,
+ * and the Qur'anic sukun turned into an ordinary one. The dagger alif stays. */
+export function cleanQuranicMarks(word: string): string {
+  return word.replace(QURANIC_SUKUN_RE, 'ْ').replace(QURANIC_MARKS_RE, '').replace(TATWEEL_RE, '').replace(/ٱ/g, 'ا');
+}
+
+const ARABIC_MARKS_RE = /[ً-ٰ]/g;
+const LONG_VOWEL_LETTERS = 'اويى';
+
+/**
+ * Other ways to write a word the dictionary may know under, for when the word
+ * as written finds nothing. Groups come most likely first; the spellings in
+ * one group are equally likely and all of them are used: Qur'anic marks and ٱ
+ * cleaned up, the dagger alif dropped or written out as ا (هَٰذَا is هذا,
+ * إِسْمَٰعِيلَ is إسماعيل), يء written ئ, and last of all the long ā left out of
+ * a defective spelling (سليمن for سليمان), one inserted ا at a time.
+ */
+export function spellingVariants(word: string): string[][] {
+  const seen = new Set<string>([word]);
+  const groups: string[][] = [];
+  const addGroup = (...variants: string[]) => {
+    const fresh = variants.filter((v) => v && !seen.has(v));
+    fresh.forEach((v) => seen.add(v));
+    if (fresh.length) groups.push(fresh);
+  };
+  const base = cleanQuranicMarks(word);
+  const forms = base.includes('ٰ') ? [base.replace(DAGGER_RE, ''), base.replace(DAGGER_RE, 'ا')] : [base];
+  const hamza = (w: string) => w.replace(/[يى]([ً-ْ]*)ء/g, 'ئ$1');
+  addGroup(...forms);
+  addGroup(...forms.map(hamza));
+  // Defective long ā: one inserted ا at a time, on the bare letters.
+  const letters = Array.from(hamza(forms[0]).replace(ARABIC_MARKS_RE, ''));
+  const afterArticle = letters[0] === 'ا' && letters[1] === 'ل' ? 2 : 0;
+  if (letters.length >= 3) {
+    for (let i = 1; i < letters.length; i++) {
+      if (LONG_VOWEL_LETTERS.includes(letters[i - 1]) || LONG_VOWEL_LETTERS.includes(letters[i])) continue;
+      // An ا right after the article would only give the stem an initial alef it never had.
+      if (i === afterArticle) continue;
+      addGroup(letters.slice(0, i).join('') + 'ا' + letters.slice(i).join(''));
+    }
+  }
+  return groups;
+}
+
+// ---------- Written vowels against a reading's vowels ----------
+interface Unit {
+  vowel: string;
+  shadda: boolean;
+  marked: boolean;
+}
+const VOWEL_MARKS = 'auioFNK';
+
+/** Base letters, each with the marks written after it (Buckwalter). */
+function toUnits(buck: string): Unit[] {
+  const units: Unit[] = [];
+  for (const ch of buck) {
+    if (ch === '`') continue;
+    if (harakaat.includes(ch)) {
+      const u = units[units.length - 1];
+      if (!u) continue;
+      u.marked = true;
+      if (ch === '~') u.shadda = true;
+      else if (VOWEL_MARKS.includes(ch) && !u.vowel) u.vowel = ch;
+    } else {
+      units.push({ vowel: '', shadda: false, marked: false });
+    }
+  }
+  return units;
+}
+
+function unitsClash(a: Unit[], b: Unit[]): boolean {
+  for (let i = 0; i < a.length - 1; i++) {
+    if (a[i].vowel && b[i].vowel && a[i].vowel !== b[i].vowel) return true;
+    if (a[i].shadda !== b[i].shadda && (a[i].shadda ? b[i].marked : a[i].marked)) return true;
+  }
+  return false;
+}
+
+/**
+ * True when the reading's vowels contradict the written ones (both
+ * Buckwalter). Case endings (the last letter) are not compared, and neither
+ * are spellings whose letters don't line up (hamza and alif seats). A written
+ * dagger alif (`) may be a long ā the reading spells out or nothing at all, so
+ * both are tried, and the reading clashes only if every one that lines up does.
+ */
+export function vowelsClash(writtenBuck: string, readingBuck: string): boolean {
+  const b = toUnits(readingBuck);
+  const forms = writtenBuck.includes('`') ? [writtenBuck.replace(/`/g, ''), writtenBuck.replace(/`/g, 'A')] : [writtenBuck];
+  const comparable = forms.map(toUnits).filter((a) => a.length === b.length);
+  return comparable.length > 0 && comparable.every((a) => unitsClash(a, b));
+}
+
+// Form V تَفَعَّلَ and Form VI تَفاعَلَ verbs, whose verbal nouns are تَفَعُّل and
+// تَفاعُل. The last letter must be a plain consonant: weak or hamzated endings
+// change the noun's spelling.
+const LAST = "[^aiuoFNK~AY`{wy'>&<}|]";
+const ANY = "[^aiuoFNK~AY`{]";
+const FORM_V_RE = new RegExp(`^ta(${ANY})a(${ANY})~a(${LAST})$`);
+const FORM_VI_RE = new RegExp(`^ta(${ANY})A(${ANY})a(${LAST})$`);
+
+/**
+ * AraMorph lists many Form V/VI verbs without their verbal noun (تَحاسَدَ but
+ * no تَحاسُد), so "the" + that noun matches nothing and the root dictionaries
+ * get no root. Make each missing noun as a hidden stem: it lets the word
+ * resolve to its root, but it's never shown, in case the made-up noun is wrong.
+ */
+export function buildHiddenMasdars(dictstems: OptimizedDictArray<MorphEntry>): OptimizedDictArray<MorphEntry> {
+  const nouns = new Set<string>();
+  for (const group of dictstems.values()) {
+    for (const e of group) if (e.morph.startsWith('N')) nouns.add(removeDiacriticsBuckwalter(e.word) + '|' + e.root);
+  }
+  const hidden = new OptimizedDictArray<MorphEntry>();
+  const made = new Set<string>();
+  for (const group of dictstems.values()) {
+    for (const e of group) {
+      if (e.morph !== 'PV' || e.root === '---' || e.lemma === '---') continue;
+      const m = e.lemma.match(FORM_V_RE) ?? e.lemma.match(FORM_VI_RE);
+      if (!m) continue;
+      const word = FORM_V_RE.test(e.lemma) ? `ta${m[1]}a${m[2]}~u${m[3]}` : `ta${m[1]}A${m[2]}u${m[3]}`;
+      const key = removeDiacriticsBuckwalter(word);
+      if (nouns.has(key + '|' + e.root) || made.has(key + '|' + e.lemma)) continue;
+      made.add(key + '|' + e.lemma);
+      hidden.addItem(key, { root: e.root, lemma: e.lemma, word, morph: 'N', def: e.def, pos: '', hidden: true, ...(e.altRoot ? { altRoot: e.altRoot } : {}) });
+    }
+  }
+  return hidden;
 }
 
 const VERB_STEM_RE = /^(PV|IV|CV)/;
@@ -247,10 +559,13 @@ const CACHE_EXPIRY = 3600000;
 
 export class AramorphEngine {
   private tables: AramorphTables | null = null;
+  /** Kept apart from `tables` so the cached parse never stores them. */
+  private hiddenStems = new OptimizedDictArray<MorphEntry>();
   private lookupCache = new Map<string, { data: AramorphResult[]; timestamp: number }>();
 
   setTables(tables: AramorphTables): void {
     this.tables = tables;
+    this.hiddenStems = buildHiddenMasdars(tables.dictstems);
     this.lookupCache.clear();
     this.familyIndex = null;
   }
@@ -322,7 +637,7 @@ export class AramorphEngine {
   private lookupPrefStemSuff(pref: string, stem: string, suff: string): AramorphResult[] {
     const t = this.tables!;
     const prefMatches = t.dictprefs.get(pref);
-    const stemMatches = t.dictstems.get(stem);
+    const stemMatches = [...t.dictstems.get(stem), ...this.hiddenStems.get(stem)];
     const suffMatches = t.dictsuffs.get(suff);
     const data: AramorphResult[] = [];
     const bracketify = (word: string, space: number): string => {
@@ -345,12 +660,42 @@ export class AramorphEngine {
               pos: [p.pos, s.pos, su.pos].filter(Boolean).join(', '),
               morph: [p.morph, s.morph, su.morph].join(', '),
               ...verbFormOf(s),
+              ...(s.hidden ? { hidden: true } : {}),
+              ...(s.altRoot ? { altRoot: detransliterate(s.altRoot) } : {}),
             });
           }
         }
       }
     }
     return data;
+  }
+
+  /** Every prefix/stem/suffix split of a diacritic-free Buckwalter word. */
+  private allSplits(processedWord: string): AramorphResult[] {
+    const candidates: AramorphResult[] = [];
+    for (let i = 0; i < processedWord.length; i++) {
+      for (let j = i + 1; j <= processedWord.length; j++) {
+        for (const r of this.lookupPrefStemSuff(processedWord.slice(0, i), processedWord.slice(i, j), processedWord.slice(j))) {
+          candidates.push(r);
+        }
+      }
+    }
+    return candidates;
+  }
+
+  /**
+   * When the word is written with vowels, flags the readings whose own vowels
+   * disagree, keeping the order: whether to put them last and grey them is the
+   * reader's choice (see rankByVowels in the provider). Nothing is removed; and
+   * if every reading disagrees (a typo in the text, or a rule that is wrong for
+   * this word) nothing is flagged.
+   */
+  private rankByWrittenVowels(word: string, results: AramorphResult[]): AramorphResult[] {
+    const written = transliterate(cleanQuranicMarks(word));
+    if (!harakaat.some((h) => written.includes(h))) return results;
+    const flagged = results.map((r) => vowelsClash(written, transliterate(r.word)));
+    if (flagged.every(Boolean) || !flagged.some(Boolean)) return results;
+    return results.map((r, i) => (flagged[i] ? { ...r, vowelClash: true } : r));
   }
 
   lookup(word: string): AramorphResult[] {
@@ -364,24 +709,37 @@ export class AramorphEngine {
       }
     }
 
-    // Every prefix/stem/suffix split of the (diacritic-free) word.
+    const visible = (c: AramorphResult[]) => c.some((r) => !r.hidden);
     const processedWord = removeDiacriticsBuckwalter(transliterate(word));
-    const candidates: AramorphResult[] = [];
-    for (let i = 0; i < processedWord.length; i++) {
-      for (let j = i + 1; j <= processedWord.length; j++) {
-        for (const r of this.lookupPrefStemSuff(processedWord.slice(0, i), processedWord.slice(i, j), processedWord.slice(j))) {
-          candidates.push(r);
+    let candidates = this.allSplits(processedWord);
+    // Qur'anic and classical spellings the dictionary doesn't write that way.
+    if (!visible(candidates)) {
+      for (const group of spellingVariants(word)) {
+        const found = group.flatMap((variant) => this.allSplits(removeDiacriticsBuckwalter(transliterate(variant))));
+        if (visible(found)) {
+          candidates = found;
+          break;
         }
       }
     }
+    // AraMorph lists some verbs without their verbal noun (e.g. تَحاسَدَ but no
+    // تَحاسُد), so "the" + that noun matches nothing it shows. Retry without the
+    // article (and any و/ف/ب/ك/ل before it) to at least show the verb.
+    if (!visible(candidates)) {
+      const bare = processedWord.replace(/^[wf]?[bkl]?Al(?=.{2})/, '');
+      if (bare !== processedWord) candidates = candidates.concat(this.allSplits(bare));
+    }
 
     const seen = new Set<string>();
-    const data = candidates.filter((d) => {
-      const k = d.word + '|' + d.def;
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    });
+    const data = this.rankByWrittenVowels(
+      word,
+      candidates.filter((d) => {
+        const k = d.word + '|' + d.def;
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      }),
+    );
 
     if (this.lookupCache.size >= CACHE_SIZE) this.lookupCache.delete(this.lookupCache.keys().next().value!);
     this.lookupCache.set(word, { data, timestamp: Date.now() });

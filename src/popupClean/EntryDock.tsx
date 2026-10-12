@@ -5,21 +5,21 @@ export interface DockItem {
   index: number;
   headword: string;
   gist: string;
+  /** The dictionary the entry is from, for the tab's label. */
+  group?: string;
 }
 
 type Side = 'left' | 'right' | null;
 
 /** Width of an open dock tab at popup size 100%, plus a little air. */
 const DOCK_WIDTH_PX = 106;
-const FLASH_MS = 900;
 
 function scrollParent(el: HTMLElement): HTMLElement | null {
   return el.closest<HTMLElement>('.dict-popup__scroll, .dict-popup__split-col');
 }
 
 /**
- * A dock of labelled tabs on the popup's edge, one per Al-Wasit entry (so one per
- * root the word led to). Pressing a tab scrolls that entry into view; the tab for
+ * A dock of labelled tabs on the popup's edge, one per root a dictionary's entries sit under (see dockItemsFor). Pressing a tab scrolls that entry into view; the tab for
  * the entry being read stays lit. It is there from the moment the popup opens, and
  * sits on whichever side of the popup has room. `onJump` runs before the scroll, so
  * the popup can unfold a folded entry first.
@@ -100,22 +100,23 @@ export function EntryDock({
       const el = entryEl(index);
       if (!el) return;
       el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      // The entry jumped to stays highlighted until the next jump (it no longer fades).
+      el.closest('.dict-popup')?.querySelectorAll('.dict-popup__entry--flash').forEach((other) => other.classList.remove('dict-popup__entry--flash'));
       el.classList.add('dict-popup__entry--flash');
-      window.setTimeout(() => el.classList.remove('dict-popup__entry--flash'), FLASH_MS);
     });
   }
 
   if (!side || items.length < 2) return null;
   return (
-    <nav className="dict-popup__dock dict-popup__dock--on" data-side={side} aria-label="Jump to an Al-Wasīṭ entry">
+    <nav className="dict-popup__dock dict-popup__dock--on" data-side={side} aria-label="Jump to an entry">
       {items.map((item) => (
         <button
           key={item.index}
           type="button"
           className="dict-popup__dock-tab"
           aria-current={item.index === active}
-          aria-label={`Go to the Al-Wasīṭ entry ${item.headword}: ${item.gist}`}
-          title={`${item.headword} · ${item.gist}`}
+          aria-label={`Go to the ${item.group ? item.group + ' ' : ''}entry ${item.headword}: ${item.gist}`}
+          title={`${item.group ? item.group + ' · ' : ''}${item.headword} · ${item.gist}`}
           onClick={() => go(item.index)}
         >
           <span className="dict-popup__dock-head" lang="ar">

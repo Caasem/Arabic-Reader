@@ -180,7 +180,7 @@
 }
 
 .dict-popup__word-text--suspect {
-  text-decoration: underline wavy #b0701c;
+  text-decoration: underline wavy var(--c-popup-warn);
   text-decoration-thickness: 1.5px;
   text-underline-offset: 8px;
 }
@@ -203,11 +203,11 @@
 }
 
 .dict-popup__ocr-note--warn {
-  color: #b0701c;
+  color: var(--c-popup-warn);
 }
 
 .dict-popup__ocr-note--ok {
-  color: #2e7d4f;
+  color: var(--c-popup-ok);
 }
 
 .dict-popup__alts {
@@ -317,19 +317,19 @@
 }
 
 .dict-popup__rarity--beginner {
-  background: rgba(139, 184, 114, 0.22);
-  color: #4c7a35;
+  background: var(--c-popup-pill-good-bg);
+  color: var(--c-popup-pill-good-ink);
 }
 
 .dict-popup__rarity--intermediate {
-  background: rgba(231, 198, 91, 0.28);
-  color: #8a6a12;
+  background: var(--c-popup-pill-mid-bg);
+  color: var(--c-popup-pill-mid-ink);
 }
 
 .dict-popup__rarity--advanced,
 .dict-popup__rarity--unlisted {
-  background: rgba(201, 122, 109, 0.22);
-  color: #a4402e;
+  background: var(--c-popup-pill-bad-bg);
+  color: var(--c-popup-pill-bad-ink);
 }
 
 .dict-popup__loading,
@@ -356,6 +356,77 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-bottom: 6px;
+}
+
+/* A root-filed dictionary folded to one row naming its root (see foldsBehindRoot): tap to open. */
+.dict-popup__root-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  text-align: start;
+}
+.dict-popup__root-row-root {
+  font-family: var(--font-arabic);
+  font-size: 1.35em;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--accent);
+}
+.dict-popup__root-row-count {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.dict-popup__root-row:hover .dict-popup__root-row-count,
+.dict-popup__root-row:focus-visible .dict-popup__root-row-count {
+  color: var(--ink);
+}
+
+/* An Arabic entry cut from a root article reads as running text: the paragraph, its opening word set in the
+   text, and a faint "+" beside it that comes up when the entry is hovered or the button focused. */
+.dict-popup .dict-popup__entry--inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 6px;
+  align-items: start;
+  padding-block: 0;
+  border: 0;
+  background: none;
+}
+.dict-popup .dict-popup__entry--inline + .dict-popup__entry--inline {
+  margin-top: 6px;
+}
+.dict-popup .dict-popup__entry--inline > .dict-popup__tokens {
+  grid-column: 1;
+  grid-row: 1;
+}
+.dict-popup .dict-popup__entry--inline > .dict-popup__entry-save {
+  grid-column: 2;
+  grid-row: 1;
+  margin-top: 4px;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+.dict-popup .dict-popup__entry--inline:hover > .dict-popup__entry-save,
+.dict-popup .dict-popup__entry--inline > .dict-popup__entry-save:focus-visible,
+.dict-popup .dict-popup__entry--inline > .dict-popup__entry-save--selection {
+  opacity: 1;
+}
+.dict-popup .dict-popup__entry-morph--inline {
+  grid-column: 1 / -1;
+}
+.dict-popup__lead-word {
+  font-weight: 600;
 }
 
 /* Entries within one provider's group get a lighter divider than the
@@ -493,6 +564,18 @@
 .dict-popup__entry--best {
   border-inline-start: 2px solid var(--accent);
   padding-inline-start: 8px;
+}
+
+.dict-popup__entry--clash {
+  opacity: 0.6;
+}
+
+/* The entry about the tapped word: a soft accent ground that stays while the popup is open. */
+.dict-popup .dict-popup__entry--about {
+  background: var(--accent-soft);
+  border-radius: 8px;
+  padding-inline: 6px;
+  margin-inline: -6px;
 }
 
 .dict-popup__sense-main {
@@ -811,4 +894,27 @@
   font-size: 11px;
   color: var(--ink-faint);
   white-space: nowrap;
+}
+
+/* "Show all N entries": opens a long dictionary list that started folded to the entry about the tapped word. */
+.dict-popup__show-all {
+  display: block;
+  margin: 8px 0 2px;
+  border: 0;
+  background: none;
+  padding: 4px 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.dict-popup__show-all:hover {
+  text-decoration: underline;
+}
+
+/* Words picked inside running English text keep its spacing and look: the token only adds the hover and selection tint. */
+.dict-popup__sense--en .dict-popup__token {
+  padding: 0;
+  border-radius: 2px;
 }

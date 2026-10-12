@@ -1,0 +1,62 @@
+/*
+ * Sense lines of the dictionary popup and the full-page dictionary. Render-time typography only (see SenseText.tsx):
+ * one wrapped paragraph per sense, English left to right at a readable size, Arabic words in the reading font.
+ */
+
+/* A sense's content is one block, so its runs flow together instead of becoming flex items of the clean layout's li. */
+.dict-popup__sense-text {
+  display: block;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* Breathing room between senses. */
+.dict-popup__senses > li + li {
+  margin-top: 7px;
+}
+
+/* English dictionaries: ~14px (the popup's own scale applies on top), a roomier line, start-aligned. */
+.dict-popup .dict-popup__senses > li.dict-popup__sense--en {
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: start;
+}
+.dict-popup.dict-popup--clean .dict-popup__senses > li.dict-popup__sense--en {
+  font-size: calc(21px * var(--k, 0.6667));
+  line-height: 1.6;
+}
+.dict-popup__sense--en .dict-popup__tag {
+  font-size: 0.82em;
+}
+
+/* Arabic inside an English line: the reading font, larger, with room for the vowel marks. */
+.dict-sense-ar {
+  font-family: var(--font-arabic);
+  font-size: 1.28em;
+  line-height: 1.4;
+}
+/* The headword that opens a Lane or Hans Wehr line. */
+.dict-sense-lead {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Lane: the English meanings are the strongest text; source sigla are small and faint. */
+.dict-lane-meaning {
+  color: var(--ink);
+  font-weight: 500;
+}
+.dict-lane-sigla {
+  font-size: 0.78em;
+  /* --ink-soft, not --ink-faint: at this size faint fell below 3:1. */
+  color: var(--ink-soft);
+  white-space: normal;
+}
+
+/* Hans Wehr: transliteration muted italic. */
+.dict-hw-translit {
+  font-style: italic;
+  color: var(--ink-soft);
+}

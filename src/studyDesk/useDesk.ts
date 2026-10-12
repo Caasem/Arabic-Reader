@@ -3,24 +3,7 @@ import { getBlobStore } from '../blobStore';
 import type { BookMeta } from '../types';
 import { addItem, bookDeskId, ensureBookDesk, getDesk, listDesks, listItems, onDeskChange, updateItem } from './deskStore';
 import type { Desk, DeskItem, NewDeskItem } from './types';
-
-const CURRENT_KEY = (bookId: string) => `studyDesk.current.${bookId}`;
-
-function loadCurrent(bookId: string): string | null {
-  try {
-    return localStorage.getItem(CURRENT_KEY(bookId));
-  } catch {
-    return null;
-  }
-}
-
-function saveCurrent(bookId: string, deskId: string): void {
-  try {
-    localStorage.setItem(CURRENT_KEY(bookId), deskId);
-  } catch {
-    // Not remembered: the book's own desk is used next time.
-  }
-}
+import { currentDeskId, rememberCurrentDeskId } from './deskMemory';
 
 export interface DeskData {
   desks: Desk[];
@@ -34,7 +17,7 @@ export interface DeskData {
 export function useDeskData(book: BookMeta): DeskData {
   const [desks, setDesks] = useState<Desk[]>([]);
   const [items, setItems] = useState<DeskItem[]>([]);
-  const [deskId, setDeskIdState] = useState<string>(() => loadCurrent(book.id) ?? bookDeskId(book.id));
+  const [deskId, setDeskIdState] = useState<string>(() => currentDeskId(book.id) ?? bookDeskId(book.id));
 
   const reload = useCallback(async () => {
     const [d, i] = await Promise.all([listDesks(), listItems()]);
@@ -47,11 +30,11 @@ export function useDeskData(book: BookMeta): DeskData {
     return onDeskChange(() => void reload());
   }, [reload]);
 
-  useEffect(() => setDeskIdState(loadCurrent(book.id) ?? bookDeskId(book.id)), [book.id]);
+  useEffect(() => setDeskIdState(currentDeskId(book.id) ?? bookDeskId(book.id)), [book.id]);
 
   const setDeskId = useCallback(
     (id: string) => {
-      saveCurrent(book.id, id);
+      rememberCurrentDeskId(book.id, id);
       setDeskIdState(id);
     },
     [book.id]

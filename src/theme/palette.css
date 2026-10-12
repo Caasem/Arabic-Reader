@@ -1,0 +1,127 @@
+/* Fixed colours used by component styles, named by role and place. Unlike the theme tokens in index.css
+   (--bg, --ink, --accent ...), these are the same in every theme: each value is the literal that used to
+   sit in the component CSS. Add a token here instead of writing a colour inline. */
+:root {
+  /* Reader: margin notes, book search, Quiet Reader highlights, note card colours */
+  --c-note-card-shadow: rgba(28, 27, 25, 0.07);
+  --c-note-card-active-shadow: rgba(28, 27, 25, 0.12);
+  --c-note-chip-shadow: rgba(28, 27, 25, 0.08);
+  --c-note-paper: #fffdf8;
+  --c-note-field-bg: #fff;
+  --c-booksearch-backdrop: rgba(28, 27, 25, 0.42);
+  --c-booksearch-shadow: rgba(28, 27, 25, 0.28);
+  --c-qr-highlight-green: rgba(139, 184, 114, 0.45);
+  --c-qr-highlight-blue: rgba(111, 163, 201, 0.45);
+  --c-qr-highlight-purple: rgba(156, 133, 201, 0.45);
+  --c-qr-highlight-red: rgba(201, 122, 109, 0.45);
+  --c-qr-search: rgba(201, 150, 58, 0.4);
+  --c-qr-flash: rgba(230, 170, 60, 0.55);
+  --c-qr-chip-shadow: rgba(20, 18, 15, 0.16);
+  --c-qr-highlight-yellow: rgba(231, 198, 91, 0.45);
+  --c-qr-toast-shadow: rgba(0, 0, 0, 0.2);
+  --c-note-colour-yellow: #f2d95c;
+  --c-note-colour-green: #8fd18f;
+  --c-note-colour-blue: #8fb8f0;
+  --c-note-colour-purple: #bb9be6;
+  --c-note-colour-red: #ef9a9a;
+
+  /* Library and catalogue browser */
+  --c-library-danger-wash: #f7e6e1;
+  --c-library-badge-bg: rgba(0, 0, 0, 0.55);
+  --c-library-badge-ink: #fff;
+  --c-library-cover-scrim: rgba(0, 0, 0, 0.4);
+  --c-library-cover-ink: #fff;
+  --c-library-neutral-border: rgba(128, 128, 128, 0.35);
+  --c-library-neutral-tint: rgba(128, 128, 128, 0.14);
+  --c-lib-mark-yellow: rgba(231, 198, 91, 0.5);
+  --c-lib-mark-green: rgba(126, 186, 140, 0.5);
+  --c-lib-mark-blue: rgba(110, 160, 220, 0.45);
+  --c-lib-mark-purple: rgba(170, 130, 210, 0.45);
+  --c-lib-mark-red: rgba(225, 120, 110, 0.45);
+  --c-lib-cover-spine: rgba(0, 0, 0, 0.2);
+  --c-lib-cover-shadow: rgba(40, 30, 15, 0.5);
+  --c-lib-sheet-backdrop: rgba(28, 27, 25, 0.38);
+  --c-lib-sheet-shadow: rgba(0, 0, 0, 0.4);
+  --c-browse-backdrop: rgba(0, 0, 0, 0.4);
+
+  /* Dictionary popup, vocabulary edit, dictionary search */
+  --c-popup-warn: #b0701c;
+  --c-popup-ok: #2e7d4f;
+  --c-popup-pill-good-bg: rgba(139, 184, 114, 0.22);
+  --c-popup-pill-good-ink: #4c7a35;
+  --c-popup-pill-mid-bg: rgba(231, 198, 91, 0.28);
+  --c-popup-pill-mid-ink: #8a6a12;
+  --c-popup-pill-bad-bg: rgba(201, 122, 109, 0.22);
+  --c-popup-pill-bad-ink: #a4402e;
+  --c-vocab-edit-backdrop: rgba(28, 27, 25, 0.28);
+  --c-dictsearch-backdrop: rgba(28, 27, 25, 0.42);
+  --c-dictsearch-shadow: rgba(28, 27, 25, 0.28);
+  --c-dictsearch-sheet-shadow: rgba(28, 27, 25, 0.25);
+
+  /* Study desk and PDF pages */
+  --c-desk-lightbox-backdrop: rgb(20 18 15 / 0.72);
+  --c-desk-lightbox-shadow: rgb(0 0 0 / 0.4);
+  --c-desk-lightbox-bg: #fff;
+  --c-desk-lightbox-ink: #f1ece4;
+  --c-desk-lightbox-border: rgb(255 255 255 / 0.4);
+  --c-desk-alert-ink: #b4472f;
+  --c-desk-alert-fill: #b4472f;
+  --c-desk-alert-fill-ink: #fff;
+  --c-margin-card-shadow: rgba(28, 27, 25, 0.06);
+  --c-margin-pop-shadow: rgba(28, 27, 25, 0.14);
+  --c-margin-active-shadow: rgb(0 0 0 / 0.1);
+  --c-margin-badge-ink: #fff;
+  --c-margin-menu-shadow: rgb(0 0 0 / 0.22);
+  --c-margin-field-bg: #fff;
+  --c-ring-shadow: rgb(0 0 0 / 0.14);
+  --c-ring-alert: #b4472f;
+  --c-pdfdesk-marker: #2e7d74;
+  --c-pdfdesk-note-border: #7d5a14;
+  --c-pdfdesk-note-bg: #fffdf8;
+  --c-pdfdesk-pin: rgb(202 138 4 / 0.8);
+  --c-pdfdesk-hl-soft: rgb(250 204 21 / 0.12);
+  --c-pdfdesk-hl-strong: rgb(250 204 21 / 0.28);
+  --c-pdfpage-paper: #fff;
+  --c-pdfpage-shadow-near: rgb(28 27 25 / 0.12);
+  --c-pdfpage-shadow-far: rgb(28 27 25 / 0.08);
+  --c-pdfpage-paper-sepia: #f4ead6;
+  --c-pdfpage-paper-night: #1d1c21;
+  --c-pdfpage-number: #b4b0a8;
+  --c-pdfpage-warn-ink: #b0701c;
+  --c-pdfpage-warn-bg: rgb(176 112 28 / 0.14);
+
+  /* Settings, storage, OCR, navigation bar */
+  --c-settings-backdrop: rgba(20, 18, 15, 0.42);
+  --c-settings-shadow: rgba(20, 18, 15, 0.3);
+  --c-settings-seg-shadow: rgba(20, 18, 15, 0.12);
+  --c-settings-knob: #ffffff;
+  --c-settings-knob-shadow: rgba(0, 0, 0, 0.25);
+  --c-storage-bar-a: #6f8f72;
+  --c-storage-bar-b: #6b86a8;
+  --c-ocr-ok: #2e7d4f;
+  --c-ocr-ok-bg: rgb(46 125 79 / 0.14);
+  --c-ocr-warn: #b0701c;
+  --c-ocr-warn-bg: rgb(176 112 28 / 0.15);
+  --c-ocr-button-ink: #fff;
+  --c-ocr-warn-wash: rgb(176 112 28 / 0.12);
+  --c-backup-ink: #fff;
+  --c-navbar-shadow: rgba(28, 27, 25, 0.12);
+  --c-look-mastered-ink: #ffffff;
+  --c-look-navbar-pill-shadow: rgba(28, 27, 25, 0.14);
+
+  /* Dashboard, review, speed reader, vocabulary, app base */
+  --c-focus-danger-wash: rgba(179, 84, 63, 0.12);
+  --c-vocab-danger-wash: rgba(179, 84, 63, 0.12);
+  --c-hl-yellow: #e7c65b;
+  --c-hl-green: #8bb872;
+  --c-hl-blue: #6fa3c9;
+  --c-hl-purple: #9c85c9;
+  --c-hl-red: #c97a6d;
+  --c-review-btn-ink: #fff;
+  --c-review-good: #4a8f5c;
+  --c-review-good-ink: #fff;
+  --c-speed-ink: #fff;
+  --c-speed-knob: #fff;
+  --c-speed-scrim: rgba(0, 0, 0, 0.35);
+  --c-app-inset-edge: rgba(0, 0, 0, 0.12);
+}

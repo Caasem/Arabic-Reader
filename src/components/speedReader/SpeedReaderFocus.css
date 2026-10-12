@@ -276,7 +276,7 @@
   width: 56px;
   height: 56px;
   background: var(--accent);
-  color: #fff;
+  color: var(--c-speed-ink);
   border-color: var(--accent);
   font-size: 18px;
 }
@@ -412,7 +412,7 @@
   height: 16px;
   left: 2px;
   top: 2px;
-  background: #fff;
+  background: var(--c-speed-knob);
   border-radius: 50%;
   transition: transform 0.15s ease;
 }
@@ -462,7 +462,7 @@
   position: fixed;
   inset: 0;
   z-index: 120;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--c-speed-scrim);
   display: flex;
   align-items: center;
   justify-content: center;

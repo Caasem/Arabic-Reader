@@ -1,3 +1,4 @@
+import { tourEvents } from '../gettingStarted/events';
 import { Rating } from 'ts-fsrs';
 import { rememberAnkiDeletes } from '../anki/deletions';
 import type { BackupData, BookMeta, DictionaryEntry, VocabularyItem, WordInstance } from '../types';
@@ -136,6 +137,7 @@ export class VocabularyService {
       ...freshFsrsFields(now),
     };
     await persistenceService.saveVocabularyItem(item);
+    tourEvents.emit('save-word');
     if (params.wordInstance) {
       await persistenceService.upsertWordInstance({ ...params.wordInstance, saved: true });
     } else {
@@ -154,6 +156,8 @@ export class VocabularyService {
     book: BookMeta;
     chapterHref?: string;
     location?: string;
+    /** Made from a diagram sheet (src/annotate/sketchCards.ts). */
+    sketch?: VocabularyItem['sketch'];
   }): Promise<VocabularyItem> {
     const now = Date.now();
     const item: VocabularyItem = {
@@ -174,10 +178,13 @@ export class VocabularyService {
       mastery: 'new',
       successfulRecalls: 0,
       custom: true,
+      ...(params.sketch ? { sketch: params.sketch } : {}),
       ...freshFsrsFields(now),
     };
     await persistenceService.saveVocabularyItem(item);
-    await persistenceService.updateWordInstance(item.bookId, normalize(item.surfaceForm), { saved: true });
+    if (!params.sketch) tourEvents.emit('make-flashcard');
+    // A sheet card's front is not a word of the book: nothing to mark as saved.
+    if (!params.sketch) await persistenceService.updateWordInstance(item.bookId, normalize(item.surfaceForm), { saved: true });
     return item;
   }
 

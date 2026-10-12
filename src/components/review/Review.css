@@ -75,6 +75,42 @@
   color: var(--ink);
 }
 
+.review__card-word--sheet {
+  font-family: inherit;
+  font-size: 20px;
+  white-space: pre-line;
+  text-align: center;
+}
+
+.review__card-meaning--sheet {
+  white-space: pre-line;
+}
+
+/* A sketch card's sheet, drawn as a picture. */
+.review__sheet {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.review__sheet img {
+  max-width: 100%;
+  max-height: 46vh;
+  border-radius: 10px;
+  background: #fffdf8;
+}
+
+.review__open-sheet {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent, var(--ink-faint));
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .review__card-hint {
   font-size: 12px;
   color: var(--ink-faint);
@@ -208,7 +244,7 @@
 .review__btn--reveal {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--c-review-btn-ink);
 }
 
 .review__btn--again {
@@ -224,13 +260,13 @@
 .review__btn--good {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--c-review-btn-ink);
 }
 
 .review__btn--easy {
-  background: #4a8f5c;
-  border-color: #4a8f5c;
-  color: #fff;
+  background: var(--c-review-good);
+  border-color: var(--c-review-good);
+  color: var(--c-review-good-ink);
 }
 
 .review__card {

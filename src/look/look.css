@@ -175,7 +175,7 @@ html[data-look] .vocab-card__mastery[data-mastery='known'] {
 
 html[data-look] .vocab-card__mastery[data-mastery='mastered'] {
   background: var(--look-secondary);
-  color: #ffffff;
+  color: var(--c-look-mastered-ink);
 }
 
 /* Narrow screens: the bottom tab bar becomes a floating pill */
@@ -189,7 +189,7 @@ html[data-look] .vocab-card__mastery[data-mastery='mastered'] {
     border-radius: 30px;
     background: color-mix(in srgb, var(--bg-elevated) 86%, transparent);
     backdrop-filter: blur(18px) saturate(1.5);
-    box-shadow: 0 10px 30px rgba(28, 27, 25, 0.14);
+    box-shadow: 0 10px 30px var(--c-look-navbar-pill-shadow);
   }
 
   html[data-look] .navbar--hidden {
