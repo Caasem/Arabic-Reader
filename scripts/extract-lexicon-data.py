@@ -117,11 +117,13 @@ def extract_tree(
     ):
         words, units = groups.setdefault(parent_id, ([], []))
         parts = form_units(meanings or "") if split_forms else [clean_html(meanings or "")]
-        unit = parts[0] if parts else ""
         if is_root:
             words.append(one_line(word or ""))
-            if " " not in unit:  # Lane's root rows only repeat the root (بأس)
-                continue
+            # Lane's root rows only repeat the root (بأس): drop that bare word. A
+            # Hans Wehr verb with no Form I (اصد II to close) splits into the bare
+            # root and its form lines; only the bare root goes, the forms stay.
+            if parts and " " not in parts[0]:
+                parts = parts[1:]
         units.extend(p for p in parts if p)
     merged: dict[str, list[str]] = {}
     roots = 0
