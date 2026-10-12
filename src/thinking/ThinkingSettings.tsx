@@ -11,6 +11,7 @@ const PARTS: { key: PartKey; label: string; note: string }[] = [
   { key: 'thinkingMuqabala', label: 'Muqābala (Alt+J)', note: 'Two books side by side: link a passage on each side as the same text, support, difference, explanation or quotation, with a note.' },
   { key: 'thinkingBacklinks', label: 'Backlinks', note: 'A count beside each passage that something touches: thoughts on it, thoughts linked to those, masāʾil, Muqābala links. Click it to see them in the Ḥāshiya.' },
   { key: 'thinkingMasail', label: 'Masāʾil (Alt+Q)', note: 'Ask a question on a passage and keep it open until another passage answers it. See them all, with how long each has waited.' },
+  { key: 'thinkingRevisit', label: 'Revisit', note: 'Bring your thoughts back after a while to agree, revise or drop them, and send them to Anki.' },
 ];
 
 export function ThinkingSettings() {

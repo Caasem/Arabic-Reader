@@ -135,6 +135,8 @@ export interface DeskReview {
   every: number;
   /** When the reader said Still agree. */
   agreed: number[];
+  /** When the current wording was written by Revise (the item's creation before any). */
+  revisedAt?: number;
   /** The FSRS card, once visited. */
   card?: { stability: number; difficulty: number; reps: number; lapses: number; state: number; scheduledDays: number; learningSteps: number; lastReview?: number };
 }

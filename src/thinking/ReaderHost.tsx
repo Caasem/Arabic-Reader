@@ -7,7 +7,7 @@ import { usePreferences } from '../state/PreferencesContext';
 import { cleanLocationNearCentre, goToPdfPlace, parsePdfLocation, pdfLocationNearCentre } from '../studyDesk/pageGeometry';
 import { useDeskTrip } from '../studyDesk/trip';
 import { currentDeskId } from '../studyDesk/deskMemory';
-import { bookDeskId } from '../studyDesk/deskStore';
+import { bookDeskId, updateItem } from '../studyDesk/deskStore';
 import { Composer } from './Composer';
 import { PassageMoves, PdfPendingMoves, QuietPendingMoves } from './MoveRow';
 import { PassageBar } from './PassageBar';
@@ -22,6 +22,8 @@ import { TouchingPanel } from './TouchingPanel';
 import { goToItem } from './nav';
 import { answerWith, findAnswer } from './actions';
 import { HuntBar } from './HuntBar';
+import { firstReview } from './revisit';
+import { say } from './say';
 import { isOpen } from './masail';
 import { threadSummaries } from './threads';
 import { useThinkingData } from './useThinkingData';
@@ -205,6 +207,7 @@ export function ReaderHost({ book, onOpenBook }: HostProps) {
           items={data.items}
           desks={data.desks}
           toInbox={toInbox}
+          extra={prefs.thinkingRevisit ? () => ({ review: firstReview(Date.now()) }) : undefined}
           onClose={() => {
             setCompose(null);
             setThinking({ selected: null });
@@ -221,6 +224,20 @@ export function ReaderHost({ book, onOpenBook }: HostProps) {
               <button type="button" className="th-link" onClick={() => void findAnswer(t.item, onOpenBook)}>
                 Find the answer
               </button>
+            ) : t.kind === 'thought' && prefs.thinkingRevisit ? (
+              t.item.review ? (
+                <button type="button" className="th-link" onClick={() => openScreen({ kind: 'revisit', id: t.item.id })}>
+                  Revisit now
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="th-link"
+                  onClick={() => void updateItem(t.item.id, { review: firstReview(Date.now()) }).then(() => say('It comes back for a revisit in a week'))}
+                >
+                  Revisit this
+                </button>
+              )
             ) : t.kind === 'link' && prefs.thinkingMuqabala ? (
               <button type="button" className="th-link" onClick={() => openScreen({ kind: 'muqabala', link: t.link.id })}>
                 Open side by side

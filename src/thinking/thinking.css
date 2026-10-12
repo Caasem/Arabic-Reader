@@ -254,7 +254,7 @@
 .th-screen {
   position: fixed;
   inset: 0;
-  z-index: 76;
+  z-index: 85;
   overflow: auto;
   background: var(--bg);
   color: var(--ink);
@@ -1223,4 +1223,161 @@
 }
 .th-cmp-psg > span {
   display: block;
+}
+
+
+/* --- Revisit -------------------------------------------------------------------------------------------------- */
+.th-rv {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+.th-rv__main,
+.th-rv__side {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.th-rv__card {
+  display: grid;
+  gap: 10px;
+  padding: 18px 20px;
+}
+.th-rv__passage .th-excerpt {
+  border-inline-start-color: var(--accent);
+}
+.th-rv__passage .th-line__meta {
+  margin-inline-start: 12px;
+}
+.th-rv__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  align-items: center;
+  font-size: 12.5px;
+}
+.th-rv__words {
+  margin: 4px 0;
+  font: 500 21px/1.55 var(--font-ui);
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+.th-rv__words.th-ar {
+  font: 500 24px/1.8 var(--font-arabic);
+}
+.th-rv__ask {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+.th-rv__answers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+.th-rv__answer {
+  display: grid;
+  gap: 3px;
+  justify-items: start;
+}
+.th-rv__answer small {
+  color: var(--ink-faint);
+  font-size: 11.5px;
+}
+.th-rv__revise {
+  display: grid;
+  gap: 8px;
+}
+.th-rv__text {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  line-height: 1.6;
+  font-size: 16px;
+}
+.th-rv__links {
+  margin-top: 8px;
+}
+.th-rv__done {
+  padding: 22px 20px;
+}
+.th-rv__queue {
+  display: grid;
+  gap: 2px;
+}
+.th-rv__q {
+  display: grid;
+  gap: 2px;
+  text-align: start;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink);
+  font: 13.5px/1.4 var(--font-ui);
+  cursor: pointer;
+}
+.th-rv__q:hover {
+  border-color: var(--border);
+}
+.th-rv__q[aria-current='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.th-rv__q small {
+  color: var(--ink-faint);
+  font-size: 11.5px;
+}
+.th-rv__hist {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 14px;
+  border-inline-start: 1px solid var(--border);
+  display: grid;
+  gap: 12px;
+}
+.th-rv__hist li {
+  position: relative;
+}
+.th-rv__hist li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: -19px;
+  top: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--th-claim);
+}
+.th-rv__hist .th-rv__hist--agreed::before {
+  background: var(--th-evidence);
+}
+.th-rv__hist small {
+  color: var(--ink-faint);
+  font-size: 11.5px;
+}
+.th-rv__hist p {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.th-rv__anki {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 12.5px;
+}
+@media (max-width: 760px) {
+  .th-rv {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .th-rv__card {
+    padding: 14px;
+  }
+  .th-rv__words {
+    font-size: 19px;
+  }
 }

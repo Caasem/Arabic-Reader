@@ -60,7 +60,7 @@ let reading: BookMeta | null = null;
 export const setReadingBook = (book: BookMeta | null): void => void (reading = book);
 export const readingBook = (): BookMeta | null => reading;
 
-export const openScreen = (screen: Screen): void => setThinking({ screen, selected: null });
+export const openScreen = (screen: Screen): void => setThinking({ screen, selected: null, touch: null });
 export const closeScreen = (): void => setThinking({ screen: null });
 
 /** Tests only. */

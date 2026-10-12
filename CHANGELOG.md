@@ -45,6 +45,16 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.118.0 — 2026-10-12
+
+- **Thinking desk, Revisit.** Thoughts written in the passage bar come back a week later, scheduled with the same FSRS
+  scheduler as flashcards; any other thought can be added with Revisit this in Touching this passage.
+- **The Revisit screen**: the thought, the passage it is on, and three answers. **Still agree** pushes the next visit
+  further out. **Revise** keeps the old wording as a version and shows how the thought changed. **Drop** archives it
+  with its history, with Undo. Today's queue sits beside it.
+- **Send to Anki**: scheduled thoughts go to Anki through AnkiConnect as their own note type, "Arabic Reader Thought",
+  with the passage and its source on the front and the thought on the back. Thoughts Anki already has are skipped.
+
 ## v0.117.0 — 2026-10-12
 
 - **Thinking desk, Muqābala (Alt+J).** Two books side by side, each listing its kept passages page by page. Click a passage
