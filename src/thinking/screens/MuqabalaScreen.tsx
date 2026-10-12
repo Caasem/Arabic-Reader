@@ -82,7 +82,10 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
     const y = link ? data.byId.get(link.b) : undefined;
     const a = x?.source?.bookId ?? bookOf(readingBook()?.id)?.id ?? books[0]?.id;
     const b = y?.source?.bookId ?? books.find((k) => k.id !== a)?.id ?? a;
-    setPanes({ a: { bookId: a, view: viewOf(bookOf(a), x), start: x?.id, n: 0 }, b: { bookId: b, view: viewOf(bookOf(b), y), start: y?.id, n: 0 } });
+    setPanes({
+      a: { bookId: a, view: viewOf(bookOf(a), x), start: x?.id, n: 0 },
+      b: { bookId: b, view: viewOf(bookOf(b), y), start: y?.id, n: 0 },
+    });
     if (x && !link) setPick({ pick: { id: x.id, side: 'a' }, pair: null });
   }
   const a = panes?.a.bookId;
@@ -97,6 +100,12 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
   const paneA = useRef<LivePaneHandle>(null);
   const paneB = useRef<LivePaneHandle>(null);
   const [wires, setWires] = useState<Wire[]>([]);
+  // A new pair: bring the relation buttons into view under the panes.
+  const noteRef = useRef<HTMLDivElement>(null);
+  const paired = !!pick.pair;
+  useEffect(() => {
+    if (paired) noteRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [paired]);
   const raf = useRef(0);
   const draw = useCallback(() => {
     cancelAnimationFrame(raf.current);
@@ -114,7 +123,14 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
         const y1 = ea.y - box.top;
         const x2 = rb.left - box.left;
         const y2 = eb.y - box.top;
-        out.push({ id: link.id, rel: link.rel, d: wirePath(x1, y1, x2, y2), x: (x1 + x2) / 2, y: (y1 + y2) / 2, off: ea.off || eb.off });
+        out.push({
+          id: link.id,
+          rel: link.rel,
+          d: wirePath(x1, y1, x2, y2),
+          x: (x1 + x2) / 2,
+          y: (y1 + y2) / 2,
+          off: ea.off || eb.off,
+        });
       }
       setWires(out);
     });
@@ -128,7 +144,12 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
     };
   }, [draw, left, right]);
 
-  if (!data.loaded || !library || !panes) return <div className="th-screen th-screen--loading" role="status">Loading…</div>;
+  if (!data.loaded || !library || !panes)
+    return (
+      <div className="th-screen th-screen--loading" role="status">
+        Loading…
+      </div>
+    );
   if (books.length === 0)
     return (
       <Frame eyebrow="Muqābala" title="Two books side by side">
@@ -169,10 +190,15 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
         type: kept.text ? 'quote' : 'capture',
         text: kept.text || `Region of ${kept.chapterLabel.toLowerCase()}`,
         ar: looksArabic(kept.text),
-        source: { bookId: book.id, bookTitle: book.title, location: kept.location, chapterLabel: kept.chapterLabel },
+        source: {
+          bookId: book.id,
+          bookTitle: book.title,
+          location: kept.location,
+          chapterLabel: kept.chapterLabel,
+        },
         inInbox: prefs.studyDeskMarginsToInbox === 'auto',
       },
-      kept.image
+      kept.image,
     );
     say('Kept');
     click(item.id, side);
@@ -183,8 +209,8 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
   const hint = pick.pair
     ? 'Name how they relate, below.'
     : pick.pick
-      ? 'Now pick a passage on the other side: click a marked one, or select words and keep them.'
-      : 'Click a marked passage on one side, then one on the other, to link them. Select words to keep new ones.';
+      ? 'Now click a passage on the other side, or select words there.'
+      : 'Click a passage, then one on the other side, to link them. Or select words to keep new ones.';
 
   const pane = (side: Side) => {
     const p = panes[side];
@@ -192,8 +218,10 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
     return (
       <section className="th-pane th-pane--live" data-side={side} aria-label={titleOf(p.bookId)}>
         <div className="th-pane__head">
+          {/* The book's title is its picker: books kept from first, then the rest of the library. */}
           <select
-            className="th-switch"
+            className="th-pane__title"
+            dir="auto"
             aria-label={side === 'a' ? 'Book on the left' : 'Book on the right'}
             value={p.bookId}
             onChange={(e) => {
@@ -202,12 +230,18 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
               setPick({ pick: null, pair: null });
             }}
           >
-            {books.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.title}
-                {counts.get(x.id) ? ` (${counts.get(x.id)} kept)` : ''}
-              </option>
-            ))}
+            {[books.filter((x) => counts.has(x.id)), books.filter((x) => !counts.has(x.id))].map(
+              (group, g) =>
+                group.length > 0 && (
+                  <optgroup key={g} label={g === 0 ? 'Books you have kept passages from' : 'Other books'}>
+                    {group.map((x) => (
+                      <option key={x.id} value={x.id}>
+                        {x.title}
+                      </option>
+                    ))}
+                  </optgroup>
+                ),
+            )}
           </select>
           {book && hasPdfChoice(book) && (
             <div className="th-seg" role="group" aria-label="Show as">
@@ -240,8 +274,7 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
   };
 
   return (
-    <Frame eyebrow="Muqābala" title={`${titleOf(a)} beside ${titleOf(b)}`} wide>
-      <p className="th-sub">{hint}</p>
+    <Frame eyebrow="Muqābala" title={`${titleOf(a)} beside ${titleOf(b)}`} wide beside={<p className="th-sub th-cmp-hint">{hint}</p>}>
       <div className={'th-cmp th-cmp--live' + (narrow ? ' th-cmp--narrow' : '')} ref={boxRef}>
         {pane('a')}
         {!narrow && <div className="th-cmp__gap" aria-hidden="true" />}
@@ -255,60 +288,92 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
         )}
         {!narrow &&
           wires.map((w) => (
-            <button key={w.id} type="button" className="th-relchip" data-rel={w.rel} style={{ left: w.x, top: w.y }} aria-pressed={w.id === active} onClick={() => choose(w.id === active ? null : w.id)}>
+            <button
+              key={w.id}
+              type="button"
+              className="th-relchip"
+              data-rel={w.rel}
+              style={{ left: w.x, top: w.y }}
+              aria-pressed={w.id === active}
+              onClick={() => choose(w.id === active ? null : w.id)}
+            >
               {relLabel(w.rel)}
             </button>
           ))}
       </div>
-      <div className="th-cmp-dock">
-        {pick.pair && <NewLink pair={pick.pair} byId={data.byId} onDone={(id) => (setPick({ pick: null, pair: null }), setActive(id))} onCancel={() => setPick({ pick: null, pair: null })} />}
-        {link && !pick.pair && <LinkNote key={link.id} link={link} byId={data.byId} onGoTo={(item) => void goToItem(item, onOpenBook)} onDeleted={() => setActive(null)} onClose={() => setActive(null)} />}
-      </div>
-      {across.length > 0 && (
+      {narrow && across.length > 0 && (
+        <div className="th-cmp-list">
+          {across.map(({ link: l, left: x, right: y }) => (
+            <button key={l.id} type="button" className="th-cmp-list__row" aria-pressed={l.id === active} onClick={() => choose(l.id === active ? null : l.id)}>
+              {relLabel(l.rel)}: <bdi>{short(x.text, 30)}</bdi> ↔ <bdi>{short(y.text, 30)}</bdi>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="th-cmp-note" ref={noteRef}>
+        {pick.pair ? (
+          <NewLink pair={pick.pair} byId={data.byId} onDone={(id) => (setPick({ pick: null, pair: null }), setActive(id))} onCancel={() => setPick({ pick: null, pair: null })} />
+        ) : link ? (
+          <LinkNote
+            key={link.id}
+            link={link}
+            byId={data.byId}
+            onGoTo={(item) => void goToItem(item, onOpenBook)}
+            onDeleted={() => setActive(null)}
+            onClose={() => setActive(null)}
+          />
+        ) : (
+          <div />
+        )}
         <section className="th-panel">
-          <h2 className="th-h2">Links between these two books</h2>
-          <div className="th-cmp-list">
-            {across.map(({ link: l, left: x, right: y }) => (
-              <button key={l.id} type="button" className="th-cmp-list__row" aria-pressed={l.id === active} onClick={() => choose(l.id === active ? null : l.id)}>
-                <span>
-                  <b>{relLabel(l.rel)}</b> <bdi>{short(x.text, 40)}</bdi> ↔ <bdi>{short(y.text, 40)}</bdi>
-                </span>
-                {l.note && <span className="th-faint">{short(l.note, 90)}</span>}
-              </button>
-            ))}
+          <span className="th-eyebrow">All links in your library</span>
+          {!data.links.length && <p className="th-empty">None yet.</p>}
+          <div className="th-lines">
+            {data.links.map((l) => {
+              const x = data.byId.get(l.a);
+              const y = data.byId.get(l.b);
+              if (!x || !y) return null;
+              return (
+                <button
+                  key={l.id}
+                  type="button"
+                  aria-pressed={l.id === active}
+                  onClick={() => {
+                    setPick({ pick: null, pair: null });
+                    // These two books already: scroll to the link. Otherwise open its books.
+                    if (across.some((c) => c.link.id === l.id)) return choose(l.id);
+                    const bx = bookOf(x.source?.bookId);
+                    const by = bookOf(y.source?.bookId);
+                    setPanes(
+                      (p) =>
+                        p && {
+                          a: {
+                            bookId: bx?.id,
+                            view: viewOf(bx, x),
+                            start: x.id,
+                            n: p.a.n + 1,
+                          },
+                          b: {
+                            bookId: by?.id,
+                            view: viewOf(by, y),
+                            start: y.id,
+                            n: p.b.n + 1,
+                          },
+                        },
+                    );
+                    setActive(l.id);
+                  }}
+                >
+                  <span>
+                    {relLabel(l.rel)} · <bdi>{citeOf(x)}</bdi> ↔ <bdi>{citeOf(y)}</bdi>
+                  </span>
+                  {l.note && <span className="th-faint">{short(l.note, 90)}</span>}
+                </button>
+              );
+            })}
           </div>
         </section>
-      )}
-      <section className="th-panel">
-        <h2 className="th-h2">All links in your library</h2>
-        {!data.links.length && <p className="th-empty">None yet.</p>}
-        <div className="th-list">
-          {data.links.map((l) => {
-            const x = data.byId.get(l.a);
-            const y = data.byId.get(l.b);
-            if (!x || !y) return null;
-            return (
-              <button
-                key={l.id}
-                type="button"
-                className="th-cmp-all"
-                onClick={() => {
-                  const bx = bookOf(x.source?.bookId);
-                  const by = bookOf(y.source?.bookId);
-                  setPanes((p) => p && { a: { bookId: bx?.id, view: viewOf(bx, x), start: x.id, n: p.a.n + 1 }, b: { bookId: by?.id, view: viewOf(by, y), start: y.id, n: p.b.n + 1 } });
-                  setPick({ pick: null, pair: null });
-                  setActive(l.id);
-                }}
-              >
-                <span>
-                  {relLabel(l.rel)} · <bdi>{citeOf(x)}</bdi> ↔ <bdi>{citeOf(y)}</bdi>
-                </span>
-                {l.note && <span className="th-faint">{short(l.note, 90)}</span>}
-              </button>
-            );
-          })}
-        </div>
-      </section>
+      </div>
     </Frame>
   );
 }
@@ -327,19 +392,35 @@ function NewLink({ pair, byId, onDone, onCancel }: { pair: { a: string; b: strin
           {short(p.text, 90)} <span className="th-faint">· {citeOf(p)}</span>
         </p>
       ))}
-      <textarea className="th-input" dir="auto" rows={2} value={note} placeholder="What do you see across the gap? (optional)" aria-label="Note on the link" onChange={(e) => setNote(e.target.value)} />
-      <div className="th-row">
+      <div className="th-relpick">
         {RELATIONS.map((r) => (
           <button
             key={r.id}
             type="button"
             className="sd-btn"
-            data-rel={r.id}
-            onClick={() => void addLink({ a: pair.a, b: pair.b, rel: r.id, note: note.trim() }).then((l) => (say(`Linked: ${r.label}`), onDone(l.id)))}
+            onClick={() =>
+              void addLink({
+                a: pair.a,
+                b: pair.b,
+                rel: r.id,
+                note: note.trim(),
+              }).then((l) => (say(`Linked: ${r.label}`), onDone(l.id)))
+            }
           >
             {r.label}
           </button>
         ))}
+      </div>
+      <textarea
+        className="th-input"
+        dir="auto"
+        rows={3}
+        value={note}
+        placeholder="What do you see across the gap?"
+        aria-label="Note on the link"
+        onChange={(e) => setNote(e.target.value)}
+      />
+      <div className="th-row th-row--end">
         <button type="button" className="sd-btn th-btn--ghost" onClick={onCancel}>
           Cancel
         </button>
@@ -355,18 +436,9 @@ function LinkNote({ link, byId, onGoTo, onDeleted, onClose }: { link: DeskLink; 
   const y = byId.get(link.b);
   return (
     <section className="th-panel th-linknote" aria-label="Link">
-      <div className="th-row">
-        <span className="th-eyebrow">{relLabel(link.rel)}</span>
-        <select className="th-switch" aria-label="Relation" value={link.rel} onChange={(e) => void updateLink(link.id, { rel: e.target.value as DeskRel })}>
-          {RELATIONS.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <span className="th-eyebrow">{relLabel(link.rel)}</span>
       <textarea
-        className="th-input th-linknote__text"
+        className="th-linknote__text"
         dir="auto"
         rows={2}
         value={note}
@@ -375,15 +447,24 @@ function LinkNote({ link, byId, onGoTo, onDeleted, onClose }: { link: DeskLink; 
         onChange={(e) => setNote(e.target.value)}
         onBlur={() => note !== link.note && void updateLink(link.id, { note })}
       />
-      <div className="th-row">
+      <div className="th-linkcite">
         {[x, y].map((p) =>
           p ? (
-            <button key={p.id} type="button" className="th-src" onClick={() => onGoTo(p)}>
+            <button key={p.id} type="button" className="th-src" title={`Go to ${citeOf(p)}`} onClick={() => onGoTo(p)}>
               <bdi>{citeOf(p)}</bdi>
             </button>
-          ) : null
+          ) : null,
         )}
         <span className="th-faint">Shows as a touch on both passages in the reader.</span>
+      </div>
+      <div className="th-row th-row--end">
+        <select className="th-switch" aria-label="Relation" value={link.rel} onChange={(e) => void updateLink(link.id, { rel: e.target.value as DeskRel })}>
+          {RELATIONS.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.label}
+            </option>
+          ))}
+        </select>
         <button
           type="button"
           className="th-link"

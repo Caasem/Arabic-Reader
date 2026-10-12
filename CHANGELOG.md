@@ -45,6 +45,13 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.121.0 — 2026-10-12
+
+- **Muqābala looks like the prototype.** Text chapters are set as pages of the book (paper, a running head, a foot) on a
+  stage, PDF pages sit on the same stage; a move's Arabic name sits on the line before its passage; a picked passage
+  shows in the selection colour with a dashed edge; plain relation chips in a wider gap. Under the books, the new or
+  chosen link sits beside All links in your library, and the hint sits beside the title.
+
 ## v0.120.0 — 2026-10-12
 
 - **Muqābala shows two live books.** Each side is now the book itself, not a list of kept passages: its text chapter by

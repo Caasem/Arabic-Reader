@@ -1,8 +1,22 @@
 import type { ReactNode } from 'react';
 import { closeScreen } from '../state';
 
-/** A thinking desk screen over the app: Back, an eyebrow and a title, then the screen's own body. */
-export function Frame({ eyebrow, title, aside, children, wide }: { eyebrow: string; title: ReactNode; aside?: ReactNode; children: ReactNode; wide?: boolean }) {
+/** A thinking desk screen over the app: Back, an eyebrow and a title (with `beside` to its right), then the body. */
+export function Frame({
+  eyebrow,
+  title,
+  aside,
+  beside,
+  children,
+  wide,
+}: {
+  eyebrow: string;
+  title: ReactNode;
+  aside?: ReactNode;
+  beside?: ReactNode;
+  children: ReactNode;
+  wide?: boolean;
+}) {
   return (
     <div className="th-screen" role="dialog" aria-label={eyebrow}>
       <div className={'th-screen__wrap' + (wide ? ' th-screen__wrap--wide' : '')}>
@@ -15,8 +29,20 @@ export function Frame({ eyebrow, title, aside, children, wide }: { eyebrow: stri
           </button>
           {aside}
         </div>
-        <span className="th-eyebrow">{eyebrow}</span>
-        <h1 className="th-screen__title">{title}</h1>
+        {beside ? (
+          <div className="th-screen__head">
+            <div>
+              <span className="th-eyebrow">{eyebrow}</span>
+              <h1 className="th-screen__title">{title}</h1>
+            </div>
+            {beside}
+          </div>
+        ) : (
+          <>
+            <span className="th-eyebrow">{eyebrow}</span>
+            <h1 className="th-screen__title">{title}</h1>
+          </>
+        )}
         {children}
       </div>
     </div>

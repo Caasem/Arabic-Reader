@@ -7,6 +7,7 @@ import type { OpenedPdf, PDFPageProxy } from '../../pdf/pages/pdfjsLoader';
 import { formatPdfLocation } from '../../studyDesk/pageGeometry';
 import type { DeskItem } from '../../studyDesk/types';
 import type { BookMeta } from '../../types';
+import { moveInfo } from '../moves';
 import { short } from '../passages';
 import { boxOnPage, livePlace, type LivePlace, type LiveView } from './places';
 import { useLiveBook } from './useLiveBook';
@@ -171,7 +172,18 @@ export const LivePane = forwardRef<LivePaneHandle, Props>(function LivePane(prop
   const elsewhere = props.passages.length - here.length;
   const markProps = (id: string) => {
     const item = props.passages.find((p) => p.id === id);
-    return { 'data-psg': id, 'data-m': item?.move, 'data-picked': props.picked === id || undefined, 'data-linked': props.linked.has(id) || undefined, 'data-on': props.on.has(id) || undefined };
+    return {
+      'data-psg': id,
+      'data-m': item?.move,
+      'data-picked': props.picked === id || undefined,
+      'data-linked': props.linked.has(id) || undefined,
+      'data-on': props.on.has(id) || undefined,
+    };
+  };
+  // The move's Arabic name on the line, before the passage, as glosses mark a manuscript.
+  const sigOf = (id: string) => {
+    const m = props.passages.find((p) => p.id === id)?.move;
+    return m ? { ar: moveInfo(m).ar, en: moveInfo(m).en, m } : null;
   };
 
   return (
@@ -224,7 +236,11 @@ export const LivePane = forwardRef<LivePaneHandle, Props>(function LivePane(prop
           </select>
         )}
       </div>
-      {elsewhere > 0 && <p className="th-faint th-live__note">{elsewhere === 1 ? 'One passage was' : `${elsewhere} passages were`} kept in the {props.view === 'text' ? 'PDF pages' : 'text'} view.</p>}
+      {elsewhere > 0 && (
+        <p className="th-faint th-live__note">
+          {elsewhere === 1 ? 'One passage was' : `${elsewhere} passages were`} kept in the {props.view === 'text' ? 'PDF pages' : 'text'} view.
+        </p>
+      )}
       <div className="th-live__scroll" ref={scroller} onScroll={onScroll} onClick={onClick}>
         <div className="th-live__sheet" ref={sheet}>
           {live.state === 'loading' && <p className="th-faint th-live__msg">Opening the book…</p>}
@@ -233,12 +249,16 @@ export const LivePane = forwardRef<LivePaneHandle, Props>(function LivePane(prop
             <LiveChapter
               key={at}
               chapter={at}
+              chapters={live.htmls.length}
+              title={live.titles[at]}
+              book={props.book.title}
               html={live.htmls[at]}
               marks={here.flatMap((p) => {
                 const pl = where(p.id);
                 return pl?.view === 'text' && pl.chapter === at ? [{ id: p.id, start: pl.start, end: pl.end }] : [];
               })}
               markProps={markProps}
+              sigOf={sigOf}
               onLaid={() => {
                 const id = revealing.current;
                 revealing.current = null;
@@ -257,6 +277,7 @@ export const LivePane = forwardRef<LivePaneHandle, Props>(function LivePane(prop
                 return pl?.view === 'pages' ? [{ id: p.id, ...pl }] : [];
               })}
               markProps={markProps}
+              sigOf={sigOf}
               onRegion={(kept) => void keep(kept)}
               onLaid={(first) => {
                 const id = revealing.current;
@@ -291,9 +312,41 @@ export const LivePane = forwardRef<LivePaneHandle, Props>(function LivePane(prop
 });
 
 type MarkProps = (id: string) => Record<string, unknown>;
+type SigOf = (id: string) => { ar: string; en: string; m: string } | null;
 
-/** A chapter's text, with the kept passages in it marked over it (the marks sit outside the text, so offsets hold). */
-function LiveChapter({ chapter, html, marks, markProps, onLaid }: { chapter: number; html: string; marks: { id: string; start: number; end: number }[]; markProps: MarkProps; onLaid(): void }) {
+function Sig({ sig, style }: { sig: NonNullable<ReturnType<SigOf>>; style: React.CSSProperties }) {
+  return (
+    <span className="th-live__sig" data-m={sig.m} title={sig.en} style={style}>
+      {sig.ar}
+    </span>
+  );
+}
+
+/**
+ * A chapter's text as a page (running head, the text, a foot), with the kept passages in it marked over it: the marks
+ * sit outside the text, so its offsets hold.
+ */
+function LiveChapter({
+  chapter,
+  chapters,
+  title,
+  book,
+  html,
+  marks,
+  markProps,
+  sigOf,
+  onLaid,
+}: {
+  chapter: number;
+  chapters: number;
+  title: string;
+  book: string;
+  html: string;
+  marks: { id: string; start: number; end: number }[];
+  markProps: MarkProps;
+  sigOf: SigOf;
+  onLaid(): void;
+}) {
   const wrap = useRef<HTMLDivElement>(null);
   const text = useRef<HTMLDivElement>(null);
   const [boxes, setBoxes] = useState<{ id: string; l: number; t: number; w: number; h: number }[] | null>(null);
@@ -314,7 +367,15 @@ function LiveChapter({ chapter, html, marks, markProps, onLaid }: { chapter: num
     for (const m of marks) {
       const range = rangeAt(root, m.start, m.end);
       if (!range) continue;
-      for (const r of range.getClientRects()) if (r.width > 1) out.push({ id: m.id, l: r.left - w.left, t: r.top - w.top, w: r.width, h: r.height });
+      for (const r of range.getClientRects())
+        if (r.width > 1)
+          out.push({
+            id: m.id,
+            l: r.left - w.left,
+            t: r.top - w.top,
+            w: r.width,
+            h: r.height,
+          });
     }
     setBoxes(out);
     // marks is new each render; its key says when it changed.
@@ -327,15 +388,31 @@ function LiveChapter({ chapter, html, marks, markProps, onLaid }: { chapter: num
     laid.current = true;
     onLaid();
   });
+  const firsts = new Set<number>();
+  boxes?.forEach((b, i) => boxes.findIndex((x) => x.id === b.id) === i && firsts.add(i));
   return (
-    <div className="th-live__chapterwrap" ref={wrap}>
-      <div ref={text} className="th-live__text" data-livechapter={chapter} dir="rtl" lang="ar" dangerouslySetInnerHTML={{ __html: html }} />
-      <div className="th-live__marks" aria-hidden="true">
-        {boxes?.map((b, i) => (
-          <span key={i} className="th-live__mark" style={{ left: b.l, top: b.t, width: b.w, height: b.h }} {...markProps(b.id)} />
-        ))}
+    <article className="th-page" ref={wrap}>
+      <div className="th-page__run" dir="rtl">
+        <span>{title}</span>
+        <span>{book}</span>
       </div>
-    </div>
+      <div ref={text} className="th-live__text" data-livechapter={chapter} dir="rtl" lang="ar" dangerouslySetInnerHTML={{ __html: html }} />
+      <div className="th-page__foot">
+        Chapter {chapter + 1} of {chapters}
+      </div>
+      <div className="th-live__marks" aria-hidden="true">
+        {boxes?.map((b, i) => {
+          const sig = firsts.has(i) ? sigOf(b.id) : null;
+          return (
+            <span key={i}>
+              <span className="th-live__mark" style={{ left: b.l, top: b.t, width: b.w, height: b.h }} {...markProps(b.id)} />
+              {/* Right to left: the passage starts at its first line's right edge. */}
+              {sig && <Sig sig={sig} style={{ left: b.l + b.w, top: b.t }} />}
+            </span>
+          );
+        })}
+      </div>
+    </article>
   );
 }
 
@@ -346,14 +423,22 @@ function LivePages({
   root,
   boxes,
   markProps,
+  sigOf,
   onRegion,
   onLaid,
 }: {
   pdf: OpenedPdf;
   pages: number;
   root: React.RefObject<HTMLDivElement | null>;
-  boxes: ({ id: string } & { page: number; x: number; y: number; w: number; h: number })[];
+  boxes: ({ id: string } & {
+    page: number;
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  })[];
   markProps: MarkProps;
+  sigOf: SigOf;
   onRegion(kept: Kept): void;
   onLaid(first: boolean): void;
 }) {
@@ -363,7 +448,7 @@ function LivePages({
   useEffect(() => {
     const el = root.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setWidth(Math.max(200, el.clientWidth - 24)));
+    const ro = new ResizeObserver(() => setWidth(Math.max(200, el.clientWidth - 28)));
     ro.observe(el);
     // The pane may close (and the PDF with it) before the first page answers.
     pdf.doc
@@ -390,7 +475,7 @@ function LivePages({
           }
           return next;
         }),
-      { root: el, rootMargin: '120% 0px' }
+      { root: el, rootMargin: '120% 0px' },
     );
     frames.current?.querySelectorAll('[data-livepage]').forEach((f) => io.observe(f));
     return () => io.disconnect();
@@ -405,7 +490,18 @@ function LivePages({
   return (
     <div className="th-live__pages" ref={frames}>
       {Array.from({ length: pages }, (_, i) => i + 1).map((n) => (
-        <LivePage key={n} pdf={pdf} number={n} width={width} ratio={ratio ?? 1.414} drawn={near.has(n)} boxes={boxes.filter((b) => b.page === n)} markProps={markProps} onRegion={onRegion} />
+        <LivePage
+          key={n}
+          pdf={pdf}
+          number={n}
+          width={width}
+          ratio={ratio ?? 1.414}
+          drawn={near.has(n)}
+          boxes={boxes.filter((b) => b.page === n)}
+          markProps={markProps}
+          sigOf={sigOf}
+          onRegion={onRegion}
+        />
       ))}
     </div>
   );
@@ -419,6 +515,7 @@ function LivePage({
   drawn,
   boxes,
   markProps,
+  sigOf,
   onRegion,
 }: {
   pdf: OpenedPdf;
@@ -428,6 +525,7 @@ function LivePage({
   drawn: boolean;
   boxes: { id: string; x: number; y: number; w: number; h: number }[];
   markProps: MarkProps;
+  sigOf: SigOf;
   onRegion(kept: Kept): void;
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -456,12 +554,21 @@ function LivePage({
       canvasEl.style.height = `${viewport.height}px`;
       const context = canvasEl.getContext('2d');
       if (!context) return;
-      task = page.render({ canvasContext: context, canvas: canvasEl, viewport, transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0] });
+      task = page.render({
+        canvasContext: context,
+        canvas: canvasEl,
+        viewport,
+        transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0],
+      });
       const content = await page.getTextContent();
       if (cancelled) return;
       layerEl.replaceChildren();
       layerEl.style.setProperty('--total-scale-factor', String(scale));
-      const tl = new pdf.pdfjs.TextLayer({ textContentSource: content, container: layerEl, viewport });
+      const tl = new pdf.pdfjs.TextLayer({
+        textContentSource: content,
+        container: layerEl,
+        viewport,
+      });
       text = tl;
       setScanned(!content.items.some((it) => 'str' in it && it.str.trim()));
       await Promise.all([task.promise, tl.render()]).catch((e: unknown) => {
@@ -482,11 +589,19 @@ function LivePage({
   }, [drawn, number, pdf, width]);
 
   // A scanned page has no words to select: drag a box round them instead.
-  const [drag, setDrag] = useState<{ x0: number; y0: number; x1: number; y1: number } | null>(null);
+  const [drag, setDrag] = useState<{
+    x0: number;
+    y0: number;
+    x1: number;
+    y1: number;
+  } | null>(null);
   const frame = useRef<HTMLDivElement>(null);
   const local = (e: React.PointerEvent) => {
     const r = frame.current!.getBoundingClientRect();
-    return { x: Math.max(0, Math.min(r.width, e.clientX - r.left)), y: Math.max(0, Math.min(r.height, e.clientY - r.top)) };
+    return {
+      x: Math.max(0, Math.min(r.width, e.clientX - r.left)),
+      y: Math.max(0, Math.min(r.height, e.clientY - r.top)),
+    };
   };
   const finish = async () => {
     const d = drag;
@@ -508,34 +623,75 @@ function LivePage({
     out.height = Math.max(1, Math.round(h * sy));
     out.getContext('2d')?.drawImage(c, l * sx, t * sy, out.width, out.height, 0, 0, out.width, out.height);
     const image = await new Promise<Blob | null>((resolve) => out.toBlob(resolve, 'image/png'));
-    onRegion({ location: formatPdfLocation(number, l / fw, t / fh, w / fw, h / fh), text: '', chapterLabel: `Page ${number}`, image: image ?? undefined });
+    onRegion({
+      location: formatPdfLocation(number, l / fw, t / fh, w / fw, h / fh),
+      text: '',
+      chapterLabel: `Page ${number}`,
+      image: image ?? undefined,
+    });
   };
 
   const height = width * (own ?? ratio);
   return (
-    <div
-      ref={frame}
-      className="th-live__page"
-      data-livepage={number}
-      data-scanned={scanned || undefined}
-      style={{ width, height }}
-      onPointerDown={(e) => {
-        if (!scanned || e.button !== 0) return;
-        const p = local(e);
-        e.currentTarget.setPointerCapture(e.pointerId);
-        setDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
-      }}
-      onPointerMove={(e) => drag && setDrag({ ...drag, ...((p) => ({ x1: p.x, y1: p.y }))(local(e)) })}
-      onPointerUp={() => void finish()}
-      onPointerCancel={() => setDrag(null)}
-    >
-      {!drawn && <span className="th-live__pagenum">{number}</span>}
-      <canvas ref={canvas} className="th-live__canvas" />
-      <div ref={layer} className="th-live-text" data-livelayer={number} />
-      {boxes.map((b) => (
-        <span key={b.id} className="th-live__mark" style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%` }} {...markProps(b.id)} />
-      ))}
-      {drag && <span className="th-live__drag" style={{ left: Math.min(drag.x0, drag.x1), top: Math.min(drag.y0, drag.y1), width: Math.abs(drag.x1 - drag.x0), height: Math.abs(drag.y1 - drag.y0) }} />}
+    <div className="th-live__pagebox">
+      <div
+        ref={frame}
+        className="th-live__page"
+        data-livepage={number}
+        data-scanned={scanned || undefined}
+        style={{ width, height }}
+        onPointerDown={(e) => {
+          if (!scanned || e.button !== 0) return;
+          const p = local(e);
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setDrag({ x0: p.x, y0: p.y, x1: p.x, y1: p.y });
+        }}
+        onPointerMove={(e) => drag && setDrag({ ...drag, ...((p) => ({ x1: p.x, y1: p.y }))(local(e)) })}
+        onPointerUp={() => void finish()}
+        onPointerCancel={() => setDrag(null)}
+      >
+        {!drawn && <span className="th-live__pagenum">{number}</span>}
+        <canvas ref={canvas} className="th-live__canvas" />
+        <div ref={layer} className="th-live-text" data-livelayer={number} />
+        {boxes.map((b) => {
+          const sig = sigOf(b.id);
+          return (
+            <span key={b.id}>
+              <span
+                className="th-live__mark"
+                style={{
+                  left: `${b.x * 100}%`,
+                  top: `${b.y * 100}%`,
+                  width: `${b.w * 100}%`,
+                  height: `${b.h * 100}%`,
+                }}
+                {...markProps(b.id)}
+              />
+              {sig && (
+                <Sig
+                  sig={sig}
+                  style={{
+                    left: `${(b.x + b.w) * 100}%`,
+                    top: `${b.y * 100}%`,
+                  }}
+                />
+              )}
+            </span>
+          );
+        })}
+        {drag && (
+          <span
+            className="th-live__drag"
+            style={{
+              left: Math.min(drag.x0, drag.x1),
+              top: Math.min(drag.y0, drag.y1),
+              width: Math.abs(drag.x1 - drag.x0),
+              height: Math.abs(drag.y1 - drag.y0),
+            }}
+          />
+        )}
+      </div>
+      <div className="th-page__foot">Page {number}</div>
     </div>
   );
 }
@@ -551,7 +707,10 @@ function readSelection(sheet: HTMLElement | null, chapter: number | null, title:
   const sr = sheet.getBoundingClientRect();
   const rects = Array.from(range.getClientRects()).filter((r) => r.width > 0);
   const last = rects[rects.length - 1] ?? range.getBoundingClientRect();
-  const spot = { x: Math.max(0, Math.min(sr.width - 150, last.left - sr.left)), y: last.bottom - sr.top + 6 };
+  const spot = {
+    x: Math.max(0, Math.min(sr.width - 150, last.left - sr.left)),
+    y: last.bottom - sr.top + 6,
+  };
   const node = range.commonAncestorContainer;
   const el = node instanceof Element ? node : node.parentElement;
   const text = el?.closest<HTMLElement>('[data-livechapter]');
@@ -560,12 +719,26 @@ function readSelection(sheet: HTMLElement | null, chapter: number | null, title:
     const end = offsetWithin(text, range.endContainer, range.endOffset);
     if (end <= start) return null;
     const heading = text.querySelector('h1, h2, h3')?.textContent?.trim();
-    return { kept: { location: formatCleanLocation({ chapter, start, end }), text: words, chapterLabel: heading || title || `Chapter ${chapter + 1}` }, ...spot };
+    return {
+      kept: {
+        location: formatCleanLocation({ chapter, start, end }),
+        text: words,
+        chapterLabel: heading || title || `Chapter ${chapter + 1}`,
+      },
+      ...spot,
+    };
   }
   const page = el?.closest<HTMLElement>('[data-livepage]');
   if (!page) return null;
   const n = Number(page.dataset.livepage);
   const box = boxOnPage(rects, page.getBoundingClientRect());
   if (!box) return null;
-  return { kept: { location: formatPdfLocation(n, box.x, box.y, box.w, box.h), text: words, chapterLabel: `Page ${n}` }, ...spot };
+  return {
+    kept: {
+      location: formatPdfLocation(n, box.x, box.y, box.w, box.h),
+      text: words,
+      chapterLabel: `Page ${n}`,
+    },
+    ...spot,
+  };
 }

@@ -94,12 +94,18 @@ It is not a parallel system. Everything is a desk, a desk item or a desk documen
   other; or select words in either pane and press Keep these words, which keeps them as a quote on the book's desk
   (as the reader's Highlighter would) and picks them. On a scanned page, drag a box round the words. Then pick a
   relation (Same text, Supports, Differs, Explains, Quotes) and write an optional note.
+- The look follows the prototype: a 170px gap between the books for the wires and chips; each pane headed by the
+  book's title in Arabic type with the book picker beside it; pages on a stage, a text chapter set as a page of the
+  book (paper, a running head over a double rule, a foot); a move's Arabic name (siglum) on the line before its
+  passage, the passage underlined in the move's colour; a picked passage in the selection colour with a dashed edge;
+  plain chips (dark when chosen). Under the panes, the new link (or the chosen link's note, citations and "Shows as a
+  touch on both passages") sits beside "All links in your library"; the hint sits right of the title.
 - Each pane has a chapter list (text) or the page it is on (PDF), and "Kept here" to jump to a passage. A passage
   kept in the other view of a PDF book is counted under the pane, and opening one of its links switches the view.
 - Lines join linked passages across the gap, coloured by relation (Differs dashed), with the relation's label on a
   chip in the gap, and follow both panes as they scroll. When one end is scrolled away (or in another chapter) the
   line points at the pane's top or bottom edge, dotted. Clicking a chip shows the link's note and both citations and
-  scrolls both panes to its passages. "Links between these two books" lists them all under the panes.
+  scrolls both panes to its passages; so does a row of All links when it joins the two books on screen.
 - Under 900px wide the panes stack and the links are listed instead of drawn.
 - "All links in your library" lists every link; opening one shows its two books.
 - Alt+J (or Compare in the passage bar) opens Muqābala with that passage picked on the left.
