@@ -45,6 +45,13 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.122.0 — 2026-10-13
+
+- **Muqābala: every passage is clickable, as in the prototype.** Each sentence lights up under the pointer and a click
+  picks it, in text chapters and on PDF pages, not just the passages you kept before. A clicked sentence is kept on its
+  book's desk only when you make the link, so picking and cancelling leaves nothing behind. Dragging across words still
+  chooses your own (now "Use these words").
+
 ## v0.121.0 — 2026-10-12
 
 - **Muqābala looks like the prototype.** Text chapters are set as pages of the book (paper, a running head, a foot) on a

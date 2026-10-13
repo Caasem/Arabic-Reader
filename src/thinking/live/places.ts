@@ -69,3 +69,52 @@ export function anchorIn(y: number | null, before: boolean, top: number, bottom:
   if (y > bottom - pad) return { y: bottom - pad, off: true };
   return { y, off: false };
 }
+
+/**
+ * Every passage clickable, as in the prototype: a block's text split into sentences, as [start, end) offsets from
+ * `base`, without the spaces around them. A sentence ends after . ! ? ؟ ۔ or … (with any closing quotes or brackets)
+ * when a space or the block's end follows, so "1.5" stays whole. A block with no stop is one passage.
+ */
+const STOP = /[.!?؟۔…]/;
+const CLOSER = /["'”’»)\]}]/;
+
+export function sentencesIn(text: string, base = 0): { start: number; end: number }[] {
+  const out: { start: number; end: number }[] = [];
+  const push = (a: number, b: number) => {
+    while (a < b && /\s/.test(text[a])) a++;
+    while (b > a && /\s/.test(text[b - 1])) b--;
+    if (b > a) out.push({ start: base + a, end: base + b });
+  };
+  let from = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (!STOP.test(text[i])) continue;
+    let j = i + 1;
+    while (j < text.length && (STOP.test(text[j]) || CLOSER.test(text[j]))) j++;
+    if (j < text.length && !/\s/.test(text[j])) continue;
+    push(from, j);
+    from = j;
+    i = j - 1;
+  }
+  push(from, text.length);
+  return out;
+}
+
+/** True when a run of text ends a sentence (its last visible character is a stop, maybe before closing marks). */
+export function endsSentence(text: string): boolean {
+  const t = text.trimEnd().replace(/["'”’»)\]}]+$/, '');
+  return STOP.test(t.slice(-1));
+}
+
+/**
+ * On a PDF page, the runs of the text layer around run `i` that make one sentence: back to the run after the last
+ * stop, forward to the next stop. It also stops at a paragraph gap (a line much further down than a line's height)
+ * and after `max` runs either way, so a page without stops does not become one passage.
+ */
+export function runAround(runs: { text: string; top: number; height: number }[], i: number, max = 6): [number, number] {
+  const gap = (a: number, b: number) => runs[b].top - runs[a].top > Math.max(runs[a].height, runs[b].height) * 1.9;
+  let a = i;
+  while (a > 0 && i - a < max && !endsSentence(runs[a - 1].text) && !gap(a - 1, a)) a--;
+  let b = i;
+  while (b < runs.length - 1 && b - i < max && !endsSentence(runs[b].text) && !gap(b, b + 1)) b++;
+  return [a, b];
+}

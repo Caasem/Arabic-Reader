@@ -1,7 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { formatCleanLocation } from '../../readerCore/location';
 import { loadCleanPosition } from '../../readerCore/cleanPosition';
-import { offsetWithin, rangeAt } from '../../quietReader/textOffsets';
+import { caretAt, offsetWithin, rangeAt } from '../../quietReader/textOffsets';
 import { loadPdfPage } from '../../pdf/pages/pdfView';
 import type { OpenedPdf, PDFPageProxy } from '../../pdf/pages/pdfjsLoader';
 import { formatPdfLocation } from '../../studyDesk/pageGeometry';
@@ -9,7 +9,7 @@ import type { DeskItem } from '../../studyDesk/types';
 import type { BookMeta } from '../../types';
 import { moveInfo } from '../moves';
 import { short } from '../passages';
-import { boxOnPage, livePlace, type LivePlace, type LiveView } from './places';
+import { boxOnPage, livePlace, runAround, sentencesIn, type LivePlace, type LiveView } from './places';
 import { useLiveBook } from './useLiveBook';
 import '../../readerCore/chapterHtml.css';
 
@@ -42,8 +42,10 @@ interface Props {
   on: Set<string>;
   /** A passage to open at. */
   start?: string;
+  /** A kept passage was clicked. */
   onPick(id: string): void;
-  onKeep(kept: Kept): Promise<void>;
+  /** A passage not kept yet was clicked (a sentence, chosen words, a box on a scanned page): picked, kept on linking. */
+  onPickNew(kept: Kept): void;
   /** Scrolled or laid out again: the wires follow. */
   onMove(): void;
 }
@@ -55,9 +57,13 @@ interface Sel {
   y: number;
 }
 
+/** A draft passage, picked but not kept yet: its id starts with this. */
+export const DRAFT = 'draft:';
+
 /**
  * One side of Muqābala, live: the book's own text (chapter by chapter, as the reader renders it) or its PDF pages,
- * with the passages kept from it marked. Click a mark to pick it; select new words to keep them and pick them.
+ * with the passages kept from it marked. As in the prototype, every sentence is a passage: it lights up under the
+ * pointer and a click picks it. Drag across words to choose your own.
  */
 export const LivePane = forwardRef<LivePaneHandle, Props>(function LivePane(props, ref) {
   const live = useLiveBook(props.book, props.view);
@@ -143,32 +149,97 @@ export const LivePane = forwardRef<LivePaneHandle, Props>(function LivePane(prop
     };
   }, [live, at]);
 
-  const [busy, setBusy] = useState(false);
-  const keep = async (kept: Kept) => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await props.onKeep(kept);
-      window.getSelection()?.removeAllRanges();
-      setSel(null);
-    } finally {
-      setBusy(false);
-    }
+  const pickNew = (kept: Kept) => {
+    window.getSelection()?.removeAllRanges();
+    setSel(null);
+    setHover(null);
+    props.onPickNew(kept);
   };
 
-  // A click on a marked passage (the marks let clicks through, so words under them can still be selected).
-  const onClick = (e: React.MouseEvent) => {
-    if (!window.getSelection()?.isCollapsed) return;
+  // The sentence under the pointer: lit while hovered, picked on a click.
+  const units = useRef<{ chapter: number; list: { start: number; end: number }[] } | null>(null);
+  const unitAt = (x: number, y: number): { kept: Kept; rects: DOMRect[] } | null => {
+    if (live.state === 'text') {
+      const root = sheet.current?.querySelector<HTMLElement>('[data-livechapter]');
+      const caret = caretAt(x, y);
+      if (!root || !caret || !root.contains(caret.node)) return null;
+      if (units.current?.chapter !== at) units.current = { chapter: at, list: sentenceUnits(root) };
+      const off = offsetWithin(root, caret.node, caret.offset);
+      const u = units.current.list.find((v) => off >= v.start && off <= v.end);
+      const range = u && rangeAt(root, u.start, u.end);
+      if (!u || !range) return null;
+      const rects = Array.from(range.getClientRects()).filter((r) => r.width > 1);
+      if (!rects.some((r) => x >= r.left - 2 && x <= r.right + 2 && y >= r.top - 2 && y <= r.bottom + 2)) return null;
+      const heading = root.querySelector('h1, h2, h3')?.textContent?.trim();
+      const text = range.toString().replace(/\s+/g, ' ').trim();
+      return { kept: { location: formatCleanLocation({ chapter: at, start: u.start, end: u.end }), text, chapterLabel: heading || live.titles[at] || `Chapter ${at + 1}` }, rects };
+    }
+    if (live.state !== 'pages') return null;
+    const page = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-livepage]');
+    if (!page || page.dataset.scanned) return null;
+    const spans = Array.from(page.querySelectorAll<HTMLElement>('.th-live-text span:not(.markedContent)')).filter((el) => el.textContent?.trim());
+    const boxes = spans.map((el) => el.getBoundingClientRect());
+    const i = boxes.findIndex((r) => x >= r.left - 1 && x <= r.right + 1 && y >= r.top - 1 && y <= r.bottom + 1);
+    if (i < 0) return null;
+    const [a, b] = runAround(
+      spans.map((el, k) => ({ text: el.textContent ?? '', top: boxes[k].top, height: boxes[k].height })),
+      i,
+    );
+    const rects = boxes.slice(a, b + 1);
+    const box = boxOnPage(rects, page.getBoundingClientRect());
+    if (!box) return null;
+    const n = Number(page.dataset.livepage);
+    const text = spans
+      .slice(a, b + 1)
+      .map((el) => el.textContent ?? '')
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return { kept: { location: formatPdfLocation(n, box.x, box.y, box.w, box.h), text, chapterLabel: `Page ${n}` }, rects };
+  };
+  useEffect(() => {
+    units.current = null;
+  }, [live, at]);
+
+  const markAt = (x: number, y: number) => {
     for (const el of scroller.current?.querySelectorAll<HTMLElement>('[data-psg]') ?? []) {
       const r = el.getBoundingClientRect();
-      if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom) {
-        props.onPick(el.dataset.psg!);
-        return;
-      }
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return el.dataset.psg!;
     }
+    return null;
+  };
+  const [hover, setHover] = useState<{ l: number; t: number; w: number; h: number }[] | null>(null);
+  const [pointer, setPointer] = useState(false);
+  const hoverRaf = useRef(0);
+  const onMouseMove = (e: React.MouseEvent) => {
+    const { clientX: x, clientY: y, buttons } = e;
+    cancelAnimationFrame(hoverRaf.current);
+    hoverRaf.current = requestAnimationFrame(() => {
+      if (buttons || !window.getSelection()?.isCollapsed) return setHover(null);
+      if (markAt(x, y)) {
+        setHover(null);
+        return setPointer(true);
+      }
+      const u = unitAt(x, y);
+      const sr = sheet.current?.getBoundingClientRect();
+      setPointer(!!u);
+      setHover(u && sr ? u.rects.map((r) => ({ l: r.left - sr.left, t: r.top - sr.top, w: r.width, h: r.height })) : null);
+    });
+  };
+  useEffect(() => () => cancelAnimationFrame(hoverRaf.current), []);
+
+  // A click on a marked passage picks it (the marks let clicks through, so words under them can still be selected);
+  // a click on any other sentence picks that sentence.
+  const onClick = (e: React.MouseEvent) => {
+    if (!window.getSelection()?.isCollapsed) return;
+    const id = markAt(e.clientX, e.clientY);
+    if (id) return props.onPick(id);
+    const u = unitAt(e.clientX, e.clientY);
+    if (u) pickNew(u.kept);
   };
 
   const here = props.passages.filter((p) => !!where(p.id));
+  const kept = here.filter((p) => !p.id.startsWith(DRAFT));
   const elsewhere = props.passages.length - here.length;
   const markProps = (id: string) => {
     const item = props.passages.find((p) => p.id === id);
@@ -212,7 +283,7 @@ export const LivePane = forwardRef<LivePaneHandle, Props>(function LivePane(prop
             Page {page} of {live.pages}
           </span>
         )}
-        {here.length > 0 && (
+        {kept.length > 0 && (
           <select
             className="th-switch th-live__go"
             aria-label="Go to a kept passage"
@@ -226,8 +297,8 @@ export const LivePane = forwardRef<LivePaneHandle, Props>(function LivePane(prop
               }
             }}
           >
-            <option value="">Kept here ({here.length})</option>
-            {here.map((p) => (
+            <option value="">Kept here ({kept.length})</option>
+            {kept.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.source?.chapterLabel ? `${short(p.source.chapterLabel, 18)} · ` : ''}
                 {short(p.text || '', 50)}
@@ -241,7 +312,22 @@ export const LivePane = forwardRef<LivePaneHandle, Props>(function LivePane(prop
           {elsewhere === 1 ? 'One passage was' : `${elsewhere} passages were`} kept in the {props.view === 'text' ? 'PDF pages' : 'text'} view.
         </p>
       )}
-      <div className="th-live__scroll" ref={scroller} onScroll={onScroll} onClick={onClick}>
+      <div
+        className="th-live__scroll"
+        ref={scroller}
+        data-pointer={pointer || undefined}
+        onScroll={() => {
+          setHover(null);
+          onScroll();
+        }}
+        onClick={onClick}
+        onMouseMove={onMouseMove}
+        onMouseLeave={() => {
+          cancelAnimationFrame(hoverRaf.current);
+          setHover(null);
+          setPointer(false);
+        }}
+      >
         <div className="th-live__sheet" ref={sheet}>
           {live.state === 'loading' && <p className="th-faint th-live__msg">Opening the book…</p>}
           {live.state === 'error' && <p className="th-faint th-live__msg">{live.message}</p>}
@@ -278,7 +364,7 @@ export const LivePane = forwardRef<LivePaneHandle, Props>(function LivePane(prop
               })}
               markProps={markProps}
               sigOf={sigOf}
-              onRegion={(kept) => void keep(kept)}
+              onRegion={pickNew}
               onLaid={(first) => {
                 const id = revealing.current;
                 revealing.current = null;
@@ -290,19 +376,25 @@ export const LivePane = forwardRef<LivePaneHandle, Props>(function LivePane(prop
               }}
             />
           )}
+          {hover && (
+            <div className="th-live__hover" aria-hidden="true">
+              {hover.map((r, i) => (
+                <span key={i} style={{ left: r.l, top: r.t, width: r.w, height: r.h }} />
+              ))}
+            </div>
+          )}
           {sel && (
             <button
               type="button"
               className="sd-btn sd-btn--pri th-live__keep"
               style={{ left: sel.x, top: sel.y }}
-              disabled={busy}
               onPointerDown={(e) => e.preventDefault()}
               onClick={(e) => {
                 e.stopPropagation();
-                void keep(sel.kept);
+                pickNew(sel.kept);
               }}
             >
-              Keep these words
+              Use these words
             </button>
           )}
         </div>
@@ -560,6 +652,8 @@ function LivePage({
         viewport,
         transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0],
       });
+      // Scrolled away while drawing: the cancel rejects this promise, perhaps before anything below awaits it.
+      task.promise.catch(() => undefined);
       const content = await page.getTextContent();
       if (cancelled) return;
       layerEl.replaceChildren();
@@ -741,4 +835,14 @@ function readSelection(sheet: HTMLElement | null, chapter: number | null, title:
     },
     ...spot,
   };
+}
+
+/** A chapter's passages: each block (title, heading, paragraph) split into sentences, as offsets in the chapter. */
+function sentenceUnits(root: HTMLElement): { start: number; end: number }[] {
+  const out: { start: number; end: number }[] = [];
+  for (const block of Array.from(root.children)) {
+    const text = block.textContent ?? '';
+    if (text.trim()) out.push(...sentencesIn(text, offsetWithin(root, block, 0)));
+  }
+  return out;
 }

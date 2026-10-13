@@ -7,7 +7,7 @@ import { addLink, bookDeskId, deleteLink, restoreLink, updateLink } from '../../
 import type { DeskItem, DeskLink, DeskRel } from '../../studyDesk/types';
 import { capture, looksArabic } from '../../studyDesk/useDesk';
 import type { BookMeta } from '../../types';
-import { LivePane, type Kept, type LivePaneHandle } from '../live/LivePane';
+import { DRAFT, LivePane, type Kept, type LivePaneHandle } from '../live/LivePane';
 import { anchorIn, viewFor, type LiveView } from '../live/places';
 import { bookPassages, booksWithPassages, linksAcross, pickPassage, relLabel, RELATIONS, wirePath, type Pick } from '../muqabala';
 import { goToItem, type OpenBook } from '../nav';
@@ -73,6 +73,13 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
   const [panes, setPanes] = useState<Record<Side, Pane> | null>(null);
   const [pick, setPick] = useState<Pick>({ pick: null, pair: null });
   const [active, setActive] = useState<string | null>(screen.link ?? null);
+  // Passages picked but not kept yet (a clicked sentence, chosen words): kept on the book's desk when the link is made.
+  const [allDrafts, setDrafts] = useState<Map<string, { item: DeskItem; kept: Kept; side: Side }>>(new Map());
+  // Only the drafts still picked count; one the pick moved on from is forgotten.
+  const drafts = useMemo(() => {
+    const used = new Set([pick.pick?.id, pick.pair?.a, pick.pair?.b]);
+    return new Map([...allDrafts].filter(([id]) => used.has(id)));
+  }, [allDrafts, pick]);
 
   // Where the screen starts: a link's two books, a passage on the left (Compare, Alt+J), else the book being read (or
   // the one most kept from) beside the next most kept from.
@@ -90,8 +97,10 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
   }
   const a = panes?.a.bookId;
   const b = panes?.b.bookId;
-  const left = useMemo(() => (a ? bookPassages(data.items, a) : []), [data.items, a]);
-  const right = useMemo(() => (b ? bookPassages(data.items, b) : []), [data.items, b]);
+  const draftsOn = (side: Side) => [...drafts.values()].filter((d) => d.side === side).map((d) => d.item);
+  const left = useMemo(() => [...(a ? bookPassages(data.items, a) : []), ...draftsOn('a')], [data.items, a, drafts]); // eslint-disable-line react-hooks/exhaustive-deps
+  const right = useMemo(() => [...(b ? bookPassages(data.items, b) : []), ...draftsOn('b')], [data.items, b, drafts]); // eslint-disable-line react-hooks/exhaustive-deps
+  const byId = useMemo(() => new Map([...data.byId, ...[...drafts].map(([id, d]) => [id, d.item] as const)]), [data.byId, drafts]);
   const across = useMemo(() => (a && b ? linksAcross(data.links, data.byId, a, b) : []), [data.links, data.byId, a, b]);
   const titleOf = (id?: string) => bookOf(id)?.title ?? 'A book';
 
@@ -180,28 +189,49 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
       return next;
     });
   };
-  const keep = async (side: Side, kept: Kept) => {
+  /** A passage not kept yet, picked: shown marked on its side until the link is made or the pick moves on. */
+  const pickNew = (side: Side, kept: Kept) => {
     const book = bookOf(panes[side].bookId);
     if (!book) return;
+    const id = `${DRAFT}${side}:${kept.location}`;
+    if (!allDrafts.has(id)) {
+      const text = kept.text || `Region of ${kept.chapterLabel.toLowerCase()}`;
+      const now = Date.now();
+      const item = {
+        id,
+        deskId: '',
+        type: kept.text ? 'quote' : 'capture',
+        text,
+        ar: looksArabic(text),
+        source: { bookId: book.id, bookTitle: book.title, location: kept.location, chapterLabel: kept.chapterLabel },
+        inInbox: false,
+        createdAt: now,
+        updatedAt: now,
+      } as DeskItem;
+      // Forget drafts the pick has moved on from as this one is added.
+      setDrafts(new Map(drafts).set(id, { item, kept, side }));
+    }
+    click(id, side);
+  };
+  /** Keeps a draft on its book's desk (as the reader's Highlighter would) and gives its new id; a kept id stays. */
+  const keepDraft = async (id: string): Promise<string> => {
+    const d = allDrafts.get(id);
+    const book = d && bookOf(d.item.source?.bookId);
+    if (!d || !book) return id;
     const item = await capture(
       book,
       currentDeskId(book.id) ?? bookDeskId(book.id),
-      {
-        type: kept.text ? 'quote' : 'capture',
-        text: kept.text || `Region of ${kept.chapterLabel.toLowerCase()}`,
-        ar: looksArabic(kept.text),
-        source: {
-          bookId: book.id,
-          bookTitle: book.title,
-          location: kept.location,
-          chapterLabel: kept.chapterLabel,
-        },
-        inInbox: prefs.studyDeskMarginsToInbox === 'auto',
-      },
-      kept.image,
+      { type: d.item.type, text: d.item.text, ar: d.item.ar, source: d.item.source, inInbox: prefs.studyDeskMarginsToInbox === 'auto' },
+      d.kept.image,
     );
-    say('Kept');
-    click(item.id, side);
+    return item.id;
+  };
+  const makeLink = async (pair: { a: string; b: string }, rel: DeskRel, note: string) => {
+    const [x, y] = [await keepDraft(pair.a), await keepDraft(pair.b)];
+    const l = await addLink({ a: x, b: y, rel, note });
+    say(`Linked: ${relLabel(rel)}`);
+    setPick({ pick: null, pair: null });
+    setActive(l.id);
   };
   const link = active ? data.links.find((l) => l.id === active) : undefined;
   const on = new Set(link ? [link.a, link.b] : []);
@@ -209,8 +239,8 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
   const hint = pick.pair
     ? 'Name how they relate, below.'
     : pick.pick
-      ? 'Now click a passage on the other side, or select words there.'
-      : 'Click a passage, then one on the other side, to link them. Or select words to keep new ones.';
+      ? 'Now click a passage on the other side.'
+      : 'Click a passage, then one on the other side, to link them. Drag across words to choose your own.';
 
   const pane = (side: Side) => {
     const p = panes[side];
@@ -265,7 +295,7 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
             on={on}
             start={p.start}
             onPick={(id) => click(id, side)}
-            onKeep={(kept) => keep(side, kept)}
+            onPickNew={(kept) => pickNew(side, kept)}
             onMove={draw}
           />
         )}
@@ -312,7 +342,7 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
       )}
       <div className="th-cmp-note" ref={noteRef}>
         {pick.pair ? (
-          <NewLink pair={pick.pair} byId={data.byId} onDone={(id) => (setPick({ pick: null, pair: null }), setActive(id))} onCancel={() => setPick({ pick: null, pair: null })} />
+          <NewLink pair={pick.pair} byId={byId} onLink={(rel, note) => makeLink(pick.pair!, rel, note)} onCancel={() => setPick({ pick: null, pair: null })} />
         ) : link ? (
           <LinkNote
             key={link.id}
@@ -379,8 +409,19 @@ export function MuqabalaScreen({ screen, onOpenBook }: { screen: Extract<Screen,
 }
 
 /** Naming a new link: the two passages, the five relations, and an optional note. */
-function NewLink({ pair, byId, onDone, onCancel }: { pair: { a: string; b: string }; byId: Map<string, DeskItem>; onDone(id: string): void; onCancel(): void }) {
+function NewLink({
+  pair,
+  byId,
+  onLink,
+  onCancel,
+}: {
+  pair: { a: string; b: string };
+  byId: Map<string, DeskItem>;
+  onLink(rel: DeskRel, note: string): Promise<void>;
+  onCancel(): void;
+}) {
   const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
   const x = byId.get(pair.a);
   const y = byId.get(pair.b);
   if (!x || !y) return null;
@@ -398,14 +439,11 @@ function NewLink({ pair, byId, onDone, onCancel }: { pair: { a: string; b: strin
             key={r.id}
             type="button"
             className="sd-btn"
-            onClick={() =>
-              void addLink({
-                a: pair.a,
-                b: pair.b,
-                rel: r.id,
-                note: note.trim(),
-              }).then((l) => (say(`Linked: ${r.label}`), onDone(l.id)))
-            }
+            disabled={busy}
+            onClick={() => {
+              setBusy(true);
+              void onLink(r.id, note.trim()).finally(() => setBusy(false));
+            }}
           >
             {r.label}
           </button>

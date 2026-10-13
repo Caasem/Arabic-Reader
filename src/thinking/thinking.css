@@ -1137,9 +1137,10 @@
   font-size: 12.5px;
 }
 .th-pane__title {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   max-width: 100%;
+  field-sizing: content;
   padding: 0 18px 0 2px;
   border: 0;
   background: transparent;
@@ -1317,6 +1318,20 @@
   font: 700 12px/1.4 var(--font-arabic);
   white-space: nowrap;
   pointer-events: none;
+}
+/* Every sentence is a passage: the one under the pointer lights up, as in the prototype. */
+.th-live__scroll[data-pointer='true'] {
+  cursor: pointer;
+}
+.th-live__hover {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.th-live__hover span {
+  position: absolute;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 .th-live__keep {
   position: absolute;

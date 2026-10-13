@@ -90,10 +90,13 @@ It is not a parallel system. Everything is a desk, a desk item or a desk documen
   reader renders it, so `clean:` places line up) or, for a book added from a PDF, its pages (pdf.js, with the text
   layer). A PDF book whose text reflowed can be shown either way (Text / PDF pages). Any book in the library can be
   opened; books with kept passages come first.
-- Passages kept from the book are marked in place (in their move's colour). Click a mark on one side, then one on the
-  other; or select words in either pane and press Keep these words, which keeps them as a quote on the book's desk
-  (as the reader's Highlighter would) and picks them. On a scanned page, drag a box round the words. Then pick a
-  relation (Same text, Supports, Differs, Explains, Quotes) and write an optional note.
+- Passages kept from the book are marked in place (in their move's colour). As in the prototype, every passage is
+  clickable: each sentence lights up under the pointer (text split at . ! ? ؟ ۔ … within its paragraph; on PDF pages,
+  the text-layer runs around the pointer up to a stop or a paragraph gap), and a click picks it. Drag across words to
+  choose your own (Use these words); on a scanned page, drag a box round them. A passage picked this way is a draft:
+  it is kept on the book's desk (as the reader's Highlighter would) only when the link is made, so picking and
+  cancelling leaves nothing behind. Click a passage on one side, then one on the other, then pick a relation (Same
+  text, Supports, Differs, Explains, Quotes) and write an optional note.
 - The look follows the prototype: a 170px gap between the books for the wires and chips; each pane headed by the
   book's title in Arabic type with the book picker beside it; pages on a stage, a text chapter set as a page of the
   book (paper, a running head over a double rule, a foot); a move's Arabic name (siglum) on the line before its
