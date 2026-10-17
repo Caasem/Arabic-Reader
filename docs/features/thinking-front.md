@@ -56,7 +56,14 @@ It is not a parallel system. Everything is a desk, a desk item or a desk documen
     name (تعريف دعوى دليل اعتراض جواب) in the move's colour before it, in a thread's document and a book desk's alike
     (0.125.0, with Argument moves on).
   - **Argument**: the tree built from moves: definitions first, then claims with their evidence and objections, replies under objections, open masāʾil placed under the passage
-    they were asked on, then "Not tied yet".
+    they were asked on, then "Not tied yet". **Draft from the argument** (0.126.0) writes it into the thread's Document
+    as an outline: a Definitions heading with the definitions, then each claim as a heading (its own words when it is
+    your claim, or the first words of the passage, which is then quoted under it) with its evidence, then its
+    objections each followed by its replies, as the passages themselves with their citations; the thread's own thoughts
+    on those passages follow them as plain paragraphs (each once); untied passages go last under "Not tied yet". A
+    document with nothing in it gets the outline as it is; otherwise it is added at the end under a heading "Draft —
+    <date>", never over what is there. The Document opens on the result, and Undo in the message puts the previous
+    document back. Needs Argument moves on.
   - **Gathered**: a timeline (a dot per item added, coloured by book) and the members grouped by book.
   - **Masāʾil**: the thread's questions, open and answered, with Find the answer and Reopen.
 
@@ -192,6 +199,8 @@ Settings → Reading → Thinking desk:
 - Linking a thought to itself is not offered; a dropped thought is not offered to link to.
 - The closing sheet never shows during a capture trip, and only once per reader visit.
 - On this day with no reading a year ago shows six months ago; with neither, it is left out.
+- Drafting twice adds a second "Draft — <date>" section; an item already in the Document (every member is, once it joined) appears again in the draft.
+- Draft with no moves in the thread: the button is not offered.
 - Very many passages on a page: handles and badges are drawn for the pages on screen only.
 
 ## 6. Acceptance criteria
@@ -205,6 +214,7 @@ Settings → Reading → Thinking desk:
 - Badges count everything that touches a passage and the Touching panel lists them.
 - A masʾala can be asked, hunted, answered with a citation, and reopened.
 - Revisit grades with FSRS; Revise keeps the old wording; Drop archives with Undo; dropped thoughts are listed and can be restored.
+- Draft from the argument writes the outline into the Document (appended under a dated heading when it has content) and can be undone.
 - A thread can be renamed, archived and unarchived, and deleted with Undo; threads are listed in All desks; a tagged quote shows its move in the document; Revisit is in the dock; a thought can be linked to another later.
 - Today shows On this day, revisits due, open masāʾil and threads; the closing sheet saves a journal line.
 - Obsidian and Notion exports come out as described, for a thread's document and a book desk's.
@@ -262,6 +272,16 @@ Settings → Reading → Thinking desk:
 - **Link later** (0.125.0). One finder, `ThoughtFinder`, now serves the composer and the Link to another thought…
   control; only thoughts (not passages or masāʾil) can be linked. Links are patched on both thoughts in one write
   (`linkPatches`).
+- **Draft from the argument** (0.126.0). Pure part in `src/thinking/draft.ts` (the argument tree to ordered blocks, the
+  blocks to document HTML, and the document with the draft in it), tested. It uses the desk document's own format: a
+  heading (`h3`), paragraphs, and item embeds (`embedHtml`), so passages show with their citation and Go to source as
+  anywhere in the Document. Decisions: the switch is `thinkingMoves` (the Argument tab's), no new preference; definitions
+  are written first under a "Definitions" heading, as in the Argument tab (the brief named only claims and the loose
+  ones); open masāʾil are left out; evidence comes before objections whatever order they were tagged in; the items stay
+  in the Document where they already were and are embedded again in the draft (the desk document draws an item wherever
+  it is embedded), rather than being moved out of the order the reader may have set; the button reads the document as
+  saved just before writing (the editor saves quietly), and Undo restores exactly that text and makes the editor load it
+  again.
 - **Size.** Everything new loads on demand; the entry script and styles were within 12 kB and 1.3 kB of their budgets.
 
 ## 8. Not yet

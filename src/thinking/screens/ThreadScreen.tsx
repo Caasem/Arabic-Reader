@@ -38,6 +38,8 @@ export function ThreadScreen({ screen, onOpenBook }: { screen: Extract<Screen, {
   const thread = data.desks.find((d) => d.id === id);
   const threads = [...live, ...all.filter((s) => s.desk.id === id && isArchived(s.desk))];
   const [tab, setTab] = useState<ThreadTab>(screen.tab ?? 'document');
+  /** Bumped when the document changed behind the editor's back (Undo of a draft), so the editor loads it again. */
+  const [docKey, setDocKey] = useState(0);
 
   if (!data.loaded) return <div className="th-screen th-screen--loading" role="status">Loading…</div>;
   if (!thread) return <NoThreads />;
@@ -111,7 +113,7 @@ export function ThreadScreen({ screen, onOpenBook }: { screen: Extract<Screen, {
       {tab === 'document' && (
         <div className="th-docwrap">
           <DeskDocument
-            key={thread.id}
+            key={thread.id + ':' + docKey}
             data={{ desks: data.desks, items: data.items, deskId: thread.id, setDeskId: () => {} }}
             deskId={thread.id}
             embedded
@@ -122,7 +124,9 @@ export function ThreadScreen({ screen, onOpenBook }: { screen: Extract<Screen, {
           />
         </div>
       )}
-      {tab === 'argument' && prefs.thinkingMoves && <ArgumentTab threadId={thread.id} data={data} onGoTo={goTo} />}
+      {tab === 'argument' && prefs.thinkingMoves && (
+        <ArgumentTab thread={thread} data={data} onGoTo={goTo} onDrafted={() => setTab('document')} onUndone={() => setDocKey((k) => k + 1)} />
+      )}
       {tab === 'gathered' && <Gathered thread={thread} data={data} onGoTo={goTo} />}
       {tab === 'masail' && (
         <div className="th-masail">

@@ -852,6 +852,10 @@
   display: grid;
   gap: 8px;
 }
+.th-amap__draft {
+  align-items: center;
+  margin-bottom: 4px;
+}
 .th-amap__h {
   margin: 14px 0 2px;
   font: 600 10.5px var(--font-ui);

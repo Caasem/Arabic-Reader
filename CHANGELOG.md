@@ -45,6 +45,13 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.126.0 — 2026-10-17
+
+- **Draft from the argument.** In a thread's Argument tab, one button writes an outline into its Document: each claim
+  as a heading, with its evidence, its objections and their replies as passages with their citations, your own
+  thoughts on them as paragraphs, and untied passages under "Not tied yet". If the Document already has something in
+  it, the outline goes at the end under "Draft — date". Undo puts the old Document back.
+
 ## v0.125.0 — 2026-10-17
 
 - **Threads can be renamed, archived and deleted; and more.** A Manage menu in the Thread screen renames a thread
