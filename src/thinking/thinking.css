@@ -311,6 +311,47 @@
 .th-newthread .th-input {
   flex: 1 1 260px;
 }
+/* The thread's menu (Rename, Archive, Delete) uses the desk document's Export menu look. */
+.th-menu__box {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 5;
+  display: grid;
+  gap: 8px;
+  width: min(320px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+.th-menu__box p {
+  margin: 0;
+}
+.th-menu__ask {
+  font: 600 14px var(--font-ui);
+  color: var(--ink);
+}
+.th-menu__field {
+  display: grid;
+  gap: 3px;
+  font: 600 11px var(--font-ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.th-menu__field .th-input {
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.th-picker__shelf {
+  margin: 10px 0 2px;
+  font: 600 10.5px var(--font-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
 .th-names {
   display: flex;
   flex-wrap: wrap;
@@ -647,6 +688,48 @@
   border-top: 1px solid var(--border);
   padding-top: 8px;
 }
+/* In the desk document (a thread's or a book desk's): a tagged quote shows its Arabic move before it, in the move's colour. */
+.th-doc-moves .desk-embed[data-move]::before {
+  align-self: flex-start;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--m) 14%, transparent);
+  color: var(--m);
+  font: 600 13px var(--font-arabic);
+}
+.th-doc-moves .desk-embed[data-move='definition'] {
+  --m: var(--th-definition);
+}
+.th-doc-moves .desk-embed[data-move='definition']::before {
+  content: 'تعريف';
+}
+.th-doc-moves .desk-embed[data-move='claim'] {
+  --m: var(--th-claim);
+}
+.th-doc-moves .desk-embed[data-move='claim']::before {
+  content: 'دعوى';
+}
+.th-doc-moves .desk-embed[data-move='evidence'] {
+  --m: var(--th-evidence);
+}
+.th-doc-moves .desk-embed[data-move='evidence']::before {
+  content: 'دليل';
+}
+.th-doc-moves .desk-embed[data-move='objection'] {
+  --m: var(--th-objection);
+}
+.th-doc-moves .desk-embed[data-move='objection']::before {
+  content: 'اعتراض';
+}
+.th-doc-moves .desk-embed[data-move='reply'] {
+  --m: var(--th-reply);
+}
+.th-doc-moves .desk-embed[data-move='reply']::before {
+  content: 'جواب';
+}
+.th-doc-moves .desk-embed.sd-emb--quote[data-move] {
+  border-inline-start-color: var(--m);
+}
 /* On a fresh selection: a slim bar of moves under the Highlighter's bar (PDF pages) or the selection (quiet reader). */
 .th-selmoves {
   position: fixed;
@@ -919,6 +1002,14 @@
 }
 .th-card__via {
   font-size: 11px;
+}
+.th-card__acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+}
+.th-links--edit {
+  flex-basis: 100%;
 }
 .th-card__text {
   margin: 0;

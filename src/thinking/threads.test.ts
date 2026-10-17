@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Desk, DeskItem } from '../studyDesk/types';
-import { byBook, filterThreads, growth, joinsActiveThread, namesFromTyped, threadChoices, threadLabel, threadMembers, threadSummaries } from './threads';
+import { archivedThreads, byBook, filterThreads, growth, joinsActiveThread, liveThreads, namesFromTyped, renamePatch, threadChoices, threadLabel, threadMembers, threadSummaries } from './threads';
 
 const desk = (id: string, extra: Partial<Desk> = {}): Desk => ({ id, kind: 'thread', title: id, html: '', createdAt: 1, updatedAt: 1, ...extra });
 const item = (id: string, extra: Partial<DeskItem> = {}): DeskItem => ({ id, deskId: 'book:b1', type: 'quote', text: id, inInbox: true, createdAt: 1, updatedAt: 1, ...extra });
@@ -67,5 +67,21 @@ describe('threads', () => {
     expect(joinsActiveThread(item('q', { type: 'question' }))).toBe(true);
     expect(joinsActiveThread(item('m', { move: 'claim' }))).toBe(true);
     expect(joinsActiveThread(item('c', { type: 'capture' }))).toBe(false);
+  });
+});
+
+describe('archived threads', () => {
+  const list = threadSummaries([desk('a', { createdAt: 3 }), desk('b', { createdAt: 2, archivedAt: 50 }), desk('c', { createdAt: 1, archivedAt: 90 })], []);
+
+  it('keeps archived threads out of what is offered, and lists them newest archived first', () => {
+    expect(liveThreads(list).map((s) => s.desk.id)).toEqual(['a']);
+    expect(archivedThreads(list).map((s) => s.desk.id)).toEqual(['c', 'b']);
+  });
+
+  it('turns what Rename shows into a patch for the desk', () => {
+    expect(renamePatch({ en: ' Intention ', ar: ' النية ', question: ' Name it? ' })).toEqual({ title: 'Intention', titleAr: 'النية', question: 'Name it?' });
+    expect(renamePatch({ en: '', ar: 'النية', question: '' })).toEqual({ title: 'النية', titleAr: 'النية', question: undefined });
+    expect(renamePatch({ en: 'Intention', ar: '', question: '' })).toEqual({ title: 'Intention', titleAr: undefined, question: undefined });
+    expect(renamePatch({ en: ' ', ar: '', question: 'Still here?' })).toBeNull();
   });
 });

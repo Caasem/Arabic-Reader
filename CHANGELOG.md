@@ -45,6 +45,14 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.125.0 — 2026-10-17
+
+- **Threads can be renamed, archived and deleted; and more.** A Manage menu in the Thread screen renames a thread
+  (names and question), archives it (out of the picker and Today, shown under Archived) or deletes it, with Undo.
+  Threads now appear in All desks. A passage tagged with a move shows its Arabic name in the desk document. Revisit
+  has a button in the dock and a Dropped tab where a dropped thought can be restored. A thought can be linked to
+  another one later, from Touching this passage and from Revisit.
+
 ## v0.124.0 — 2026-10-17
 
 - **Export to Obsidian and Notion.** The desk document's Export menu, for a thread's document and a book desk's, now

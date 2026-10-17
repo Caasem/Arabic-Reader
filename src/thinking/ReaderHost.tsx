@@ -19,14 +19,15 @@ import { openScreen, setReadingBook, setThinking, thinkingState, useThinking } f
 import { ThreadBar } from './ThreadBar';
 import { ThreadPicker } from './ThreadPicker';
 import { touchCounts, touching } from './touching';
+import { ThoughtLinks } from './ThoughtLinks';
 import { TouchingPanel } from './TouchingPanel';
 import { goToItem } from './nav';
 import { answerWith, findAnswer } from './actions';
 import { HuntBar } from './HuntBar';
-import { firstReview } from './revisit';
+import { dueThoughts, firstReview } from './revisit';
 import { say } from './say';
 import { isOpen } from './masail';
-import { threadSummaries } from './threads';
+import { archivedThreads, liveThreads, threadSummaries } from './threads';
 import { useThinkingData } from './useThinkingData';
 import './thinking.css';
 
@@ -36,6 +37,12 @@ const IconThread = () => (
     <circle cx="12" cy="18" r="2" />
     <circle cx="19" cy="7" r="2" />
     <path d="M6.5 7.5L10.6 16.4M13.4 16.4L17.7 8.6" />
+  </svg>
+);
+
+const IconRevisit = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 0 1-13.7 5.6L4 15.5M4 20v-4.5h4.5" />
   </svg>
 );
 
@@ -60,7 +67,9 @@ export function ReaderHost({ book, onOpenBook }: HostProps) {
   const toInbox = prefs.studyDeskMarginsToInbox === 'auto';
   const moves = prefs.thinkingMoves;
 
-  const threads = useMemo(() => threadSummaries(data.desks, data.items), [data.desks, data.items]);
+  const allThreads = useMemo(() => threadSummaries(data.desks, data.items), [data.desks, data.items]);
+  const threads = useMemo(() => liveThreads(allThreads), [allThreads]);
+  const archived = useMemo(() => archivedThreads(allThreads), [allThreads]);
   const active = threads.find((s) => s.desk.id === st.active) ?? null;
   const passages = useMemo(() => data.items.filter(isPassage), [data.items]);
 
@@ -117,6 +126,22 @@ export function ReaderHost({ book, onOpenBook }: HostProps) {
     setCompose({ kind: 'question', on, place: on ? undefined : (cleanLocationNearCentre() ?? pdfLocationNearCentre() ?? undefined) });
   };
   useChordHotkey('KeyQ', prefs.thinkingMasail, () => (compose ? setCompose(null) : ask()));
+  // Revisit in the dock; the dock has no badge, so the count of thoughts due is in its name and tooltip.
+  useEffect(() => {
+    if (!prefs.thinkingRevisit) return;
+    const dueCount = dueThoughts(data.items, Date.now()).length;
+    return registerReaderTool({
+      id: 'thinking:revisit',
+      label: 'Revisit',
+      title: dueCount ? `Your thoughts to look at again (${dueCount} due)` : 'Your thoughts to look at again',
+      ariaLabel: dueCount ? `Revisit, ${dueCount} due` : 'Revisit',
+      group: 'desk',
+      order: 12,
+      readers: ['clean', 'pdf'],
+      icon: <IconRevisit />,
+      run: () => openScreen({ kind: 'revisit' }),
+    });
+  }, [prefs.thinkingRevisit, data.items]);
   useEffect(() => {
     if (!prefs.thinkingMasail) return;
     return registerReaderTool({
@@ -196,20 +221,24 @@ export function ReaderHost({ book, onOpenBook }: HostProps) {
               <button type="button" className="th-link" onClick={() => void findAnswer(t.item, onOpenBook)}>
                 Find the answer
               </button>
-            ) : t.kind === 'thought' && prefs.thinkingRevisit ? (
-              t.item.review ? (
-                <button type="button" className="th-link" onClick={() => openScreen({ kind: 'revisit', id: t.item.id })}>
-                  Revisit now
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="th-link"
-                  onClick={() => void updateItem(t.item.id, { review: firstReview(Date.now()) }).then(() => say('It comes back for a revisit in a week'))}
-                >
-                  Revisit this
-                </button>
-              )
+            ) : t.kind === 'thought' ? (
+              <div className="th-card__acts">
+                {prefs.thinkingRevisit &&
+                  (t.item.review ? (
+                    <button type="button" className="th-link" onClick={() => openScreen({ kind: 'revisit', id: t.item.id })}>
+                      Revisit now
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="th-link"
+                      onClick={() => void updateItem(t.item.id, { review: firstReview(Date.now()) }).then(() => say('It comes back for a revisit in a week'))}
+                    >
+                      Revisit this
+                    </button>
+                  ))}
+                <ThoughtLinks thought={t.item} items={data.items} />
+              </div>
             ) : null
           }
         />
@@ -217,7 +246,7 @@ export function ReaderHost({ book, onOpenBook }: HostProps) {
       {(moves || hunting) && book.pdf && <PdfPendingMoves collect={prefs.thinkingThreads} answering={hunting} />}
       {(moves || hunting) && <QuietPendingMoves book={book} deskId={deskId} toInbox={toInbox} collect={prefs.thinkingThreads} answering={hunting} />}
       {picker && (
-        <ThreadPicker threads={threads} active={active?.desk.id ?? null} style={prefs.dictionarySearchStyle} forItem={picker.forItem} onClose={() => setPicker(null)} />
+        <ThreadPicker threads={threads} archived={archived} active={active?.desk.id ?? null} style={prefs.dictionarySearchStyle} forItem={picker.forItem} onClose={() => setPicker(null)} />
       )}
     </>
   );

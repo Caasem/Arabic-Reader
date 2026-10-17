@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { patchItems } from '../studyDesk/deskStore';
 import { capture } from '../studyDesk/useDesk';
 import type { Desk, DeskItem, NewDeskItem } from '../studyDesk/types';
 import type { BookMeta } from '../types';
 import { stripBox } from './geometry';
-import { citeOf, isThought, short, thoughtText } from './passages';
+import { citeOf, short, thoughtText } from './passages';
 import { say } from './say';
 import { thinkingState } from './state';
+import { ThoughtFinder } from './ThoughtLinks';
 import { newQuestion, newThought } from './thoughts';
 import { threadLabel } from './threads';
 
@@ -42,19 +43,12 @@ export function Composer({
   const [text, setText] = useState('');
   const [claim, setClaim] = useState(false);
   const [links, setLinks] = useState<string[]>([]);
-  const [find, setFind] = useState('');
   const [busy, setBusy] = useState(false);
   const box = stripBox();
   const ta = useRef<HTMLTextAreaElement>(null);
   useEffect(() => ta.current?.focus(), []);
   const active = desks.find((d) => d.id === thinkingState().active && d.kind === 'thread');
   const asking = kind === 'question' || !passage;
-
-  const found = useMemo(() => {
-    const q = find.trim().toLowerCase();
-    if (!q) return [];
-    return items.filter((i) => isThought(i) && !links.includes(i.id) && thoughtText(i).toLowerCase().includes(q)).slice(0, 5);
-  }, [find, items, links]);
 
   async function save() {
     if (!text.trim() || busy) return;
@@ -128,26 +122,7 @@ export function Composer({
             </span>
           );
         })}
-        <input className="th-input th-links__find" dir="auto" value={find} placeholder="Link to another thought…" aria-label="Find a thought to link" onChange={(e) => setFind(e.target.value)} />
-        {found.length > 0 && (
-          <div className="th-links__found" role="listbox" aria-label="Thoughts">
-            {found.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                role="option"
-                aria-selected="false"
-                onClick={() => {
-                  setLinks([...links, t.id]);
-                  setFind('');
-                }}
-              >
-                <bdi>{short(thoughtText(t), 70)}</bdi>
-                <span className="th-faint">{t.source?.bookTitle ?? 'yours'}</span>
-              </button>
-            ))}
-          </div>
-        )}
+        <ThoughtFinder items={items} exclude={links} onPick={(t) => setLinks([...links, t.id])} />
       </div>
       </>}
       {active && (

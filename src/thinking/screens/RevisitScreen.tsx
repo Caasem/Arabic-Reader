@@ -6,11 +6,12 @@ import type { DeskItem } from '../../studyDesk/types';
 import { sendThoughts } from '../ankiThoughts';
 import { goToItem, type OpenBook } from '../nav';
 import { ago, citeOf, dateLabel, isThought, short, thoughtText } from '../passages';
-import { agree, drop, dueThoughts, firstReview, history, intervalLabel, nextDue, passageFor, revise } from '../revisit';
+import { agree, drop, droppedThoughts, dueThoughts, firstReview, history, intervalLabel, nextDue, passageFor, restore, revise } from '../revisit';
 import { say } from '../say';
 import type { Screen } from '../state';
+import { ThoughtLinks } from '../ThoughtLinks';
 import { useThinkingData } from '../useThinkingData';
-import { Frame } from './Frame';
+import { Frame, Tabs } from './Frame';
 import { ItemLine } from './parts';
 
 const DAY = 864e5;
@@ -18,54 +19,114 @@ const DAY = 864e5;
 /**
  * Revisit: thoughts come back after a while to be judged again. Still agree, Revise (the old wording is kept) or Drop
  * (archived, with Undo). Beside the thought: today's queue, how it changed, and sending the scheduled ones to Anki.
+ * Dropped thoughts are listed under Dropped, each with Restore.
  */
 export function RevisitScreen({ screen, onOpenBook }: { screen: Extract<Screen, { kind: 'revisit' }>; onOpenBook?: OpenBook }) {
   const data = useThinkingData();
   const [now] = useState(() => Date.now());
   // The thought on show: one picked from the queue or opened by id (even if not due), else the one waiting longest.
   const [focus, setFocus] = useState<string | null>(screen.id ?? null);
+  const [view, setView] = useState<'today' | 'dropped'>('today');
   const queue = useMemo(() => dueThoughts(data.items, now), [data.items, now]);
+  const dropped = useMemo(() => droppedThoughts(data.items), [data.items]);
   const picked = focus ? data.byId.get(focus) : undefined;
   const current = picked && isThought(picked) ? picked : queue[0];
 
   if (!data.loaded) return <div className="th-screen th-screen--loading" role="status">Loading…</div>;
 
-  const title = queue.length ? `${queue.length} ${queue.length === 1 ? 'thought' : 'thoughts'} to look at again` : current ? 'Looking at it again' : 'Done for today';
+  const title =
+    view === 'dropped'
+      ? 'Dropped thoughts'
+      : queue.length
+        ? `${queue.length} ${queue.length === 1 ? 'thought' : 'thoughts'} to look at again`
+        : current
+          ? 'Looking at it again'
+          : 'Done for today';
   const soon = nextDue(data.items, now);
   return (
     <Frame eyebrow="Revisit" wide title={title}>
-      <div className="th-rv">
-        <div className="th-rv__main">
-          {current ? (
-            <Thought key={current.id} item={current} items={data.items} byId={data.byId} now={now} onFocus={setFocus} onOpenBook={onOpenBook} />
-          ) : (
-            <section className="th-panel th-rv__done">
-              <h2 className="th-h2">All caught up</h2>
-              <p className="th-sub">{soon ? `The next thought comes back ${comesBack(soon, now)} (${dateLabel(soon)}).` : 'Nothing is scheduled. A thought you write is brought back a week later.'}</p>
+      {(dropped.length > 0 || view === 'dropped') && (
+        <Tabs<'today' | 'dropped'>
+          value={view}
+          onChange={setView}
+          tabs={[
+            { id: 'today', label: 'Today' },
+            { id: 'dropped', label: `Dropped · ${dropped.length}` },
+          ]}
+        />
+      )}
+      {view === 'dropped' ? (
+        <Dropped items={dropped} now={now} onOpenBook={onOpenBook} />
+      ) : (
+        <div className="th-rv">
+          <div className="th-rv__main">
+            {current ? (
+              <Thought key={current.id} item={current} items={data.items} byId={data.byId} now={now} onFocus={setFocus} onOpenBook={onOpenBook} />
+            ) : (
+              <section className="th-panel th-rv__done">
+                <h2 className="th-h2">All caught up</h2>
+                <p className="th-sub">
+                  {soon ? `The next thought comes back ${comesBack(soon, now)} (${dateLabel(soon)}).` : 'Nothing is scheduled. A thought you write is brought back a week later.'}
+                </p>
+              </section>
+            )}
+          </div>
+          <aside className="th-rv__side">
+            <section className="th-panel">
+              <h2 className="th-h2">Today’s queue</h2>
+              {!queue.length && <p className="th-sub">Nothing is waiting.</p>}
+              <div className="th-rv__queue">
+                {queue.map((q) => (
+                  <button key={q.id} type="button" className="th-rv__q" aria-current={q.id === current?.id} onClick={() => setFocus(q.id)}>
+                    <span dir="auto">{short(thoughtText(q), 80)}</span>
+                    <small>
+                      {citeOf(q) && <bdi>{citeOf(q)} · </bdi>}
+                      due {ago(q.review?.due ?? now, now)}
+                    </small>
+                  </button>
+                ))}
+              </div>
             </section>
-          )}
+            {current && <Changed item={current} />}
+            <AnkiPanel items={data.items} />
+          </aside>
         </div>
-        <aside className="th-rv__side">
-          <section className="th-panel">
-            <h2 className="th-h2">Today’s queue</h2>
-            {!queue.length && <p className="th-sub">Nothing is waiting.</p>}
-            <div className="th-rv__queue">
-              {queue.map((q) => (
-                <button key={q.id} type="button" className="th-rv__q" aria-current={q.id === current?.id} onClick={() => setFocus(q.id)}>
-                  <span dir="auto">{short(thoughtText(q), 80)}</span>
-                  <small>
-                    {citeOf(q) && <bdi>{citeOf(q)} · </bdi>}
-                    due {ago(q.review?.due ?? now, now)}
-                  </small>
-                </button>
-              ))}
-            </div>
-          </section>
-          {current && <Changed item={current} />}
-          <AnkiPanel items={data.items} />
-        </aside>
-      </div>
+      )}
     </Frame>
+  );
+}
+
+/** Thoughts dropped in Revisit, newest drop first. Restore puts one back among the live ones, due a week out. */
+function Dropped({ items, now, onOpenBook }: { items: DeskItem[]; now: number; onOpenBook?: OpenBook }) {
+  if (!items.length) return <p className="th-empty">No dropped thoughts. A thought you drop in Revisit waits here.</p>;
+  const onRestore = (item: DeskItem) => {
+    const before = { droppedAt: item.droppedAt, review: item.review };
+    void patchItems([{ id: item.id, patch: restore(Date.now()) }]);
+    say(`Restored “${short(thoughtText(item), 40)}”. It comes back in a week.`, () => patchItems([{ id: item.id, patch: before }]));
+  };
+  return (
+    <div className="th-list">
+      {items.map((item) => (
+        <ItemLine
+          key={item.id}
+          item={item}
+          dim
+          sub={` · dropped ${ago(item.droppedAt ?? now, now)}`}
+          acts={
+            <>
+              {(item.source?.location || item.pin) && (
+                <button type="button" className="th-link" onClick={() => void goToItem(item, onOpenBook)}>
+                  Open page ↗
+                </button>
+              )}
+              <button type="button" className="sd-btn" onClick={() => onRestore(item)}>
+                Restore
+              </button>
+            </>
+          }
+        />
+      ))}
+    </div>
   );
 }
 
@@ -175,32 +236,35 @@ function Thought({
           </div>
         </>
       )}
-      {!!linked.length && (
-        <div className="th-rv__links">
-          <h3 className="th-group__h">Linked thoughts</h3>
-          <div className="th-list">
-            {linked.map((l) => (
-              <ItemLine
-                key={l.id}
-                item={l}
-                acts={
-                  isThought(l) ? (
-                    <button type="button" className="th-link" onClick={() => onFocus(l.id)}>
-                      Look at it
-                    </button>
-                  ) : (
-                    l.source?.location && (
-                      <button type="button" className="th-link" onClick={() => void goToItem(l, onOpenBook)}>
-                        Open page ↗
+      <div className="th-rv__links">
+        {!!linked.length && (
+          <>
+            <h3 className="th-group__h">Linked thoughts</h3>
+            <div className="th-list">
+              {linked.map((l) => (
+                <ItemLine
+                  key={l.id}
+                  item={l}
+                  acts={
+                    isThought(l) ? (
+                      <button type="button" className="th-link" onClick={() => onFocus(l.id)}>
+                        Look at it
                       </button>
+                    ) : (
+                      l.source?.location && (
+                        <button type="button" className="th-link" onClick={() => void goToItem(l, onOpenBook)}>
+                          Open page ↗
+                        </button>
+                      )
                     )
-                  )
-                }
-              />
-            ))}
-          </div>
-        </div>
-      )}
+                  }
+                />
+              ))}
+            </div>
+          </>
+        )}
+        <ThoughtLinks thought={item} items={items} />
+      </div>
     </section>
   );
 }

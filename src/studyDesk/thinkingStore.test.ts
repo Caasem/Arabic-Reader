@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DeskDB } from './db';
 import { outline } from './docHtml';
 import {
-  addItem, addJournal, addLink, createThread, deleteDesk, deleteLink, ensureBookDesk, getDesk, getItem, joinThread, leaveThread, listDesks,
-  listJournal, listLinks, onItemAdded, readAll, restoreLink, setDeskDBForTests, updateDesk,
+  addItem, addJournal, addLink, createThread, deleteDesk, deleteDeskKeepingUndo, deleteItem, deleteLink, ensureBookDesk, getDesk, getItem, joinThread, leaveThread, listDesks,
+  listJournal, listLinks, onItemAdded, readAll, restoreDeletedDesk, restoreLink, setDeskArchived, setDeskDBForTests, updateDesk,
 } from './deskStore';
 
 const book = { id: 'b1', title: 'Jāmiʿ' };
@@ -80,6 +80,42 @@ describe('thinking store', () => {
     await joinThread([q.id], t.id);
     await deleteDesk(t.id);
     expect((await getItem(q.id))?.threads).toEqual([]);
+  });
+
+  it('brings a deleted thread back with its document and its members', async () => {
+    const desk = await ensureBookDesk(book);
+    const t = await createThread({ title: 'T', titleAr: 'ت', question: 'Why?' });
+    const q = await addItem(desk.id, { type: 'note', text: '', body: 'x' });
+    const other = await addItem(desk.id, { type: 'note', text: '', body: 'y' });
+    await joinThread([q.id, other.id], t.id);
+    const own = await addItem(t.id, { type: 'concept', text: 'on the thread itself' });
+    const joinedAt = (await getItem(q.id))!.joined![t.id];
+    const gone = await deleteDeskKeepingUndo(t.id);
+    expect(gone?.desk.id).toBe(t.id);
+    expect(gone?.members.map((m) => m.id).sort()).toEqual([q.id, other.id].sort());
+    expect(await getDesk(t.id)).toBeUndefined();
+    expect(await getItem(own.id)).toBeUndefined();
+    // One member was deleted meanwhile: it stays gone.
+    await deleteItem(other.id);
+    await restoreDeletedDesk(gone!);
+    expect((await getDesk(t.id))?.question).toBe('Why?');
+    expect((await getItem(own.id))?.text).toBe('on the thread itself');
+    expect(await embeds(t.id)).toEqual([q.id, other.id, own.id]);
+    expect((await getItem(q.id))?.threads).toEqual([t.id]);
+    expect((await getItem(q.id))?.joined?.[t.id]).toBe(joinedAt);
+    expect(await getItem(other.id)).toBeUndefined();
+    expect(await deleteDeskKeepingUndo('nope')).toBeUndefined();
+  });
+
+  it('archives a thread and brings it back, keeping everything', async () => {
+    const t = await createThread({ title: 'T', question: 'Why?' });
+    await setDeskArchived(t.id, true);
+    const archived = (await getDesk(t.id))!;
+    expect(archived.archivedAt).toBeGreaterThan(0);
+    expect(archived.question).toBe('Why?');
+    await setDeskArchived(t.id, false);
+    expect('archivedAt' in (await getDesk(t.id))!).toBe(false);
+    await setDeskArchived('nope', true);
   });
 
   it('tells listeners about every item added', async () => {

@@ -101,6 +101,16 @@ export function drop(now: number): Partial<DeskItem> {
   return { droppedAt: now };
 }
 
+/** Thoughts dropped in Revisit, the most recently dropped first. */
+export function droppedThoughts(items: DeskItem[]): DeskItem[] {
+  return items.filter((i) => i.droppedAt && (i.type === 'note' || i.type === 'line') && !!thoughtText(i)).sort((a, b) => b.droppedAt! - a.droppedAt!);
+}
+
+/** Restore a dropped thought: back among the live ones, scheduled afresh a week out. Undo puts `droppedAt` and `review` back as they were. */
+export function restore(now: number): Partial<DeskItem> {
+  return { droppedAt: undefined, review: firstReview(now) };
+}
+
 /** Live thoughts that are scheduled and due, the longest waiting first. */
 export function dueThoughts(items: DeskItem[], now: number): DeskItem[] {
   return items.filter((i) => i.review && i.review.due <= now && isThought(i)).sort((a, b) => a.review!.due - b.review!.due);

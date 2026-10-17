@@ -184,6 +184,8 @@ export interface Desk {
   titleAr?: string;
   /** Threads: the guiding question. */
   question?: string;
+  /** Threads: when it was archived (hidden from the picker and Today, kept whole). */
+  archivedAt?: number;
   /** The document: sanitized HTML (see docHtml.ts) with items embedded as `<div class="desk-embed" data-item="…">`. */
   html: string;
   createdAt: number;

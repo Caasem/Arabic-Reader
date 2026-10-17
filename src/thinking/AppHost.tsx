@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect, useRef } from 'react';
 import type { AppHostProps } from '../features/registry';
 import { usePreferences } from '../state/PreferencesContext';
-import { joinThread, onItemAdded } from '../studyDesk/deskStore';
+import { getDesk, joinThread, onDeskChange, onItemAdded } from '../studyDesk/deskStore';
 import { ClosingSheet } from './ClosingSheet';
 import { registerThinkingExports } from './exportFormats';
-import { closeScreen, thinkingState, useThinking } from './state';
+import { closeScreen, setThinking, thinkingState, useThinking } from './state';
 import { joinsActiveThread } from './threads';
 import { ThinkingToast } from './toast';
 import './thinking.css';
@@ -32,6 +32,22 @@ export function AppHost({ onOpenBook }: AppHostProps) {
       }),
     []
   );
+
+  // The active thread is archived or deleted (here, in All desks or on another device's import): stop collecting.
+  useEffect(() => {
+    const check = () => {
+      const id = thinkingState().active;
+      if (id) void getDesk(id).then((d) => thinkingState().active === id && (!d || d.archivedAt) && setThinking({ active: null }));
+    };
+    check();
+    return onDeskChange(check);
+  }, []);
+
+  // A quote tagged with a move shows its Arabic label in the desk document (thinking.css), while the moves are on.
+  useEffect(() => {
+    document.documentElement.classList.toggle('th-doc-moves', !!prefs.thinkingMoves);
+    return () => document.documentElement.classList.remove('th-doc-moves');
+  }, [prefs.thinkingMoves]);
 
   // Obsidian and Notion join the desk document's Export menu, for a thread's document and a book desk's alike.
   useEffect(() => (prefs.thinkingExport ? registerThinkingExports() : undefined), [prefs.thinkingExport]);

@@ -40,11 +40,21 @@ It is not a parallel system. Everything is a desk, a desk item or a desk documen
   desk) join it.
 - The passage bar has a +/✓ button per thread (the active thread first, then the three most recent): + adds the passage,
   ✓ shows it is in and takes it out.
+- A thread can be renamed, archived and deleted (0.125.0). The Thread screen's head has a **Manage** menu: **Rename…**
+  (English name, Arabic name and guiding question together; the names and question can still be edited in place),
+  **Archive** / **Unarchive**, and **Delete…** (asks first; the gathered items stay on their own desks, the thread's
+  document goes; Undo in the message brings back the desk, its document and its members). An archived thread is out of
+  the Alt+T picker's list, the passage bar and Today, and stops collecting if it was the active thread; the picker
+  lists archived threads last, under "Archived", where choosing one (Enter, or Unarchive) brings it back. Archived
+  threads can still be opened (Open in the picker) and show "Archived" in the Thread screen. All desks lists threads
+  under "Threads", and deleting one there asks first, like any desk. Deleting the active thread also stops collecting.
 - The Thread screen (Open thread, the dock's Thread button, Today, or the picker's Open): a thread switcher, the
   names and guiding question, counts (gathered, books, since), Collect while reading, and four tabs:
   - **Document**: the thread desk's own desk document, embedded (headings, lists, "/" picker, the + line, export).
     Members are its side panel; joining a thread puts the item at the end of the document, as a capture does on a
-    book desk. Every quote keeps its citation and Go to source.
+    book desk. Every quote keeps its citation and Go to source. A quote or thought tagged with a move shows its Arabic
+    name (تعريف دعوى دليل اعتراض جواب) in the move's colour before it, in a thread's document and a book desk's alike
+    (0.125.0, with Argument moves on).
   - **Argument**: the tree built from moves: definitions first, then claims with their evidence and objections, replies under objections, open masāʾil placed under the passage
     they were asked on, then "Not tied yet".
   - **Gathered**: a timeline (a dot per item added, coloured by book) and the members grouped by book.
@@ -72,6 +82,9 @@ It is not a parallel system. Everything is a desk, a desk item or a desk documen
   at its place), thoughts linked to those (from any book), masāʾil asked on it or answered by it.
 - Clicking the badge shows "Touching this passage" in the Ḥāshiya strip (over the right margin in the quiet reader):
   the passage, each thought (with "linked from your thought" where it came by a link), each masʾala. "Back to the Ḥāshiya" or Esc closes it.
+- A thought can be linked to another one later (0.125.0): **Link to another thought…** on a thought in Touching this
+  passage, and under the thought in Revisit, opens the finder the composer uses (type words from any thought) and shows
+  what it is already linked to, each with ×. Links are kept on both thoughts; Undo is offered.
 
 **Masāʾil (Alt+Q)**
 - Question items have an open or answered state. Alt+Q asks a new masʾala: on the passage in the bar, or on the
@@ -96,6 +109,11 @@ It is not a parallel system. Everything is a desk, a desk item or a desk documen
 - The Revisit screen shows the thought, the passage it is on, and three answers: **Still agree** (graded Good: the
   next visit is further out), **Revise** (the old wording is kept as a version, the history is shown, graded Hard),
   **Drop** (archived, history kept, Undo in the message). Today's queue and "How this thought changed" sit beside it.
+- **Dropped** (0.125.0): once a thought has been dropped, a Dropped tab (with how many) lists them, the latest drop
+  first, each with Open page and **Restore**, which takes it out of the dropped list and schedules it again a week out
+  (Undo in the message puts the old state back).
+- **Revisit in the dock** (0.125.0): the dock has a Revisit button beside Thread and Masāʾil. The dock has no badge, so
+  the number of thoughts due is in its tooltip and its screen-reader name.
 - Send to Anki: due and scheduled thoughts go to Anki through AnkiConnect as a "Arabic Reader Thought" note type
   (Passage and source on the front, the thought on the back).
 
@@ -163,12 +181,15 @@ Settings → Reading → Thinking desk:
 ## 5. Edge cases
 
 - A passage whose book was removed keeps its text; Go to source says the book is gone.
-- A thread deleted (All desks): its members stay on their own desks and lose the thread id lazily (ignored when read).
+- A thread deleted (All desks or its Manage menu): its members stay on their own desks and leave the thread. Undo (from the Manage menu) puts the thread, its document and the members that still exist back.
+- The active thread archived or deleted, anywhere: collecting stops.
+- An archived thread keeps everything (members, document, names); its members still show in Touching and Gathered.
 - A tie to an item that was deleted reads as loose.
 - A move changed to another move drops its tie (a reply's objection is no longer the right kind).
 - A reply tied to an objection that loses its move shows under "Not tied yet".
 - Answer deleted: the question reads as open again.
-- Thoughts dropped are left out of Revisit, Touching and Gathered, but stay on their desk and in their documents.
+- Thoughts dropped are left out of Revisit, Touching and Gathered, but stay on their desk and in their documents, and are listed under Revisit's Dropped tab until restored.
+- Linking a thought to itself is not offered; a dropped thought is not offered to link to.
 - The closing sheet never shows during a capture trip, and only once per reader visit.
 - On this day with no reading a year ago shows six months ago; with neither, it is left out.
 - Very many passages on a page: handles and badges are drawn for the pages on screen only.
@@ -183,7 +204,8 @@ Settings → Reading → Thinking desk:
   ties are asked for Evidence, Objection and Reply; the Argument tab shows the tree.
 - Badges count everything that touches a passage and the Touching panel lists them.
 - A masʾala can be asked, hunted, answered with a citation, and reopened.
-- Revisit grades with FSRS; Revise keeps the old wording; Drop archives with Undo.
+- Revisit grades with FSRS; Revise keeps the old wording; Drop archives with Undo; dropped thoughts are listed and can be restored.
+- A thread can be renamed, archived and unarchived, and deleted with Undo; threads are listed in All desks; a tagged quote shows its move in the document; Revisit is in the dock; a thought can be linked to another later.
 - Today shows On this day, revisits due, open masāʾil and threads; the closing sheet saves a journal line.
 - Obsidian and Notion exports come out as described, for a thread's document and a book desk's.
 - Unit tests cover moves and ties, the argument tree, touching, scheduling, the export formats, On this day, the
@@ -221,10 +243,30 @@ Settings → Reading → Thinking desk:
   items, which the two formats need for the thread's question and for linked thoughts and answers. Both save as `.md`
   under the desk's title, like Markdown does; Settings → Reading → Thinking desk has a row for `thinkingExport`. Obsidian
   links point to the book's page (`[[Book#p. N]]`), which exists as a note only if the reader makes one.
+- **Threads: rename, archive, delete** (0.125.0). The menu is in the Thread screen's head (a small "Manage" menu in
+  the Export menu's look). Archive is `archivedAt` on the desk (no database change; the field is not indexed), set
+  and cleared by `setDeskArchived`; archived threads are hidden by the thinking desk's own lists (picker, passage bar,
+  Today), not by the study desk. Delete takes a snapshot first (`deleteDeskKeepingUndo`, `restoreDeletedDesk`), so
+  Undo can restore the desk, its document, the items that lived on it and each member's place in the thread. All
+  desks (the study desk's list) gains a Threads section and the same confirm-then-delete as other desks, without
+  Undo, since the list has only plain messages. "Stop collecting" when the active thread goes is done by the app host
+  watching the desks, so it also covers deleting from All desks. Opening a thread from All desks shows its document
+  in the study desk's document, as before; the Thread screen is one click away from the picker.
+- **Move labels in the document** (0.125.0). The embed carries `data-move`; the label and colour are drawn by
+  `thinking.css` (the Arabic name before the quote, the quote's rule in the move's colour), only while Argument moves
+  is on (the app host sets a class on the page), so nothing changes with the thinking desk off.
+- **Revisit in the dock** (0.125.0). The dock's `live` text replaces the label in the label-style dock, so it is not
+  used as a badge; the due count is in the tooltip and name instead. Re-registered when the thoughts change.
+- **Dropped** (0.125.0) is a tab, shown only once something has been dropped. Restore sets a fresh first visit
+  (`firstReview`) and forgets the old schedule; Undo puts the old `droppedAt` and `review` back.
+- **Link later** (0.125.0). One finder, `ThoughtFinder`, now serves the composer and the Link to another thought…
+  control; only thoughts (not passages or masāʾil) can be linked. Links are patched on both thoughts in one write
+  (`linkPatches`).
 - **Size.** Everything new loads on demand; the entry script and styles were within 12 kB and 1.3 kB of their budgets.
 
 ## 8. Not yet
 
 - Sync of the new tables (they follow the desk tables).
+- Undo for deleting a thread from All desks (the thread's Manage menu has it).
 - Moves inside epub (iframe) books.
 - Hash addresses for the new screens.

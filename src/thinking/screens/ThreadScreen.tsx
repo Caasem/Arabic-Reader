@@ -8,7 +8,7 @@ import type { Desk, DeskItem } from '../../studyDesk/types';
 import { goToItem, type OpenBook } from '../nav';
 import { dateLabel, isPassage } from '../passages';
 import { openScreen, setThinking, useThinking, type Screen, type ThreadTab } from '../state';
-import { byBook, joinedAt, namesFromTyped, summarise, threadLabel, threadMembers, threadSummaries } from '../threads';
+import { byBook, isArchived, joinedAt, liveThreads, namesFromTyped, summarise, threadLabel, threadMembers, threadSummaries } from '../threads';
 import { say } from '../say';
 import { useThinkingData, type ThinkingData } from '../useThinkingData';
 import { findAnswer, reopenQuestion } from '../actions';
@@ -16,6 +16,7 @@ import { isOpen } from '../masail';
 import { ArgumentTab } from './ArgumentTab';
 import { MasalaRow } from './MasalaRow';
 import { Frame, Tabs } from './Frame';
+import { ThreadMenu } from './ThreadMenu';
 import { ItemLine } from './parts';
 
 /** Colours for books on the timeline, in the order books first joined. */
@@ -30,9 +31,12 @@ export function ThreadScreen({ screen, onOpenBook }: { screen: Extract<Screen, {
   const data = useThinkingData();
   const { active } = useThinking();
   const { prefs } = usePreferences();
-  const threads = useMemo(() => threadSummaries(data.desks, data.items), [data.desks, data.items]);
-  const id = screen.id && threads.some((s) => s.desk.id === screen.id) ? screen.id : (threads.find((s) => s.desk.id === active) ?? threads[0])?.desk.id;
+  const all = useMemo(() => threadSummaries(data.desks, data.items), [data.desks, data.items]);
+  const live = useMemo(() => liveThreads(all), [all]);
+  // An archived thread can still be opened (from the picker); it joins the switcher while it is on show.
+  const id = screen.id && all.some((s) => s.desk.id === screen.id) ? screen.id : (live.find((s) => s.desk.id === active) ?? live[0])?.desk.id;
   const thread = data.desks.find((d) => d.id === id);
+  const threads = [...live, ...all.filter((s) => s.desk.id === id && isArchived(s.desk))];
   const [tab, setTab] = useState<ThreadTab>(screen.tab ?? 'document');
 
   if (!data.loaded) return <div className="th-screen th-screen--loading" role="status">Loading…</div>;
@@ -48,14 +52,23 @@ export function ThreadScreen({ screen, onOpenBook }: { screen: Extract<Screen, {
       wide
       title={<Names key={thread.id} desk={thread} />}
       aside={
-        <select className="th-switch" aria-label="Switch thread" value={thread.id} onChange={(e) => (e.target.value === '+' ? void newThread() : openScreen({ kind: 'thread', id: e.target.value, tab }))}>
-          {threads.map((s) => (
-            <option key={s.desk.id} value={s.desk.id}>
-              {threadLabel(s.desk)}
-            </option>
-          ))}
-          <option value="+">+ New thread</option>
-        </select>
+        <span className="th-row">
+          <select className="th-switch" aria-label="Switch thread" value={thread.id} onChange={(e) => (e.target.value === '+' ? void newThread() : openScreen({ kind: 'thread', id: e.target.value, tab }))}>
+            {threads.map((s) => (
+              <option key={s.desk.id} value={s.desk.id}>
+                {threadLabel(s.desk)}
+                {isArchived(s.desk) ? ' (archived)' : ''}
+              </option>
+            ))}
+            <option value="+">+ New thread</option>
+          </select>
+          <ThreadMenu
+            key={thread.id}
+            thread={thread}
+            gathered={threadMembers(thread.id, data.items).filter((i) => i.deskId !== thread.id).length}
+            made={data.items.filter((i) => i.deskId === thread.id).length}
+          />
+        </span>
       }
     >
       <Question key={thread.id + ':' + (thread.question ?? '')} desk={thread} />
@@ -69,17 +82,21 @@ export function ThreadScreen({ screen, onOpenBook }: { screen: Extract<Screen, {
         <span>
           since <b>{dateLabel(thread.createdAt)}</b>
         </span>
-        <button
-          type="button"
-          className={'sd-btn' + (active === thread.id ? '' : ' sd-btn--pri')}
-          aria-pressed={active === thread.id}
-          onClick={() => {
-            setThinking({ active: active === thread.id ? null : thread.id });
-            say(active === thread.id ? 'Stopped collecting' : `Collecting into ${threadLabel(thread)}`);
-          }}
-        >
-          {active === thread.id ? 'Collecting while reading ✓' : 'Collect while reading'}
-        </button>
+        {isArchived(thread) ? (
+          <span className="th-kind">Archived</span>
+        ) : (
+          <button
+            type="button"
+            className={'sd-btn' + (active === thread.id ? '' : ' sd-btn--pri')}
+            aria-pressed={active === thread.id}
+            onClick={() => {
+              setThinking({ active: active === thread.id ? null : thread.id });
+              say(active === thread.id ? 'Stopped collecting' : `Collecting into ${threadLabel(thread)}`);
+            }}
+          >
+            {active === thread.id ? 'Collecting while reading ✓' : 'Collect while reading'}
+          </button>
+        )}
       </div>
       <Tabs<ThreadTab>
         value={tab}

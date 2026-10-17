@@ -44,6 +44,14 @@ export function threadSummaries(desks: Desk[], items: DeskItem[]): ThreadSummary
     .sort((a, b) => b.lastAdded - a.lastAdded);
 }
 
+export const isArchived = (desk: Desk): boolean => !!desk.archivedAt;
+
+/** Threads that are not archived: what the picker, the passage bar and Today offer. */
+export const liveThreads = (list: ThreadSummary[]): ThreadSummary[] => list.filter((s) => !isArchived(s.desk));
+
+/** Archived threads, the most recently archived first. */
+export const archivedThreads = (list: ThreadSummary[]): ThreadSummary[] => list.filter((s) => isArchived(s.desk)).sort((a, b) => b.desk.archivedAt! - a.desk.archivedAt!);
+
 /** Threads whose name or question contains the words typed (any order, ignoring case). */
 export function filterThreads(list: ThreadSummary[], query: string): ThreadSummary[] {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -58,6 +66,14 @@ export function filterThreads(list: ThreadSummary[], query: string): ThreadSumma
 export function namesFromTyped(typed: string, arabic: boolean): { title: string; titleAr?: string } {
   const t = typed.trim();
   return arabic ? { title: t, titleAr: t } : { title: t };
+}
+
+/** What Rename saves: the English and Arabic names and the guiding question as typed. Null when it has no name at all. */
+export function renamePatch(typed: { en: string; ar: string; question: string }): Pick<Desk, 'title' | 'titleAr' | 'question'> | null {
+  const en = typed.en.trim();
+  const ar = typed.ar.trim();
+  if (!en && !ar) return null;
+  return { title: en || ar, titleAr: ar || undefined, question: typed.question.trim() || undefined };
 }
 
 /**

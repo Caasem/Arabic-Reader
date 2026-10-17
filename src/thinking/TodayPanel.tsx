@@ -11,7 +11,7 @@ import { ago, dateLabel, short, thoughtText } from './passages';
 import { dueThoughts } from './revisit';
 import { say } from './say';
 import { openScreen, readingBook, setThinking } from './state';
-import { growth, joinedAt, threadLabel, threadMembers, threadSummaries, type ThreadSummary } from './threads';
+import { growth, joinedAt, liveThreads, threadLabel, threadMembers, threadSummaries, type ThreadSummary } from './threads';
 import { onThisDay, weekMinutes, type DayBook, type DayLook } from './today';
 import { useThinkingData } from './useThinkingData';
 import './thinking.css';
@@ -177,7 +177,7 @@ export function TodayPanel({ onOpenBook }: LibraryTopProps) {
   const due = useMemo(() => (prefs.thinkingRevisit ? dueThoughts(data.items, now) : []), [prefs.thinkingRevisit, data.items, now]);
   const open = useMemo(() => (prefs.thinkingMasail ? masail(data.items, data.byId, 'open') : []), [prefs.thinkingMasail, data.items, data.byId]);
   const threads = useMemo(
-    () => (prefs.thinkingThreads ? threadSummaries(data.desks, data.items).filter((s) => s.count > 0).slice(0, THREADS) : []),
+    () => (prefs.thinkingThreads ? liveThreads(threadSummaries(data.desks, data.items)).filter((s) => s.count > 0).slice(0, THREADS) : []),
     [prefs.thinkingThreads, data.desks, data.items]
   );
   const minutes = useMemo(() => weekMinutes(sessions, now), [sessions, now]);

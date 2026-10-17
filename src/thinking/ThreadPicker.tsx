@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { Shell } from '../dictionarySearch/Shell';
 import '../dictionarySearch/dictionarySearch.css';
-import { createThread, joinThread } from '../studyDesk/deskStore';
+import { createThread, joinThread, setDeskArchived } from '../studyDesk/deskStore';
 import { looksArabic } from '../studyDesk/useDesk';
 import type { ReaderPreferences } from '../types';
 import { ago } from './passages';
@@ -9,18 +9,24 @@ import { openScreen, setThinking } from './state';
 import { filterThreads, namesFromTyped, threadLabel, type ThreadSummary } from './threads';
 import { say } from './say';
 
+/** Prefix of an archived thread's row id. */
+const ARCHIVED = 'archived:';
+
 /**
  * Alt+T: the threads, in the Alt+D palette's frame and style. Type to filter or to start a thread; Enter collects into
  * the chosen one; Stop collecting turns the active thread off. With `forItem`, the chosen thread also takes that passage.
+ * Archived threads are listed last, under their own heading; choosing one brings it back (Unarchive).
  */
 export function ThreadPicker({
   threads,
+  archived,
   active,
   style,
   forItem,
   onClose,
 }: {
   threads: ThreadSummary[];
+  archived: ThreadSummary[];
   active: string | null;
   style: ReaderPreferences['dictionarySearchStyle'];
   forItem?: string;
@@ -28,15 +34,26 @@ export function ThreadPicker({
 }) {
   const [query, setQuery] = useState('');
   const list = useMemo(() => filterThreads(threads, query), [threads, query]);
+  const shelved = useMemo(() => filterThreads(archived, query), [archived, query]);
   const typed = query.trim();
-  const exact = threads.some((s) => s.desk.title === typed || s.desk.titleAr === typed);
-  // Rows: "Start a thread" (when something new is typed), each thread, "Stop collecting" (when one is on).
-  const rows: ('new' | 'stop' | string)[] = [...(typed && !exact ? ['new'] : []), ...list.map((s) => s.desk.id), ...(active ? ['stop'] : [])];
+  const exact = [...threads, ...archived].some((s) => s.desk.title === typed || s.desk.titleAr === typed);
+  // Rows: "Start a thread" (when something new is typed), each thread, "Stop collecting" (when one is on), archived threads (as `archived:<id>`).
+  const rows: ('new' | 'stop' | string)[] = [
+    ...(typed && !exact ? ['new'] : []),
+    ...list.map((s) => s.desk.id),
+    ...(active ? ['stop'] : []),
+    ...shelved.map((s) => ARCHIVED + s.desk.id),
+  ];
   const [cursor, setCursor] = useState(0);
   const at = Math.min(cursor, Math.max(0, rows.length - 1));
 
   async function choose(row: string) {
-    if (row === 'stop') {
+    if (row.startsWith(ARCHIVED)) {
+      const s = archived.find((x) => x.desk.id === row.slice(ARCHIVED.length));
+      if (!s) return;
+      await setDeskArchived(s.desk.id, false);
+      say(`Brought back ${threadLabel(s.desk)}`, () => setDeskArchived(s.desk.id, true));
+    } else if (row === 'stop') {
       setThinking({ active: null });
       say('Stopped collecting');
     } else if (row === 'new') {
@@ -83,7 +100,7 @@ export function ThreadPicker({
           />
         </div>
         <div className="dsearch__results" role="listbox" aria-label="Threads">
-          {!threads.length && !typed && <p className="dsearch__hint">No threads yet. Name one above (a question, a topic) and press Enter.</p>}
+          {!threads.length && !archived.length && !typed && <p className="dsearch__hint">No threads yet. Name one above (a question, a topic) and press Enter.</p>}
           {rows.map((row, i) => {
             const on = i === at;
             const cls = 'dsearch__entry' + (on ? ' dsearch__entry--active' : '');
@@ -106,38 +123,42 @@ export function ThreadPicker({
                   </div>
                 </div>
               );
-            const s = threads.find((x) => x.desk.id === row)!;
+            const shelf = row.startsWith(ARCHIVED);
+            const s = (shelf ? archived : threads).find((x) => x.desk.id === (shelf ? row.slice(ARCHIVED.length) : row))!;
             return (
-              <div key={row} role="option" aria-selected={on} className={cls} onClick={() => void choose(row)}>
-                <div className="dsearch__entry-head">
-                  <span className={'dsearch__headword' + (s.desk.titleAr ? '' : ' sd-latin')} dir="auto">
-                    {s.desk.titleAr || s.desk.title}
-                  </span>
-                  <span className="dsearch__meta">
-                    <bdi>{s.desk.titleAr && s.desk.title !== s.desk.titleAr ? s.desk.title + ' · ' : ''}</bdi>
-                    {s.count === 1 ? '1 item' : `${s.count} items`} · last added {ago(s.lastAdded)}
-                  </span>
-                  <span className="dsearch__provider">{s.desk.id === active ? 'Collecting' : 'Thread'}</span>
-                </div>
-                {on && (
-                  <div className="sd-acts">
-                    <button type="button" className="dsearch__add" onClick={(e) => (e.stopPropagation(), void choose(row))}>
-                      Collect into it
-                    </button>
-                    <button
-                      type="button"
-                      className="sd-ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onClose();
-                        openScreen({ kind: 'thread', id: row });
-                      }}
-                    >
-                      Open
-                    </button>
+              <Fragment key={row}>
+                {shelf && row === rows.find((r) => r.startsWith(ARCHIVED)) && <p className="dsearch__hint th-picker__shelf">Archived</p>}
+                <div role="option" aria-selected={on} className={cls} onClick={() => void choose(row)}>
+                  <div className="dsearch__entry-head">
+                    <span className={'dsearch__headword' + (s.desk.titleAr ? '' : ' sd-latin')} dir="auto">
+                      {s.desk.titleAr || s.desk.title}
+                    </span>
+                    <span className="dsearch__meta">
+                      <bdi>{s.desk.titleAr && s.desk.title !== s.desk.titleAr ? s.desk.title + ' · ' : ''}</bdi>
+                      {s.count === 1 ? '1 item' : `${s.count} items`} · last added {ago(s.lastAdded)}
+                    </span>
+                    <span className="dsearch__provider">{shelf ? 'Archived' : s.desk.id === active ? 'Collecting' : 'Thread'}</span>
                   </div>
-                )}
-              </div>
+                  {on && (
+                    <div className="sd-acts">
+                      <button type="button" className="dsearch__add" onClick={(e) => (e.stopPropagation(), void choose(row))}>
+                        {shelf ? 'Unarchive' : 'Collect into it'}
+                      </button>
+                      <button
+                        type="button"
+                        className="sd-ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onClose();
+                          openScreen({ kind: 'thread', id: s.desk.id });
+                        }}
+                      >
+                        Open
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </Fragment>
             );
           })}
         </div>

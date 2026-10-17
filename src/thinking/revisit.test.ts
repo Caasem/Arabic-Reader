@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DeskItem } from '../studyDesk/types';
-import { agree, drop, dueThoughts, firstReview, history, intervalLabel, nextDue, passageFor, revise } from './revisit';
+import { agree, drop, droppedThoughts, dueThoughts, firstReview, history, intervalLabel, nextDue, passageFor, restore, revise } from './revisit';
 
 const DAY = 864e5;
 const T0 = Date.UTC(2026, 0, 1);
@@ -141,5 +141,28 @@ describe('version dates', () => {
       [t1, 'Second wording', false],
       [T0, 'Intention decides the deed', false],
     ]);
+  });
+});
+
+describe('dropped thoughts', () => {
+  it('lists the dropped thoughts, the latest drop first, leaving out live ones and other kinds', () => {
+    const items = [
+      thought({ id: 'a', droppedAt: T0 + 5 }),
+      thought({ id: 'b', droppedAt: T0 + 9 }),
+      thought({ id: 'live' }),
+      thought({ id: 'q', type: 'question', text: 'Why?', body: undefined, droppedAt: T0 + 7 }),
+      thought({ id: 'empty', body: '', droppedAt: T0 + 8 }),
+    ];
+    expect(droppedThoughts(items).map((i) => i.id)).toEqual(['b', 'a']);
+  });
+
+  it('restores a thought into a fresh first visit a week out, and drops it from the dropped list', () => {
+    const dropped = thought({ droppedAt: T0 + 3, review: { due: T0 - DAY, every: 30, agreed: [T0] } });
+    const patch = restore(T0 + 10 * DAY);
+    expect(patch).toEqual({ droppedAt: undefined, review: firstReview(T0 + 10 * DAY) });
+    const back = { ...dropped, ...patch };
+    expect(droppedThoughts([back])).toEqual([]);
+    expect(dueThoughts([back], T0 + 18 * DAY).map((i) => i.id)).toEqual(['t']);
+    expect(dueThoughts([back], T0 + 12 * DAY)).toEqual([]);
   });
 });

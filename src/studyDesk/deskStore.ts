@@ -226,6 +226,51 @@ export async function updateDesk(id: string, patch: Partial<Pick<Desk, 'title' |
   changed();
 }
 
+/** A thread archived (hidden from the thread picker and Today, kept whole) or brought back. */
+export async function setDeskArchived(id: string, archived: boolean): Promise<void> {
+  const desk = await deskDb().desks.get(id);
+  if (!desk) return;
+  const next: Desk = { ...desk, updatedAt: Date.now() };
+  if (archived) next.archivedAt = next.updatedAt;
+  else delete next.archivedAt;
+  await deskDb().desks.put(next);
+  changed();
+}
+
+/** What deleting a desk took, kept so Undo can bring it back: the desk, the items that lived on it and its members as they were. */
+export interface DeletedDesk {
+  desk: Desk;
+  items: DeskItem[];
+  /** Items from other desks that were in the thread (for a thread only). */
+  members: DeskItem[];
+}
+
+/** Deletes a desk as `deleteDesk` does and returns what it took (nothing when there was no such desk). */
+export async function deleteDeskKeepingUndo(id: string): Promise<DeletedDesk | undefined> {
+  const desk = await deskDb().desks.get(id);
+  if (!desk) return undefined;
+  const items = await deskDb().items.where('deskId').equals(id).toArray();
+  const members = (await deskDb().items.where('threads').equals(id).toArray()).filter((m) => m.deskId !== id);
+  await deleteDesk(id);
+  return { desk, items, members };
+}
+
+/** Undo of `deleteDeskKeepingUndo`: the desk and its items come back, and each member rejoins the thread (when it still exists). */
+export async function restoreDeletedDesk(gone: DeletedDesk): Promise<void> {
+  const id = gone.desk.id;
+  await deskDb().transaction('rw', deskDb().desks, deskDb().items, async () => {
+    await deskDb().desks.put(gone.desk);
+    await deskDb().items.bulkPut(gone.items);
+    for (const was of gone.members) {
+      const now = await deskDb().items.get(was.id);
+      if (!now) continue;
+      const joined = was.joined?.[id];
+      await deskDb().items.put({ ...now, threads: [...new Set([...(now.threads ?? []), id])], joined: joined === undefined ? now.joined : { ...now.joined, [id]: joined } });
+    }
+  });
+  changed();
+}
+
 /** Items join a thread: the thread id on each, when it joined, and its embed at the end of the thread's document. */
 export async function joinThread(itemIds: string[], threadId: string): Promise<void> {
   const now = Date.now();
