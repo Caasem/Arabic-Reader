@@ -83,6 +83,8 @@ const PdfPage = memo(function PdfPage({ book, opened, number, width, active, onW
       const context = el.getContext('2d');
       if (!context) return;
       task = page.render({ canvasContext: context, canvas: el, viewport, transform: dpr === 1 ? undefined : [dpr, 0, 0, dpr, 0, 0] });
+      // Scrolled away while drawing: the cancel rejects this promise, perhaps before anything below awaits it.
+      task.promise.catch(() => undefined);
       const content = await page.getTextContent();
       if (cancelled || !textLayer.current) return;
       const host = textLayer.current;
