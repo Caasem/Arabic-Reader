@@ -45,6 +45,13 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.124.0 — 2026-10-17
+
+- **Export to Obsidian and Notion.** The desk document's Export menu, for a thread's document and a book desk's, now
+  has Save for Obsidian (front matter, `[[Book#p. N]]` citations, moves as tags, linked thoughts as backlinks) and
+  Save for Notion (quotes with citations, masāʾil as to-dos). There is a switch for it in Settings → Reading →
+  Thinking desk.
+
 ## v0.123.0 — 2026-10-17
 
 - **Muqābala is set aside for now.** The side-by-side screen, Alt+J, Compare and Open side by side are gone from the

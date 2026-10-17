@@ -537,6 +537,8 @@ export function DeskDocument({ book, data, deskId, focusItem, onClose, onSwitchD
                 save();
                 return documentBlocks(sanitizeDocHtml(edRef.current?.innerHTML ?? ''), itemsById, (i) => shownInDocument(i, docMode));
               }}
+              desk={desk ?? undefined}
+              items={itemsById}
               onToast={onToast}
             />
           </div>

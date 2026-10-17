@@ -107,10 +107,18 @@ It is not a parallel system. Everything is a desk, a desk item or a desk documen
   optional sheet: pages, minutes, moves, thoughts, masāʾil and items added to threads, and "What changed in your
   mind?" in one line, with Skip and Save. Saved lines form the reading journal, which feeds On this day.
 
-**Export (not built yet: phase 8 was set aside)**
-- The desk document's Export would add Obsidian (.md: front matter with title, kind, guiding question, tags and date;
-  citations as `[[Book#p. N]]`; linked thoughts as backlinks) and Notion (.md: quotes with citations; open masāʾil
-  as to-dos, answered ones ticked), next to Markdown and Word.
+**Export (0.124.0)**
+- The desk document's Export menu (Copy as text, Markdown, Word) gains two more, for a thread's document and a book
+  desk's alike, while `thinkingExport` is on:
+  - **Save for Obsidian** (.md): front matter (title, kind, the guiding question of a thread, tags, date); the Arabic
+    name before the title of a thread; quotes with their citation and a wiki link `[[Book#p. N]]` (the chapter label
+    for text books), a move as a tag (`#claim`); a thought as "My note" with its linked thoughts as `[[Book#place|“…”]]`
+    backlinks; masāʾil as to-dos, ticked when answered, with the answering passage quoted under them.
+  - **Save for Notion** (.md): the same document as plain Markdown that Notion takes on paste or import: quotes with
+    plain citations, thoughts as paragraphs, masāʾil as to-dos; no front matter, wiki links or tags.
+- The formats are registered by the thinking desk's app host (`src/thinking/exportFormats.ts`) in a small registry the
+  Export menu reads when it opens (`src/studyDesk/exportFormats.ts`), so with the thinking desk off the menu is exactly
+  as before.
 
 ## 3. Data
 
@@ -177,7 +185,7 @@ Settings → Reading → Thinking desk:
 - A masʾala can be asked, hunted, answered with a citation, and reopened.
 - Revisit grades with FSRS; Revise keeps the old wording; Drop archives with Undo.
 - Today shows On this day, revisits due, open masāʾil and threads; the closing sheet saves a journal line.
-- Obsidian and Notion exports come out as described.
+- Obsidian and Notion exports come out as described, for a thread's document and a book desk's.
 - Unit tests cover moves and ties, the argument tree, touching, scheduling, the export formats, On this day, the
   closing criteria and the database migration. tsc, lint, unit tests and the size check pass.
 
@@ -208,11 +216,14 @@ Settings → Reading → Thinking desk:
   journalled under the book open at the end. Pages are counted for PDF books (pages seen); text books report minutes.
 - **Screens** (Thread, Masāʾil, Revisit) are full-page sheets over the app, loaded on first use, opened from
   the reader's dock, the passage bar and Today; they have no address of their own yet.
+- **Export** (0.124.0). Folded in from the set-aside phase 8 commit. The Export menu reads a small registry of formats
+  (opened with the menu, so nothing changes while the thinking desk is off); the desk document hands it the desk and its
+  items, which the two formats need for the thread's question and for linked thoughts and answers. Both save as `.md`
+  under the desk's title, like Markdown does; Settings → Reading → Thinking desk has a row for `thinkingExport`. Obsidian
+  links point to the book's page (`[[Book#p. N]]`), which exists as a note only if the reader makes one.
 - **Size.** Everything new loads on demand; the entry script and styles were within 12 kB and 1.3 kB of their budgets.
 
 ## 8. Not yet
-
-- Phase 8, Obsidian and Notion export, was set aside before it was folded in; `thinkingExport` exists but does nothing yet.
 
 - Sync of the new tables (they follow the desk tables).
 - Moves inside epub (iframe) books.

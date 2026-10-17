@@ -17,6 +17,7 @@ const PARTS: { key: PartKey; label: string; note: string }[] = [
     label: 'Ask what changed when a book closes',
     note: 'After 5 minutes or more, or anything made. Saved lines form your reading journal, shown on Today.',
   },
+  { key: 'thinkingExport', label: 'Export to Obsidian and Notion', note: 'Save for Obsidian and Save for Notion in the desk document’s Export menu, for a thread’s document and a book desk’s.' },
 ];
 
 export function ThinkingSettings() {

@@ -3,6 +3,7 @@ import type { AppHostProps } from '../features/registry';
 import { usePreferences } from '../state/PreferencesContext';
 import { joinThread, onItemAdded } from '../studyDesk/deskStore';
 import { ClosingSheet } from './ClosingSheet';
+import { registerThinkingExports } from './exportFormats';
 import { closeScreen, thinkingState, useThinking } from './state';
 import { joinsActiveThread } from './threads';
 import { ThinkingToast } from './toast';
@@ -31,6 +32,9 @@ export function AppHost({ onOpenBook }: AppHostProps) {
       }),
     []
   );
+
+  // Obsidian and Notion join the desk document's Export menu, for a thread's document and a book desk's alike.
+  useEffect(() => (prefs.thinkingExport ? registerThinkingExports() : undefined), [prefs.thinkingExport]);
 
   // Esc closes a screen, unless something inside it (a menu, a note being typed) takes it first.
   useEffect(() => {

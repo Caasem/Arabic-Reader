@@ -22,6 +22,7 @@ export const thinkingFeature: FeatureDescriptor = {
     'the `thinking*` preferences (src/types/preferences.ts, src/state/defaultPreferences.ts)',
     "the study desk's data: the thinking fields on DeskItem and Desk, the links and journal tables, desk database version 2 and their store functions (src/studyDesk: types, db, deskStore), in the storage registry and the full export",
     "the study desk's desk document: an embedded mode, an optional book and a thread's members in its side panel (src/studyDesk/DeskDocument.tsx)",
+    "the desk document's Export menu: a registry of formats, the desk and its items passed to the menu (src/studyDesk: exportFormats, ExportMenu, DeskDocument, and docExport exporting a few helpers)",
     'the registry extension points it uses: App host props and LibraryTop (src/features/registry.ts, src/App.tsx, src/components/library/Library.tsx)',
   ],
 };
