@@ -1,4 +1,4 @@
-import type { DeskItem, DeskLink } from '../studyDesk/types';
+import type { DeskItem } from '../studyDesk/types';
 import { tieOf } from './moves';
 import { onPassage } from './passages';
 
@@ -17,8 +17,6 @@ export interface ArgNode {
 
 export interface Argument {
   definitions: ArgNode[];
-  /** Pairs of definitions a Muqābala link says differ. */
-  tensions: { link: DeskLink; a: DeskItem; b: DeskItem }[];
   claims: ArgNode[];
   /** Evidence, objections and replies not tied to anything in the thread. */
   loose: ArgNode[];
@@ -26,7 +24,7 @@ export interface Argument {
   questions: DeskItem[];
 }
 
-export function buildArgument(members: DeskItem[], byId: Map<string, DeskItem>, links: DeskLink[], isOpen: (q: DeskItem) => boolean): Argument {
+export function buildArgument(members: DeskItem[], byId: Map<string, DeskItem>, isOpen: (q: DeskItem) => boolean): Argument {
   const tagged = members.filter((i) => i.move && !i.droppedAt);
   const inThread = new Set(tagged.map((i) => i.id));
   const openQs = members.filter((i) => i.type === 'question' && isOpen(i));
@@ -57,10 +55,5 @@ export function buildArgument(members: DeskItem[], byId: Map<string, DeskItem>, 
     })
     .map(node);
 
-  const defs = new Set(definitions.map((d) => d.item.id));
-  const tensions = links
-    .filter((l) => l.rel === 'differs' && defs.has(l.a) && defs.has(l.b))
-    .map((link) => ({ link, a: byId.get(link.a)!, b: byId.get(link.b)! }));
-
-  return { definitions, tensions, claims, loose, questions: openQs.filter((q) => !placed.has(q.id)) };
+  return { definitions, claims, loose, questions: openQs.filter((q) => !placed.has(q.id)) };
 }

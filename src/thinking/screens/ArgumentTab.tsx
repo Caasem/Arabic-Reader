@@ -4,14 +4,13 @@ import { wordsOf } from '../labels';
 import { isOpen } from '../masail';
 import { moveInfo } from '../moves';
 import { citeOf, isPassage, isThought, thoughtText } from '../passages';
-import { openScreen } from '../state';
 import { threadMembers } from '../threads';
 import type { ThinkingData } from '../useThinkingData';
 
 /** The thread's argument, from the moves tagged on its members: definitions, claims and what bears on them. */
 export function ArgumentTab({ threadId, data, onGoTo }: { threadId: string; data: ThinkingData; onGoTo(item: DeskItem): void }) {
   const members = threadMembers(threadId, data.items);
-  const arg = buildArgument(members, data.byId, data.links, (q) => isOpen(q, data.byId));
+  const arg = buildArgument(members, data.byId, (q) => isOpen(q, data.byId));
   const empty = !arg.definitions.length && !arg.claims.length && !arg.loose.length;
   return (
     <div className="th-amap">
@@ -19,14 +18,6 @@ export function ArgumentTab({ threadId, data, onGoTo }: { threadId: string; data
       {arg.definitions.length > 0 && <h3 className="th-amap__h">Definitions</h3>}
       {arg.definitions.map((n) => (
         <Node key={n.item.id} node={n} onGoTo={onGoTo} />
-      ))}
-      {arg.tensions.map((t) => (
-        <p key={t.link.id} className="th-tension">
-          These definitions differ{t.link.note ? `: ${t.link.note}` : '.'}{' '}
-          <button type="button" className="th-link" onClick={() => openScreen({ kind: 'muqabala', link: t.link.id })}>
-            See them side by side
-          </button>
-        </p>
       ))}
       {arg.claims.length > 0 && <h3 className="th-amap__h">Claims, with what supports and resists them</h3>}
       {arg.claims.map((n) => (

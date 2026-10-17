@@ -145,13 +145,14 @@ export interface ReaderPreferences {
   studyDeskCards: 'open' | 'folded';
   /** Margin notes go to the inbox when you leave them (auto) or only when you send them (ask). */
   studyDeskMarginsToInbox: 'ask' | 'auto';
-  /** The thinking desk (src/thinking): threads, argument moves, backlinks, masāʾil, Muqābala, Revisit, Today. Off by default. */
+  /** The thinking desk (src/thinking): threads, argument moves, backlinks, masāʾil, Revisit, Today. Off by default. */
   thinkingFrontEnabled: boolean;
   /** Its parts, each on by default under the main switch. */
   thinkingThreads: boolean;
   thinkingMoves: boolean;
   thinkingBacklinks: boolean;
   thinkingMasail: boolean;
+  /** Unused since Muqābala was set aside (0.123.0); kept so saved settings stay valid. */
   thinkingMuqabala: boolean;
   thinkingRevisit: boolean;
   thinkingToday: boolean;

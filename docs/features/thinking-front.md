@@ -1,8 +1,8 @@
-# Thinking desk: threads, moves, backlinks, masāʾil, muqābala, revisit, today
+# Thinking desk: threads, moves, backlinks, masāʾil, revisit, today
 
 Roadmap id: `thinking-front` · Area: Reader experience · Status: in progress · Depends on: `study-desk`
 
-Design spec: the single-file prototype "Thinking Desk" (Today, Reader, Thread, Muqābala, Revisit, Masāʾil). Its Arabic book
+Design spec: the single-file prototype "Thinking Desk" (Today, Reader, Thread, Muqābala, Revisit, Masāʾil; Muqābala is set aside, see below). Its Arabic book
 text is abridged sample text and is never used as book content.
 
 Every change is listed, phase by phase, with how to switch it off or revert it, in
@@ -12,7 +12,7 @@ Every change is listed, phase by phase, with how to switch it off or revert it, 
 
 The study desk collects what a reader notices. The thinking desk helps them think with it: name what a passage is doing
 in an argument, gather passages from many books under one question, see everything that touches a passage, keep
-questions open until a passage answers them, set two books side by side, come back to their own thoughts later and
+questions open until a passage answers them, come back to their own thoughts later and
 judge them again, and look back at what they read a year ago.
 
 It is not a parallel system. Everything is a desk, a desk item or a desk document from `src/studyDesk`:
@@ -24,7 +24,7 @@ It is not a parallel system. Everything is a desk, a desk item or a desk documen
 | A tagged passage | The same item carrying a `move` |
 | A thought | A note (`note`, or a Ḥāshiya `line`) |
 | A masʾala | A `question` item, now with an answer |
-| A comparison link | A row of the new `links` table between two items |
+| A comparison link | A row of the new `links` table between two items (kept; no screen makes or shows them since Muqābala was set aside) |
 | A closing line | A row of the new `journal` table |
 
 ## 2. Expected behaviour
@@ -45,8 +45,7 @@ It is not a parallel system. Everything is a desk, a desk item or a desk documen
   - **Document**: the thread desk's own desk document, embedded (headings, lists, "/" picker, the + line, export).
     Members are its side panel; joining a thread puts the item at the end of the document, as a capture does on a
     book desk. Every quote keeps its citation and Go to source.
-  - **Argument**: the tree built from moves: definitions first (with a note when a Muqābala link says two differ),
-    then claims with their evidence and objections, replies under objections, open masāʾil placed under the passage
+  - **Argument**: the tree built from moves: definitions first, then claims with their evidence and objections, replies under objections, open masāʾil placed under the passage
     they were asked on, then "Not tied yet".
   - **Gathered**: a timeline (a dot per item added, coloured by book) and the members grouped by book.
   - **Masāʾil**: the thread's questions, open and answered, with Find the answer and Reopen.
@@ -56,7 +55,7 @@ It is not a parallel system. Everything is a desk, a desk item or a desk documen
   جواب Reply (5). Nothing is tagged automatically.
 - A passage already on the desk shows a small handle at its start (its Arabic move label, or a dot). Clicking it opens
   the passage bar: "What is this passage doing?", the five moves, Write a thought, Ask a masʾala (Alt+Q),
-  Compare (Alt+J), the thread buttons, Close (Esc). Pressing a move again takes it off.
+  the thread buttons, Close (Esc). Pressing a move again takes it off.
 - A new passage: select text (or drag over a scanned page) as for the Highlighter. On PDF pages the five moves join the
   Highlighter's bar; in the quiet reader a slim bar of moves appears below the selection (the highlight colours stay
   above it). Choosing a move keeps the passage as a quote on the current desk and opens its passage bar.
@@ -70,10 +69,9 @@ It is not a parallel system. Everything is a desk, a desk item or a desk documen
 
 **Backlinks**
 - Beside each passage something touches, a dark count badge. Touching means: thoughts on it (its own gloss and notes
-  at its place), thoughts linked to those (from any book), masāʾil asked on it or answered by it, and Muqābala links.
+  at its place), thoughts linked to those (from any book), masāʾil asked on it or answered by it.
 - Clicking the badge shows "Touching this passage" in the Ḥāshiya strip (over the right margin in the quiet reader):
-  the passage, each thought (with "linked from your thought" where it came by a link), each masʾala, each link with
-  Open side by side. "Back to the Ḥāshiya" or Esc closes it.
+  the passage, each thought (with "linked from your thought" where it came by a link), each masʾala. "Back to the Ḥāshiya" or Esc closes it.
 
 **Masāʾil (Alt+Q)**
 - Question items have an open or answered state. Alt+Q asks a new masʾala: on the passage in the bar, or on the
@@ -85,34 +83,12 @@ It is not a parallel system. Everything is a desk, a desk item or a desk documen
   and Not this one. The answer is the passage item, saved with its citation and the date. Undo is offered.
 - Answered questions can be reopened.
 
-**Muqābala (Alt+J)**
-- Two live books side by side: each pane shows the book itself, its text chapter by chapter (rendered as the quiet
-  reader renders it, so `clean:` places line up) or, for a book added from a PDF, its pages (pdf.js, with the text
-  layer). A PDF book whose text reflowed can be shown either way (Text / PDF pages). Any book in the library can be
-  opened; books with kept passages come first.
-- Passages kept from the book are marked in place (in their move's colour). As in the prototype, every passage is
-  clickable: each sentence lights up under the pointer (text split at . ! ? ؟ ۔ … within its paragraph; on PDF pages,
-  the text-layer runs around the pointer up to a stop or a paragraph gap), and a click picks it. Drag across words to
-  choose your own (Use these words); on a scanned page, drag a box round them. A passage picked this way is a draft:
-  it is kept on the book's desk (as the reader's Highlighter would) only when the link is made, so picking and
-  cancelling leaves nothing behind. Click a passage on one side, then one on the other, then pick a relation (Same
-  text, Supports, Differs, Explains, Quotes) and write an optional note.
-- The look follows the prototype: a 170px gap between the books for the wires and chips; each pane headed by the
-  book's title in Arabic type with the book picker beside it; pages on a stage, a text chapter set as a page of the
-  book (paper, a running head over a double rule, a foot); a move's Arabic name (siglum) on the line before its
-  passage, the passage underlined in the move's colour; a picked passage in the selection colour with a dashed edge;
-  plain chips (dark when chosen). Under the panes, the new link (or the chosen link's note, citations and "Shows as a
-  touch on both passages") sits beside "All links in your library"; the hint sits right of the title.
-- Each pane has a chapter list (text) or the page it is on (PDF), and "Kept here" to jump to a passage. A passage
-  kept in the other view of a PDF book is counted under the pane, and opening one of its links switches the view.
-- Lines join linked passages across the gap, coloured by relation (Differs dashed), with the relation's label on a
-  chip in the gap, and follow both panes as they scroll. When one end is scrolled away (or in another chapter) the
-  line points at the pane's top or bottom edge, dotted. Clicking a chip shows the link's note and both citations and
-  scrolls both panes to its passages; so does a row of All links when it joins the two books on screen.
-- Under 900px wide the panes stack and the links are listed instead of drawn.
-- "All links in your library" lists every link; opening one shows its two books.
-- Alt+J (or Compare in the passage bar) opens Muqābala with that passage picked on the left.
-- Links count as backlinks on both passages.
+**Muqābala (set aside)**
+- Muqābala (two live books side by side, with relation links between passages, Alt+J) was built through 0.122.0 and
+  set aside in 0.123.0: the reader did not want it for now. Its full version is preserved on the branch
+  `claude/thinking-desk-muqabala` (tag `thinking-desk-with-muqabala`); reverting the 0.123.0 commit brings it back.
+- Nothing in the app makes or shows a link now: no Alt+J, no Compare in the dock or the passage bar, no Open side by
+  side, no Muqābala row in Settings. The data stays (see section 3).
 
 **Revisit**
 - Thoughts written in the thinking composer are scheduled with the review scheduler (FSRS, `src/vocabulary/fsrs.ts`),
@@ -160,6 +136,8 @@ until sync covers it, in the full export and import (newer wins by `updatedAt`).
 - Migration: version 1 rows need no change (every new field is optional); the upgrade only adds the tables and the
   index. Tested by opening a version 1 database with rows in it.
 - Passages are existing locations; no new location format.
+- The `links` table and the `DeskLink` store functions stay with their data (desk database version 2 had already
+  shipped to test profiles; links are still in the full export and import). Nothing reads them since 0.123.0.
 - Preferences (src/types/preferences.ts): see switches.
 
 ## 4. Switches
@@ -169,8 +147,9 @@ Settings → Reading → Thinking desk:
 - `thinkingFrontEnabled` (default **off**): the whole feature. Off: no host, no shortcut, no Today panel, no screens,
   no export formats; the study desk is exactly as before. Data stays.
 - One switch per part, all on by default under the main switch: `thinkingThreads`, `thinkingMoves`,
-  `thinkingBacklinks`, `thinkingMasail`, `thinkingMuqabala`, `thinkingRevisit`, `thinkingToday`,
-  `thinkingClosingPrompt` (the off switch for the closing sheet), `thinkingExport`.
+  `thinkingBacklinks`, `thinkingMasail`, `thinkingRevisit`, `thinkingToday`,
+  `thinkingClosingPrompt` (the off switch for the closing sheet), `thinkingExport`. `thinkingMuqabala` still exists in the
+  preferences but is unused (and has no row in Settings) since 0.123.0, so saved settings stay valid.
 - The study desk's own `studyDeskEnabled` must be on (the thinking desk uses its desks).
 
 ## 5. Edge cases
@@ -182,8 +161,6 @@ Settings → Reading → Thinking desk:
 - A reply tied to an objection that loses its move shows under "Not tied yet".
 - Answer deleted: the question reads as open again.
 - Thoughts dropped are left out of Revisit, Touching and Gathered, but stay on their desk and in their documents.
-- Two clicks for a Muqābala link on the same side replace the first pick; a link to itself is refused.
-- A link between passages of the same book is allowed (two places in one book).
 - The closing sheet never shows during a capture trip, and only once per reader visit.
 - On this day with no reading a year ago shows six months ago; with neither, it is left out.
 - Very many passages on a page: handles and badges are drawn for the pages on screen only.
@@ -198,7 +175,6 @@ Settings → Reading → Thinking desk:
   ties are asked for Evidence, Objection and Reply; the Argument tab shows the tree.
 - Badges count everything that touches a passage and the Touching panel lists them.
 - A masʾala can be asked, hunted, answered with a citation, and reopened.
-- A Muqābala link can be made, drawn, listed on narrow screens, and counts on both passages.
 - Revisit grades with FSRS; Revise keeps the old wording; Drop archives with Undo.
 - Today shows On this day, revisits due, open masāʾil and threads; the closing sheet saves a journal line.
 - Obsidian and Notion exports come out as described.
@@ -216,10 +192,13 @@ Settings → Reading → Thinking desk:
   handle at its start (its move label, or a dot), and a new passage from a selection, as the Highlighter does.
 - **Labels "inline".** The quiet reader's text is never changed (its offsets are the `clean:` places), so labels and
   underlines are drawn over the text, just before the passage's first word, not inserted into it.
-- **Muqābala panes are live books** (0.120.0; at first they only listed kept passages). They are light readers of their
-  own (`src/thinking/live/`), not two copies of the quiet reader or the pages view: one chapter at a time for text, and
-  for PDFs only the pages near the view are drawn. No dictionary, highlights or dock inside them; the reader is one
-  click away from any link (the citations in the link panel).
+- **Muqābala set aside** (0.123.0). The reader decided it is not wanted for now. It is removed from this branch (the
+  screen, `src/thinking/live/`, `muqabala.ts`, its CSS and every entry point) and preserved whole on the branch
+  `claude/thinking-desk-muqabala` and the tag `thinking-desk-with-muqabala`. The data side stays: the `links` table,
+  `DeskLink` and the store functions, so desk database version 2 (already on test profiles) and the export are
+  unchanged. Backlinks and the Argument tab no longer read links (the Muqābala cards and "These definitions differ" are
+  gone), since nothing can make or delete one; `thinkingMuqabala` stays in the preferences, unused, as `thinkingExport`
+  did. `Frame` lost its `beside` prop, which only Muqābala used.
 - **Thread membership** is `threads` on the item (plus `joined` dates for the growth chart), not a copy: the item stays
   on its own desk and is embedded in the thread's document.
 - **A thought's history** keeps earlier wordings in `versions`; the item's own text is the current one.
@@ -227,7 +206,7 @@ Settings → Reading → Thinking desk:
   set a week out by hand.
 - **Closing prompt** shows when the reader closes to the Library; book switches inside one visit count as one session,
   journalled under the book open at the end. Pages are counted for PDF books (pages seen); text books report minutes.
-- **Screens** (Thread, Masāʾil, Muqābala, Revisit) are full-page sheets over the app, loaded on first use, opened from
+- **Screens** (Thread, Masāʾil, Revisit) are full-page sheets over the app, loaded on first use, opened from
   the reader's dock, the passage bar and Today; they have no address of their own yet.
 - **Size.** Everything new loads on demand; the entry script and styles were within 12 kB and 1.3 kB of their budgets.
 
@@ -236,5 +215,5 @@ Settings → Reading → Thinking desk:
 - Phase 8, Obsidian and Notion export, was set aside before it was folded in; `thinkingExport` exists but does nothing yet.
 
 - Sync of the new tables (they follow the desk tables).
-- Moves inside epub (iframe) books; looking words up inside a Muqābala pane.
+- Moves inside epub (iframe) books.
 - Hash addresses for the new screens.

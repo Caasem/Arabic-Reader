@@ -9,7 +9,6 @@ import { ThinkingToast } from './toast';
 import './thinking.css';
 
 const ThreadScreen = lazy(() => import('./screens/ThreadScreen').then((m) => ({ default: m.ThreadScreen })));
-const MuqabalaScreen = lazy(() => import('./screens/MuqabalaScreen').then((m) => ({ default: m.MuqabalaScreen })));
 const MasailScreen = lazy(() => import('./screens/MasailScreen').then((m) => ({ default: m.MasailScreen })));
 const RevisitScreen = lazy(() => import('./screens/RevisitScreen').then((m) => ({ default: m.RevisitScreen })));
 
@@ -51,7 +50,6 @@ export function AppHost({ onOpenBook }: AppHostProps) {
       {screen && (
         <Suspense fallback={<div className="th-screen th-screen--loading" role="status">Loading…</div>}>
           {screen.kind === 'thread' && prefs.thinkingThreads && <ThreadScreen screen={screen} onOpenBook={onOpenBook} />}
-          {screen.kind === 'muqabala' && prefs.thinkingMuqabala && <MuqabalaScreen key={screen.link ?? screen.a ?? ''} screen={screen} onOpenBook={onOpenBook} />}
           {screen.kind === 'masail' && prefs.thinkingMasail && <MasailScreen onOpenBook={onOpenBook} />}
           {screen.kind === 'revisit' && prefs.thinkingRevisit && <RevisitScreen screen={screen} onOpenBook={onOpenBook} />}
         </Suspense>

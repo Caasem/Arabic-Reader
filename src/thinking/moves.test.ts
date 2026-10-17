@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { DeskItem, DeskLink } from '../studyDesk/types';
+import type { DeskItem } from '../studyDesk/types';
 import { buildArgument } from './argument';
 import { canTie, moveForKey, movePatch, tieCandidates, tieKind, tieOf, tieQuestion } from './moves';
 
@@ -60,11 +60,9 @@ describe('the argument tree', () => {
     const q1 = item('q1', { type: 'question', text: 'Why?', source: { bookId: 'b', location: 'pdf:62:0:0.55:1:0' } });
     const q2 = item('q2', { type: 'question', text: 'And?' });
     const done = item('q3', { type: 'question', answer: 'c' });
-    const links: DeskLink[] = [{ id: 'l1', a: 'd1', b: 'd2', rel: 'differs', note: '', createdAt: 1, updatedAt: 1 }];
     const members = [r, d1, o, c, e, d2, loose, outside, q1, q2, done];
-    const arg = buildArgument(members, map(members), links, (q) => !q.answer);
+    const arg = buildArgument(members, map(members), (q) => !q.answer);
     expect(arg.definitions.map((n) => n.item.id)).toEqual(['d1', 'd2']);
-    expect(arg.tensions.map((t) => [t.a.id, t.b.id])).toEqual([['d1', 'd2']]);
     expect(arg.claims).toHaveLength(1);
     const claim = arg.claims[0];
     expect(claim.kids.map((k) => k.item.id)).toEqual(['o', 'e']);
@@ -77,7 +75,7 @@ describe('the argument tree', () => {
   it('puts a reply whose objection is loose under that objection', () => {
     const o = item('o', { move: 'objection' });
     const r = item('r', { move: 'reply', tie: 'o' });
-    const arg = buildArgument([r, o], map([r, o]), [], () => true);
+    const arg = buildArgument([r, o], map([r, o]), () => true);
     expect(arg.loose.map((n) => [n.item.id, n.kids.map((k) => k.item.id)])).toEqual([['o', ['r']]]);
   });
 });

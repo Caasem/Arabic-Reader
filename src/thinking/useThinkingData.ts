@@ -1,24 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
-import { listDesks, listItems, listJournal, listLinks, onDeskChange } from '../studyDesk/deskStore';
-import type { Desk, DeskItem, DeskLink, JournalEntry } from '../studyDesk/types';
+import { listDesks, listItems, listJournal, onDeskChange } from '../studyDesk/deskStore';
+import type { Desk, DeskItem, JournalEntry } from '../studyDesk/types';
 
 export interface ThinkingData {
   desks: Desk[];
   items: DeskItem[];
-  links: DeskLink[];
   journal: JournalEntry[];
   byId: Map<string, DeskItem>;
   loaded: boolean;
 }
 
-/** Every desk, item, link and journal line, kept current as anything changes them. */
+/** Every desk, item and journal line, kept current as anything changes them. */
 export function useThinkingData(): ThinkingData {
-  const [data, setData] = useState<Omit<ThinkingData, 'byId'>>({ desks: [], items: [], links: [], journal: [], loaded: false });
+  const [data, setData] = useState<Omit<ThinkingData, 'byId'>>({ desks: [], items: [], journal: [], loaded: false });
   useEffect(() => {
     let alive = true;
     const load = () =>
-      void Promise.all([listDesks(), listItems(), listLinks(), listJournal()]).then(([desks, items, links, journal]) => {
-        if (alive) setData({ desks, items, links, journal, loaded: true });
+      void Promise.all([listDesks(), listItems(), listJournal()]).then(([desks, items, journal]) => {
+        if (alive) setData({ desks, items, journal, loaded: true });
       });
     load();
     const off = onDeskChange(load);

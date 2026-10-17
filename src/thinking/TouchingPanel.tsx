@@ -6,8 +6,6 @@ import { ago, citeOf, short, thoughtText } from './passages';
 import { setThinking } from './state';
 import type { Touch } from './touching';
 
-const REL: Record<string, string> = { same: 'Same text', supports: 'Supports', differs: 'Differs', explains: 'Explains', quotes: 'Quotes' };
-
 /**
  * "Touching this passage", in the Ḥāshiya strip: what the badge counted, each as a margin card. Parts after backlinks
  * add their own actions to the cards (`actions`).
@@ -54,20 +52,6 @@ export function TouchingPanel({
       </p>
       {!touches.length && <p className="th-empty">Nothing touches it yet.</p>}
       {touches.map((t) => {
-        if (t.kind === 'link')
-          return (
-            <div key={'l' + t.link.id} className="th-card th-card--link">
-              <div className="th-card__top">
-                <span className="th-kind th-kind--link">Muqābala · {REL[t.link.rel]}</span>
-                {source(t.other)}
-              </div>
-              <p className={'th-excerpt' + (t.other.ar ? ' th-ar' : '')} dir="auto">
-                {short(t.other.text, 90)}
-              </p>
-              {t.link.note && <p className="th-card__text">{t.link.note}</p>}
-              {actions?.(t)}
-            </div>
-          );
         const item = t.item;
         const label = t.kind === 'gloss' ? 'Your gloss' : t.kind === 'question' ? (item.answer ? 'Masʾala · answered' : 'Masʾala · open') : 'Thought';
         const words = t.kind === 'gloss' ? (item.body ?? '') : t.kind === 'question' ? wordsOf(item) : thoughtText(item);

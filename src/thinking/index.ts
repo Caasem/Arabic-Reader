@@ -1,6 +1,6 @@
 /**
- * The thinking desk (docs/features/thinking-front.md): threads, argument moves, backlinks, masāʾil, Muqābala,
- * Revisit, Today and the closing prompt, built on the study desk's desks, items and documents (src/studyDesk).
+ * The thinking desk (docs/features/thinking-front.md): threads, argument moves, backlinks, masāʾil, Revisit, Today
+ * and the closing prompt, built on the study desk's desks, items and documents (src/studyDesk).
  * Self-contained: the app wires it through `thinkingFeature` in src/features/registry.ts; the other touch points are
  * listed in it. Every change is listed in docs/changes/thinking-front-changes.md. To remove the feature, delete this
  * folder, its registry line and those touch points. Everything here loads on demand (gates.tsx).
@@ -17,7 +17,7 @@ export const thinkingFeature: FeatureDescriptor = {
   LibraryTop: ThinkingToday,
   SettingsSection: ThinkingSettings,
   settingsGroup: 'reading',
-  chords: ['Alt+T', 'Alt+Q', 'Alt+J'],
+  chords: ['Alt+T', 'Alt+Q'],
   touchPoints: [
     'the `thinking*` preferences (src/types/preferences.ts, src/state/defaultPreferences.ts)',
     "the study desk's data: the thinking fields on DeskItem and Desk, the links and journal tables, desk database version 2 and their store functions (src/studyDesk: types, db, deskStore), in the storage registry and the full export",

@@ -8,11 +8,7 @@ import { readString, removeKey, writeString } from '../utils/storage';
  * a question being hunted, a passage whose touches are shown, and a place to jump to once a book is open.
  */
 
-export type Screen =
-  | { kind: 'thread'; id?: string; tab?: ThreadTab }
-  | { kind: 'masail' }
-  | { kind: 'muqabala'; a?: string; b?: string; link?: string }
-  | { kind: 'revisit'; id?: string };
+export type Screen = { kind: 'thread'; id?: string; tab?: ThreadTab } | { kind: 'masail' } | { kind: 'revisit'; id?: string };
 
 export type ThreadTab = 'document' | 'argument' | 'gathered' | 'masail';
 

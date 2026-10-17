@@ -45,6 +45,12 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.123.0 — 2026-10-17
+
+- **Muqābala is set aside for now.** The side-by-side screen, Alt+J, Compare and Open side by side are gone from the
+  thinking desk, which makes it lighter to load. Links you already made stay in your data and in exports. The whole
+  feature is kept on the branch `claude/thinking-desk-muqabala` and can come back.
+
 ## v0.122.0 — 2026-10-13
 
 - **Muqābala: every passage is clickable, as in the prototype.** Each sentence lights up under the pointer and a click
