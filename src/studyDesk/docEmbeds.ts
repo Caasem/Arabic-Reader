@@ -67,6 +67,9 @@ export function fillEmbed(host: HTMLElement, item: DeskItem | undefined, opts: E
   if (item.ar) host.setAttribute('dir', 'rtl');
   else host.removeAttribute('dir');
   if (item.fromMargin) host.classList.add('sd-emb--margin');
+  // The argument move the thinking desk tagged it with (its label is drawn by src/thinking's stylesheet).
+  if (item.move) host.dataset.move = item.move;
+  else delete host.dataset.move;
 
   const head = el('div', 'sd-emb__head');
   const text = el('span', item.ar ? 'sd-emb__text sd-emb__text--ar' : 'sd-emb__text', itemTitle(item));

@@ -115,6 +115,8 @@ export const STORAGE_REGISTRY: readonly StoreSpec[] = [
   }),
   table(DESK_DB, 'items', { ...localRecords, note: 'Study desk items (src/studyDesk): captures, concepts, margin notes. Local only until sync covers it.' }),
   table(DESK_DB, 'desks', { ...localRecords, note: 'Study desks and their documents (sanitized HTML with item embeds). Local only until sync covers it.' }),
+  table(DESK_DB, 'links', { ...localRecords, note: 'Thinking desk Muqābala links between two desk items (src/studyDesk, docs/features/thinking-front.md). Local only until sync covers it.' }),
+  table(DESK_DB, 'journal', { ...localRecords, note: 'Thinking desk reading journal: a closing line per book closed. Local only until sync covers it.' }),
   table(INK_DB, 'strokes', { ...localRecords, note: 'Ink written on book pages (src/annotate): PDF strokes in page units, clean-text strokes tied to a word. Local only until sync covers it.' }),
   table(INK_DB, 'sketches', { ...localRecords, note: 'Sketch sheets beside the pages (src/annotate): freehand strokes and diagram nodes per page or passage. Local only until sync covers it.' }),
   table(BLOBS_DB, 'blobIndex', { ...cache, evictable: false, note: 'BlobStore index: rebuildable by a scan, but it holds the owner references, so never evicted.' }),

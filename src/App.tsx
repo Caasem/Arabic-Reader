@@ -193,7 +193,7 @@ function App() {
 
   return (
     <PreferencesProvider>
-      {FEATURES.map(({ id, AppHost }) => AppHost && <AppHost key={id} />)}
+      {FEATURES.map(({ id, AppHost }) => AppHost && <AppHost key={id} onOpenBook={openBook} />)}
       <AutoSync />
       <AnkiAutoSync />
       {firstRun ? (

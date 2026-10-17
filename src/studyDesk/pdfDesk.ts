@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import type { OpenedPdf } from '../pdf/pages/pdfjsLoader';
 import { parsePdfLocation } from './pageGeometry';
-import type { DeskItem } from './types';
+import type { DeskItem, NewDeskItem } from './types';
 
 /**
  * Shared between the boxes drawn inside each PDF page (PdfDeskLayer, a pages-view extension that the pages
@@ -17,9 +17,11 @@ interface PdfDeskState {
   tie: string | null;
   /** The open PDF, for reading scanned pages (published by the page layer, which the pages view hands it). */
   opened: OpenedPdf | null;
+  /** The Highlighter's words waiting in its bar: keep them as a quote with extra fields (the thinking desk's moves). */
+  pending: ((extra: Partial<NewDeskItem>) => Promise<DeskItem | null>) | null;
 }
 
-let state: PdfDeskState = { items: [], hover: null, focus: null, tie: null, opened: null };
+let state: PdfDeskState = { items: [], hover: null, focus: null, tie: null, opened: null, pending: null };
 const listeners = new Set<() => void>();
 
 function set(patch: Partial<PdfDeskState>): void {
@@ -36,6 +38,7 @@ export const setPdfDeskTie = (tie: string | null): void => set({ tie });
 export const publishOpenedPdf = (opened: OpenedPdf | null): void => {
   if (state.opened !== opened) set({ opened });
 };
+export const setPdfDeskPending = (pending: PdfDeskState['pending']): void => set({ pending });
 export const pdfDeskState = (): PdfDeskState => state;
 
 const subscribe = (l: () => void) => {
