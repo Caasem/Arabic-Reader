@@ -161,6 +161,10 @@ export interface ReaderPreferences {
   annotateEnabled: boolean;
   /** Ink gestures (src/annotate/gestures.ts): while writing, underline highlights, circle looks up, circle and tick saves. Off by default. */
   inkGesturesEnabled: boolean;
+  /** Nodes (src/nodes): dots placed anywhere on a page, to attach notes and cards to (Alt+O). */
+  nodesEnabled: boolean;
+  /** How a new node opens: a side panel with an outline (reticle) or a tree across the page (branch). */
+  nodesDefaultStyle: 'reticle' | 'branch';
   /** Show a verb's form (I-X) and its root's other verbs in the dictionary popup (src/verbForms). */
   verbFormsEnabled: boolean;
   /** The aligned, roomier dictionary popup layout (src/popupClean). Off restores the classic popup. */
