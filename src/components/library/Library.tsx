@@ -19,6 +19,7 @@ import { highlightsMarkdown } from '../../dataExport/highlightsMd';
 import { saveFile } from '../../utils/saveFile';
 import { hasPdfChoice, rememberPdfView, type PdfView } from '../../pdf/pages/pdfView';
 import { GettingStartedCard } from '../../gettingStarted';
+import { FEATURES } from '../../features/registry';
 import { BookCover } from './BookCover';
 import { BookDetails } from './BookDetails';
 import { ContinueReading } from './ContinueReading';
@@ -465,6 +466,7 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
         </div>
       )}
 
+      {!loading && FEATURES.map(({ id, LibraryTop }) => LibraryTop && <LibraryTop key={id} onOpenBook={openBook} />)}
       {!loading && <GettingStartedCard books={books} onOpenBook={(b) => openBook(b)} />}
 
       {!loading && (heroBook || showQuote) && (

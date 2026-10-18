@@ -21,7 +21,14 @@ const ago = (t: number) => {
   return d <= 0 ? 'today' : d === 1 ? 'yesterday' : d < 30 ? `${d} days ago` : new Date(t).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-/** Every desk, from every book: search, open, start a new one, delete one of your own. */
+/** A thread's name: its Arabic and English names when it has both. */
+const nameOf = (d: Desk) => (d.titleAr && d.titleAr !== d.title ? `${d.titleAr} · ${d.title}` : d.title);
+
+/** Deleting a thread: what it gathered stays on its own desks; what was written in it goes with it. */
+const threadDeleteLabel = (made: number) =>
+  made ? `Delete the thread and the ${made === 1 ? 'note' : `${made} notes`} written in it (gathered items stay)` : 'Delete the thread (gathered items stay on their desks)';
+
+/** Every desk, from every book: search, open, start a new one, delete one of your own (or a thread). */
 export function DeskList({ desks, items, current, bookId, onOpen, onDeleted, onClose, onToast }: Props) {
   const [query, setQuery] = useState('');
   const [confirm, setConfirm] = useState<string | null>(null);
@@ -38,16 +45,27 @@ export function DeskList({ desks, items, current, bookId, onOpen, onDeleted, onC
     return () => window.removeEventListener('keydown', onKey, true);
   }, [onClose]);
 
-  const counts = useMemo(() => {
+  // Items that live on each desk (for a thread: written in it; they go when it is deleted).
+  const ownCounts = useMemo(() => {
     const m = new Map<string, number>();
     items.forEach((i) => m.set(i.deskId, (m.get(i.deskId) ?? 0) + 1));
     return m;
   }, [items]);
+  const counts = useMemo(() => {
+    const m = new Map<string, number>();
+    items.forEach((i) => {
+      m.set(i.deskId, (m.get(i.deskId) ?? 0) + 1);
+      // A thread holds the items that joined it, which stay on their own desks.
+      i.threads?.forEach((t) => m.set(t, (m.get(t) ?? 0) + 1));
+    });
+    return m;
+  }, [items]);
 
   const q = query.trim().toLowerCase();
-  const match = (d: Desk) => !q || d.title.toLowerCase().includes(q) || d.html.replace(/<[^>]+>/g, ' ').toLowerCase().includes(q);
+  const match = (d: Desk) => !q || d.title.toLowerCase().includes(q) || !!d.titleAr?.includes(q) || d.html.replace(/<[^>]+>/g, ' ').toLowerCase().includes(q);
   const byRecent = (a: Desk, b: Desk) => b.updatedAt - a.updatedAt;
   const own = desks.filter((d) => d.kind === 'own' && match(d)).sort(byRecent);
+  const threads = desks.filter((d) => d.kind === 'thread' && match(d)).sort(byRecent);
   const books = desks.filter((d) => d.kind === 'book' && match(d)).sort(byRecent);
 
   async function make() {
@@ -57,18 +75,19 @@ export function DeskList({ desks, items, current, bookId, onOpen, onDeleted, onC
 
   const row = (d: Desk) => {
     const n = counts.get(d.id) ?? 0;
-    const name = d.kind === 'book' && d.bookId === bookId ? `${d.title} (this book)` : d.title;
+    const name = d.kind === 'book' && d.bookId === bookId ? `${d.title} (this book)` : nameOf(d);
     return (
       <li key={d.id} className={'sd-dl__row' + (d.id === current ? ' sd-dl__row--on' : '')}>
         <button type="button" className="sd-dl__open" onClick={() => onOpen(d.id)} aria-current={d.id === current ? 'page' : undefined}>
-          <span className={looksArabic(d.title) ? 'sd-dl__t sd-dl__t--ar' : 'sd-dl__t'} dir="auto">
+          <span className={looksArabic(d.titleAr || d.title) ? 'sd-dl__t sd-dl__t--ar' : 'sd-dl__t'} dir="auto">
             {name}
           </span>
           <span className="sd-dl__m">
             {n === 1 ? '1 item' : `${n} items`} · {ago(d.updatedAt)}
+            {d.archivedAt ? ' · archived' : ''}
           </span>
         </button>
-        {d.kind === 'own' &&
+        {d.kind !== 'book' &&
           (confirm === d.id ? (
             <span className="sd-dl__confirm">
               <button
@@ -77,19 +96,19 @@ export function DeskList({ desks, items, current, bookId, onOpen, onDeleted, onC
                 onClick={() =>
                   void deleteDesk(d.id).then(() => {
                     setConfirm(null);
-                    onToast(`Deleted ${d.title}`);
+                    onToast(`Deleted ${nameOf(d)}`);
                     onDeleted(d.id);
                   })
                 }
               >
-                Delete it and its {n === 1 ? 'item' : `${n} items`}
+                {d.kind === 'thread' ? threadDeleteLabel(ownCounts.get(d.id) ?? 0) : `Delete it and its ${n === 1 ? 'item' : `${n} items`}`}
               </button>
               <button type="button" className="sd-dl__keep" onClick={() => setConfirm(null)}>
                 Keep
               </button>
             </span>
           ) : (
-            <button type="button" className="sd-dl__x" aria-label={`Delete ${d.title}`} title="Delete this desk" onClick={() => setConfirm(d.id)}>
+            <button type="button" className="sd-dl__x" aria-label={`Delete ${nameOf(d)}`} title={d.kind === 'thread' ? 'Delete this thread' : 'Delete this desk'} onClick={() => setConfirm(d.id)}>
               ×
             </button>
           ))}
@@ -110,7 +129,7 @@ export function DeskList({ desks, items, current, bookId, onOpen, onDeleted, onC
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
-              const first = own[0] ?? books[0];
+              const first = own[0] ?? threads[0] ?? books[0];
               if (first) onOpen(first.id);
             }
           }}
@@ -122,6 +141,12 @@ export function DeskList({ desks, items, current, bookId, onOpen, onDeleted, onC
       <div className="sd-dl__body">
         <h4>Your desks</h4>
         {own.length ? <ul>{own.map(row)}</ul> : <p className="sd-dl__none">{q ? 'None match.' : 'None yet. A desk of your own takes captures from any book: an essay, a topic.'}</p>}
+        {(threads.length > 0 || desks.some((d) => d.kind === 'thread')) && (
+          <>
+            <h4>Threads</h4>
+            {threads.length ? <ul>{threads.map(row)}</ul> : <p className="sd-dl__none">None match.</p>}
+          </>
+        )}
         <h4>Book desks</h4>
         {books.length ? <ul>{books.map(row)}</ul> : <p className="sd-dl__none">{q ? 'None match.' : 'A book gets its desk on its first capture.'}</p>}
       </div>

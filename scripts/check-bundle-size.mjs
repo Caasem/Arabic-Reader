@@ -7,7 +7,9 @@
 // that is not data, a worker or WebAssembly; it also has a budget for its total. Budgets sit about 10%
 // above the sizes measured when this was written (lowered in 0.96.0, when the old readers went; entry
 // script and styles raised in 0.115.0 for nodes: the feature itself is a lazy chunk of 27 kB of script and
-// 12 kB of styles, about 50 kB more app code in all, and moving it out regrouped the modules the entry shares);
+// 12 kB of styles, about 50 kB more app code in all, and moving it out regrouped the modules the entry shares;
+// the app code total raised from 2.75 to 2.85 MB in 0.127.0, when the thinking desk joined nodes on main: both
+// are lazy chunks loaded only when switched on, about 95 kB together, so the entry is unchanged by them);
 // raise one on purpose, in the same commit that explains why. The dictionary data rules go away when
 // the dictionaries become packs (refactor phase 3).
 import { readdirSync, statSync } from 'node:fs';
@@ -28,7 +30,7 @@ const RULES = [
   ['other script', /\.m?js$/, 480 * KB, true],
   ['other styles', /\.css$/, 60 * KB, true],
 ];
-const APP_CODE_TOTAL = 2.75 * MB;
+const APP_CODE_TOTAL = 2.85 * MB;
 
 const dist = process.argv[2] ?? 'dist';
 const assets = join(dist, 'assets');

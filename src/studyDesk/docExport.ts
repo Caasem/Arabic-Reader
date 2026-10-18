@@ -85,7 +85,7 @@ export function documentBlocks(html: string, items: Map<string, DeskItem>, shown
 
 // --- plain text ---------------------------------------------------------------------------------------
 
-function itemText(item: DeskItem, cite: string, md: boolean): string {
+export function itemText(item: DeskItem, cite: string, md: boolean): string {
   const title = itemTitle(item);
   const body = item.text ? (item.body ?? '').trim() : (item.body ?? '').split('\n').slice(1).join('\n').trim();
   const strong = (s: string) => (md ? `**${escapeMd(s)}**` : s);
@@ -124,11 +124,11 @@ export function toPlainText(title: string, blocks: Block[]): string {
 
 // --- Markdown -----------------------------------------------------------------------------------------
 
-function escapeMd(s: string): string {
+export function escapeMd(s: string): string {
   return s.replace(/([\\`*_[\]])/g, '\\$1').replace(/^([#>+-]|\d+\.)(\s)/gm, '\\$1$2');
 }
 
-function runsMd(runs: Run[]): string {
+export function runsMd(runs: Run[]): string {
   return runs
     .map((r) => {
       if (r.text === '\n') return '  \n';

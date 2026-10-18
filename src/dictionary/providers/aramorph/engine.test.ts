@@ -250,6 +250,18 @@ describe('AramorphEngine.lookup', () => {
     expect(engine.lookup('الزززز')).toEqual([]);
   });
 
+  it('drops the article only for readings that can follow it: none with a pronoun ending', () => {
+    const tables = buildTables();
+    tables.dictsuffs = createDictTable(['; header', '\t\tSuff-0\t', 'h\thu\tNSuff-h\t[its/his] <pos>hu/POSS_PRON_3MS</pos>'].join('\n'));
+    tables.tablebc = createMorphTableFromText(['PV Suff-0', 'N Suff-0', 'N NSuff-h'].join('\n'));
+    tables.tableac = createMorphTableFromText(['Pref-0 Suff-0', 'Pref-Wa Suff-0', 'Pref-0 NSuff-h'].join('\n'));
+    const engine = new AramorphEngine();
+    engine.setTables(tables);
+    expect(engine.lookup('قلمه')[0]).toMatchObject({ def: expect.stringContaining('pen'), pos: expect.stringContaining('POSS_PRON') });
+    expect(engine.lookup('القلم')[0]).toMatchObject({ def: expect.stringContaining('pen') });
+    expect(engine.lookup('القلمه')).toEqual([]);
+  });
+
   it('makes missing Form V/VI verbal nouns as hidden stems that carry the root', () => {
     const tables = buildTables();
     const hidden = buildHiddenMasdars(tables.dictstems);

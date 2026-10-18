@@ -724,10 +724,12 @@ export class AramorphEngine {
     }
     // AraMorph lists some verbs without their verbal noun (e.g. تَحاسَدَ but no
     // تَحاسُد), so "the" + that noun matches nothing it shows. Retry without the
-    // article (and any و/ف/ب/ك/ل before it) to at least show the verb.
+    // article (and any و/ف/ب/ك/ل before it) to at least show the verb. A reading
+    // that ends in a pronoun can't follow the article (المدرسه is not مدرس + ه),
+    // so those stay out: a misread like that is still not a word.
     if (!visible(candidates)) {
       const bare = processedWord.replace(/^[wf]?[bkl]?Al(?=.{2})/, '');
-      if (bare !== processedWord) candidates = candidates.concat(this.allSplits(bare));
+      if (bare !== processedWord) candidates = candidates.concat(this.allSplits(bare).filter((r) => !/PRON/.test(r.pos)));
     }
 
     const seen = new Set<string>();
