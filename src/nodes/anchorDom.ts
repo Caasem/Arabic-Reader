@@ -1,5 +1,7 @@
 import { caretAt, offsetWithin, rangeAt } from '../quietReader/textOffsets';
-import { screenToClean, screenToPdf, type Point } from './anchor';
+import { goToBookLocation } from '../readerChords/navigation';
+import { formatCleanLocation } from '../readerCore/location';
+import { PDF_UNITS, screenToClean, screenToPdf, type Point } from './anchor';
 import type { NodeAnchor } from './types';
 
 /**
@@ -104,4 +106,18 @@ export function anchorAtScreen(stage: ReaderStage, x: number, y: number): NodeAn
   }
   const frame = pdfFrameAt(stage.el, x, y);
   return frame ? { kind: 'pdf', page: frame.page, ...screenToPdf({ x, y }, frame.rect) } : null;
+}
+
+/**
+ * Scrolls the open reader to a node's home. False when the reader that shows it is not the one open (a node made in a
+ * book's text is not on its PDF pages, and the other way round) or the place cannot be found.
+ */
+export function jumpToAnchor(a: NodeAnchor): boolean {
+  if (a.kind === 'clean') return !!findCleanStage() && goToBookLocation(formatCleanLocation({ chapter: a.chapter, start: a.offset, end: a.offset }));
+  const stage = findPdfStage();
+  const frame = stage?.querySelector<HTMLElement>(`.pdfp-page[data-page="${a.page}"]`);
+  if (!stage || !frame) return false;
+  const top = frame.getBoundingClientRect().top - stage.getBoundingClientRect().top + stage.scrollTop + (a.y / PDF_UNITS) * frame.offsetWidth;
+  stage.scrollTo({ top: Math.max(0, top - stage.clientHeight / 3) });
+  return true;
 }

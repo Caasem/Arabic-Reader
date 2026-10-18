@@ -15,7 +15,7 @@ export const nodesFeature: FeatureDescriptor = {
   SettingsSection: NodesSettings,
   settingsGroup: 'dictionary',
   settingsAfter: 'annotate',
-  chords: ['Alt+O'],
+  chords: ['Alt+O', 'Alt+Shift+O'],
   touchPoints: [
     'the `nodesEnabled` and `nodesDefaultStyle` preferences (src/types/preferences.ts, src/state/defaultPreferences.ts)',
     'its database (NODES_DB) in the storage registry (src/storage/registry.ts) and the full export (src/dataExport/stores.ts)',

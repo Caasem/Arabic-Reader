@@ -21,7 +21,12 @@ export const IconAddNode = () => (
 );
 export const IconUnlink = () => svg(<path d="M5 7l2-2M4.4 3.6l.8-.8a2 2 0 0 1 2.8 2.8l-.4.4M7.6 8.4l-.8.8a2 2 0 0 1-2.8-2.8l.4-.4M2 2l1 1M10 10l-1-1" {...line} strokeWidth={1.1} />);
 export const IconChevron = () => svg(<path d="M4 2.5L7.5 6 4 9.5" {...line} strokeWidth={1.6} />, 10);
-export const IconCarry = () => svg(<path d="M6 1.5v6.5M3.6 5.6L6 8l2.4-2.4M2.5 10.5h7" {...line} />);
+/** Carry: an arrow that follows. */
+export const IconCarry = () => svg(<path d="M2 6h7M6.5 3.2L9.3 6 6.5 8.8" {...line} />);
+/** Put down here: an arrow landing on a line. */
+export const IconPutDown = () => svg(<path d="M6 1.8v6.4M3.6 5.8L6 8.2l2.4-2.4M2.5 10.5h7" {...line} />);
+/** Send back home: an arrow curling back. */
+export const IconReturn = () => svg(<path d="M4.2 3.2L2.2 5.2l2 2M2.4 5.2h4.4a2.6 2.6 0 0 1 0 5.2H5" {...line} />);
 export const IconTrash = () => svg(<path d="M2.5 3.5h7M5 3.5V2.2h2v1.3M3.4 3.5l.4 6.3h4.4l.4-6.3" {...line} />);
 
 /** The small round badge that says what kind of card it is. */
@@ -50,5 +55,15 @@ export const IconNodeTool = ({ size = 18 }: { size?: number }) => (
   <svg viewBox="0 0 18 18" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden="true" focusable="false">
     <path d="M3.5 6.5v-3h3M11.5 3.5h3v3M14.5 11.5v3h-3M6.5 14.5h-3v-3" />
     <circle cx="9" cy="9" r="1.8" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+/** The dock button for the list of nodes. */
+export const IconNodeList = ({ size = 18 }: { size?: number }) => (
+  <svg viewBox="0 0 18 18" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" aria-hidden="true" focusable="false">
+    <path d="M8 4.5h7M8 9h7M8 13.5h7" />
+    <circle cx="4" cy="4.5" r="1.3" fill="currentColor" stroke="none" />
+    <circle cx="4" cy="9" r="1.3" fill="currentColor" stroke="none" />
+    <circle cx="4" cy="13.5" r="1.3" fill="currentColor" stroke="none" />
   </svg>
 );

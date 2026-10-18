@@ -2,12 +2,13 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPoi
 import type { Point } from './anchor';
 import { anchorAtScreen, type ReaderStage } from './anchorDom';
 import { ancestorIds, subtreeIds, type Rows } from './model';
-import { detach, moveTopNode, nest, setOffset } from './nodeStore';
-import type { CardRec, Offset } from './types';
+import { carryNode, detach, moveTopNode, nest, setOffset } from './nodeStore';
+import type { CardRec, NodeRec, Offset } from './types';
 
 /**
  * Dragging a dot or a card.
- * - A top-level dot moves: it is tied to the nearest word, or the page, where it is let go.
+ * - A top-level dot moves: it is tied to the nearest word, or the page, where it is let go (a carried one just moves on
+ *   the screen, and keeps its home).
  * - A nested dot, or a card in a branch, is spaced out by hand: it stays attached, with an offset from where the layout
  *   would put it (in a reticle panel it floats out of the outline, tied to the panel's dot).
  * - Let go over another node, its dot or its open panel, and it is nested there. Let go over one of its own ancestors and
@@ -167,7 +168,15 @@ export function useNodeDrag(deps: Deps) {
         return;
       }
       if (top) {
-        const at = anchorAtScreen(stage, frame.left + clamp(x0 + ev.clientX - start.x, 0, frame.width), frame.top + clamp(y0 + ev.clientY - start.y, 0, frame.height));
+        const px = clamp(x0 + ev.clientX - start.x, 0, frame.width);
+        const py = clamp(y0 + ev.clientY - start.y, 0, frame.height);
+        // A carried node moves on the screen and keeps its home; any other is tied to where it is let go.
+        if ((row as NodeRec).carried) {
+          settle();
+          void carryNode(id, { x: px / frame.width, y: py / frame.height });
+          return;
+        }
+        const at = anchorAtScreen(stage, frame.left + px, frame.top + py);
         if (!at) return cancel();
         settle();
         void moveTopNode(id, at);

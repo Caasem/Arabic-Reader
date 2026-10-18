@@ -91,7 +91,7 @@ export function nextOrder(rows: Rows, parentId: string | null): number {
 export function nestNode(rows: Rows, id: string, targetId: string, now: number): NodeRec | null {
   const n = rows.nodes.find((x) => x.id === id);
   if (!n || !canNest(rows, id, targetId)) return null;
-  const { anchor: _anchor, carried: _carried, off: _off, ...rest } = n;
+  const { anchor: _anchor, carried: _carried, carryAt: _carryAt, off: _off, ...rest } = n;
   return { ...rest, parentId: targetId, open: n.open, order: nextOrder(rows, targetId), updatedAt: now };
 }
 

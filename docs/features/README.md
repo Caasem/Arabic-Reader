@@ -28,6 +28,7 @@ Status values are from the roadmap.
 | Area | Spec | Status | Needs first |
 |---|---|---|---|
 | Foundation | [sync-v10](sync-v10.md) Storage and sync | in progress (v1 built) | — |
+| Reader | [nodes](nodes.md) Nodes: dots placed anywhere on a page | built locally (feat/nodes) | — |
 | Foundation | [governance](governance.md) Governance and docs | in progress | — |
 | Foundation | [data-arch-spec](data-arch-spec.md) Data architecture | in progress (draft) | governance |
 | Foundation | [infra-cloud](infra-cloud.md) Shared cloud hosting | planned | data-arch-spec |

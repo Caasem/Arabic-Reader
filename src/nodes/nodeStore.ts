@@ -102,6 +102,23 @@ export async function moveTopNode(id: string, anchor: NodeAnchor): Promise<void>
   await apply({ putNodes: [{ ...row, anchor, updatedAt: Date.now() }] });
 }
 
+const unit = (n: number) => Math.min(1, Math.max(0, Math.round(n * 1000) / 1000));
+
+/** Starts carrying a top-level node (or moves it while carried): it stays where it is on screen from page to page. */
+export async function carryNode(id: string, at: { x: number; y: number }): Promise<void> {
+  const row = await nodesDb().nodes.get(id);
+  if (!row || row.parentId !== null) return;
+  await apply({ putNodes: [{ ...row, carried: true, carryAt: { x: unit(at.x), y: unit(at.y) }, updatedAt: Date.now() }] });
+}
+
+/** Stops carrying. With an anchor the node's home moves there (put down here); without, it goes back home. */
+export async function stopCarrying(id: string, anchor?: NodeAnchor): Promise<void> {
+  const row = await nodesDb().nodes.get(id);
+  if (!row || row.parentId !== null) return;
+  const { carried: _carried, carryAt: _carryAt, ...rest } = row;
+  await apply({ putNodes: [{ ...rest, ...(anchor ? { anchor } : {}), updatedAt: Date.now() }] });
+}
+
 /** Sets (or, with null, clears) the hand-placed offset of a node or card. */
 export async function setOffset(kind: 'node' | 'card', id: string, off: Offset | null): Promise<void> {
   const d = nodesDb();

@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { NodesDB } from './db';
 import { buildTree } from './model';
 import {
-  addCard, addChildNode, addTopNode, bookRows, bulkGet, bulkPut, detach, moveTopNode, nest, onNodesChange, patchNode, readAll, removeCard, removeNode, restoreRows,
-  setCardText, setOffset, setNodesDBForTests, setStyle,
+  addCard, addChildNode, addTopNode, bookRows, bulkGet, bulkPut, carryNode, detach, moveTopNode, nest, onNodesChange, patchNode, readAll, removeCard, removeNode, restoreRows,
+  setCardText, setOffset, setNodesDBForTests, setStyle, stopCarrying,
 } from './nodeStore';
 import type { NodeAnchor } from './types';
 
@@ -85,6 +85,46 @@ describe('editing', () => {
     const rows = await bookRows('b1');
     expect(rows.nodes.find((x) => x.id === top.id)?.style).toBe('branch');
     expect(rows.nodes.find((x) => x.id === child.id)).not.toHaveProperty('off');
+  });
+});
+
+describe('carrying', () => {
+  it('carries a top-level node at a place on screen, and keeps its home', async () => {
+    const a = await addTopNode('b1', pdf(2), 'branch', 'A');
+    await carryNode(a.id, { x: 0.25, y: 1.4 });
+    let row = (await bookRows('b1')).nodes[0];
+    expect(row).toMatchObject({ carried: true, carryAt: { x: 0.25, y: 1 }, anchor: pdf(2) });
+    await carryNode(a.id, { x: 0.5, y: 0.5 });
+    row = (await bookRows('b1')).nodes[0];
+    expect(row.carryAt).toEqual({ x: 0.5, y: 0.5 });
+  });
+
+  it('goes back home, or is put down at a new place', async () => {
+    const a = await addTopNode('b1', pdf(2), 'branch', 'A');
+    await carryNode(a.id, { x: 0.5, y: 0.5 });
+    await stopCarrying(a.id);
+    let row = (await bookRows('b1')).nodes[0];
+    expect(row).not.toHaveProperty('carried');
+    expect(row).not.toHaveProperty('carryAt');
+    expect(row.anchor).toEqual(pdf(2));
+    await carryNode(a.id, { x: 0.5, y: 0.5 });
+    await stopCarrying(a.id, pdf(9));
+    row = (await bookRows('b1')).nodes[0];
+    expect(row.anchor).toEqual(pdf(9));
+    expect(row).not.toHaveProperty('carried');
+  });
+
+  it('does not carry a nested node, and loses the carry when nested', async () => {
+    const a = await addTopNode('b1', pdf(1), 'branch', 'A');
+    const b = (await addChildNode('b1', a.id, 'branch', 'B'))!;
+    await carryNode(b.id, { x: 0.5, y: 0.5 });
+    expect((await bookRows('b1')).nodes.find((x) => x.id === b.id)).not.toHaveProperty('carried');
+    const z = await addTopNode('b1', pdf(3), 'branch', 'Z');
+    await carryNode(z.id, { x: 0.1, y: 0.1 });
+    await nest('b1', 'node', z.id, a.id);
+    const row = (await bookRows('b1')).nodes.find((x) => x.id === z.id)!;
+    expect(row).not.toHaveProperty('carried');
+    expect(row).not.toHaveProperty('carryAt');
   });
 });
 

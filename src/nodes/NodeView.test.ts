@@ -74,6 +74,25 @@ describe('an open reticle', () => {
   });
 });
 
+describe('carrying', () => {
+  const open = (extra: Partial<NodeRec> = {}) => [node('a', null, { open: true, ...extra })];
+
+  it('offers to carry a node that is not carried', () => {
+    const out = html(open(), [], { carry: true });
+    expect(out).toContain('data-nx-carry="a"');
+    expect(out).not.toContain('data-nx-putdown');
+    expect(out).not.toContain('is-carried');
+  });
+
+  it('offers to put a carried node down here or send it home, and marks its dot', () => {
+    const out = html(open({ carried: true, carryAt: { x: 0.5, y: 0.5 } }), [], { carry: true });
+    expect(out).toContain('data-nx-putdown="a"');
+    expect(out).toContain('data-nx-return="a"');
+    expect(out).not.toContain('data-nx-carry=');
+    expect(out).toContain('is-carried');
+  });
+});
+
 describe('a branch', () => {
   it('draws a connector per child and a card per card, in a column away from the nearer edge', () => {
     const rows = [node('a', null, { open: true, style: 'branch' }), node('b', 'a', { style: 'branch' })];

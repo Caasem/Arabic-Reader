@@ -42,6 +42,8 @@ export interface NodeRec {
   anchor?: NodeAnchor;
   /** Top-level nodes only: follows the reader from page to page instead of staying on its own page. */
   carried?: boolean;
+  /** While carried: where it sits on screen, as a fraction of the reader's width and height. */
+  carryAt?: { x: number; y: number };
   /**
    * Attached nodes only. In a branch it nudges the node (and what hangs from it) from its place in the layout; in a
    * reticle panel it floats the node out of the outline, still tied to the panel's dot and still counted as its child.

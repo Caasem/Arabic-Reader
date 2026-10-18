@@ -4,7 +4,7 @@ import type { BookMeta } from '../types';
 import { anchorAtScreen } from './anchorDom';
 import { buildTree, type Rows } from './model';
 import { NodeGroup, type ViewCtx } from './NodeView';
-import { addTopNode, detach } from './nodeStore';
+import { addTopNode, carryNode, detach, stopCarrying } from './nodeStore';
 import type { NodeKid, NodeStyle } from './types';
 import { useAnchorPoints } from './useAnchorPoints';
 import { useNodeActions } from './useNodeActions';
@@ -41,11 +41,17 @@ function startEdit(el: HTMLElement) {
  * the listening for everything drawn by NodeView (which marks its controls with `data-nx-*`).
  */
 export function NodesLayer({ book, rows, tree: savedTree, adding, defaultStyle, onAdded }: Props) {
-  const { stage, frame, points } = useAnchorPoints(savedTree);
+  const { stage, frame, points: homes } = useAnchorPoints(savedTree);
   const suppress = useRef(false);
   const [toast, setToast] = useState<{ message: string; undo?: () => void } | null>(null);
   const notify = useCallback((message: string, undo?: () => void) => setToast({ message, undo }), []);
   const actions = useNodeActions(book.id, rows, notify);
+  // Where each top-level dot is drawn: at its home, or (when carried) where it was left on the screen.
+  const points = useMemo(() => {
+    const m = new Map(homes);
+    if (frame) for (const r of savedTree) if (r.node.carried && r.node.carryAt) m.set(r.node.id, { x: r.node.carryAt.x * frame.width, y: r.node.carryAt.y * frame.height });
+    return m;
+  }, [homes, frame, savedTree]);
   const { drag, live, target, hint, onPointerDown } = useNodeDrag({ bookId: book.id, rows, stage, frame, points, suppress });
   /** Something just added that should open for typing: a node's title or a card's text. */
   const focusAfter = useRef<{ kind: 'title' | 'text'; id: string } | null>(null);
@@ -82,7 +88,7 @@ export function NodesLayer({ book, rows, tree: savedTree, adding, defaultStyle, 
   }, [tree, points, focusTick]);
 
   if (!stage || !frame) return null;
-  const ctx: ViewCtx = { width: frame.width, height: frame.height, controls: true, carry: false, drop: target };
+  const ctx: ViewCtx = { width: frame.width, height: frame.height, controls: true, carry: true, drop: target };
 
   const onClick = (e: MouseEvent<HTMLDivElement>) => {
     const t = e.target as HTMLElement;
@@ -99,6 +105,20 @@ export function NodesLayer({ book, rows, tree: savedTree, adding, defaultStyle, 
       return;
     }
     if ((el = hit('data-nx-remove'))) return actions.removeNode(el.dataset.nxRemove!);
+    if ((el = hit('data-nx-carry'))) {
+      const id = el.dataset.nxCarry!;
+      const p = points.get(id);
+      if (p) void carryNode(id, { x: p.x / frame.width, y: p.y / frame.height });
+      return;
+    }
+    if ((el = hit('data-nx-putdown'))) {
+      const id = el.dataset.nxPutdown!;
+      const p = points.get(id);
+      const at = p && anchorAtScreen(stage, frame.left + p.x, frame.top + p.y);
+      if (at) void stopCarrying(id, at);
+      return;
+    }
+    if ((el = hit('data-nx-return'))) return void stopCarrying(el.dataset.nxReturn!);
     if ((el = hit('data-nx-detach'))) {
       const id = el.dataset.nxDetach!;
       const dot = document.querySelector<HTMLElement>(`[data-nx-dot="${id}"]`)?.getBoundingClientRect();
@@ -177,6 +197,12 @@ export function NodesLayer({ book, rows, tree: savedTree, adding, defaultStyle, 
       onKeyDown={onKeyDown}
     >
       {(adding || hint) && <div className="nx-hint">{hint ?? 'Tap the page to place a node'}</div>}
+      {tree.map((root) => {
+        const home = root.node.carried ? homes.get(root.node.id) : undefined;
+        const at = points.get(root.node.id);
+        // A carried node leaves a faint ring where it belongs, while that page is showing.
+        return home && at && Math.hypot(home.x - at.x, home.y - at.y) > 28 ? <i key={`home-${root.node.id}`} className="nx-home" style={{ left: home.x, top: home.y }} aria-hidden="true" /> : null;
+      })}
       {tree.map((root) => {
         const p = drag?.id === root.node.id ? drag : points.get(root.node.id);
         return p ? <NodeGroup key={root.node.id} root={root} x={p.x} y={p.y} ctx={ctx} dragging={drag?.id === root.node.id} /> : null;

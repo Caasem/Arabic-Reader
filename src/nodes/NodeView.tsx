@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { IconAddNode, IconAddNote, IconCarry, IconChevron, IconPin, IconSwap, IconTrash, IconUnlink, KindIcon } from './icons';
+import { IconAddNode, IconAddNote, IconCarry, IconChevron, IconPin, IconPutDown, IconReturn, IconSwap, IconTrash, IconUnlink, KindIcon } from './icons';
 import { floatedNodes, growSide, layoutBranch } from './layout';
 import { countBelow } from './model';
 import type { CardKid, NodeKid } from './types';
@@ -35,7 +35,7 @@ function Dot({ k, top, ctx }: { k: NodeKid; top: boolean; ctx: ViewCtx }) {
   return (
     <button
       type="button"
-      className={`nx-dot nx-st-${n.style}${n.open ? ' is-open' : ''}${c ? ' has' : ''}${ctx.drop?.id === n.id && ctx.drop.part === 'dot' ? ' nx-drop' : ''}`}
+      className={`nx-dot nx-st-${n.style}${n.open ? ' is-open' : ''}${c ? ' has' : ''}${n.carried && n.parentId === null ? ' is-carried' : ''}${ctx.drop?.id === n.id && ctx.drop.part === 'dot' ? ' nx-drop' : ''}`}
       data-nx-dot={n.id}
       data-nx-top={top ? '1' : undefined}
       aria-expanded={n.open}
@@ -77,9 +77,20 @@ function Acts({ k, ctx, pin = true }: { k: NodeKid; ctx: ViewCtx; pin?: boolean 
               <IconUnlink />
             </button>
           ) : ctx.carry ? (
-            <button type="button" className="nx-btn" data-nx-carry={n.id} aria-pressed={!!n.carried} aria-label="Carry across pages" title={n.carried ? 'Stop carrying' : 'Carry across pages'}>
-              <IconCarry />
-            </button>
+            n.carried ? (
+              <>
+                <button type="button" className="nx-btn" data-nx-putdown={n.id} aria-label="Put down here" title="Put down here: this page becomes its home">
+                  <IconPutDown />
+                </button>
+                <button type="button" className="nx-btn" data-nx-return={n.id} aria-label="Send back home" title="Send it back to where it belongs">
+                  <IconReturn />
+                </button>
+              </>
+            ) : (
+              <button type="button" className="nx-btn" data-nx-carry={n.id} aria-label="Carry across pages" title="Carry it with you from page to page">
+                <IconCarry />
+              </button>
+            )
           ) : null}
           <button type="button" className="nx-btn" data-nx-remove={n.id} aria-label="Delete this node" title="Delete this node and what is attached to it">
             <IconTrash />

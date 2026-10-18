@@ -45,6 +45,14 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.115.0 — 2026-10-18
+
+- **Carry a node with you.** An open node has a *Carry* button: it then stays where it is on screen as you turn pages or change
+  chapters, with everything attached to it. A faint ring marks the node's home while that page is showing. *Put down here* makes the
+  page you are on its new home; *Send back home* stops carrying.
+- **A list of every node in the book** (Alt+Shift+O, or *Nodes* in the dock), in book order. Tap one to go to its home; *Bring here*
+  carries it to the page you are reading.
+
 ## v0.114.0 — 2026-10-18
 
 - **Attach to a node.** Open a node and its controls appear: attach a note (it opens for typing at once), attach a branch (a node
