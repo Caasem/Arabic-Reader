@@ -4,10 +4,11 @@ import type { BookMeta } from '../types';
 import { deleteItem, updateItem } from './deskStore';
 import { MarginRing, type DeskCommands, type RingState } from './MarginRing';
 import { formatPdfLocation, pdfRegionInBox } from './pageGeometry';
-import { pdfDeskState, setPdfDeskFocus, setPdfDeskHover, setPdfDeskTie, usePdfDesk } from './pdfDesk';
+import { pdfDeskState, setPdfDeskFocus, setPdfDeskHover, setPdfDeskPending, setPdfDeskTie, usePdfDesk } from './pdfDesk';
 import { snapDrag, type FracBox, type Snapped } from './pdfSnap';
 import { setSnapEnabled, snapEnabled } from './deskMemory';
 import { capture, looksArabic, type DeskData } from './useDesk';
+import type { DeskItem, NewDeskItem } from './types';
 import { useInkUi } from '../annotate/inkUi';
 
 /**
@@ -215,9 +216,10 @@ export function PdfSelect({ book, data, active, commands, onToast }: { book: Boo
     };
   }, [pending]);
 
-  async function keep(where: 'margin' | 'inbox') {
+  /** With `extra` (the thinking desk's moves), the quote carries it, and the caller says what happened. */
+  async function keep(where: 'margin' | 'inbox', extra?: Partial<NewDeskItem>): Promise<DeskItem | null> {
     const p = pending;
-    if (!p?.snapped || busy) return;
+    if (!p?.snapped || busy) return null;
     setBusy(true);
     try {
       const { box, text, via } = p.snapped;
@@ -234,13 +236,15 @@ export function PdfSelect({ book, data, active, commands, onToast }: { book: Boo
           ar: looksArabic(text),
           source: { bookId: book.id, bookTitle: book.title, location, chapterLabel: `Page ${p.page}` },
           inInbox: where === 'inbox' || prefs.studyDeskMarginsToInbox === 'auto',
+          ...extra,
         },
         image ?? undefined
       );
       setPending(null);
       window.getSelection()?.removeAllRanges();
-      if (where === 'margin') setPdfDeskFocus(item.id);
-      onToast(where === 'inbox' ? 'Sent to the inbox' : text ? 'Gloss it in the Ḥāshiya' : 'Region kept; gloss it in the Ḥāshiya');
+      if (where === 'margin' && !extra) setPdfDeskFocus(item.id);
+      if (!extra) onToast(where === 'inbox' ? 'Sent to the inbox' : text ? 'Gloss it in the Ḥāshiya' : 'Region kept; gloss it in the Ḥāshiya');
+      return item;
     } finally {
       setBusy(false);
     }
@@ -279,6 +283,14 @@ export function PdfSelect({ book, data, active, commands, onToast }: { book: Boo
       setBusy(false);
     }
   }
+  // Words waiting in the bar can be kept from outside it (the thinking desk's moves, shown under the bar).
+  const keepRef = useRef(keep);
+  keepRef.current = keep;
+  const ready = !!pending?.snapped && !tie;
+  useEffect(() => {
+    setPdfDeskPending(ready ? (extra) => keepRef.current(prefs.studyDeskMarginsToInbox === 'auto' ? 'inbox' : 'margin', extra) : null);
+    return () => setPdfDeskPending(null);
+  }, [ready, prefs.studyDeskMarginsToInbox]);
   const quoteRef = useRef(quoteInSketch);
   quoteRef.current = quoteInSketch;
   // The sketch panel's Quote button, while words wait here.

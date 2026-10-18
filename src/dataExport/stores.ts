@@ -103,10 +103,10 @@ const personalDictionary: RecordStore = {
 };
 
 /** Study desk tables (src/studyDesk): newer-wins by updatedAt, like the main tables. */
-function deskTable(table: 'items' | 'desks'): RecordStore {
+function deskTable(table: deskStore.DeskTableName): RecordStore {
   return {
     id: `${DESK_DB}/${table}`,
-    read: () => (table === 'items' ? deskStore.readAllItems() : deskStore.readAllDesks()),
+    read: () => deskStore.readAll(table),
     async restore(rows) {
       const { toWrite, result } = await newerThanLocal(rows, 'id', 'updatedAt', (keys) => deskStore.bulkGet(table, keys));
       await deskStore.bulkPut(table, toWrite);
@@ -137,6 +137,8 @@ function storeFor(spec: StoreSpec): RecordStore | undefined {
   }
   if (spec.id === `${DESK_DB}/items`) return deskTable('items');
   if (spec.id === `${DESK_DB}/desks`) return deskTable('desks');
+  if (spec.id === `${DESK_DB}/links`) return deskTable('links');
+  if (spec.id === `${DESK_DB}/journal`) return deskTable('journal');
   if (spec.id === `${INK_DB}/strokes`) return inkTable('strokes');
   if (spec.id === `${INK_DB}/sketches`) return inkTable('sketches');
   return spec.id === personalDictionary.id ? personalDictionary : undefined;

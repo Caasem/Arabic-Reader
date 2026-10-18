@@ -256,7 +256,7 @@ test.describe('pull in', () => {
     await expect(pull).toBeVisible();
     await pull.getByRole('button', { name: 'Highlights' }).click();
     await expect(pull.locator('.dsearch__entry .dsearch__provider', { hasText: 'Highlight' })).toHaveCount(1);
-    await expect(pull.getByRole('button', { name: 'Right Ḥāshiya' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(pull.getByRole('button', { name: 'Right Ḥāshiya', exact: true })).toHaveAttribute('aria-pressed', 'true');
     await page.keyboard.press('Enter');
     await expect(pull).toHaveCount(0);
     await expect(page.locator('.sd-toast')).toContainText('right Ḥāshiya');
@@ -481,7 +481,7 @@ test.describe('margin beside PDF pages', () => {
     await openScan(page);
     await page.keyboard.press('Alt+u');
     const pull = page.getByRole('dialog', { name: 'Pull in' }).or(page.getByRole('complementary', { name: 'Pull in' }));
-    await expect(pull.getByRole('button', { name: 'Right Ḥāshiya' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(pull.getByRole('button', { name: 'Right Ḥāshiya', exact: true })).toHaveAttribute('aria-pressed', 'true');
     await expect(pull.getByRole('button', { name: 'Left Ḥāshiya' })).toHaveCount(0);
     await page.getByLabel('Image file').setInputFiles({ name: 'figure.png', mimeType: 'image/png', buffer: png });
     await expect(page.locator('.sd-pdfmargin .sd-gloss .sd-frame img')).toHaveCount(1);
@@ -506,7 +506,7 @@ test.describe('capture trip', () => {
   async function goToScan(page: Page) {
     await page.keyboard.press('Alt+u');
     const pull = page.getByRole('dialog', { name: 'Pull in' }).or(page.getByRole('complementary', { name: 'Pull in' }));
-    await expect(pull.getByRole('button', { name: 'Right Ḥāshiya' })).toHaveAttribute('aria-pressed', 'true');
+    await expect(pull.getByRole('button', { name: 'Right Ḥāshiya', exact: true })).toHaveAttribute('aria-pressed', 'true');
     await pull.getByText('Go to another book…').click();
     await pull.locator('.dsearch__entry', { hasText: 'scan' }).click();
     await expect(page.locator('.pdfp .qr-where--right')).toContainText('Page 1 of 2', { timeout: 20000 });

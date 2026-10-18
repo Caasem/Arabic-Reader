@@ -7,6 +7,7 @@ import { noteCardFeature } from '../noteCard';
 import { flashCardFeature } from '../flashCard';
 import { picksExportFeature } from '../picksExport';
 import { studyDeskFeature } from '../studyDesk';
+import { thinkingFeature } from '../thinking';
 import { annotateFeature } from '../annotate';
 import { verbFormsFeature } from '../verbForms';
 import { popupCleanFeature } from '../popupClean';
@@ -21,6 +22,16 @@ import { gettingStartedFeature } from '../gettingStarted';
 export interface HostProps {
   book: BookMeta;
   onOpenBook?(book: BookMeta, location?: string): void;
+}
+
+/** What an App host gets: a way to open a book at a place (the thinking desk's screens go to their sources). */
+export interface AppHostProps {
+  onOpenBook?(book: BookMeta, location?: string): void;
+}
+
+/** What a feature's panel above the Library's shelves gets. */
+export interface LibraryTopProps {
+  onOpenBook(book: BookMeta, location?: string): void;
 }
 
 /** The Settings groups (SettingsPanel's sidebar), in order. */
@@ -43,8 +54,10 @@ export interface FeatureDescriptor {
   settingsAfter?: string;
   /** Mounted beside the reader (the new reader and PDF pages), for palettes, cards and overlays. */
   Host?: ComponentType<HostProps>;
-  /** Mounted once in App, for app-wide effects. */
-  AppHost?: ComponentType;
+  /** Mounted once in App, for app-wide effects and screens over the app. */
+  AppHost?: ComponentType<AppHostProps>;
+  /** Shown at the top of the Library, above its shelves (the thinking desk's Today). */
+  LibraryTop?: ComponentType<LibraryTopProps>;
   /** The reader chords it registers (src/readerChords), e.g. "Alt+N". Two features may not claim the same one. */
   chords?: string[];
   /** Every place outside its folder that knows about it, besides this registry: how to remove it. */
@@ -63,6 +76,7 @@ export const FEATURES: FeatureDescriptor[] = [
   flashCardFeature,
   picksExportFeature,
   studyDeskFeature,
+  thinkingFeature,
   annotateFeature,
   verbFormsFeature,
   popupCleanFeature,

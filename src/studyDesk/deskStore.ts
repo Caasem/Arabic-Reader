@@ -1,7 +1,7 @@
 import { newId } from '../utils/id';
 import { DeskDB } from './db';
 import { appendEmbed, EMPTY_DOC, hasEmbed, removeEmbed, replaceEmbedWithHeading, sanitizeDocHtml } from './docHtml';
-import type { Desk, DeskItem, NewDeskItem } from './types';
+import type { Desk, DeskItem, DeskLink, JournalEntry, NewDeskItem } from './types';
 
 let db: DeskDB | null = null;
 function deskDb(): DeskDB {
@@ -23,13 +23,20 @@ export function onDeskChange(listener: () => void): () => void {
 function changed(): void {
   listeners.forEach((l) => l());
 }
+/** Every item as it is added, after it is saved (the thinking desk joins new ones to the active thread). */
+const addedListeners = new Set<(item: DeskItem) => void>();
+export function onItemAdded(listener: (item: DeskItem) => void): () => void {
+  addedListeners.add(listener);
+  return () => void addedListeners.delete(listener);
+}
 
 // --- desks ---------------------------------------------------------------------------------------------
 export const bookDeskId = (bookId: string): string => `book:${bookId}`;
 
 export async function listDesks(): Promise<Desk[]> {
   const all = await deskDb().desks.toArray();
-  return all.sort((a, b) => (a.kind === b.kind ? a.createdAt - b.createdAt : a.kind === 'book' ? -1 : 1));
+  const rank = { book: 0, own: 1, thread: 2 };
+  return all.sort((a, b) => rank[a.kind] - rank[b.kind] || a.createdAt - b.createdAt);
 }
 
 export async function getDesk(id: string): Promise<Desk | undefined> {
@@ -71,6 +78,8 @@ export async function saveDeskHtml(id: string, html: string, { quiet = false } =
 export async function deleteDesk(id: string): Promise<void> {
   await deskDb().transaction('rw', deskDb().desks, deskDb().items, async () => {
     await deskDb().items.where('deskId').equals(id).delete();
+    // A thread's members stay on their own desks and leave the thread.
+    await deskDb().items.where('threads').equals(id).modify((i) => void (i.threads = i.threads?.filter((t) => t !== id)));
     await deskDb().desks.delete(id);
   });
   changed();
@@ -105,6 +114,7 @@ export async function addItem(deskId: string, input: NewDeskItem): Promise<DeskI
     await deskDb().desks.update(deskId, { html: appendEmbed(desk.html, item.id), updatedAt: now });
   });
   changed();
+  addedListeners.forEach((l) => l(item));
   return item;
 }
 
@@ -197,13 +207,149 @@ export async function putBackInDocument(id: string): Promise<void> {
   changed();
 }
 
+// --- the thinking desk (docs/features/thinking-front.md): threads, links, the journal ----------------------
+
+/** A thread: a desk that belongs to a question instead of a book, gathering from any book. */
+export async function createThread(input: { title: string; titleAr?: string; question?: string }): Promise<Desk> {
+  const now = Date.now();
+  const desk: Desk = { id: newId('thread'), kind: 'thread', title: input.title.trim() || input.titleAr?.trim() || 'Untitled thread', html: EMPTY_DOC, createdAt: now, updatedAt: now };
+  if (input.titleAr?.trim()) desk.titleAr = input.titleAr.trim();
+  if (input.question?.trim()) desk.question = input.question.trim();
+  await deskDb().desks.put(desk);
+  changed();
+  return desk;
+}
+
+/** Names and question of a thread (or any desk's title). */
+export async function updateDesk(id: string, patch: Partial<Pick<Desk, 'title' | 'titleAr' | 'question'>>): Promise<void> {
+  await deskDb().desks.update(id, { ...patch, updatedAt: Date.now() });
+  changed();
+}
+
+/** A thread archived (hidden from the thread picker and Today, kept whole) or brought back. */
+export async function setDeskArchived(id: string, archived: boolean): Promise<void> {
+  const desk = await deskDb().desks.get(id);
+  if (!desk) return;
+  const next: Desk = { ...desk, updatedAt: Date.now() };
+  if (archived) next.archivedAt = next.updatedAt;
+  else delete next.archivedAt;
+  await deskDb().desks.put(next);
+  changed();
+}
+
+/** What deleting a desk took, kept so Undo can bring it back: the desk, the items that lived on it and its members as they were. */
+export interface DeletedDesk {
+  desk: Desk;
+  items: DeskItem[];
+  /** Items from other desks that were in the thread (for a thread only). */
+  members: DeskItem[];
+}
+
+/** Deletes a desk as `deleteDesk` does and returns what it took (nothing when there was no such desk). */
+export async function deleteDeskKeepingUndo(id: string): Promise<DeletedDesk | undefined> {
+  const desk = await deskDb().desks.get(id);
+  if (!desk) return undefined;
+  const items = await deskDb().items.where('deskId').equals(id).toArray();
+  const members = (await deskDb().items.where('threads').equals(id).toArray()).filter((m) => m.deskId !== id);
+  await deleteDesk(id);
+  return { desk, items, members };
+}
+
+/** Undo of `deleteDeskKeepingUndo`: the desk and its items come back, and each member rejoins the thread (when it still exists). */
+export async function restoreDeletedDesk(gone: DeletedDesk): Promise<void> {
+  const id = gone.desk.id;
+  await deskDb().transaction('rw', deskDb().desks, deskDb().items, async () => {
+    await deskDb().desks.put(gone.desk);
+    await deskDb().items.bulkPut(gone.items);
+    for (const was of gone.members) {
+      const now = await deskDb().items.get(was.id);
+      if (!now) continue;
+      const joined = was.joined?.[id];
+      await deskDb().items.put({ ...now, threads: [...new Set([...(now.threads ?? []), id])], joined: joined === undefined ? now.joined : { ...now.joined, [id]: joined } });
+    }
+  });
+  changed();
+}
+
+/** Items join a thread: the thread id on each, when it joined, and its embed at the end of the thread's document. */
+export async function joinThread(itemIds: string[], threadId: string): Promise<void> {
+  const now = Date.now();
+  await deskDb().transaction('rw', deskDb().desks, deskDb().items, async () => {
+    const thread = await deskDb().desks.get(threadId);
+    if (!thread) return;
+    let html = thread.html;
+    for (const id of itemIds) {
+      const item = await deskDb().items.get(id);
+      if (!item || item.threads?.includes(threadId)) continue;
+      await deskDb().items.put({ ...item, threads: [...(item.threads ?? []), threadId], joined: { ...item.joined, [threadId]: now }, updatedAt: now });
+      if (!hasEmbed(html, id)) html = appendEmbed(html, id);
+    }
+    if (html !== thread.html) await deskDb().desks.update(threadId, { html, updatedAt: now });
+  });
+  changed();
+}
+
+/** An item leaves a thread, and the thread's document. */
+export async function leaveThread(itemId: string, threadId: string): Promise<void> {
+  const now = Date.now();
+  await deskDb().transaction('rw', deskDb().desks, deskDb().items, async () => {
+    const item = await deskDb().items.get(itemId);
+    if (item?.threads?.includes(threadId)) {
+      const joined = { ...item.joined };
+      delete joined[threadId];
+      await deskDb().items.put({ ...item, threads: item.threads.filter((t) => t !== threadId), joined, updatedAt: now });
+    }
+    const thread = await deskDb().desks.get(threadId);
+    if (thread && thread.kind === 'thread' && hasEmbed(thread.html, itemId)) await deskDb().desks.update(threadId, { html: removeEmbed(thread.html, itemId), updatedAt: now });
+  });
+  changed();
+}
+
+export const listLinks = (): Promise<DeskLink[]> => deskDb().links.toArray();
+
+export async function addLink(input: Pick<DeskLink, 'a' | 'b' | 'rel' | 'note'>): Promise<DeskLink> {
+  const now = Date.now();
+  const link: DeskLink = { ...input, id: newId('link'), createdAt: now, updatedAt: now };
+  await deskDb().links.put(link);
+  changed();
+  return link;
+}
+
+export async function updateLink(id: string, patch: Partial<Pick<DeskLink, 'rel' | 'note'>>): Promise<void> {
+  await deskDb().links.update(id, { ...patch, updatedAt: Date.now() });
+  changed();
+}
+
+export async function deleteLink(id: string): Promise<void> {
+  await deskDb().links.delete(id);
+  changed();
+}
+
+/** Undo of a link deleted. */
+export async function restoreLink(link: DeskLink): Promise<void> {
+  await deskDb().links.put(link);
+  changed();
+}
+
+export const listJournal = (): Promise<JournalEntry[]> => deskDb().journal.orderBy('at').toArray();
+
+export async function addJournal(input: Omit<JournalEntry, 'id' | 'createdAt' | 'updatedAt'>): Promise<JournalEntry> {
+  const now = Date.now();
+  const entry: JournalEntry = { ...input, id: newId('jr'), createdAt: now, updatedAt: now };
+  await deskDb().journal.put(entry);
+  changed();
+  return entry;
+}
+
 // --- export and import (src/dataExport) ---------------------------------------------------------------
+export type DeskTableName = 'items' | 'desks' | 'links' | 'journal';
 export const readAllItems = (): Promise<DeskItem[]> => deskDb().items.toArray();
 export const readAllDesks = (): Promise<Desk[]> => deskDb().desks.toArray();
-export async function bulkGet(table: 'items' | 'desks', keys: string[]): Promise<(Record<string, unknown> | undefined)[]> {
+export const readAll = (table: DeskTableName): Promise<Record<string, unknown>[]> => deskDb().table(table).toArray();
+export async function bulkGet(table: DeskTableName, keys: string[]): Promise<(Record<string, unknown> | undefined)[]> {
   return (await deskDb().table(table).bulkGet(keys)) as (Record<string, unknown> | undefined)[];
 }
-export async function bulkPut(table: 'items' | 'desks', rows: Record<string, unknown>[]): Promise<void> {
+export async function bulkPut(table: DeskTableName, rows: Record<string, unknown>[]): Promise<void> {
   const clean = table === 'desks' ? rows.map((r) => ({ ...r, html: sanitizeDocHtml(String(r.html ?? '')) })) : rows;
   await deskDb().table(table).bulkPut(clean);
   changed();

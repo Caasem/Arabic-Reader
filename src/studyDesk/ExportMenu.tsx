@@ -2,18 +2,25 @@ import { useEffect, useRef, useState } from 'react';
 import { getBlobStore } from '../blobStore';
 import { saveFile } from '../utils/saveFile';
 import { exportFileName, toMarkdown, toPlainText, type Block } from './docExport';
+import { exportFormats, type ExportFormat } from './exportFormats';
+import type { Desk, DeskItem } from './types';
 
 interface Props {
   title: string;
   /** The document as it is now (saved first by the caller). */
   blocks(): Block[];
+  /** The desk and its items, for formats that need more than the blocks (Obsidian, Notion). */
+  desk?: Desk;
+  items?: Map<string, DeskItem>;
   onToast(m: string): void;
 }
 
 /** Copy the desk document as text, or save it as Markdown or Word (docExport.ts, docxExport.ts). */
-export function ExportMenu({ title, blocks, onToast }: Props) {
+export function ExportMenu({ title, blocks, desk, items, onToast }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Read when the menu opens, so formats registered later show.
+  const [extra, setExtra] = useState<ExportFormat[]>([]);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,12 +39,20 @@ export function ExportMenu({ title, blocks, onToast }: Props) {
     };
   }, [open]);
 
-  async function run(kind: 'copy' | 'md' | 'docx') {
+  function toggle() {
+    setExtra(exportFormats());
+    setOpen((v) => !v);
+  }
+
+  async function run(kind: 'copy' | 'md' | 'docx' | ExportFormat) {
     setOpen(false);
     setBusy(true);
     try {
       const b = blocks();
-      if (kind === 'copy') {
+      if (typeof kind === 'object') {
+        const r = await saveFile(exportFileName(title, kind.ext), kind.make({ title, blocks: b, desk, items }), 'text/markdown');
+        if (r !== 'cancelled') onToast(kind.savedMessage);
+      } else if (kind === 'copy') {
         await navigator.clipboard.writeText(toPlainText(title, b));
         onToast('Copied as text');
       } else if (kind === 'md') {
@@ -58,7 +73,7 @@ export function ExportMenu({ title, blocks, onToast }: Props) {
 
   return (
     <div className="sd-export" ref={ref}>
-      <button type="button" className="sd-pill" aria-haspopup="menu" aria-expanded={open} disabled={busy} onClick={() => setOpen((v) => !v)}>
+      <button type="button" className="sd-pill" aria-haspopup="menu" aria-expanded={open} disabled={busy} onClick={toggle}>
         {busy ? 'Exporting…' : 'Export'}
       </button>
       {open && (
@@ -69,6 +84,11 @@ export function ExportMenu({ title, blocks, onToast }: Props) {
           <button type="button" role="menuitem" onClick={() => void run('md')}>
             Save as Markdown <span>.md</span>
           </button>
+          {extra.map((f) => (
+            <button key={f.id} type="button" role="menuitem" onClick={() => void run(f)}>
+              {f.label} <span>.{f.ext}</span>
+            </button>
+          ))}
           <button type="button" role="menuitem" onClick={() => void run('docx')}>
             Save as Word <span>.docx</span>
           </button>
