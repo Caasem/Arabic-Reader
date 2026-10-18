@@ -5,7 +5,7 @@
  * points.
  */
 import type { FeatureDescriptor } from '../features/registry';
-import { NodesHost } from './NodesHost';
+import { NodesHost } from './LazyHost';
 import { NodesSettings } from './NodesSettings';
 
 export const nodesFeature: FeatureDescriptor = {
@@ -19,5 +19,6 @@ export const nodesFeature: FeatureDescriptor = {
   touchPoints: [
     'the `nodesEnabled` and `nodesDefaultStyle` preferences (src/types/preferences.ts, src/state/defaultPreferences.ts)',
     'its database (NODES_DB) in the storage registry (src/storage/registry.ts) and the full export (src/dataExport/stores.ts)',
+    'the bundle size budgets for the entry script and styles, raised for it (scripts/check-bundle-size.mjs); the layer itself is a lazy chunk (LazyHost.tsx)',
   ],
 };
