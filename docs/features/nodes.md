@@ -60,7 +60,7 @@ An `anchor` is `{kind: 'clean', chapter, offset, dx, dy}` (the word at `offset` 
 - Place, drag, rename, collapse and reopen a node in the quiet reader; it keeps its place across a reload and follows its word when scrolling. (Checked in a browser.)
 - Attach notes and branches, switch looks, nest, detach, space out, edit and delete with Undo. (Checked in a browser, except detach.)
 - Carry across chapters, put down, and jump from the list. (Checked in a browser.)
-- Unit tests cover the tree, layout, anchors, store, list order and rendering. **Not yet checked on PDF pages** (same layer and anchors, but not exercised in a browser) or on a phone.
+- Unit tests cover the tree, layout, anchors, store, list order and rendering. Checked on PDF pages by `e2e/nodes.spec.ts`: placing, a place that holds at any width, the margin beside the page, dragging back onto it, carrying to another page and putting down. **Not yet checked on a phone.**
 
 ## 10. Future extensions
 

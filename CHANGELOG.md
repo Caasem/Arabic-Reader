@@ -45,6 +45,15 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.115.1 — 2026-10-18
+
+- **Nodes in the margin of a paged page now appear.** In the paged layout, a node tapped into a margin could attach itself to a word on a
+  neighbouring page (one hidden beside the column) and never show. It now picks the nearest word that is on screen.
+- **Placing a node while a PDF's pages are still settling no longer does nothing.** The layer looks the reader up again if it was
+  replaced a moment before.
+- Checked on PDF pages: a node keeps its place on the page at any width, can sit in the margin beside the page, can be dragged back onto it,
+  and can be carried to the next page and put down there. A new end-to-end spec (`e2e/nodes.spec.ts`) covers the reader and PDF pages.
+
 ## v0.115.0 — 2026-10-18
 
 - **Carry a node with you.** An open node has a *Carry* button: it then stays where it is on screen as you turn pages or change

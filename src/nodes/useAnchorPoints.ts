@@ -30,7 +30,7 @@ export function useAnchorPoints(roots: NodeKid[]): { stage: ReaderStage | null; 
       const found = findStage();
       return sameStage(s, found) ? s : found;
     };
-    const t = window.setInterval(() => setStage(look), 500);
+    const t = window.setInterval(() => setStage(look), 250);
     return () => window.clearInterval(t);
   }, []);
 

@@ -41,11 +41,14 @@ export function wordAnchorAt(stage: HTMLElement, x: number, y: number): { chapte
   if (word && own) return result(own, offsetWithin(own, word, 0));
   // In the margin or between lines: the nearest word on screen.
   const box = stage.getBoundingClientRect();
+  // Paged layout keeps the other pages beside the column, hidden by it: their words are not on screen.
+  const column = stage.querySelector('.qr-column')?.getBoundingClientRect();
   let best: HTMLElement | null = null;
   let bestD = Infinity;
   for (const w of stage.querySelectorAll<HTMLElement>('.qr-chapter .ar-word')) {
     const r = w.getBoundingClientRect();
     if (r.bottom < box.top || r.top > box.bottom || r.right < box.left || r.left > box.right || !r.width) continue;
+    if (column && (r.right < column.left - 2 || r.left > column.right + 2)) continue;
     const dx = x < r.left ? r.left - x : x > r.right ? x - r.right : 0;
     const dy = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
     const d = dx * dx + dy * dy;
@@ -96,7 +99,11 @@ export interface ReaderStage {
 }
 
 /** The anchor for a place on screen: the nearest word (and the offset from it), or the page under it (margins included). */
-export function anchorAtScreen(stage: ReaderStage, x: number, y: number): NodeAnchor | null {
+export function anchorAtScreen(known: ReaderStage, x: number, y: number): NodeAnchor | null {
+  // The reader can have been drawn again since the layer last looked (a PDF's pages replace the text, a page remounts).
+  const el = known.el.isConnected ? known.el : known.kind === 'clean' ? findCleanStage() : findPdfStage();
+  if (!el) return null;
+  const stage: ReaderStage = { el, kind: known.kind };
   if (stage.kind === 'clean') {
     const at = wordAnchorAt(stage.el, x, y);
     const section = at && chapterEl(stage.el, at.chapter);
