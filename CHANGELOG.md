@@ -45,6 +45,14 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.126.1 — 2026-10-18
+
+- **Dictionary screen:** the Nearby list marks the word you looked up again, also when its entry is written with
+  vowels (the list is found without them).
+- **Scanned PDFs:** a misread like المدرسه (ة read as ه) is flagged as not a word again, with corrections offered.
+  When a word is retried without ال, readings ending in a pronoun no longer count: ال and an attached pronoun can't
+  go together.
+
 ## v0.126.0 — 2026-10-17
 
 - **Draft from the argument.** In a thread's Argument tab, one button writes an outline into its Document: each claim

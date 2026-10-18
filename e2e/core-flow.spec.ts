@@ -80,7 +80,9 @@ test('word lookup, save, highlight, and TOC survive a reload', async ({ page }) 
   await expect(page.locator('.hl-card')).toHaveCount(1);
 
   // --- Persistence across a full reload ---
+  // A reload keeps the screen it was on (hash routing), so go back to the Library to see the book.
   await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('.navbar__item', { hasText: 'Library' }).click();
   await page.waitForSelector('.book-card', { timeout: 10000 });
   expect(await page.locator('.book-card').count()).toBeGreaterThanOrEqual(1);
 
