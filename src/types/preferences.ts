@@ -148,6 +148,13 @@ export interface ReaderPreferences {
   /** The thinking desk (src/thinking): threads, argument moves, backlinks, masāʾil, Revisit, Today. Off by default. */
   /** The argument layer (src/arguments): Toulmin roles on words, with margin cards and a sheet. Off by default; while on it replaces the thinking desk's moves. */
   argumentsEnabled: boolean;
+  /** The argument layer's layers, each usable alone: marks on the page, cards in the margin, the sheet, and which reader's notes show in the margin. */
+  argumentsMarks: boolean;
+  argumentsCards: boolean;
+  argumentsSheet: 'off' | 'side' | 'full';
+  argumentsWarrants: boolean;
+  argumentsBackings: boolean;
+  argumentsExceptions: boolean;
   thinkingFrontEnabled: boolean;
   /** Its parts, each on by default under the main switch. */
   thinkingThreads: boolean;

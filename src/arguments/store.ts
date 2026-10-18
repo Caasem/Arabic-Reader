@@ -3,6 +3,7 @@ import type { BookMeta } from '../types';
 import type { DeskItem } from '../studyDesk/types';
 import type { ArgumentRole } from './roles';
 import type { ArgItem } from './roles';
+import { DEFAULT_LAYERS, type Layers } from './layers';
 
 /**
  * What the argument layer shares between its host (which reads the desk) and the cards in the margin (which the study
@@ -21,9 +22,10 @@ export interface ArgState {
   /** A card with its inline input open, to write an implicit note. */
   add: { id: string; role: Extract<ArgumentRole, 'warrant' | 'backing' | 'rebuttal'> } | null;
   deskId: string | null;
+  layers: Layers;
 }
 
-const empty: ArgState = { book: null, mine: [], items: [], byId: new Map(), nums: new Map(), tie: null, add: null, deskId: null };
+const empty: ArgState = { book: null, mine: [], items: [], byId: new Map(), nums: new Map(), tie: null, add: null, deskId: null, layers: DEFAULT_LAYERS };
 let state = empty;
 const listeners = new Set<() => void>();
 
@@ -37,6 +39,8 @@ export const resetArg = (): void => setArg({ ...empty });
 export const argState = (): ArgState => state;
 
 export const useArg = (): ArgState => useSyncExternalStore((l) => (listeners.add(l), () => void listeners.delete(l)), () => state);
+
+export const useArgLayers = (): Layers => useArg().layers;
 
 /** Undo steps for everything the layer does, newest last. */
 const undoStack: (() => Promise<void>)[] = [];

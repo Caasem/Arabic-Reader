@@ -6,6 +6,9 @@ import { NO_GAPS, nextOffender } from './gaps';
 import type { ArgItem } from './roles';
 import { BOX_SIZE } from './layout';
 import { GHOST_SIZE, buildSheet } from './sheetModel';
+import { LayersControl } from './LayersControl';
+import type { Layers } from './layers';
+import type { ReaderPreferences } from '../types';
 
 export type SheetSize = 'side' | 'full';
 
@@ -26,6 +29,8 @@ interface Props {
   size: SheetSize;
   onSize(s: SheetSize): void;
   onClose(): void;
+  layers: Layers;
+  onLayers(patch: Partial<ReaderPreferences>): void;
 }
 
 const where = (i: DeskItem | undefined) => i?.source?.location ?? i?.pin?.location;
@@ -35,7 +40,7 @@ const where = (i: DeskItem | undefined) => i?.source?.location ?? i?.pin?.locati
  * warrant on its arrow, and a strip of what is missing. Drawn from the margin's items (buildSheet), never by hand;
  * clicking a box or a gap goes to its place in the book.
  */
-export function ArgumentSheet({ bookId, argItems, byId, scope, onScope, size, onSize, onClose }: Props) {
+export function ArgumentSheet({ bookId, argItems, byId, scope, onScope, size, onSize, onClose, layers, onLayers }: Props) {
   const sheet = useMemo(() => buildSheet(argItems, (id) => byId.get(id)?.text ?? ''), [argItems, byId]);
   const [selected, setSelected] = useState<string | null>(null);
   const [last, setLast] = useState<Record<string, string>>({});
@@ -68,6 +73,7 @@ export function ArgumentSheet({ bookId, argItems, byId, scope, onScope, size, on
             </button>
           ))}
         </div>
+        <LayersControl layers={layers} onChange={onLayers} compact />
         <button type="button" onClick={() => onSize(size === 'side' ? 'full' : 'side')} aria-label={size === 'side' ? 'Fill the window' : 'Dock to the side'} title={size === 'side' ? 'Fill the window' : 'Dock to the side'}>
           {size === 'side' ? '⤢' : '⤡'}
         </button>

@@ -1,5 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useArgumentKind } from '../arguments/useArgumentKind';
+import { cardShown } from '../arguments/layers';
+import { useArgLayers } from '../arguments/store';
 import { isCleanLocation } from '../readerCore/location';
 import { getReaderMarks } from '../readerChords';
 import { usePreferences } from '../state/PreferencesContext';
@@ -178,13 +180,15 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
     return { left: ok(left) ? left : null, right: ok(right) ? right : null };
   }, [geo]);
 
+  // The argument layer's Layers control can hide its cards (src/arguments/layers.ts).
+  const argLayers = useArgLayers();
   // Piles (piles.ts): only a pile's top card is placed; the rest show in its fan.
   const piles = useMemo(() => groupPiles(data.items), [data.items]);
   const placed = useMemo<Placed[]>(() => {
     if (!geo || !sides || (!sides.left && !sides.right)) return [];
     const out: Placed[] = [];
     for (const item of data.items) {
-      if (isBeneath(item, piles)) continue;
+      if (isBeneath(item, piles) || !cardShown(item, argLayers)) continue;
       const pinned = item.pin?.bookId === book.id;
       const location = pinned ? item.pin!.location : item.source?.bookId === book.id && !item.hidden ? item.source.location : undefined;
       if (!location || !isCleanLocation(location)) continue;
@@ -198,7 +202,7 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
     return out.sort((a, b) => a.y - b.y);
     // tick: the page moved.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.items, piles, book.id, geo, sides, mode, tick]);
+  }, [data.items, piles, book.id, geo, sides, mode, tick, argLayers]);
 
   // --- piles: dragging, the fan, naming, the lasso and P / Delete, shared with the PDF margin (usePileGestures.ts) ---
   /** The margin a drop lands in; over the text column, the nearer one. */

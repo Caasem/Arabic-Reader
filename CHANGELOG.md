@@ -45,6 +45,13 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.131.0 — 2026-10-18
+
+**The argument layer, stage 5: Layers.** A Layers button (in the sheet's header, and in the status line while Alt+A is
+on) turns each part on or off on its own: page marks, margin cards, the sheet (off, side, full), and which of your own
+notes show in the margin (warrants, backings, exceptions). No part needs another to be open, and the choice is kept.
+Spec: `docs/features/argument-layer.md`. To revert: `git revert`.
+
 ## v0.130.0 — 2026-10-18
 
 **The argument layer, stage 4: the sheet.** Alt+Shift+A opens the argument sheet, drawn from your marks and cards with

@@ -17,6 +17,8 @@ import { ROLES, ROLE_BY_ID, numbering, roleForKey, rolesOf, type ArgumentRole } 
 import { OVERLAP_TOAST, overlaps, snapSelection } from './selection';
 import { candidates, nothingToAttach, pickerList, pickerTitle } from './targets';
 import { useArg } from './store';
+import { layersOf, type Layers } from './layers';
+import { LayersControl } from './LayersControl';
 import './arguments.css';
 
 interface Pending {
@@ -45,15 +47,17 @@ const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && (t.isCon
  * the margin cards and the sheet (later stages) read the same data.
  */
 export function ArgumentsHost({ book }: HostProps) {
-  const { prefs } = usePreferences();
+  const { prefs, updatePrefs } = usePreferences();
+  const layers = useMemo(() => layersOf(prefs), [prefs]);
   const on = prefs.argumentsEnabled && prefs.studyDeskEnabled;
   const data = useDeskData(book);
   const [armed, setArmed] = useState(false);
   const [pending, setPending] = useState<Pending | null>(null);
   const [pick, setPick] = useState<Pick | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [sheetSize, setSheetSize] = useState<SheetSize>('side');
+  const sheetOpen = layers.sheet !== 'off';
+  const sheetSize: SheetSize = layers.sheet === 'full' ? 'full' : 'side';
+  const setSheet = useCallback((sheet: Layers['sheet']) => updatePrefs({ argumentsSheet: sheet }), [updatePrefs]);
   const [scope, setScope] = useState<SheetScope>('book');
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef(0);
@@ -72,8 +76,8 @@ export function ArgumentsHost({ book }: HostProps) {
   // Share what the margin cards need (MarginLayer draws them; see cardExtras.tsx).
   useEffect(() => {
     if (!on) return resetArg();
-    setArg({ book, mine, items: argItems, byId, nums, deskId: currentDeskId(book.id) ?? bookDeskId(book.id) });
-  }, [on, book, mine, argItems, byId, nums]);
+    setArg({ book, mine, items: argItems, byId, nums, layers, deskId: currentDeskId(book.id) ?? bookDeskId(book.id) });
+  }, [on, book, mine, argItems, byId, nums, layers]);
   useEffect(() => resetArg, []);
 
   useChordHotkey('KeyA', on, () => {
@@ -82,7 +86,7 @@ export function ArgumentsHost({ book }: HostProps) {
     setPick(null);
   });
 
-  useChordHotkey('KeyA', on, () => setSheetOpen((o) => !o), true);
+  useChordHotkey('KeyA', on, () => setSheet(sheetOpen ? 'off' : 'side'), true);
 
   // --- the sheet: the chapter on screen, and what each scope holds ---
   const [tick, setTick] = useState(0);
@@ -105,7 +109,7 @@ export function ArgumentsHost({ book }: HostProps) {
   useEffect(() => {
     const names = new Map<string, Range[]>();
     const push = (name: string, r: Range | null) => r && names.set(name, [...(names.get(name) ?? []), r]);
-    if (on && paintSupported) {
+    if (on && layers.marks && paintSupported) {
       for (const item of mine) {
         const at = parseCleanLocation(item.source?.location);
         if (!at) continue;
@@ -119,7 +123,7 @@ export function ArgumentsHost({ book }: HostProps) {
     }
     paintArguments(names);
     return () => paintArguments(new Map());
-  }, [on, mine, tick]);
+  }, [on, layers.marks, mine, tick]);
 
   // --- a selection becomes a pending mark ---
   const tieId = useArgTie();
@@ -291,7 +295,7 @@ export function ArgumentsHost({ book }: HostProps) {
   const chosen = selected ? byId.get(selected) : null;
   return (
     <>
-      {sheetOpen && <ArgumentSheet bookId={book.id} argItems={sheetItems} byId={allById} scope={scope} onScope={setScope} size={sheetSize} onSize={setSheetSize} onClose={() => setSheetOpen(false)} />}
+      {sheetOpen && <ArgumentSheet bookId={book.id} argItems={sheetItems} byId={allById} scope={scope} onScope={setScope} size={sheetSize} onSize={(s) => setSheet(s)} onClose={() => setSheet('off')} layers={layers} onLayers={(p) => updatePrefs(p)} />}
       {armed && (
       <>
       {pending && (
@@ -324,6 +328,7 @@ export function ArgumentsHost({ book }: HostProps) {
         </div>
       )}
       <div className="arg-bar" aria-live="polite">
+        <LayersControl layers={layers} onChange={(p) => updatePrefs(p)} />
         {toast ?? (chosen ? `#${nums.get(chosen.id)} ${ROLE_BY_ID[chosen.argument!.role].label} selected. Delete removes it.` : 'Argument layer on (Alt+A). Select words, then press 1 to 8.')}
       </div>
       </>
