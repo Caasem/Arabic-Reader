@@ -55,6 +55,8 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   studyDeskCards: 'open',
   annotateEnabled: true,
   inkGesturesEnabled: false,
+  nodesEnabled: true,
+  nodesDefaultStyle: 'reticle',
   pdfConvertToText: false,
   pdfHighlightFill: true,
   pdfHighlightColor: '#f6ead0',

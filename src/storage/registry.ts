@@ -47,6 +47,7 @@ export const FREQUENCY_DB = 'arabic-reader-frequency';
 export const BLOBS_DB = 'arabic-reader-blobs';
 export const DESK_DB = 'arabic-reader-desk';
 export const INK_DB = 'arabic-reader-ink';
+export const NODES_DB = 'arabic-reader-nodes';
 
 type TableSpec = Omit<StoreSpec, 'id' | 'kind' | 'db'>;
 
@@ -117,6 +118,8 @@ export const STORAGE_REGISTRY: readonly StoreSpec[] = [
   table(DESK_DB, 'desks', { ...localRecords, note: 'Study desks and their documents (sanitized HTML with item embeds). Local only until sync covers it.' }),
   table(INK_DB, 'strokes', { ...localRecords, note: 'Ink written on book pages (src/annotate): PDF strokes in page units, clean-text strokes tied to a word. Local only until sync covers it.' }),
   table(INK_DB, 'sketches', { ...localRecords, note: 'Sketch sheets beside the pages (src/annotate): freehand strokes and diagram nodes per page or passage. Local only until sync covers it.' }),
+  table(NODES_DB, 'nodes', { ...localRecords, note: 'Nodes placed on book pages (src/nodes): top-level ones tied to a word or a PDF page, attached ones to their parent. Local only until sync covers it.' }),
+  table(NODES_DB, 'cards', { ...localRecords, note: 'Notes, quotes and cards attached to a node (src/nodes). Local only until sync covers it.' }),
   table(BLOBS_DB, 'blobIndex', { ...cache, evictable: false, note: 'BlobStore index: rebuildable by a scan, but it holds the owner references, so never evicted.' }),
 
   // --- BlobStore namespaces (src/blobStore) -----------------------------------

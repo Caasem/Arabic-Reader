@@ -466,6 +466,18 @@
       "notes": "Built in phases on feat/study-desk; every phase is one commit with its own off-switch. Revert matrix: docs/changes/study-desk-changes.md. Concept: https://claude.ai/artifact/FjdxN1wKtaYzSTRLTvtKx4",
       "brief": "features/study-desk.md",
       "milestone": "M2"
+    },
+    {
+      "id": "nodes",
+      "title": "Nodes: dots placed anywhere on a page, with things attached",
+      "area": "reader",
+      "status": "in-progress",
+      "effort": 3,
+      "deps": [],
+      "branch": "feat/nodes",
+      "notes": "Built in stages on feat/nodes (data, the dot, attach and nest, carry and the list); every stage is one commit with its own off-switch. Revert matrix: docs/changes/nodes-changes.md. Prototype: https://claude.ai/artifact/3JgEMySJcAkYG73RtMkbot",
+      "brief": "features/nodes.md",
+      "milestone": "M2"
     }
   ],
   "milestones": [

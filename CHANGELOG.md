@@ -45,6 +45,45 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.115.1 — 2026-10-18
+
+- **Nodes in the margin of a paged page now appear.** In the paged layout, a node tapped into a margin could attach itself to a word on a
+  neighbouring page (one hidden beside the column) and never show. It now picks the nearest word that is on screen.
+- **Placing a node while a PDF's pages are still settling no longer does nothing.** The layer looks the reader up again if it was
+  replaced a moment before.
+- Checked on PDF pages: a node keeps its place on the page at any width, can sit in the margin beside the page, can be dragged back onto it,
+  and can be carried to the next page and put down there. A new end-to-end spec (`e2e/nodes.spec.ts`) covers the reader and PDF pages.
+
+## v0.115.0 — 2026-10-18
+
+- **Carry a node with you.** An open node has a *Carry* button: it then stays where it is on screen as you turn pages or change
+  chapters, with everything attached to it. A faint ring marks the node's home while that page is showing. *Put down here* makes the
+  page you are on its new home; *Send back home* stops carrying.
+- **A list of every node in the book** (Alt+Shift+O, or *Nodes* in the dock), in book order. Tap one to go to its home; *Bring here*
+  carries it to the page you are reading.
+
+## v0.114.0 — 2026-10-18
+
+- **Attach to a node.** Open a node and its controls appear: attach a note (it opens for typing at once), attach a branch (a node
+  inside the node), switch the node's look between reticle and branch, delete it, or pin its title. Double-click a card or a note
+  to edit it; Enter saves, Esc cancels, and emptying one deletes it. Deleting shows *Undo*.
+- **Nest by dragging.** Drop one node on another, on its dot or its open panel, and it goes inside. Drop it back on the node it came from
+  and it returns to its place. Alt-drag, or the *Detach* button, frees a nested node as a node of its own.
+- **Space things out without leaving the node.** Drag a nested node, or a card in a branch, and it stays where you put it, still joined
+  to its parent by a thin line; the rest of the layout does not change. In a reticle panel a nested node floats out of the outline,
+  tied to the panel's dot. Switching a node's look puts what hangs from it back in its default places.
+- Every node, nested ones included, keeps its own look, so a reticle can hold a branch and a branch can hold a reticle.
+
+## v0.113.0 — 2026-10-18
+
+- **Nodes (Alt+O).** A new dot you can place anywhere on a page, in the text or out in a margin. Press Alt+O (or *Node* in the dock), tap
+  the page, and a node appears with its title ready to type. Drag it wherever you like: on PDF pages it stays where you put it at every
+  zoom; in the reader it is tied to the nearest word and moves with the text when it reflows or the font changes.
+- **Tap a node to open it, and again to collapse it.** An open node shows what is attached to it; a closed one is just the dot. Hover a
+  dot to see its title, or pin the title to keep it showing. Attaching notes, quotes and other nodes comes in the next versions.
+- **Two looks, chosen in Settings → Nodes:** a reticle (a small bracketed diamond that opens a side panel with an outline) or a branch (a
+  bead that opens a tree across the page). Every node keeps its own look; switching one comes with the attach controls.
+
 ## v0.112.0 — 2026-10-12
 
 - **Pull in (Alt+U), the next version.** Results are grouped by book (this book first, then the others) with a count on each

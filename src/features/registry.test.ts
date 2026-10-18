@@ -47,6 +47,7 @@ describe('feature registry', () => {
       'picksExport',
       'studyDesk',
       'annotate',
+      'nodes',
     ]);
   });
 
@@ -76,6 +77,7 @@ describe('feature registry', () => {
       'flashCard',
       'studyDesk',
       'annotate',
+      'nodes',
       'verbForms',
       'popupClean',
       'wasitMatch',
