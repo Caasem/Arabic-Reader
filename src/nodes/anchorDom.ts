@@ -1,5 +1,6 @@
 import { caretAt, offsetWithin, rangeAt } from '../quietReader/textOffsets';
-import type { Point } from './anchor';
+import { screenToClean, screenToPdf, type Point } from './anchor';
+import type { NodeAnchor } from './types';
 
 /**
  * Finding anchors on screen. Works from the readers' DOM only, as the ink layer does: the quiet reader renders each
@@ -83,4 +84,24 @@ export function pdfFrame(stage: HTMLElement, page: number): DOMRect | null {
   const el = stage.querySelector<HTMLElement>(`.pdfp-page[data-page="${page}"]`);
   const r = el?.getBoundingClientRect();
   return r && r.width ? r : null;
+}
+
+export type ReaderKind = 'clean' | 'pdf';
+/** The reader that is showing: its stage element, and which kind it is. */
+export interface ReaderStage {
+  el: HTMLElement;
+  kind: ReaderKind;
+}
+
+/** The anchor for a place on screen: the nearest word (and the offset from it), or the page under it (margins included). */
+export function anchorAtScreen(stage: ReaderStage, x: number, y: number): NodeAnchor | null {
+  if (stage.kind === 'clean') {
+    const at = wordAnchorAt(stage.el, x, y);
+    const section = at && chapterEl(stage.el, at.chapter);
+    const corner = at && section && wordCorner(section, at.offset);
+    if (!at || !corner) return null;
+    return { kind: 'clean', chapter: at.chapter, offset: at.offset, ...screenToClean({ x, y }, corner, cleanEm(stage.el)) };
+  }
+  const frame = pdfFrameAt(stage.el, x, y);
+  return frame ? { kind: 'pdf', page: frame.page, ...screenToPdf({ x, y }, frame.rect) } : null;
 }

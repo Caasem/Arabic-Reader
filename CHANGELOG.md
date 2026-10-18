@@ -45,6 +45,16 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.113.0 — 2026-10-18
+
+- **Nodes (Alt+O).** A new dot you can place anywhere on a page, in the text or out in a margin. Press Alt+O (or *Node* in the dock), tap
+  the page, and a node appears with its title ready to type. Drag it wherever you like: on PDF pages it stays where you put it at every
+  zoom; in the reader it is tied to the nearest word and moves with the text when it reflows or the font changes.
+- **Tap a node to open it, and again to collapse it.** An open node shows what is attached to it; a closed one is just the dot. Hover a
+  dot to see its title, or pin the title to keep it showing. Attaching notes, quotes and other nodes comes in the next versions.
+- **Two looks, chosen in Settings → Nodes:** a reticle (a small bracketed diamond that opens a side panel with an outline) or a branch (a
+  bead that opens a tree across the page). Every node keeps its own look; switching one comes with the attach controls.
+
 ## v0.112.0 — 2026-10-12
 
 - **Pull in (Alt+U), the next version.** Results are grouped by book (this book first, then the others) with a count on each
