@@ -84,6 +84,11 @@ Not done: phase 3, dictionaries as downloadable packs (dropped).
 - **Two looks, chosen in Settings → Nodes:** a reticle (a small bracketed diamond that opens a side panel with an outline) or a branch (a
   bead that opens a tree across the page). Every node keeps its own look; switching one comes with the attach controls.
 
+## v0.112.1 — 2026-10-15
+
+- **PDF pages no longer log a stray error when you scroll fast.** A page that scrolled away while it was still being drawn
+  left its cancelled drawing unhandled, which showed up in Settings → Diagnostics as an error (just “we” in the built app).
+
 ## v0.112.0 — 2026-10-12
 
 - **Pull in (Alt+U), the next version.** Results are grouped by book (this book first, then the others) with a count on each
