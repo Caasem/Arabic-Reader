@@ -24,3 +24,22 @@ export function argItemsOf(items: readonly DeskItem[], bookId: string): ArgItem[
   }
   return out;
 }
+
+export type SheetScope = 'chapter' | 'book' | 'all';
+
+/** Room for a whole book's places, so items from several books order by book, then place. */
+const BOOK_SPAN = 1e12;
+
+/**
+ * The items a sheet shows: the chapter, the book, or every book (the free scope, where an item's book comes from the item).
+ * Items of other books keep their own places, shifted by their book's turn in the list, so the sheet lays them out together.
+ */
+export function argItemsFor(items: readonly DeskItem[], scope: SheetScope, bookId: string, chapter: number | null): ArgItem[] {
+  if (scope !== 'all') {
+    const own = argItemsOf(items, bookId);
+    if (scope === 'book') return own;
+    return own.filter((n) => chapter != null && Math.floor(n.spot / CHAPTER_SPAN) === chapter);
+  }
+  const books = [...new Set(items.filter((i) => i.argument).map(bookOf).filter((b): b is string => !!b))].sort((x, y) => (x === bookId ? -1 : y === bookId ? 1 : x.localeCompare(y)));
+  return books.flatMap((b, k) => argItemsOf(items, b).map((n) => ({ ...n, spot: n.spot + k * BOOK_SPAN })));
+}

@@ -45,6 +45,16 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.130.0 — 2026-10-18
+
+**The argument layer, stage 4: the sheet.** Alt+Shift+A opens the argument sheet, drawn from your marks and cards with
+nothing to draw by hand: claims, grounds, objections and replies as boxes, arrows between them (grounds green, attacks
+red, replies teal), each warrant as a dashed card on its arrow with its backing inside, qualifiers and an exception flag
+(⚑) on the arrow's label. Under it a strip lists what is missing: claims with no grounds, steps with no warrant,
+objections with no reply, marks attached to nothing; click one to go to the first, again for the next. Scopes: this
+chapter, this book, across books. Dock it to the side or fill the window. Spec: `docs/features/argument-layer.md`.
+To revert: `git revert`.
+
 ## v0.129.0 — 2026-10-18
 
 **The argument layer, stage 3: margin cards and reader's notes.** With the layer on, each marked passage's card in the

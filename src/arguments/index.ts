@@ -14,7 +14,7 @@ export const argumentsFeature: FeatureDescriptor = {
   Host: ArgumentsGate,
   SettingsSection: ArgumentsSettings,
   settingsGroup: 'reading',
-  chords: ['Alt+A'],
+  chords: ['Alt+A', 'Alt+Shift+A'],
   touchPoints: [
     'the `argumentsEnabled` preference (src/types/preferences.ts, src/state/defaultPreferences.ts)',
     'DeskItem.argument, the argument fields on a study desk item (src/studyDesk/types.ts)',

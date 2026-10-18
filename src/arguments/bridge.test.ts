@@ -26,3 +26,23 @@ describe('argItemsOf', () => {
     expect(argItemsOf([i], 'b')[0]).toMatchObject({ spot: 20_000_040, marginOnly: true });
   });
 });
+
+import { argItemsFor } from './bridge';
+
+describe('argItemsFor', () => {
+  const items = [
+    item('a', 'clean:1:5:9', { role: 'claim', for: null }),
+    item('b', 'clean:2:5:9', { role: 'claim', for: null }),
+    item('x', 'clean:0:5:9', { role: 'claim', for: null }, 'other'),
+  ];
+  it('the chapter shows that chapter only', () => {
+    expect(argItemsFor(items, 'chapter', 'b', 1).map((n) => n.id)).toEqual(['a']);
+    expect(argItemsFor(items, 'chapter', 'b', null)).toEqual([]);
+  });
+  it('the book shows its own items; across books shows all, this book first', () => {
+    expect(argItemsFor(items, 'book', 'b', null).map((n) => n.id)).toEqual(['a', 'b']);
+    const all = argItemsFor(items, 'all', 'b', null);
+    expect(all.map((n) => n.id)).toEqual(['a', 'b', 'x']);
+    expect(all[2].spot).toBeGreaterThan(all[1].spot);
+  });
+});

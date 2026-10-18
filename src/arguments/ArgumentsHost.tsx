@@ -9,7 +9,8 @@ import { bookDeskId, deleteItem, getDesk, getItem, listItems, patchItems, restor
 import { currentDeskId } from '../studyDesk/deskMemory';
 import { capture, looksArabic, useDeskData } from '../studyDesk/useDesk';
 import type { DeskItem } from '../studyDesk/types';
-import { argItemsOf, bookOf, spotOf } from './bridge';
+import { argItemsFor, argItemsOf, bookOf, spotOf, type SheetScope } from './bridge';
+import { ArgumentSheet, type SheetSize } from './ArgumentSheet';
 import { tieTo } from './actions';
 import { argState, popUndo, pushUndo, resetArg, setArg } from './store';
 import { ROLES, ROLE_BY_ID, numbering, roleForKey, rolesOf, type ArgumentRole } from './roles';
@@ -51,6 +52,9 @@ export function ArgumentsHost({ book }: HostProps) {
   const [pending, setPending] = useState<Pending | null>(null);
   const [pick, setPick] = useState<Pick | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetSize, setSheetSize] = useState<SheetSize>('side');
+  const [scope, setScope] = useState<SheetScope>('book');
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef(0);
 
@@ -78,8 +82,21 @@ export function ArgumentsHost({ book }: HostProps) {
     setPick(null);
   });
 
-  // --- paint the marks with the Custom Highlight API (the text's DOM is never touched) ---
+  useChordHotkey('KeyA', on, () => setSheetOpen((o) => !o), true);
+
+  // --- the sheet: the chapter on screen, and what each scope holds ---
   const [tick, setTick] = useState(0);
+  const chapter = useMemo(() => {
+    if (!sheetOpen) return null;
+    for (const el of document.querySelectorAll<HTMLElement>('.qr-chapter[data-chapter]')) if (el.getBoundingClientRect().bottom > 80) return Number(el.dataset.chapter);
+    return null;
+    // tick: the page moved.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheetOpen, tick]);
+  const allById = useMemo(() => new Map(data.items.map((i) => [i.id, i])), [data.items]);
+  const sheetItems = useMemo(() => (sheetOpen ? argItemsFor(data.items, scope, book.id, chapter) : []), [sheetOpen, data.items, scope, book.id, chapter]);
+
+  // --- paint the marks with the Custom Highlight API (the text's DOM is never touched) ---
   useEffect(() => {
     if (!on) return;
     const id = window.setInterval(() => setTick((t) => t + 1), 1200);
@@ -270,10 +287,13 @@ export function ArgumentsHost({ book }: HostProps) {
     return () => document.removeEventListener('click', onClick);
   }, [on, armed, mine]);
 
-  if (!on || !armed) return null;
+  if (!on) return null;
   const chosen = selected ? byId.get(selected) : null;
   return (
     <>
+      {sheetOpen && <ArgumentSheet bookId={book.id} argItems={sheetItems} byId={allById} scope={scope} onScope={setScope} size={sheetSize} onSize={setSheetSize} onClose={() => setSheetOpen(false)} />}
+      {armed && (
+      <>
       {pending && (
         <div className="arg-pal" role="toolbar" aria-label="Argument role" style={{ left: Math.max(8, pending.rect.left + pending.rect.width / 2 - 250), top: Math.max(8, pending.rect.top - 48) }}>
           {ROLES.map((r) => (
@@ -306,6 +326,8 @@ export function ArgumentsHost({ book }: HostProps) {
       <div className="arg-bar" aria-live="polite">
         {toast ?? (chosen ? `#${nums.get(chosen.id)} ${ROLE_BY_ID[chosen.argument!.role].label} selected. Delete removes it.` : 'Argument layer on (Alt+A). Select words, then press 1 to 8.')}
       </div>
+      </>
+      )}
     </>
   );
 }
