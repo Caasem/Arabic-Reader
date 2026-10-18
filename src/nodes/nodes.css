@@ -262,6 +262,16 @@
   transform: translateX(-50%);
   padding-bottom: 11px;
 }
+.nx-lb.nx-s-tr {
+  bottom: 13px;
+  left: -10px;
+  padding-bottom: 11px;
+}
+.nx-lb.nx-s-tl {
+  bottom: 13px;
+  right: -10px;
+  padding-bottom: 11px;
+}
 .nx-lb.nx-st-reticle {
   border-radius: 2px;
   font: 500 10.5px/1 var(--nx-mono);
@@ -550,6 +560,10 @@
 }
 .nx-chev[aria-expanded='true'] {
   transform: rotate(90deg);
+}
+.nx-rh .nx-btn {
+  width: 16px;
+  height: 16px;
 }
 .nx-rh .nx-dot {
   position: relative;

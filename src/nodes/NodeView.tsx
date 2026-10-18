@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { IconAddNode, IconAddNote, IconCarry, IconChevron, IconPin, IconSwap, IconUnlink, KindIcon } from './icons';
+import { IconAddNode, IconAddNote, IconCarry, IconChevron, IconPin, IconSwap, IconTrash, IconUnlink, KindIcon } from './icons';
 import { floatedNodes, growSide, layoutBranch } from './layout';
 import { countBelow } from './model';
 import type { CardKid, NodeKid } from './types';
@@ -17,21 +17,25 @@ export interface ViewCtx {
   /** The layer's size, to decide which way things grow and whether a panel opens up or down. */
   width: number;
   height: number;
-  /** Show the controls that change a node (switch style, attach, detach, carry). */
+  /** Show the controls that change a node (switch style, attach, detach, delete). */
   controls: boolean;
+  /** Show the carry control on top-level nodes. */
+  carry: boolean;
+  /** The node, or the open panel of one, a dragged node or card is over right now. */
+  drop: { id: string; part: 'dot' | 'panel' } | null;
 }
 
 const at = (x: number, y: number): CSSProperties => ({ left: Math.round(x * 10) / 10, top: Math.round(y * 10) / 10 });
 
 // ---- pieces ---------------------------------------------------------------------------------------------
 
-function Dot({ k, top }: { k: NodeKid; top: boolean }) {
+function Dot({ k, top, ctx }: { k: NodeKid; top: boolean; ctx: ViewCtx }) {
   const n = k.node;
   const c = countBelow(k);
   return (
     <button
       type="button"
-      className={`nx-dot nx-st-${n.style}${n.open ? ' is-open' : ''}${c ? ' has' : ''}`}
+      className={`nx-dot nx-st-${n.style}${n.open ? ' is-open' : ''}${c ? ' has' : ''}${ctx.drop?.id === n.id && ctx.drop.part === 'dot' ? ' nx-drop' : ''}`}
       data-nx-dot={n.id}
       data-nx-top={top ? '1' : undefined}
       aria-expanded={n.open}
@@ -72,11 +76,14 @@ function Acts({ k, ctx, pin = true }: { k: NodeKid; ctx: ViewCtx; pin?: boolean 
             <button type="button" className="nx-btn" data-nx-detach={n.id} aria-label="Detach from its parent" title="Detach from its parent (or Alt-drag it)">
               <IconUnlink />
             </button>
-          ) : (
+          ) : ctx.carry ? (
             <button type="button" className="nx-btn" data-nx-carry={n.id} aria-pressed={!!n.carried} aria-label="Carry across pages" title={n.carried ? 'Stop carrying' : 'Carry across pages'}>
               <IconCarry />
             </button>
-          )}
+          ) : null}
+          <button type="button" className="nx-btn" data-nx-remove={n.id} aria-label="Delete this node" title="Delete this node and what is attached to it">
+            <IconTrash />
+          </button>
         </>
       )}
       {pin && (
@@ -88,7 +95,9 @@ function Acts({ k, ctx, pin = true }: { k: NodeKid; ctx: ViewCtx; pin?: boolean 
   );
 }
 
-function Label({ k, side, ctx }: { k: NodeKid; side: 'r' | 'l' | 't' | 'b'; ctx: ViewCtx }) {
+type LabelSide = 'r' | 'l' | 't' | 'b' | 'tr' | 'tl';
+
+function Label({ k, side, ctx }: { k: NodeKid; side: LabelSide; ctx: ViewCtx }) {
   const n = k.node;
   return (
     <span className={`nx-lb nx-st-${n.style} nx-s-${side}${n.open || n.pinTitle ? ' show' : ''}`}>
@@ -152,7 +161,7 @@ function Outline({ k, br, ctx }: { k: NodeKid; br: boolean; ctx: ViewCtx }) {
               <button type="button" className="nx-chev" data-nx-dot={c.node.id} aria-expanded={c.node.open} aria-label={`${c.node.open ? 'Collapse' : 'Open'} ${c.node.title}`}>
                 <IconChevron />
               </button>
-              <Dot k={c} top={false} />
+              <Dot k={c} top={false} ctx={ctx} />
               <Title k={c} />
               <em>{countBelow(c)}</em>
               <Acts k={c} ctx={ctx} pin={false} />
@@ -180,10 +189,10 @@ function ReticleNode({ k, ax, ay, top, ctx }: { k: NodeKid; ax: number; ay: numb
         </svg>
       )}
       <div className="nx-nw">
-        <Dot k={k} top={top} />
+        <Dot k={k} top={top} ctx={ctx} />
         {!k.node.open && <Label k={k} side={dir} ctx={ctx} />}
         {k.node.open && (
-          <div className={`nx-pn nx-${dir} ${up ? 'up' : 'dn'}`} data-nx-owner={k.node.id}>
+          <div className={`nx-pn nx-${dir} ${up ? 'up' : 'dn'}${ctx.drop?.id === k.node.id && ctx.drop.part === 'panel' ? ' nx-drop' : ''}`} data-nx-owner={k.node.id}>
             <div className="nx-ph">
               <Title k={k} />
               <em>{countBelow(k)}</em>
@@ -208,6 +217,8 @@ function BranchNode({ k, ax, ay, top, ctx }: { k: NodeKid; ax: number; ay: numbe
   const side = growSide(ax, ctx.width);
   const placed = layoutBranch(k, side);
   const cardSide = side === 1 ? 'r' : 'l';
+  // Above the dot, reaching toward the side the tree grows, so a node near a page edge keeps its title.
+  const labelSide: LabelSide = side === 1 ? 'tr' : 'tl';
   const lines = placed.flatMap((p) => {
     if (p.parent === null) return [];
     const from = placed[p.parent];
@@ -237,16 +248,16 @@ function BranchNode({ k, ax, ay, top, ctx }: { k: NodeKid; ax: number; ay: numbe
               <ReticleNode k={kid} ax={ax + p.x} ay={ay + p.y} top={false} ctx={ctx} />
             ) : (
               <div className="nx-nw">
-                <Dot k={kid} top={false} />
-                <Label k={kid} side="t" ctx={ctx} />
+                <Dot k={kid} top={false} ctx={ctx} />
+                <Label k={kid} side={labelSide} ctx={ctx} />
               </div>
             )}
           </div>
         );
       })}
       <div className="nx-nw">
-        <Dot k={k} top={top} />
-        <Label k={k} side="t" ctx={ctx} />
+        <Dot k={k} top={top} ctx={ctx} />
+        <Label k={k} side={labelSide} ctx={ctx} />
       </div>
     </>
   );

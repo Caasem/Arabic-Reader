@@ -45,6 +45,18 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.114.0 — 2026-10-18
+
+- **Attach to a node.** Open a node and its controls appear: attach a note (it opens for typing at once), attach a branch (a node
+  inside the node), switch the node's look between reticle and branch, delete it, or pin its title. Double-click a card or a note
+  to edit it; Enter saves, Esc cancels, and emptying one deletes it. Deleting shows *Undo*.
+- **Nest by dragging.** Drop one node on another, on its dot or its open panel, and it goes inside. Drop it back on the node it came from
+  and it returns to its place. Alt-drag, or the *Detach* button, frees a nested node as a node of its own.
+- **Space things out without leaving the node.** Drag a nested node, or a card in a branch, and it stays where you put it, still joined
+  to its parent by a thin line; the rest of the layout does not change. In a reticle panel a nested node floats out of the outline,
+  tied to the panel's dot. Switching a node's look puts what hangs from it back in its default places.
+- Every node, nested ones included, keeps its own look, so a reticle can hold a branch and a branch can hold a reticle.
+
 ## v0.113.0 — 2026-10-18
 
 - **Nodes (Alt+O).** A new dot you can place anywhere on a page, in the text or out in a margin. Press Alt+O (or *Node* in the dock), tap
