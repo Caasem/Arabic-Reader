@@ -1,3 +1,4 @@
+import { movesOn } from './switches';
 import { lazy, Suspense, useEffect, useRef } from 'react';
 import type { AppHostProps } from '../features/registry';
 import { usePreferences } from '../state/PreferencesContext';
@@ -45,9 +46,9 @@ export function AppHost({ onOpenBook }: AppHostProps) {
 
   // A quote tagged with a move shows its Arabic label in the desk document (thinking.css), while the moves are on.
   useEffect(() => {
-    document.documentElement.classList.toggle('th-doc-moves', !!prefs.thinkingMoves);
+    document.documentElement.classList.toggle('th-doc-moves', movesOn({ thinkingMoves: prefs.thinkingMoves, argumentsEnabled: prefs.argumentsEnabled }));
     return () => document.documentElement.classList.remove('th-doc-moves');
-  }, [prefs.thinkingMoves]);
+  }, [prefs.thinkingMoves, prefs.argumentsEnabled]);
 
   // Obsidian and Notion join the desk document's Export menu, for a thread's document and a book desk's alike.
   useEffect(() => (prefs.thinkingExport ? registerThinkingExports() : undefined), [prefs.thinkingExport]);

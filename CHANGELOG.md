@@ -45,6 +45,15 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.128.0 — 2026-10-18
+
+**The argument layer, stage 2: marking words.** Off by default (Settings → Reading → Argument layer). Press Alt+A in the
+reader, select words, press 1 to 8 (Claim, Grounds, Warrant, Backing, Qualifier, Exception, Objection, Reply), and Enter
+takes the suggested target. Selections snap to whole words, overlaps are refused, Delete removes the selected mark and
+Ctrl+Z undoes. Marks are study desk items and are painted with the CSS Custom Highlight API. While the layer is on, the
+thinking desk's five argument moves are off. Margin cards, implicit notes and the sheet come in the next stages.
+Spec: `docs/features/argument-layer.md`. To revert: `git revert` this commit.
+
 ## v0.127.0 — 2026-10-18
 
 - **The thinking desk joins main, alongside Nodes.** Both were built on separate branches at the same time and

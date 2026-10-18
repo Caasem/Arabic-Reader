@@ -1,3 +1,4 @@
+import { movesOn } from './switches';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { HostProps } from '../features/registry';
 import { registerPdfPageExtension } from '../pdf/pages/extensions';
@@ -65,7 +66,7 @@ export function ReaderHost({ book, onOpenBook }: HostProps) {
   const [compose, setCompose] = useState<{ kind: 'thought' | 'question'; on?: string; place?: string } | null>(null);
   const deskId = currentDeskId(book.id) ?? bookDeskId(book.id);
   const toInbox = prefs.studyDeskMarginsToInbox === 'auto';
-  const moves = prefs.thinkingMoves;
+  const moves = movesOn(prefs);
 
   const allThreads = useMemo(() => threadSummaries(data.desks, data.items), [data.desks, data.items]);
   const threads = useMemo(() => liveThreads(allThreads), [allThreads]);

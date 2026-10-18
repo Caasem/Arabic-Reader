@@ -1,3 +1,4 @@
+import { movesOn } from '../switches';
 import { useMemo, useState } from 'react';
 import { usePreferences } from '../../state/PreferencesContext';
 import { DeskDocument } from '../../studyDesk/DeskDocument';
@@ -105,7 +106,7 @@ export function ThreadScreen({ screen, onOpenBook }: { screen: Extract<Screen, {
         onChange={setTab}
         tabs={[
           { id: 'document', label: 'Document' },
-          ...(prefs.thinkingMoves ? [{ id: 'argument' as const, label: 'Argument' }] : []),
+          ...(movesOn(prefs) ? [{ id: 'argument' as const, label: 'Argument' }] : []),
           { id: 'gathered', label: 'Gathered' },
           { id: 'masail', label: `Masāʾil · ${open} open` },
         ]}
@@ -124,7 +125,7 @@ export function ThreadScreen({ screen, onOpenBook }: { screen: Extract<Screen, {
           />
         </div>
       )}
-      {tab === 'argument' && prefs.thinkingMoves && (
+      {tab === 'argument' && movesOn(prefs) && (
         <ArgumentTab thread={thread} data={data} onGoTo={goTo} onDrafted={() => setTab('document')} onUndone={() => setDocKey((k) => k + 1)} />
       )}
       {tab === 'gathered' && <Gathered thread={thread} data={data} onGoTo={goTo} />}

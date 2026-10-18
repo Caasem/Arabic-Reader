@@ -3,6 +3,8 @@
  * collect on a desk, and the desk is one free text document with its items embedded in it.
  */
 
+import type { ArgumentFields } from '../arguments/types';
+
 /** What an item is. Margin notes start as `line` (plain text) and can be turned into the others. */
 export type DeskItemType = 'concept' | 'quote' | 'capture' | 'note' | 'line' | 'question' | 'card';
 
@@ -95,6 +97,8 @@ export interface DeskItem {
   collapsed?: boolean;
   /** In a pile in the margin. A pile of one is no pile and is shown as a lone card. */
   pile?: DeskPile;
+  /** What the words do in an argument (src/arguments): a role and the item it is for. */
+  argument?: ArgumentFields;
   // --- the thinking desk (docs/features/thinking-front.md); all optional, ignored when it is off ---
   /** What the passage is doing in an argument, chosen by hand. */
   move?: DeskMove;

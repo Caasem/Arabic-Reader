@@ -1,9 +1,29 @@
 /**
- * Argument layer (docs/features/argument-layer.md): Toulmin roles on highlights, margin cards and the sheet.
+ * Argument layer (docs/features/argument-layer.md): Toulmin roles on words, margin cards and the sheet.
  *
- * Stage 1: pure logic only. Nothing outside this folder touches it yet, so there are no touch points to list.
- * To remove the feature, delete src/arguments. Later stages add their touch points here.
+ * Wired through `argumentsFeature` in src/features/registry.ts. Touch points outside this folder, and how to remove it
+ * (delete this folder and its registry line, then undo these):
  */
+import type { FeatureDescriptor } from '../features/registry';
+import { ArgumentsGate } from './gates';
+import { ArgumentsSettings } from './ArgumentsSettings';
+
+export const argumentsFeature: FeatureDescriptor = {
+  id: 'arguments',
+  pref: 'argumentsEnabled',
+  Host: ArgumentsGate,
+  SettingsSection: ArgumentsSettings,
+  settingsGroup: 'reading',
+  chords: ['Alt+A'],
+  touchPoints: [
+    'the `argumentsEnabled` preference (src/types/preferences.ts, src/state/defaultPreferences.ts)',
+    'DeskItem.argument, the argument fields on a study desk item (src/studyDesk/types.ts)',
+    'paintArguments and the qr-arg-* highlight names (src/readerCore/paint.ts, src/quietReader/quietReader.css)',
+    'the role colour tokens --c-reply and --s-* (src/theme/palette.css)',
+    "the thinking desk's moves give way while it is on: movesOn (src/thinking/switches.ts and the places that use it)",
+  ],
+};
+
 export * from './edit';
 export * from './gaps';
 export * from './layout';
