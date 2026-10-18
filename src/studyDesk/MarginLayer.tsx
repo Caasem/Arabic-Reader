@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useArgumentKind } from '../arguments/useArgumentKind';
 import { isCleanLocation } from '../readerCore/location';
 import { getReaderMarks } from '../readerChords';
 import { usePreferences } from '../state/PreferencesContext';
@@ -17,6 +18,9 @@ import { usePileGestures, type Side } from './usePileGestures';
 import { foldActions, foldKeys } from './folding';
 import { InkView, useMarginInk, type InkColumn } from './marginInk';
 import './marginLayer.css';
+
+// The argument layer's card extras load only when a card carries an argument (src/arguments).
+const ArgumentCardExtras = lazy(() => import('../arguments/cardExtras').then((m) => ({ default: m.ArgumentCardExtras })));
 
 /**
  * The desk in the quiet reader's margins (Alt+M). Items whose place is on the visible page sit beside it,
@@ -731,7 +735,8 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
   const shownInDoc = shownInDocument(item, docMode);
   const plain = item.fromMargin && item.type === 'line';
   // In piles every card names its kind, plain notes too.
-  const kind = item.sketchId
+  const argKind = useArgumentKind(item);
+  const baseKind = item.sketchId
     ? (item.type === 'capture' ? 'Sketch' : item.ink ? 'Ink from sketch' : 'From sketch') + (item.sketchTitle ? ` · ${item.sketchTitle}` : '')
     : item.ink && plain
       ? 'Ink'
@@ -742,6 +747,7 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
           : null
         : TYPE_LABEL[item.type]
       : TYPE_LABEL[item.type];
+  const kind = argKind ?? baseKind;
   const elsewhere = showSource && item.source && item.source.bookId !== book.id ? item.source.bookTitle || 'another book' : null;
 
   // Folded: one line at the card's place (its kind, a thumbnail or its first words). Click (or Enter) opens it,
@@ -837,6 +843,7 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
       data-gloss={item.id}
       className={
         'sd-gloss sd-gloss--' + side + (item.fromMargin ? ' sd-gloss--m sd-gloss--' + item.type : '') + (focused ? ' sd-gloss--focus' : '') + (item.fromMargin && !shownInDoc ? ' sd-gloss--out' : '') +
+        (item.argument ? ' sd-gloss--arg' + (item.source?.location ? '' : ' sd-gloss--argonly') : '') +
         (pile ? ' sd-gloss--pile' : '') + (pile?.name || pile?.color ? ' sd-gloss--tabbed' : '') + (inline ? ' sd-gloss--inline' : '') + (selected ? ' sd-gloss--sel' : '') + (fanned ? ' sd-gloss--fanned' : '')
       }
       style={inline ? undefined : { left, width, ...(pile?.color ? ({ '--tab': pile.color } as React.CSSProperties) : {}) }}
@@ -956,6 +963,11 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
         <div className={'sd-gloss__q' + (item.ar ? ' sd-gloss__q--ar' : '')} dir="auto">
           {item.text}
         </div>
+      )}
+      {item.argument && (
+        <Suspense fallback={null}>
+          <ArgumentCardExtras item={item} />
+        </Suspense>
       )}
       {item.type === 'card' && (
         <div className="sd-gloss__front">

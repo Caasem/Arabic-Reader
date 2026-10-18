@@ -22,7 +22,7 @@ describe('argItemsOf', () => {
     expect(spotOf('clean:1:5:9')).toBe(10_000_005);
   });
   it('a margin-only item sits at its pin', () => {
-    const i = item('m', 'clean:0:1:2', { role: 'warrant', for: 'a', pin: { bookId: 'b', location: 'clean:2:40:41' } });
+    const i: DeskItem = { ...item('m', '', { role: 'warrant', for: 'a', typed: true }), source: { bookId: 'b' }, pin: { bookId: 'b', location: 'clean:2:40:41', side: 'right' } };
     expect(argItemsOf([i], 'b')[0]).toMatchObject({ spot: 20_000_040, marginOnly: true });
   });
 });

@@ -18,6 +18,7 @@ export const argumentsFeature: FeatureDescriptor = {
   touchPoints: [
     'the `argumentsEnabled` preference (src/types/preferences.ts, src/state/defaultPreferences.ts)',
     'DeskItem.argument, the argument fields on a study desk item (src/studyDesk/types.ts)',
+    "the argument card inside the study desk's margin card: its heading and extras (src/studyDesk/MarginLayer.tsx, Gloss)",
     'paintArguments and the qr-arg-* highlight names (src/readerCore/paint.ts, src/quietReader/quietReader.css)',
     'the role colour tokens --c-reply and --s-* (src/theme/palette.css)',
     "the thinking desk's moves give way while it is on: movesOn (src/thinking/switches.ts and the places that use it)",

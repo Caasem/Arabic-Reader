@@ -9,10 +9,13 @@ import { bookDeskId, deleteItem, getDesk, getItem, listItems, patchItems, restor
 import { currentDeskId } from '../studyDesk/deskMemory';
 import { capture, looksArabic, useDeskData } from '../studyDesk/useDesk';
 import type { DeskItem } from '../studyDesk/types';
-import { argItemsOf, spotOf } from './bridge';
+import { argItemsOf, bookOf, spotOf } from './bridge';
+import { tieTo } from './actions';
+import { argState, popUndo, pushUndo, resetArg, setArg } from './store';
 import { ROLES, ROLE_BY_ID, numbering, roleForKey, rolesOf, type ArgumentRole } from './roles';
 import { OVERLAP_TOAST, overlaps, snapSelection } from './selection';
 import { candidates, nothingToAttach, pickerList, pickerTitle } from './targets';
+import { useArg } from './store';
 import './arguments.css';
 
 interface Pending {
@@ -30,6 +33,9 @@ interface Pick {
 }
 
 const sectionOf = (n: Node | null): HTMLElement | null => (n instanceof Element ? n : n?.parentElement)?.closest<HTMLElement>('.qr-chapter[data-chapter]') ?? null;
+function useArgTie(): string | null {
+  return useArg().tie;
+}
 const isTyping = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
 
 /**
@@ -46,7 +52,6 @@ export function ArgumentsHost({ book }: HostProps) {
   const [pick, setPick] = useState<Pick | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const undoStack = useRef<(() => Promise<void>)[]>([]);
   const toastTimer = useRef(0);
 
   const say = useCallback((text: string) => {
@@ -55,10 +60,17 @@ export function ArgumentsHost({ book }: HostProps) {
     toastTimer.current = window.setTimeout(() => setToast(null), 2600);
   }, []);
 
-  const mine = useMemo(() => data.items.filter((i) => i.argument && i.source?.bookId === book.id), [data.items, book.id]);
+  const mine = useMemo(() => data.items.filter((i) => i.argument && bookOf(i) === book.id), [data.items, book.id]);
   const argItems = useMemo(() => argItemsOf(mine, book.id), [mine, book.id]);
   const byId = useMemo(() => new Map(mine.map((i) => [i.id, i])), [mine]);
   const nums = useMemo(() => numbering(argItems), [argItems]);
+
+  // Share what the margin cards need (MarginLayer draws them; see cardExtras.tsx).
+  useEffect(() => {
+    if (!on) return resetArg();
+    setArg({ book, mine, items: argItems, byId, nums, deskId: currentDeskId(book.id) ?? bookDeskId(book.id) });
+  }, [on, book, mine, argItems, byId, nums]);
+  useEffect(() => resetArg, []);
 
   useChordHotkey('KeyA', on, () => {
     setArmed((a) => !a);
@@ -79,7 +91,7 @@ export function ArgumentsHost({ book }: HostProps) {
     if (on && paintSupported) {
       for (const item of mine) {
         const at = parseCleanLocation(item.source?.location);
-        if (!at || item.argument?.pin) continue;
+        if (!at) continue;
         const section = document.querySelector<HTMLElement>(`.qr-chapter[data-chapter="${at.chapter}"]`);
         const range = section && rangeAt(section, at.start, at.end);
         if (!range) continue;
@@ -93,8 +105,9 @@ export function ArgumentsHost({ book }: HostProps) {
   }, [on, mine, tick]);
 
   // --- a selection becomes a pending mark ---
+  const tieId = useArgTie();
   useEffect(() => {
-    if (!on || !armed) return;
+    if (!on || (!armed && !tieId)) return;
     const read = () => {
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed || !sel.rangeCount) return;
@@ -107,7 +120,7 @@ export function ArgumentsHost({ book }: HostProps) {
       const chapter = Number(section.dataset.chapter);
       const taken = mine.flatMap((i) => {
         const at = parseCleanLocation(i.source?.location);
-        return at && at.chapter === chapter && !i.argument?.pin ? [{ start: at.start, end: at.end }] : [];
+        return at && at.chapter === chapter ? [{ start: at.start, end: at.end }] : [];
       });
       if (overlaps(taken, snapped)) {
         say(OVERLAP_TOAST);
@@ -115,6 +128,12 @@ export function ArgumentsHost({ book }: HostProps) {
         return;
       }
       const b = r.getBoundingClientRect();
+      const tie = argState().tie;
+      if (tie) {
+        sel.removeAllRanges();
+        void tieTo(tie, { chapter, ...snapped, text: text.slice(snapped.start, snapped.end) });
+        return;
+      }
       setPick(null);
       setPending({ chapter, ...snapped, text: text.slice(snapped.start, snapped.end), rect: { left: b.left, top: b.top, bottom: b.bottom, width: b.width } });
     };
@@ -128,7 +147,7 @@ export function ArgumentsHost({ book }: HostProps) {
       document.removeEventListener('mouseup', onUp);
       document.removeEventListener('touchend', onUp);
     };
-  }, [on, armed, mine, say]);
+  }, [on, armed, tieId, mine, say]);
 
   // --- apply a role ---
   const apply = useCallback(
@@ -147,7 +166,7 @@ export function ArgumentsHost({ book }: HostProps) {
         inDocument: false,
         argument: { role, for: null },
       });
-      undoStack.current.push(() => deleteItem(made.id));
+      pushUndo(() => deleteItem(made.id));
       const spot = spotOf(made.source!.location!)!;
       const found = candidates(argItems, role, spot, made.id);
       const list = pickerList(role, found).map((x) => (x ? byId.get(x.id) ?? null : null));
@@ -181,7 +200,7 @@ export function ArgumentsHost({ book }: HostProps) {
     await patchItems(dependents.map((d) => ({ id: d.id, patch: { argument: { ...d.argument!, for: null } } })));
     await deleteItem(id);
     const desk = await getDesk(item.deskId);
-    undoStack.current.push(async () => {
+    pushUndo(async () => {
       await restoreItems([item], desk ? [desk] : []);
       await patchItems(dependents.map((d) => ({ id: d.id, patch: { argument: d.argument } })));
     });
@@ -189,7 +208,7 @@ export function ArgumentsHost({ book }: HostProps) {
   }, []);
 
   const undo = useCallback(async () => {
-    const fn = undoStack.current.pop();
+    const fn = popUndo();
     if (!fn) return say('Nothing to undo');
     await fn();
   }, [say]);
@@ -243,7 +262,7 @@ export function ArgumentsHost({ book }: HostProps) {
       const at = offsetWithin(section, pos.offsetNode, pos.offset);
       const hit = mine.find((i) => {
         const l = parseCleanLocation(i.source?.location);
-        return l && !i.argument?.pin && l.chapter === Number(section.dataset.chapter) && at >= l.start && at < l.end;
+        return l && l.chapter === Number(section.dataset.chapter) && at >= l.start && at < l.end;
       });
       setSelected(hit?.id ?? null);
     };

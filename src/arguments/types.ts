@@ -5,8 +5,6 @@ export interface ArgumentFields {
   role: ArgumentRole;
   /** The item this one is for. Null: not attached yet. One target in the first release. */
   for: string | null;
-  /** Margin-only items keep their place here (stage 3). */
-  pin?: { bookId: string; location: string };
   /** Written by the reader (an implicit note), so it is italic and says "reader's note". */
   typed?: boolean;
 }

@@ -45,6 +45,15 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.129.0 — 2026-10-18
+
+**The argument layer, stage 3: margin cards and reader's notes.** With the layer on, each marked passage's card in the
+Ḥāshiya shows `#n Role`, what it is for, any gap (no grounds, no warrant, no reply) and actions. **+ Warrant**,
+**+ Exception** (on a step) and **+ Backing** (on a warrant) add your own note, with no words on the page: a dashed card
+marked "reader's note", kept beside its step, and piled with the claim's other notes (the pile opens in the usual fan).
+**To margin** keeps a note and drops the highlight; **Tie to words** puts it back on the next words you select. All of
+it undoes with Ctrl+Z while the layer is armed (Alt+A). Spec: `docs/features/argument-layer.md`. To revert: `git revert`.
+
 ## v0.128.0 — 2026-10-18
 
 **The argument layer, stage 2: marking words.** Off by default (Settings → Reading → Argument layer). Press Alt+A in the
