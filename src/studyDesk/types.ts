@@ -95,11 +95,84 @@ export interface DeskItem {
   collapsed?: boolean;
   /** In a pile in the margin. A pile of one is no pile and is shown as a lone card. */
   pile?: DeskPile;
+  // --- the thinking desk (docs/features/thinking-front.md); all optional, ignored when it is off ---
+  /** What the passage is doing in an argument, chosen by hand. */
+  move?: DeskMove;
+  /** The item it supports or objects to (a claim), or answers (an objection, for a reply). */
+  tie?: string;
+  /** Thoughts this thought is linked to, kept on both sides. */
+  links?: string[];
+  /** Thread desks it belongs to. */
+  threads?: string[];
+  /** When it joined each thread (thread id → ms). */
+  joined?: Record<string, number>;
+  /** Earlier wordings of a thought, oldest first; the item's own text is the current one. */
+  versions?: DeskVersion[];
+  /** A thought scheduled for Revisit. */
+  review?: DeskReview;
+  /** A question's answer: the passage item that answers it. */
+  answer?: string;
+  answeredAt?: number;
+  /** A thought dropped in Revisit: archived, history kept, still on its desk. */
+  droppedAt?: number;
   createdAt: number;
   updatedAt: number;
 }
 
-export type DeskKind = 'book' | 'own';
+/** The five argument moves (thinking desk). */
+export type DeskMove = 'definition' | 'claim' | 'evidence' | 'objection' | 'reply';
+
+export interface DeskVersion {
+  at: number;
+  text: string;
+}
+
+/** When a thought comes back for Revisit, scheduled with FSRS (src/vocabulary/fsrs.ts). */
+export interface DeskReview {
+  /** Next visit (ms). */
+  due: number;
+  /** Days between the last visit and the next. */
+  every: number;
+  /** When the reader said Still agree. */
+  agreed: number[];
+  /** When the current wording was written by Revise (the item's creation before any). */
+  revisedAt?: number;
+  /** The FSRS card, once visited. */
+  card?: { stability: number; difficulty: number; reps: number; lapses: number; state: number; scheduledDays: number; learningSteps: number; lastReview?: number };
+}
+
+/** How two passages relate in a Muqābala link. */
+export type DeskRel = 'same' | 'supports' | 'differs' | 'explains' | 'quotes';
+
+/** A Muqābala link between two items (passages), with a note of what is seen across the gap. */
+export interface DeskLink {
+  id: string;
+  a: string;
+  b: string;
+  rel: DeskRel;
+  note: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** A line of the reading journal: what changed in the reader's mind when they closed a book. */
+export interface JournalEntry {
+  id: string;
+  /** When the book was closed. */
+  at: number;
+  bookId: string;
+  bookTitle?: string;
+  /** PDF pages seen (0 for text books). */
+  pages: number;
+  minutes: number;
+  text: string;
+  /** What was made in the session: moves, thoughts, questions, items added to threads. */
+  made?: { moves: number; thoughts: number; questions: number; threaded: number };
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type DeskKind = 'book' | 'own' | 'thread';
 
 export interface Desk {
   id: string;
@@ -107,6 +180,12 @@ export interface Desk {
   /** Book desks: the book. */
   bookId?: string;
   title: string;
+  /** Threads: the Arabic name (`title` is the English one, or the Arabic when there is no English name). */
+  titleAr?: string;
+  /** Threads: the guiding question. */
+  question?: string;
+  /** Threads: when it was archived (hidden from the picker and Today, kept whole). */
+  archivedAt?: number;
   /** The document: sanitized HTML (see docHtml.ts) with items embedded as `<div class="desk-embed" data-item="…">`. */
   html: string;
   createdAt: number;

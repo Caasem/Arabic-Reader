@@ -284,7 +284,9 @@ function Nearby({
     };
   }, [provider, centre]);
   if (!win) return null;
-  const current = around.split('|')[0].trim();
+  // The window is centred on the headword found for `around` (looked up without its vowels), so its index, not
+  // the text, says which word is current; once paged away from it, none is.
+  const current = centre === around ? win.index : -1;
   return (
     <aside className="dpage__nearby" aria-label={`Nearby in ${label}`}>
       <div className="dpage__label" dir="ltr">
@@ -296,7 +298,7 @@ function Nearby({
       <ul className="dpage__nearby-list">
         {win.words.map((w, i) => (
           <li key={`${w}${i}`}>
-            <button className="dpage__nearby-word" aria-current={w === current ? 'true' : undefined} onClick={() => onPick(w)}>
+            <button className="dpage__nearby-word" aria-current={i === current ? 'true' : undefined} onClick={() => onPick(w)}>
               {w}
             </button>
           </li>

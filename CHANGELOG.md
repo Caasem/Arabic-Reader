@@ -45,6 +45,149 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.127.0 — 2026-10-18
+
+- **The thinking desk joins main, alongside Nodes.** Both were built on separate branches at the same time and
+  numbered their releases from 0.113.0, so the entries below overlap: the thinking desk's 0.113.0–0.126.1 come first,
+  then Nodes' 0.113.0–0.115.1. Nothing changes in either feature here; this release only brings them together.
+
+## v0.126.1 — 2026-10-18
+
+- **Dictionary screen:** the Nearby list marks the word you looked up again, also when its entry is written with
+  vowels (the list is found without them).
+- **Scanned PDFs:** a misread like المدرسه (ة read as ه) is flagged as not a word again, with corrections offered.
+  When a word is retried without ال, readings ending in a pronoun no longer count: ال and an attached pronoun can't
+  go together.
+
+## v0.126.0 — 2026-10-17
+
+- **Draft from the argument.** In a thread's Argument tab, one button writes an outline into its Document: each claim
+  as a heading, with its evidence, its objections and their replies as passages with their citations, your own
+  thoughts on them as paragraphs, and untied passages under "Not tied yet". If the Document already has something in
+  it, the outline goes at the end under "Draft — date". Undo puts the old Document back.
+
+## v0.125.0 — 2026-10-17
+
+- **Threads can be renamed, archived and deleted; and more.** A Manage menu in the Thread screen renames a thread
+  (names and question), archives it (out of the picker and Today, shown under Archived) or deletes it, with Undo.
+  Threads now appear in All desks. A passage tagged with a move shows its Arabic name in the desk document. Revisit
+  has a button in the dock and a Dropped tab where a dropped thought can be restored. A thought can be linked to
+  another one later, from Touching this passage and from Revisit.
+
+## v0.124.0 — 2026-10-17
+
+- **Export to Obsidian and Notion.** The desk document's Export menu, for a thread's document and a book desk's, now
+  has Save for Obsidian (front matter, `[[Book#p. N]]` citations, moves as tags, linked thoughts as backlinks) and
+  Save for Notion (quotes with citations, masāʾil as to-dos). There is a switch for it in Settings → Reading →
+  Thinking desk.
+
+## v0.123.0 — 2026-10-17
+
+- **Muqābala is set aside for now.** The side-by-side screen, Alt+J, Compare and Open side by side are gone from the
+  thinking desk, which makes it lighter to load. Links you already made stay in your data and in exports. The whole
+  feature is kept on the branch `claude/thinking-desk-muqabala` and can come back.
+
+## v0.122.0 — 2026-10-13
+
+- **Muqābala: every passage is clickable, as in the prototype.** Each sentence lights up under the pointer and a click
+  picks it, in text chapters and on PDF pages, not just the passages you kept before. A clicked sentence is kept on its
+  book's desk only when you make the link, so picking and cancelling leaves nothing behind. Dragging across words still
+  chooses your own (now "Use these words").
+
+## v0.121.0 — 2026-10-12
+
+- **Muqābala looks like the prototype.** Text chapters are set as pages of the book (paper, a running head, a foot) on a
+  stage, PDF pages sit on the same stage; a move's Arabic name sits on the line before its passage; a picked passage
+  shows in the selection colour with a dashed edge; plain relation chips in a wider gap. Under the books, the new or
+  chosen link sits beside All links in your library, and the hint sits beside the title.
+
+## v0.120.0 — 2026-10-12
+
+- **Muqābala shows two live books.** Each side is now the book itself, not a list of kept passages: its text chapter by
+  chapter, or its PDF pages (books added from a PDF whose text reflowed can switch between Text and PDF pages). Kept
+  passages are marked in place; click one on each side to link them, or select words in either book and press Keep
+  these words. On a scanned page, drag a box round the words. The lines follow both books as they scroll, and point at
+  the edge when a passage is out of sight; click a chip to scroll both books to its passages. Any book in the library
+  can be opened on either side.
+
+## v0.119.0 — 2026-10-12
+
+- **Thinking desk, Today.** Above the Library, when there is anything to show: On this day (what you read a year ago, and
+  six months ago; a thought from then that you later revised, then and now side by side; that day's closing line),
+  thoughts due for a revisit, open masāʾil, and your threads with a sparkline of their growth.
+- **The closing prompt.** Closing a book after real activity (5 minutes or more, or anything made) offers an optional
+  sheet over the Library: pages, minutes, moves, thoughts, masāʾil and items added to threads, and "What changed in your
+  mind?" in one line, with Skip and Save. Saved lines form your reading journal, which feeds On this day. Never during a
+  capture trip. Off switch: Settings → Reading → Thinking desk → Ask what changed when a book closes.
+
+## v0.118.0 — 2026-10-12
+
+- **Thinking desk, Revisit.** Thoughts written in the passage bar come back a week later, scheduled with the same FSRS
+  scheduler as flashcards; any other thought can be added with Revisit this in Touching this passage.
+- **The Revisit screen**: the thought, the passage it is on, and three answers. **Still agree** pushes the next visit
+  further out. **Revise** keeps the old wording as a version and shows how the thought changed. **Drop** archives it
+  with its history, with Undo. Today's queue sits beside it.
+- **Send to Anki**: scheduled thoughts go to Anki through AnkiConnect as their own note type, "Arabic Reader Thought",
+  with the passage and its source on the front and the thought on the back. Thoughts Anki already has are skipped.
+
+## v0.117.0 — 2026-10-12
+
+- **Thinking desk, Muqābala (Alt+J).** Two books side by side, each listing its kept passages page by page. Click a passage
+  on one side, then one on the other, and name how they relate: Same text, Supports, Differs, Explains or Quotes, with an
+  optional note.
+- **Lines join linked passages** across the gap, coloured by relation (Differs dashed), with the relation on a chip in
+  the gap; a click shows the note (edited in place), both citations and Delete link (with Undo). Under 900px the books
+  stack and the links are listed instead. All links in your library are listed below.
+- **From the reader**: Compare in the passage bar or Alt+J picks that passage on the left; Compare in the dock. Links
+  count as backlinks on both passages, with Open side by side; two definitions that differ show it in the Argument tab.
+
+## v0.116.0 — 2026-10-12
+
+- **Thinking desk, masāʾil.** Questions have an open or answered state. **Alt+Q** (or Ask a masʾala in the passage bar)
+  asks one on the passage, or at this place on the page; it sits in the Ḥāshiya beside the passage and in the inbox, and
+  joins the active thread.
+- **The Masāʾil screen** (Masāʾil in the dock): how many are still open and how long the oldest has waited, Open,
+  Answered and All, and for each when and where it was asked, its threads, and its answer with its citation.
+- **Find the answer** opens the book it was asked in, with a bar naming the question. Click a passage's handle (Yes, this
+  answers it / Not this one) or select new words (These words answer the masʾala): the answer is saved with its citation,
+  with Undo. Cancel or Esc stops looking. Answered masāʾil can be reopened.
+- The Thread screen's Masāʾil tab and Touching this passage offer Find the answer too.
+
+## v0.115.0 — 2026-10-12
+
+- **Thinking desk, backlinks.** A dark count beside each passage that something touches: your gloss on it, thoughts at its
+  place, thoughts linked to those (from any book), masāʾil asked on it or answered by it, and Muqābala links.
+- **Click the count** for "Touching this passage" in the Ḥāshiya strip: each as a card, thoughts that came by a link
+  marked as such, each with its source to go to. Back to the Ḥāshiya, or Esc, closes it.
+
+## v0.114.0 — 2026-10-12
+
+- **Thinking desk, argument moves.** Name what a passage is doing, by hand: تعريف Definition (1), دعوى Claim (2),
+  دليل Evidence (3), اعتراض Objection (4), جواب Reply (5). In the passage bar, or straight from a selection: on PDF
+  pages the moves sit under the Highlighter's bar, in the quiet reader under the selected words. Pressing a move again
+  takes it off.
+- **Ties.** After Evidence or Objection the bar asks which claim it bears on; after Reply, which objection it answers
+  (the active thread's first, then this book's). Leave it loose for now is always there.
+- **On the page**, a tagged passage shows its Arabic label at its start and a coloured underline.
+- **Write a thought** from the passage bar: a card in the Ḥāshiya strip, "What do you make of it?", with This is my
+  claim and links to other thoughts from any book. The thought sits beside the passage as a Ḥāshiya note. Ctrl+Enter saves.
+- **The Thread screen's Argument tab**: definitions (with a note when they differ), then each claim with its evidence
+  and objections, replies under the objections they answer, open masāʾil under the passage they were asked on, and
+  what is not tied yet.
+
+## v0.113.0 — 2026-10-12
+
+- **Thinking desk, threads (off by default: Settings → Reading → Thinking desk).** A thread is a desk that belongs to a
+  question instead of a book. It has an Arabic and/or English name and a guiding question, and gathers from any book.
+- **Alt+T** opens the threads in the Alt+D palette's style: each with how many items it holds and when it was last added
+  to. Type to filter or to start a new thread; Enter collects into it; Stop collecting turns it off. Thread is also in the dock.
+- **The active thread** shows as a bar under the reader's header. While it is on, new thoughts, Ḥāshiya notes and masāʾil
+  join it, wherever they are made.
+- **Passages on the page** (quotes and captures) have a small handle at their start. It opens the passage bar, with a
+  +/✓ button for each thread (the active one, then the most recent), so a passage can be in several threads.
+- **The Thread screen**: a thread switcher, the names and guiding question edited in place, counts, Collect while reading,
+  and tabs: Document (the thread's own desk document, with headings, the "/" picker and export), Gathered (a timeline of
+  what was added, coloured by book, and everything grouped by book) and Masāʾil.
 ## v0.115.1 — 2026-10-18
 
 - **Nodes in the margin of a paged page now appear.** In the paged layout, a node tapped into a margin could attach itself to a word on a

@@ -46,13 +46,14 @@ describe('feature registry', () => {
       'flashCard',
       'picksExport',
       'studyDesk',
+      'thinking',
       'annotate',
       'nodes',
     ]);
   });
 
   it('mounts app hosts in the order App listed them', () => {
-    expect(FEATURES.filter((f) => f.AppHost).map((f) => f.id)).toEqual(['look', 'readerFont', 'crowdSync', 'gettingStarted']);
+    expect(FEATURES.filter((f) => f.AppHost).map((f) => f.id)).toEqual(['thinking', 'look', 'readerFont', 'crowdSync', 'gettingStarted']);
   });
 
   it('places settings sections where SettingsPanel listed them', () => {
@@ -67,6 +68,7 @@ describe('feature registry', () => {
       'pdfimport',
       'pdfhighlighter',
       'pdfocr',
+      'thinking',
     ]);
     expect(sectionOrder('dictionary', ['dictionaries'], FEATURES)).toEqual([
       'dictionaries',

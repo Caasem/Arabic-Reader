@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-07",
+  "updated": "2026-10-18",
   "note": "Effort is a rough estimate in working weeks of remaining work. Status: done | in-progress | built-local | planned | idea. Edit this file; the site reads it.",
   "areas": {
     "foundation": "Foundation",
@@ -477,6 +477,20 @@
       "branch": "feat/nodes",
       "notes": "Built in stages on feat/nodes (data, the dot, attach and nest, carry and the list); every stage is one commit with its own off-switch. Revert matrix: docs/changes/nodes-changes.md. Prototype: https://claude.ai/artifact/3JgEMySJcAkYG73RtMkbot",
       "brief": "features/nodes.md",
+      "milestone": "M2"
+    },
+    {
+      "id": "thinking-front",
+      "title": "Thinking desk: threads, argument moves, backlinks, masāʾil, revisit, today, export, draft",
+      "area": "reader",
+      "status": "done",
+      "effort": 0,
+      "deps": [
+        "study-desk"
+      ],
+      "branch": "claude/thinking-desk-threads-moves-yr6wq6",
+      "notes": "Built on the study desk, one commit per part, behind thinkingFrontEnabled (off by default) and a switch per part. Merged into main in 0.127.0. Muqābala was set aside (0.123.0; preserved on branch claude/thinking-desk-muqabala). Revert matrix: docs/changes/thinking-front-changes.md.",
+      "brief": "features/thinking-front.md",
       "milestone": "M2"
     }
   ],
