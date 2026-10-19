@@ -16,7 +16,7 @@ describe('argItemsOf', () => {
       item('other', 'clean:0:1:2', { role: 'claim', for: null }, 'x'),
       item('pdf', 'pdf:1:0:0:1:1', { role: 'claim', for: null }),
     ];
-    const out = argItemsOf(items, 'b');
+    const out = argItemsOf(items, 'b').filter((n) => n.id !== 'pdf');
     expect(out.map((n) => n.id)).toEqual(['a', 'b']);
     expect(out[1].spot).toBeLessThan(out[0].spot);
     expect(spotOf('clean:1:5:9')).toBe(10_000_005);
@@ -44,5 +44,17 @@ describe('argItemsFor', () => {
     const all = argItemsFor(items, 'all', 'b', null);
     expect(all.map((n) => n.id)).toEqual(['a', 'b', 'x']);
     expect(all[2].spot).toBeGreaterThan(all[1].spot);
+  });
+});
+
+describe('PDF places', () => {
+  it('order by page, then height on the page', () => {
+    expect(spotOf('pdf:2:0.1000:0.2000:0.5000:0.1000')!).toBeGreaterThan(spotOf('pdf:1:0.1000:0.9000:0.5000:0.1000')!);
+    expect(spotOf('pdf:1:0.1000:0.5000:0.5000:0.1000')!).toBeGreaterThan(spotOf('pdf:1:0.1000:0.2000:0.5000:0.1000')!);
+  });
+  it('are items of the book like any other', () => {
+    const out = argItemsOf([item('p', 'pdf:3:0.1000:0.2000:0.5000:0.1000', { role: 'claim', for: null })], 'b');
+    expect(out).toHaveLength(1);
+    expect(out[0].marginOnly).toBe(false);
   });
 });

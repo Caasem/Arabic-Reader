@@ -5,6 +5,9 @@ import { formatCleanLocation, parseCleanLocation } from '../readerCore/location'
 import { useChordHotkey } from '../readerChords';
 import { clearBlocks, keepBlocksFresh, renderBlocks } from '../readerCore/markBlocks';
 import { registerSelectionExtra } from '../readerCore/selectionExtras';
+import { registerPdfPageExtension } from '../pdf/pages/extensions';
+import { pdfDeskState, usePdfDesk } from '../studyDesk/pdfDesk';
+import { ArgumentPdfLayer } from './ArgumentPdfLayer';
 import { ArgumentRoleRow } from './ArgumentRoleRow';
 import { usePreferences } from '../state/PreferencesContext';
 import { bookDeskId, deleteItem, getDesk, getItem, listItems, patchItems, restoreItems, updateItem } from '../studyDesk/deskStore';
@@ -56,6 +59,8 @@ export function ArgumentsHost({ book }: HostProps) {
   const [armed, setArmed] = useState(true);
   const [pick, setPick] = useState<Pick | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  // Words waiting in the PDF Highlighter's bar (PDF pages): the roles apply to them like to a selection in the text.
+  const pdfPending = !!usePdfDesk().pending;
   const sheetOpen = layers.sheet !== 'off';
   const sheetSize: SheetSize = layers.sheet === 'full' ? 'full' : 'side';
   const setSheet = useCallback((sheet: Layers['sheet']) => updatePrefs({ argumentsSheet: sheet }), [updatePrefs]);
@@ -186,8 +191,32 @@ export function ArgumentsHost({ book }: HostProps) {
   }, [on, tieId, readSelection]);
 
   // --- apply a role ---
+  /** After an item is made: ask what it is for (or say there is nothing to attach it to). */
+  const afterMade = useCallback(
+    (made: DeskItem, role: ArgumentRole) => {
+      pushUndo(() => deleteItem(made.id));
+      const spot = spotOf(made.source?.location ?? '');
+      const found = spot == null ? [] : candidates(argItems, role, spot, made.id);
+      const list = pickerList(role, found).map((x) => (x ? byId.get(x.id) ?? null : null));
+      if (found.length) setPick({ id: made.id, title: pickerTitle(role), list });
+      else {
+        const msg = nothingToAttach(role, found);
+        if (msg) say(msg);
+      }
+    },
+    [argItems, byId, say]
+  );
+
   const apply = useCallback(
     async (role: ArgumentRole) => {
+      // PDF pages: the Highlighter has the words waiting; it keeps them as an item that carries the role.
+      const keep = pdfDeskState().pending;
+      if (keep) {
+        const made = await keep({ argument: { role, for: null }, fromMargin: true, inInbox: false, inDocument: false });
+        setPick(null);
+        if (made) afterMade(made, role);
+        return;
+      }
       const p = readSelection();
       if (!p) return;
       setPick(null);
@@ -202,18 +231,16 @@ export function ArgumentsHost({ book }: HostProps) {
         inDocument: false,
         argument: { role, for: null },
       });
-      pushUndo(() => deleteItem(made.id));
-      const spot = spotOf(made.source!.location!)!;
-      const found = candidates(argItems, role, spot, made.id);
-      const list = pickerList(role, found).map((x) => (x ? byId.get(x.id) ?? null : null));
-      if (found.length) setPick({ id: made.id, title: pickerTitle(role), list });
-      else {
-        const msg = nothingToAttach(role, found);
-        if (msg) say(msg);
-      }
+      afterMade(made, role);
     },
-    [readSelection, book, argItems, byId, say]
+    [readSelection, book, afterMade]
   );
+
+  // Marks on PDF pages.
+  useEffect(() => {
+    if (!on || !book.pdf) return;
+    return registerPdfPageExtension({ id: 'arguments', Layer: ArgumentPdfLayer });
+  }, [on, book.pdf]);
 
   // The roles in the selection bar (one palette with the five colours), applying to the current selection.
   useEffect(() => {
@@ -280,7 +307,7 @@ export function ArgumentsHost({ book }: HostProps) {
           e.preventDefault();
           void choose(Number(e.key) - 1);
         }
-      } else if (!e.ctrlKey && !e.shiftKey && roleForKey(e.key) && window.getSelection()?.isCollapsed === false) {
+      } else if (!e.ctrlKey && !e.shiftKey && roleForKey(e.key) && (pdfPending || window.getSelection()?.isCollapsed === false)) {
         // Words are selected: 1 to 8 marks them.
         e.preventDefault();
         void apply(roleForKey(e.key)!);
@@ -291,7 +318,7 @@ export function ArgumentsHost({ book }: HostProps) {
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [on, armed, pick, selected, apply, choose, remove, undo]);
+  }, [on, armed, pick, selected, pdfPending, apply, choose, remove, undo]);
 
   // --- click a mark to select it (Delete removes it) ---
   useEffect(() => {

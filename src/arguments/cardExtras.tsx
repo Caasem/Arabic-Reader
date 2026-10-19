@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { DeskItem } from '../studyDesk/types';
+import { setPdfDeskTie } from '../studyDesk/pdfDesk';
 import { addImplicitNote, armTie, toMargin } from "./actions";
 import { implicitFor, type ImplicitRole } from './edit';
 import { gaps } from './gaps';
@@ -62,7 +63,7 @@ export function ArgumentCardExtras({ item }: { item: DeskItem }) {
               To margin
             </button>
           ) : (
-            <button type="button" title="Select the words this note belongs to" onMouseDown={(e) => e.preventDefault()} onClick={() => armTie(item.id)}>
+            <button type="button" title="Select the words this note belongs to" onMouseDown={(e) => e.preventDefault()} onClick={() => ((item.pin?.location ?? item.source?.location ?? '').startsWith('pdf:') ? setPdfDeskTie(item.id) : armTie(item.id))}>
               Tie to words
             </button>
           )}

@@ -45,6 +45,14 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.134.0 — 2026-10-19
+
+**Argument marks on PDF pages.** Select words on a PDF page and the Highlighter's bar now carries the eight roles too
+(or press 1 to 8). The mark is drawn over its region in your chosen look (underline by default), gets a margin card with
+the same actions (+ Warrant, To margin ...), and joins the same argument and sheet as marks in the reader's text. Notes
+tied to words on a PDF still become margin-only if you tie them (the PDF reader's own tie keeps them in the margin).
+To revert: `git revert`.
+
 ## v0.133.0 — 2026-10-19
 
 **One palette for every mark.** Select words and the bar over them now shows the five highlight colours and, with the

@@ -426,3 +426,11 @@
 .qr-blocks .qr-block--objection { --c: var(--s-objection); }
 .qr-blocks .qr-block--reply { --c: var(--s-reply); }
 .qr-blocks .qr-block--under-grounds { --c2: var(--s-grounds); }
+
+/* Marks on a PDF page: the same blocks, over the page's frame. */
+.qr-blocks.qr-blocks--page {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}

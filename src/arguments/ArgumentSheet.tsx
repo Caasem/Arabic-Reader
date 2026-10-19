@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { goToBookLocation } from '../readerChords';
+import { goToPdfPlace } from '../studyDesk/pageGeometry';
 import type { DeskItem } from '../studyDesk/types';
 import { bookOf, type SheetScope } from './bridge';
 import { NO_GAPS, nextOffender } from './gaps';
@@ -49,7 +50,10 @@ export function ArgumentSheet({ bookId, argItems, byId, scope, onScope, size, on
     setSelected(id);
     const item = byId.get(id);
     const at = where(item);
-    if (at && item && bookOf(item) === bookId) goToBookLocation(at);
+    if (at && item && bookOf(item) === bookId) {
+      if (at.startsWith('pdf:')) goToPdfPlace(at);
+      else goToBookLocation(at);
+    }
   };
   const jump = (key: string, ids: string[]) => {
     const next = nextOffender(ids, last[key] ?? null);

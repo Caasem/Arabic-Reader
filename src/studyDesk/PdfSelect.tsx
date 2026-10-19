@@ -10,6 +10,7 @@ import { setSnapEnabled, snapEnabled } from './deskMemory';
 import { capture, looksArabic, type DeskData } from './useDesk';
 import type { DeskItem, NewDeskItem } from './types';
 import { useInkUi } from '../annotate/inkUi';
+import { useSelectionExtras } from '../readerCore/selectionExtras';
 
 /**
  * The Highlighter: highlighting straight on PDF pages, without Alt+X. On a scanned page, drag over words with a mouse or pen
@@ -49,6 +50,7 @@ export function PdfSelect({ book, data, active, commands, onToast }: { book: Boo
   const { tie } = usePdfDesk();
   const sketching = useInkUi().sketch;
   const [pending, setPending] = useState<Pending | null>(null);
+  const extras = useSelectionExtras();
   const [live, setLive] = useState<{ frame: HTMLElement; a: { x: number; y: number }; b: { x: number; y: number } } | null>(null);
   const [snap, setSnap] = useState(snapEnabled);
   const [busy, setBusy] = useState(false);
@@ -379,6 +381,7 @@ export function PdfSelect({ book, data, active, commands, onToast }: { book: Boo
               </div>
             )}
             {pending.snapped && pending.snapped.via === 'none' && snap && <div className="sd-pdfsel__note">No words read there: kept as an image region.</div>}
+            {pending.snapped && !tie && extras.map(({ id, Row }) => <Row key={id} />)}
           </div>
         </>
       )}
