@@ -99,9 +99,7 @@ test('word lookup, save, highlight, and TOC survive a reload', async ({ page }) 
   await page.waitForSelector('.book-card', { timeout: 5000 });
   await page.click('.book-card');
   await page.waitForSelector('.qr-chapter .ar-word', { timeout: 10000 });
-  // Saved highlights are painted asynchronously (an IndexedDB read) as ranges
-  // in the CSS highlight registry -- poll instead of a fixed wait.
-  await expect
-    .poll(() => page.evaluate(() => CSS.highlights.get('qr-hl-yellow')?.size ?? 0), { timeout: 10000 })
-    .toBeGreaterThan(0);
+  // Saved highlights are drawn asynchronously (an IndexedDB read) as blocks behind the text
+  // (readerCore/markBlocks.ts) -- poll instead of a fixed wait.
+  await expect(page.locator('.qr-blocks[data-layer="highlights"] .qr-block--yellow').first()).toBeAttached({ timeout: 10000 });
 });
