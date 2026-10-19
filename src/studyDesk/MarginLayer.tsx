@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useArgumentKind } from '../arguments/useArgumentKind';
 import { cardShown } from '../arguments/layers';
+import { lineBlocks } from '../arguments/lineBlocks';
 import { useArgLayers } from '../arguments/store';
 import { isCleanLocation } from '../readerCore/location';
 import { getReaderMarks } from '../readerChords';
@@ -340,8 +341,9 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
     <div ref={layerRef} className="sd-margins" aria-label="Ḥāshiya" onPointerDown={onLayerPointerDown} onPointerDownCapture={ink.onPointerDownCapture}>
       <svg ref={svgRef} className="sd-margins__lines" aria-hidden="true" />
       {ink.overlay}
-      {hovered?.rects.map((r, i) => (
-        <div key={i} className="sd-margins__mark" style={{ left: r.left - 2, top: r.top - 1, width: r.width + 4, height: r.height + 2 }} />
+      {/* One outline per line of words: the page draws each word in its own box, which would ring every word. */}
+      {hovered && lineBlocks(hovered.rects, null).map((r, i) => (
+        <div key={i} className="sd-margins__mark" style={{ left: r.left - 2, top: r.top - 1, width: r.right - r.left + 4, height: r.bottom - r.top + 2 }} />
       ))}
       {areas.map((side) => {
         const s = sides[side]!;

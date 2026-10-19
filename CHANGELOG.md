@@ -45,6 +45,12 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.131.4 — 2026-10-19
+
+**One outline per line when you point at a margin card's words.** Pointing at a margin item (a highlight's card, or an
+argument mark's) outlines its words in gold. Each word used to get its own ring, with rings inside rings; it is now one
+outline per line of words.
+
 ## v0.131.3 — 2026-10-19
 
 **Argument marks sit behind the words.** They were drawn over the text and dimmed it (the red one looked brown). They are
