@@ -422,15 +422,22 @@
   font-weight: 600;
 }
 
-/* The marks on the page: one solid block per line, tinted by role. Drawn over the text, so the tints are see-through. */
+/* The marks on the page: one solid block per line, tinted by role, behind the words. They sit in the reader's scroll
+   area, which is made its own stacking context so a layer at z-index -1 paints above its background and below the text. */
+.qr-stage.arg-iso {
+  isolation: isolate;
+}
 .arg-marks {
-  position: fixed;
-  inset: 0;
-  z-index: 5;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: -1;
   pointer-events: none;
 }
 .arg-mark {
-  position: fixed;
+  position: absolute;
   border-radius: 3px;
 }
 .arg-mark--claim { background: var(--c-qr-highlight-blue); }
