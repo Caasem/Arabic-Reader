@@ -45,6 +45,13 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.135.0 — 2026-10-19
+
+**The argument layer is on by default.** Select words and the bar shows the eight argument roles under the five colours
+(keys 1 to 8; Shift+1 to 5 for colours), and Alt+Shift+A opens the sheet. Turn it off in Settings → Reading → Argument
+layer. While it is on, the thinking desk's five argument moves are off (they come back when you turn it off). It needs the
+study desk, which is on by default. To revert: `git revert`.
+
 ## v0.134.0 — 2026-10-19
 
 **Argument marks on PDF pages.** Select words on a PDF page and the Highlighter's bar now carries the eight roles too
