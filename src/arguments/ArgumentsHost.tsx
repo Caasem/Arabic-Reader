@@ -110,7 +110,8 @@ export function ArgumentsHost({ book }: HostProps) {
     };
     document.addEventListener('scroll', bump, true);
     window.addEventListener('resize', bump);
-    const id = window.setInterval(bump, 1200);
+    // The poll sets the tick directly: a hidden window does not run animation frames.
+    const id = window.setInterval(() => setTick((t) => t + 1), 1200);
     return () => {
       cancelAnimationFrame(raf);
       document.removeEventListener('scroll', bump, true);

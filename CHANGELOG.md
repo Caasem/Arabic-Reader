@@ -45,6 +45,10 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.131.2 — 2026-10-19
+
+**Argument marks show up.** The 0.131.1 blocks were drawn at an invalid position and did not appear; fixed, and saved marks are redrawn on a timer even in a window that is not in front. Marks are one solid block per line.
+
 ## v0.131.1 — 2026-10-19
 
 **Argument marks are solid.** A marked passage is now one unbroken block per line, and a passage that wraps has no gap

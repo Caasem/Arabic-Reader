@@ -23,4 +23,19 @@ describe('lineBlocks', () => {
     expect(lineBlocks([box(5, 5, 5, 20), box(0, 0, 10, 10)], null)).toEqual([box(0, 0, 10, 10)]);
     expect(lineBlocks([], 40)).toEqual([]);
   });
+  it('reads boxes whose fields are getters, as a DOMRect has them', () => {
+    class Rect {
+      v: [number, number, number, number];
+      constructor(v: [number, number, number, number]) {
+        this.v = v;
+      }
+      get left() { return this.v[0]; }
+      get top() { return this.v[1]; }
+      get right() { return this.v[2]; }
+      get bottom() { return this.v[3]; }
+    }
+    const out = lineBlocks([new Rect([0, 10, 40, 50]), new Rect([44, 12, 80, 52])], null);
+    expect(out).toEqual([box(0, 10, 80, 52)]);
+    expect(out.every((b) => Number.isFinite(b.left) && Number.isFinite(b.top))).toBe(true);
+  });
 });

@@ -23,7 +23,7 @@ export function lineBlocks(rects: readonly Box[], lineHeight: number | null): Bo
       last.right = Math.max(last.right, r.right);
       last.top = Math.min(last.top, r.top);
       last.bottom = Math.max(last.bottom, r.bottom);
-    } else lines.push({ ...r });
+    } else lines.push({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
   }
   if (!lineHeight || lineHeight <= 0) return lines;
   return lines.map((l) => {
