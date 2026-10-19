@@ -45,6 +45,14 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.132.0 — 2026-10-19
+
+**Smooth highlights.** Highlights and argument marks are drawn as one clean block per line, behind the words, instead of
+the browser's per-word painting (which left notches and gaps). Pick how they look in Settings → Reading → Argument layer:
+**Underline** (default: a line under the words and a faint tint), **Soft wash**, or **Marker**. The text you drag over is
+now a soft accent tint, not the browser's hard blue. The five highlight colours use the same blocks, so they look the same
+everywhere. To revert: `git revert`.
+
 ## v0.131.4 — 2026-10-19
 
 **One outline per line when you point at a margin card's words.** Pointing at a margin item (a highlight's card, or an

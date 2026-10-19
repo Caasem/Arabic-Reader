@@ -1,10 +1,9 @@
-import { createPortal } from 'react-dom';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HostProps } from '../features/registry';
 import { offsetWithin, rangeAt } from '../quietReader/textOffsets';
 import { formatCleanLocation, parseCleanLocation } from '../readerCore/location';
 import { useChordHotkey } from '../readerChords';
-import { lineBlocks } from './lineBlocks';
+import { clearBlocks, keepBlocksFresh, renderBlocks } from '../readerCore/markBlocks';
 import { usePreferences } from '../state/PreferencesContext';
 import { bookDeskId, deleteItem, getDesk, getItem, listItems, patchItems, restoreItems, updateItem } from '../studyDesk/deskStore';
 import { currentDeskId } from '../studyDesk/deskMemory';
@@ -120,36 +119,28 @@ export function ArgumentsHost({ book }: HostProps) {
       window.clearInterval(id);
     };
   }, [on]);
-  const [blocks, setBlocks] = useState<{ key: string; role: ArgumentRole; under: ArgumentRole | null; left: number; top: number; width: number; height: number }[]>([]);
-  // The marks live inside the reader's scroll area, behind the text (it gets its own stacking context), so they scroll
-  // with the words and never tint them.
-  const [stage, setStage] = useState<HTMLElement | null>(null);
-  useLayoutEffect(() => {
-    const out: typeof blocks = [];
-    const el = on && layers.marks ? document.querySelector<HTMLElement>('.qr-stage') : null;
-    if (el) {
-      const sr = el.getBoundingClientRect();
-      const x0 = sr.left + el.clientLeft - el.scrollLeft;
-      const y0 = sr.top + el.clientTop - el.scrollTop;
+  useEffect(() => {
+    if (!on || !layers.marks) return;
+    const draw = () => {
+      const specs: { key: string; cls: string; ranges: Range[] }[] = [];
       for (const item of mine) {
         const at = parseCleanLocation(item.source?.location);
         if (!at) continue;
-        const section = el.querySelector<HTMLElement>(`.qr-chapter[data-chapter="${at.chapter}"]`);
+        const section = document.querySelector<HTMLElement>(`.qr-chapter[data-chapter="${at.chapter}"]`);
         const range = section && rangeAt(section, at.start, at.end);
         if (!range) continue;
-        const px = parseFloat(getComputedStyle(section).lineHeight);
         const roles = rolesOf({ role: item.argument!.role, for: item.argument!.for });
-        lineBlocks(Array.from(range.getClientRects()), Number.isFinite(px) ? px : null).forEach((b, i) =>
-          out.push({ key: `${item.id}:${i}`, role: roles[0], under: roles[1] ?? null, left: b.left - x0, top: b.top - y0, width: b.right - b.left, height: b.bottom - b.top })
-        );
+        specs.push({ key: item.id, cls: `qr-block--${roles[0]}${roles[1] ? ` qr-block--under-${roles[1]}` : ''}`, ranges: [range] });
       }
-    }
-    setStage(el);
-    setBlocks(out);
-    el?.classList.toggle('arg-iso', out.length > 0);
-    return () => el?.classList.remove('arg-iso');
-    // tick: the page moved.
-  }, [on, layers.marks, mine, tick]);
+      renderBlocks('arguments', specs, prefs.markStyle);
+    };
+    draw();
+    const stop = keepBlocksFresh(draw);
+    return () => {
+      stop();
+      clearBlocks('arguments');
+    };
+  }, [on, layers.marks, mine, prefs.markStyle]);
 
   // --- a selection becomes a pending mark ---
   const tieId = useArgTie();
@@ -321,16 +312,6 @@ export function ArgumentsHost({ book }: HostProps) {
   const chosen = selected ? byId.get(selected) : null;
   return (
     <>
-      {stage &&
-        blocks.length > 0 &&
-        createPortal(
-          <div className="arg-marks" aria-hidden="true">
-            {blocks.map((b) => (
-              <div key={b.key} className={`arg-mark arg-mark--${b.role}${b.under ? ` arg-mark--under-${b.under}` : ''}`} style={{ left: b.left, top: b.top, width: b.width, height: b.height }} />
-            ))}
-          </div>,
-          stage
-        )}
       {sheetOpen && <ArgumentSheet bookId={book.id} argItems={sheetItems} byId={allById} scope={scope} onScope={setScope} size={sheetSize} onSize={(s) => setSheet(s)} onClose={() => setSheet('off')} layers={layers} onLayers={(p) => updatePrefs(p)} />}
       {armed && (
       <>

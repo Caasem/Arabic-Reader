@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useArgumentKind } from '../arguments/useArgumentKind';
 import { cardShown } from '../arguments/layers';
-import { lineBlocks } from '../arguments/lineBlocks';
+import { lineBlocks } from '../readerCore/lineBlocks';
 import { useArgLayers } from '../arguments/store';
 import { isCleanLocation } from '../readerCore/location';
 import { getReaderMarks } from '../readerChords';

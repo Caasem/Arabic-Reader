@@ -422,30 +422,13 @@
   font-weight: 600;
 }
 
-/* The marks on the page: one solid block per line, tinted by role, behind the words. They sit in the reader's scroll
-   area, which is made its own stacking context so a layer at z-index -1 paints above its background and below the text. */
-.qr-stage.arg-iso {
-  isolation: isolate;
-}
-.arg-marks {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 0;
-  height: 0;
-  z-index: -1;
-  pointer-events: none;
-}
-.arg-mark {
-  position: absolute;
-  border-radius: 3px;
-}
-.arg-mark--claim { background: var(--c-qr-highlight-blue); }
-.arg-mark--grounds { background: var(--c-qr-highlight-green); }
-.arg-mark--warrant { background: var(--c-qr-highlight-yellow); }
-.arg-mark--backing { background: var(--c-qr-highlight-purple); }
-.arg-mark--qualifier { background: var(--accent-soft); }
-.arg-mark--rebuttal { background: var(--c-qr-search); }
-.arg-mark--objection { background: var(--c-qr-highlight-red); }
-.arg-mark--reply { background: var(--c-reply); }
-.arg-mark--under-grounds { box-shadow: inset 0 -3px 0 var(--s-grounds); }
+/* Role colours for the marks (the blocks themselves are drawn by readerCore/markBlocks.ts, styled in quietReader.css). */
+.qr-blocks .qr-block--claim { --c: var(--s-claim); }
+.qr-blocks .qr-block--grounds { --c: var(--s-grounds); }
+.qr-blocks .qr-block--warrant { --c: var(--s-warrant); }
+.qr-blocks .qr-block--backing { --c: var(--s-backing); }
+.qr-blocks .qr-block--qualifier { --c: var(--s-qualifier); }
+.qr-blocks .qr-block--rebuttal { --c: var(--s-rebuttal); }
+.qr-blocks .qr-block--objection { --c: var(--s-objection); }
+.qr-blocks .qr-block--reply { --c: var(--s-reply); }
+.qr-blocks .qr-block--under-grounds { --c2: var(--s-grounds); }

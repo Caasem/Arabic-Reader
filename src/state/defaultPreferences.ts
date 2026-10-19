@@ -53,6 +53,7 @@ export const DEFAULT_PREFS: ReaderPreferences = {
   studyDeskMarginsInDocument: 'all',
   studyDeskMarginsToInbox: 'ask',
   studyDeskCards: 'open',
+  markStyle: 'underline',
   argumentsEnabled: false,
   argumentsMarks: true,
   argumentsCards: true,

@@ -14,6 +14,11 @@
   --c-qr-highlight-blue: rgba(111, 163, 201, 0.45);
   --c-qr-highlight-purple: rgba(156, 133, 201, 0.45);
   --c-qr-highlight-red: rgba(201, 122, 109, 0.45);
+  --hl-yellow: #e7c65b;
+  --hl-green: #8bb872;
+  --hl-blue: #6fa3c9;
+  --hl-purple: #9c85c9;
+  --hl-red: #c97a6d;
   --c-reply: rgba(46, 125, 116, 0.38);
   --s-claim: #6fa3c9;
   --s-grounds: #8bb872;
