@@ -421,3 +421,24 @@
   border-color: var(--accent);
   font-weight: 600;
 }
+
+/* The marks on the page: one solid block per line, tinted by role. Drawn over the text, so the tints are see-through. */
+.arg-marks {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+.arg-mark {
+  position: fixed;
+  border-radius: 3px;
+}
+.arg-mark--claim { background: var(--c-qr-highlight-blue); }
+.arg-mark--grounds { background: var(--c-qr-highlight-green); }
+.arg-mark--warrant { background: var(--c-qr-highlight-yellow); }
+.arg-mark--backing { background: var(--c-qr-highlight-purple); }
+.arg-mark--qualifier { background: var(--accent-soft); }
+.arg-mark--rebuttal { background: var(--c-qr-search); }
+.arg-mark--objection { background: var(--c-qr-highlight-red); }
+.arg-mark--reply { background: var(--c-reply); }
+.arg-mark--under-grounds { box-shadow: inset 0 -3px 0 var(--s-grounds); }

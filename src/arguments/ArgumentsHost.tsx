@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { HostProps } from '../features/registry';
 import { offsetWithin, rangeAt } from '../quietReader/textOffsets';
 import { formatCleanLocation, parseCleanLocation } from '../readerCore/location';
-import { paintArguments, paintSupported } from '../readerCore/paint';
 import { useChordHotkey } from '../readerChords';
+import { lineBlocks } from './lineBlocks';
 import { usePreferences } from '../state/PreferencesContext';
 import { bookDeskId, deleteItem, getDesk, getItem, listItems, patchItems, restoreItems, updateItem } from '../studyDesk/deskStore';
 import { currentDeskId } from '../studyDesk/deskMemory';
@@ -100,29 +100,43 @@ export function ArgumentsHost({ book }: HostProps) {
   const allById = useMemo(() => new Map(data.items.map((i) => [i.id, i])), [data.items]);
   const sheetItems = useMemo(() => (sheetOpen ? argItemsFor(data.items, scope, book.id, chapter) : []), [sheetOpen, data.items, scope, book.id, chapter]);
 
-  // --- paint the marks with the Custom Highlight API (the text's DOM is never touched) ---
+  // --- draw the marks: one solid block per line, over the text (the text's DOM is never touched) ---
   useEffect(() => {
     if (!on) return;
-    const id = window.setInterval(() => setTick((t) => t + 1), 1200);
-    return () => window.clearInterval(id);
+    let raf = 0;
+    const bump = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => setTick((t) => t + 1));
+    };
+    document.addEventListener('scroll', bump, true);
+    window.addEventListener('resize', bump);
+    const id = window.setInterval(bump, 1200);
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener('scroll', bump, true);
+      window.removeEventListener('resize', bump);
+      window.clearInterval(id);
+    };
   }, [on]);
-  useEffect(() => {
-    const names = new Map<string, Range[]>();
-    const push = (name: string, r: Range | null) => r && names.set(name, [...(names.get(name) ?? []), r]);
-    if (on && layers.marks && paintSupported) {
+  const [blocks, setBlocks] = useState<{ key: string; role: ArgumentRole; under: ArgumentRole | null; left: number; top: number; width: number; height: number }[]>([]);
+  useLayoutEffect(() => {
+    const out: typeof blocks = [];
+    if (on && layers.marks) {
       for (const item of mine) {
         const at = parseCleanLocation(item.source?.location);
         if (!at) continue;
         const section = document.querySelector<HTMLElement>(`.qr-chapter[data-chapter="${at.chapter}"]`);
         const range = section && rangeAt(section, at.start, at.end);
         if (!range) continue;
+        const px = parseFloat(getComputedStyle(section).lineHeight);
         const roles = rolesOf({ role: item.argument!.role, for: item.argument!.for });
-        push(`${roles[0]}`, range);
-        if (roles[1]) push(`underline-${roles[1]}`, range);
+        lineBlocks(Array.from(range.getClientRects()), Number.isFinite(px) ? px : null).forEach((b, i) =>
+          out.push({ key: `${item.id}:${i}`, role: roles[0], under: roles[1] ?? null, left: b.left, top: b.top, width: b.right - b.left, height: b.bottom - b.top })
+        );
       }
     }
-    paintArguments(names);
-    return () => paintArguments(new Map());
+    setBlocks(out);
+    // tick: the page moved.
   }, [on, layers.marks, mine, tick]);
 
   // --- a selection becomes a pending mark ---
@@ -295,6 +309,13 @@ export function ArgumentsHost({ book }: HostProps) {
   const chosen = selected ? byId.get(selected) : null;
   return (
     <>
+      {blocks.length > 0 && (
+        <div className="arg-marks" aria-hidden="true">
+          {blocks.map((b) => (
+            <div key={b.key} className={`arg-mark arg-mark--${b.role}${b.under ? ` arg-mark--under-${b.under}` : ''}`} style={{ left: b.left, top: b.top, width: b.width, height: b.height }} />
+          ))}
+        </div>
+      )}
       {sheetOpen && <ArgumentSheet bookId={book.id} argItems={sheetItems} byId={allById} scope={scope} onScope={setScope} size={sheetSize} onSize={(s) => setSheet(s)} onClose={() => setSheet('off')} layers={layers} onLayers={(p) => updatePrefs(p)} />}
       {armed && (
       <>

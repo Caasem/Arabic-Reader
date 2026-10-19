@@ -25,18 +25,6 @@ export function paintHighlights(byColor: Map<HighlightColor, Range[]>): void {
   }
 }
 
-/** The argument layer's roles (src/arguments), drawn like highlights. A claim that is also grounds adds the grounds colour as an underline. */
-export const ARGUMENT_PAINT = ['claim', 'grounds', 'warrant', 'backing', 'qualifier', 'rebuttal', 'objection', 'reply', 'underline-grounds'] as const;
-
-export function paintArguments(byName: Map<string, Range[]>): void {
-  if (!supported) return;
-  for (const name of ARGUMENT_PAINT) {
-    const ranges = byName.get(name);
-    if (ranges?.length) CSS.highlights.set(`qr-arg-${name}`, new Highlight(...ranges));
-    else CSS.highlights.delete(`qr-arg-${name}`);
-  }
-}
-
 export function paintSearchMatch(range: Range | null): void {
   if (!supported) return;
   if (range) CSS.highlights.set('qr-search', new Highlight(range));
@@ -54,7 +42,6 @@ export function flash(range: Range, ms = 1600): void {
 export function clearPaint(): void {
   if (!supported) return;
   for (const color of COLORS) CSS.highlights.delete(`qr-hl-${color}`);
-  for (const name of ARGUMENT_PAINT) CSS.highlights.delete(`qr-arg-${name}`);
   CSS.highlights.delete('qr-search');
   CSS.highlights.delete('qr-flash');
   window.clearTimeout(flashTimer);

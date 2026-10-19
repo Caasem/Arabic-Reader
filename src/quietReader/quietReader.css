@@ -270,17 +270,6 @@
 ::highlight(qr-hl-red) {
   background-color: var(--c-qr-highlight-red);
 }
-/* The argument layer's roles (src/arguments). A claim that is also grounds is blue with a green underline: ::highlight()
-   takes colours and text decoration only. */
-::highlight(qr-arg-claim) { background-color: var(--c-qr-highlight-blue); }
-::highlight(qr-arg-grounds) { background-color: var(--c-qr-highlight-green); }
-::highlight(qr-arg-warrant) { background-color: var(--c-qr-highlight-yellow); }
-::highlight(qr-arg-backing) { background-color: var(--c-qr-highlight-purple); }
-::highlight(qr-arg-qualifier) { background-color: var(--accent-soft); }
-::highlight(qr-arg-rebuttal) { background-color: var(--c-qr-search); }
-::highlight(qr-arg-objection) { background-color: var(--c-qr-highlight-red); }
-::highlight(qr-arg-reply) { background-color: var(--c-reply); }
-::highlight(qr-arg-underline-grounds) { text-decoration: underline 2px var(--s-grounds); }
 ::highlight(qr-search) {
   background-color: var(--c-qr-search);
 }

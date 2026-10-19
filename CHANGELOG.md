@@ -45,6 +45,12 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.131.1 — 2026-10-19
+
+**Argument marks are solid.** A marked passage is now one unbroken block per line, and a passage that wraps has no gap
+between its lines. Before, each word was tinted on its own, which left notches along the bottom. The marks are drawn
+over the text (the book's words are untouched) and follow the page as it scrolls. To revert: `git revert`.
+
 ## v0.131.0 — 2026-10-18
 
 **The argument layer, stage 5: Layers.** A Layers button (in the sheet's header, and in the status line while Alt+A is
