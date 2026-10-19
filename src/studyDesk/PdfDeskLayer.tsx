@@ -1,6 +1,7 @@
 import { useEffect, type CSSProperties } from 'react';
 import type { PdfPageContext } from '../pdf/pages/extensions';
 import { usePreferences } from '../state/PreferencesContext';
+import { useArg } from '../arguments/store';
 import { highlighterFill, highlighterNight, highlighterOutlines } from './highlighterColour';
 import { pdfBoxMarks, publishOpenedPdf, usePdfDesk } from './pdfDesk';
 import './pdfDesk.css';
@@ -16,7 +17,9 @@ export function PdfDeskLayer({ book, opened, page, width, height }: PdfPageConte
   // Scanned pages are read from the PDF itself when a drag snaps to words (pdfSnap.ts).
   useEffect(() => publishOpenedPdf(opened), [opened]);
   // Margin notes sit at a level (no height) and get no box; a region keeps its box when its card is in a pile.
-  const marks = pdfBoxMarks(items, book.id, page);
+  // While the argument layer is on it draws its own items (arguments/ArgumentPdfLayer.tsx).
+  const arg = useArg();
+  const marks = pdfBoxMarks(items, book.id, page).filter((m) => !(arg.book && m.item.argument));
   if (!marks.length) return null;
   // The Highlighter's look (Settings → Highlighter). With no fill the outline always shows, so a highlight never vanishes.
   const fill = prefs.pdfHighlightFill;

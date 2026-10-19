@@ -244,31 +244,47 @@
   cursor: pointer;
 }
 
-/* Yellow is the Reading Graph highlight (.hl): soft gold behind gold ink. ::highlight() takes colours only, so
-   its rounded corners and hover outline cannot follow. */
-::highlight(qr-hl-yellow) {
-  background-color: #f6ead0;
-  color: #7d5a14;
+/* Highlights: one block per line, behind the words (readerCore/markBlocks.ts). The reader's scroll area becomes its own
+   stacking context so a layer at z-index -1 paints above its background and below the text. */
+.qr-stage.qr-iso {
+  isolation: isolate;
 }
-:root[data-theme='dark'] ::highlight(qr-hl-yellow) {
-  background-color: #3b3220;
-  color: #e6c47c;
+.qr-blocks {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  z-index: -1;
+  pointer-events: none;
 }
-:root[data-theme='sepia'] ::highlight(qr-hl-yellow) {
-  background-color: #efdcb4;
-  color: #6b4c10;
+.qr-block {
+  position: absolute;
+  --c: currentColor;
+  border-radius: 4px;
 }
-::highlight(qr-hl-green) {
-  background-color: var(--c-qr-highlight-green);
+.qr-blocks[data-style='underline'] .qr-block {
+  background: color-mix(in srgb, var(--c) 10%, transparent);
+  box-shadow: inset 0 -2px 0 var(--c2, var(--c));
 }
-::highlight(qr-hl-blue) {
-  background-color: var(--c-qr-highlight-blue);
+.qr-blocks[data-style='wash'] .qr-block {
+  background: color-mix(in srgb, var(--c) 28%, transparent);
+  border-radius: 6px;
 }
-::highlight(qr-hl-purple) {
-  background-color: var(--c-qr-highlight-purple);
+.qr-blocks[data-style='marker'] .qr-block {
+  border-radius: 3px;
+  background: linear-gradient(transparent 38%, color-mix(in srgb, var(--c) 42%, transparent) 38%, color-mix(in srgb, var(--c) 42%, transparent) 92%, transparent 92%);
 }
-::highlight(qr-hl-red) {
-  background-color: var(--c-qr-highlight-red);
+.qr-blocks .qr-block--yellow { --c: var(--hl-yellow); }
+.qr-blocks .qr-block--green { --c: var(--hl-green); }
+.qr-blocks .qr-block--blue { --c: var(--hl-blue); }
+.qr-blocks .qr-block--purple { --c: var(--hl-purple); }
+.qr-blocks .qr-block--red { --c: var(--hl-red); }
+
+/* The text selection while you drag: warm and soft, not the browser's hard blue. */
+.qr-column ::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: inherit;
 }
 ::highlight(qr-search) {
   background-color: var(--c-qr-search);
@@ -1599,11 +1615,14 @@
   position: fixed;
   z-index: 50;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: min(420px, calc(100vw - 20px));
   align-items: center;
   gap: 2px;
   padding: 4px 6px;
   border: 1px solid var(--qr-line);
-  border-radius: 999px;
+  border-radius: 18px;
   background: var(--qr-surface);
   box-shadow: var(--qr-shadow);
 }

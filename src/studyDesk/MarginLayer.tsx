@@ -1,4 +1,8 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useArgumentKind } from '../arguments/useArgumentKind';
+import { cardShown } from '../arguments/layers';
+import { lineBlocks } from '../readerCore/lineBlocks';
+import { useArgLayers } from '../arguments/store';
 import { isCleanLocation } from '../readerCore/location';
 import { getReaderMarks } from '../readerChords';
 import { usePreferences } from '../state/PreferencesContext';
@@ -17,6 +21,9 @@ import { usePileGestures, type Side } from './usePileGestures';
 import { foldActions, foldKeys } from './folding';
 import { InkView, useMarginInk, type InkColumn } from './marginInk';
 import './marginLayer.css';
+
+// The argument layer's card extras load only when a card carries an argument (src/arguments).
+const ArgumentCardExtras = lazy(() => import('../arguments/cardExtras').then((m) => ({ default: m.ArgumentCardExtras })));
 
 /**
  * The desk in the quiet reader's margins (Alt+M). Items whose place is on the visible page sit beside it,
@@ -174,13 +181,15 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
     return { left: ok(left) ? left : null, right: ok(right) ? right : null };
   }, [geo]);
 
+  // The argument layer's Layers control can hide its cards (src/arguments/layers.ts).
+  const argLayers = useArgLayers();
   // Piles (piles.ts): only a pile's top card is placed; the rest show in its fan.
   const piles = useMemo(() => groupPiles(data.items), [data.items]);
   const placed = useMemo<Placed[]>(() => {
     if (!geo || !sides || (!sides.left && !sides.right)) return [];
     const out: Placed[] = [];
     for (const item of data.items) {
-      if (isBeneath(item, piles)) continue;
+      if (isBeneath(item, piles) || !cardShown(item, argLayers)) continue;
       const pinned = item.pin?.bookId === book.id;
       const location = pinned ? item.pin!.location : item.source?.bookId === book.id && !item.hidden ? item.source.location : undefined;
       if (!location || !isCleanLocation(location)) continue;
@@ -194,7 +203,7 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
     return out.sort((a, b) => a.y - b.y);
     // tick: the page moved.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.items, piles, book.id, geo, sides, mode, tick]);
+  }, [data.items, piles, book.id, geo, sides, mode, tick, argLayers]);
 
   // --- piles: dragging, the fan, naming, the lasso and P / Delete, shared with the PDF margin (usePileGestures.ts) ---
   /** The margin a drop lands in; over the text column, the nearer one. */
@@ -332,8 +341,9 @@ export function MarginLayer({ book, data, onToast, onOpenDocument, commands }: P
     <div ref={layerRef} className="sd-margins" aria-label="Ḥāshiya" onPointerDown={onLayerPointerDown} onPointerDownCapture={ink.onPointerDownCapture}>
       <svg ref={svgRef} className="sd-margins__lines" aria-hidden="true" />
       {ink.overlay}
-      {hovered?.rects.map((r, i) => (
-        <div key={i} className="sd-margins__mark" style={{ left: r.left - 2, top: r.top - 1, width: r.width + 4, height: r.height + 2 }} />
+      {/* One outline per line of words: the page draws each word in its own box, which would ring every word. */}
+      {hovered && lineBlocks(hovered.rects, null).map((r, i) => (
+        <div key={i} className="sd-margins__mark" style={{ left: r.left - 2, top: r.top - 1, width: r.right - r.left + 4, height: r.bottom - r.top + 2 }} />
       ))}
       {areas.map((side) => {
         const s = sides[side]!;
@@ -731,7 +741,8 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
   const shownInDoc = shownInDocument(item, docMode);
   const plain = item.fromMargin && item.type === 'line';
   // In piles every card names its kind, plain notes too.
-  const kind = item.sketchId
+  const argKind = useArgumentKind(item);
+  const baseKind = item.sketchId
     ? (item.type === 'capture' ? 'Sketch' : item.ink ? 'Ink from sketch' : 'From sketch') + (item.sketchTitle ? ` · ${item.sketchTitle}` : '')
     : item.ink && plain
       ? 'Ink'
@@ -742,6 +753,7 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
           : null
         : TYPE_LABEL[item.type]
       : TYPE_LABEL[item.type];
+  const kind = argKind ?? baseKind;
   const elsewhere = showSource && item.source && item.source.bookId !== book.id ? item.source.bookTitle || 'another book' : null;
 
   // Folded: one line at the card's place (its kind, a thumbnail or its first words). Click (or Enter) opens it,
@@ -837,6 +849,7 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
       data-gloss={item.id}
       className={
         'sd-gloss sd-gloss--' + side + (item.fromMargin ? ' sd-gloss--m sd-gloss--' + item.type : '') + (focused ? ' sd-gloss--focus' : '') + (item.fromMargin && !shownInDoc ? ' sd-gloss--out' : '') +
+        (item.argument ? ' sd-gloss--arg' + (item.source?.location ? '' : ' sd-gloss--argonly') : '') +
         (pile ? ' sd-gloss--pile' : '') + (pile?.name || pile?.color ? ' sd-gloss--tabbed' : '') + (inline ? ' sd-gloss--inline' : '') + (selected ? ' sd-gloss--sel' : '') + (fanned ? ' sd-gloss--fanned' : '')
       }
       style={inline ? undefined : { left, width, ...(pile?.color ? ({ '--tab': pile.color } as React.CSSProperties) : {}) }}
@@ -956,6 +969,11 @@ export function Gloss({ item, side, left, width, book, docMode, toInbox, autoFoc
         <div className={'sd-gloss__q' + (item.ar ? ' sd-gloss__q--ar' : '')} dir="auto">
           {item.text}
         </div>
+      )}
+      {item.argument && (
+        <Suspense fallback={null}>
+          <ArgumentCardExtras item={item} />
+        </Suspense>
       )}
       {item.type === 'card' && (
         <div className="sd-gloss__front">

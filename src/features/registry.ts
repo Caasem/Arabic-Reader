@@ -9,6 +9,7 @@ import { picksExportFeature } from '../picksExport';
 import { studyDeskFeature } from '../studyDesk';
 import { thinkingFeature } from '../thinking';
 import { annotateFeature } from '../annotate';
+import { argumentsFeature } from '../arguments';
 import { nodesFeature } from '../nodes';
 import { verbFormsFeature } from '../verbForms';
 import { popupCleanFeature } from '../popupClean';
@@ -79,6 +80,7 @@ export const FEATURES: FeatureDescriptor[] = [
   studyDeskFeature,
   thinkingFeature,
   annotateFeature,
+  argumentsFeature,
   nodesFeature,
   verbFormsFeature,
   popupCleanFeature,

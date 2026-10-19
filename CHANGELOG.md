@@ -45,6 +45,85 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.134.0 — 2026-10-19
+
+**Argument marks on PDF pages.** Select words on a PDF page and the Highlighter's bar now carries the eight roles too
+(or press 1 to 8). The mark is drawn over its region in your chosen look (underline by default), gets a margin card with
+the same actions (+ Warrant, To margin ...), and joins the same argument and sheet as marks in the reader's text. Notes
+tied to words on a PDF still become margin-only if you tie them (the PDF reader's own tie keeps them in the margin).
+To revert: `git revert`.
+
+## v0.133.0 — 2026-10-19
+
+**One palette for every mark.** Select words and the bar over them now shows the five highlight colours and, with the
+argument layer on, the eight roles under them (Claim, Grounds, Warrant, Backing, Qualifier, Exception, Objection,
+Reply). Keys: **1 to 8** apply a role and **Shift+1 to Shift+5** apply a colour, with words selected. You no longer
+press Alt+A first; Alt+A now hides or shows the roles. To revert: `git revert`.
+
+## v0.132.0 — 2026-10-19
+
+**Smooth highlights.** Highlights and argument marks are drawn as one clean block per line, behind the words, instead of
+the browser's per-word painting (which left notches and gaps). Pick how they look in Settings → Reading → Argument layer:
+**Underline** (default: a line under the words and a faint tint), **Soft wash**, or **Marker**. The text you drag over is
+now a soft accent tint, not the browser's hard blue. The five highlight colours use the same blocks, so they look the same
+everywhere. To revert: `git revert`.
+
+## v0.131.4 — 2026-10-19
+
+**One outline per line when you point at a margin card's words.** Pointing at a margin item (a highlight's card, or an
+argument mark's) outlines its words in gold. Each word used to get its own ring, with rings inside rings; it is now one
+outline per line of words.
+
+## v0.131.3 — 2026-10-19
+
+**Argument marks sit behind the words.** They were drawn over the text and dimmed it (the red one looked brown). They are
+now drawn inside the reader's scroll area, behind the text, so the words stay clear and the marks scroll with them.
+
+## v0.131.2 — 2026-10-19
+
+**Argument marks show up.** The 0.131.1 blocks were drawn at an invalid position and did not appear; fixed, and saved marks are redrawn on a timer even in a window that is not in front. Marks are one solid block per line.
+
+## v0.131.1 — 2026-10-19
+
+**Argument marks are solid.** A marked passage is now one unbroken block per line, and a passage that wraps has no gap
+between its lines. Before, each word was tinted on its own, which left notches along the bottom. The marks are drawn
+over the text (the book's words are untouched) and follow the page as it scrolls. To revert: `git revert`.
+
+## v0.131.0 — 2026-10-18
+
+**The argument layer, stage 5: Layers.** A Layers button (in the sheet's header, and in the status line while Alt+A is
+on) turns each part on or off on its own: page marks, margin cards, the sheet (off, side, full), and which of your own
+notes show in the margin (warrants, backings, exceptions). No part needs another to be open, and the choice is kept.
+Spec: `docs/features/argument-layer.md`. To revert: `git revert`.
+
+## v0.130.0 — 2026-10-18
+
+**The argument layer, stage 4: the sheet.** Alt+Shift+A opens the argument sheet, drawn from your marks and cards with
+nothing to draw by hand: claims, grounds, objections and replies as boxes, arrows between them (grounds green, attacks
+red, replies teal), each warrant as a dashed card on its arrow with its backing inside, qualifiers and an exception flag
+(⚑) on the arrow's label. Under it a strip lists what is missing: claims with no grounds, steps with no warrant,
+objections with no reply, marks attached to nothing; click one to go to the first, again for the next. Scopes: this
+chapter, this book, across books. Dock it to the side or fill the window. Spec: `docs/features/argument-layer.md`.
+To revert: `git revert`.
+
+## v0.129.0 — 2026-10-18
+
+**The argument layer, stage 3: margin cards and reader's notes.** With the layer on, each marked passage's card in the
+Ḥāshiya shows `#n Role`, what it is for, any gap (no grounds, no warrant, no reply) and actions. **+ Warrant**,
+**+ Exception** (on a step) and **+ Backing** (on a warrant) add your own note, with no words on the page: a dashed card
+marked "reader's note", kept beside its step, and piled with the claim's other notes (the pile opens in the usual fan).
+**To margin** keeps a note and drops the highlight; **Tie to words** puts it back on the next words you select. All of
+it undoes with Ctrl+Z while the layer is armed (Alt+A). Spec: `docs/features/argument-layer.md`. To revert: `git revert`.
+
+## v0.128.0 — 2026-10-18
+
+**The argument layer, stage 2: marking words.** Off by default (Settings → Reading → Argument layer). Press Alt+A in the
+reader, select words, press 1 to 8 (Claim, Grounds, Warrant, Backing, Qualifier, Exception, Objection, Reply), and Enter
+takes the suggested target. Selections snap to whole words, overlaps are refused, Delete removes the selected mark and
+Ctrl+Z undoes. Marks are study desk items and are painted with the CSS Custom Highlight API. While the layer is on, the
+thinking desk's five argument moves are off. Margin cards, implicit notes and the sheet come in the next stages.
+Spec: `docs/features/argument-layer.md`. To revert: `git revert` this commit.
+
 ## v0.127.0 — 2026-10-18
 
 - **The thinking desk joins main, alongside Nodes.** Both were built on separate branches at the same time and

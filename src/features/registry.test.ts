@@ -48,6 +48,7 @@ describe('feature registry', () => {
       'studyDesk',
       'thinking',
       'annotate',
+      'arguments',
       'nodes',
     ]);
   });
@@ -69,6 +70,7 @@ describe('feature registry', () => {
       'pdfhighlighter',
       'pdfocr',
       'thinking',
+      'arguments',
     ]);
     expect(sectionOrder('dictionary', ['dictionaries'], FEATURES)).toEqual([
       'dictionaries',

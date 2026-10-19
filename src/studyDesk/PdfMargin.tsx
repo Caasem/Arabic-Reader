@@ -3,6 +3,8 @@ import { usePreferences } from '../state/PreferencesContext';
 import type { BookMeta } from '../types';
 import { carriesFiles, imageIn } from './marginImages';
 import { Gloss, isFolded, MarginSettings } from './MarginLayer';
+import { cardShown } from '../arguments/layers';
+import { useArgLayers } from '../arguments/store';
 import { PileFan } from './PileFan';
 import { fromOtherBooks, groupOf, groupPiles, isBeneath } from './piles';
 import { usePileGestures } from './usePileGestures';
@@ -121,7 +123,9 @@ export function PdfMargin({ book, data, onToast, onOpenDocument, commands }: Pro
 
   // Piles (piles.ts): only a pile's top card is placed; the rest show in its fan.
   const piles = useMemo(() => groupPiles(data.items), [data.items]);
-  const marks = useMemo(() => pdfMarks(data.items, book.id).filter((m) => !isBeneath(m.item, piles)), [data.items, book.id, piles]);
+  // The argument layer's Layers control can hide its cards (arguments/layers.ts).
+  const argLayers = useArgLayers();
+  const marks = useMemo(() => pdfMarks(data.items, book.id).filter((m) => !isBeneath(m.item, piles) && cardShown(m.item, argLayers)), [data.items, book.id, piles, argLayers]);
   const placed = useMemo<Placed[]>(() => {
     if (!on || !stage) return [];
     const out: Placed[] = [];

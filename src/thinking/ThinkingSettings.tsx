@@ -34,7 +34,7 @@ export function ThinkingSettings() {
       </ToggleRow>
       {PARTS.map((p) => (
         <ToggleRow key={p.key} label={p.label} checked={!!prefs[p.key]} disabled={!on} onChange={(value) => updatePrefs({ [p.key]: value })}>
-          {p.note}
+          {p.key === 'thinkingMoves' && prefs.argumentsEnabled ? 'Off while the argument layer is on (Settings → Reading → Argument layer).' : p.note}
         </ToggleRow>
       ))}
     </SettingsSection>

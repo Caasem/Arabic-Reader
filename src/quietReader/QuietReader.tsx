@@ -34,7 +34,8 @@ import { chapterForEpubPosition, formatCleanLocation, parseCleanLocation } from 
 import { epubOffsetInChapter } from '../readerCore/epubPosition';
 import { MarginLevels } from './MarginLevels';
 import { NotePopover, SelectionBar, type ViewportRect } from './Overlays';
-import { clearPaint, flash, paintHighlights, paintSearchMatch, paintSupported } from '../readerCore/paint';
+import { clearPaint, flash, paintSearchMatch } from '../readerCore/paint';
+import { clearBlocks, keepBlocksFresh, renderBlocks } from '../readerCore/markBlocks';
 import { bookProgress, chapterStarts, estimatePages } from './progress';
 import { useReaderSearch, type SearchHit } from '../readerCore/searchState';
 import { caretAt, offsetWithin, rangeAt } from './textOffsets';
@@ -282,18 +283,27 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   }, [model, marks.highlights]);
 
   const repaint = useCallback(() => {
-    const byColor = new Map<HighlightColor, Range[]>();
+    const specs: { key: string; cls: string; ranges: Range[] }[] = [];
     for (const h of marks.highlights) {
       const loc = located.get(h.id);
       const section = loc && sectionEl(loc.chapter);
       if (!loc || !section || !prepared.current.has(section)) continue;
       const range = rangeAt(section, loc.start, loc.end);
-      if (range) byColor.set(h.color, [...(byColor.get(h.color) ?? []), range]);
+      if (range) specs.push({ key: h.id, cls: `qr-block--${h.color}`, ranges: [range] });
     }
-    paintHighlights(byColor);
+    renderBlocks('highlights', specs, prefsRef.current.markStyle);
   }, [marks.highlights, located, sectionEl]);
   const repaintRef = useRef(repaint);
   repaintRef.current = repaint;
+  // Highlights are drawn as blocks (markBlocks.ts): redraw when the style changes, and keep them in step with the page.
+  useEffect(() => {
+    repaintRef.current();
+    const stop = keepBlocksFresh(() => repaintRef.current());
+    return () => {
+      stop();
+      clearBlocks('highlights');
+    };
+  }, [prefs.markStyle, repaint]);
 
   /** Wraps a section's words (once) so they can be tapped, and counts its words as seen. */
   const prepare = useCallback(
@@ -864,6 +874,8 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   }
 
   // --- Keys -------------------------------------------------------------------------------------------
+  const highlightRef = useRef(highlightSelection);
+  highlightRef.current = highlightSelection;
   const escapeRef = useRef<() => void>(() => {});
   escapeRef.current = () => {
     const l = lookupsRef.current;
@@ -898,6 +910,12 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
       if (isTyping(e.target) || lookupsRef.current.editing) return;
       // Space with a word's dictionary open saves it instead of turning the page.
       if (lookupsRef.current.handleSpaceSave(e)) return;
+      // Words selected: Shift+1 to Shift+5 are the five highlight colours (the argument layer keeps 1 to 8 for its roles).
+      if (selectionRef.current && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && /^Digit[1-5]$/.test(e.code)) {
+        e.preventDefault();
+        void highlightRef.current((['yellow', 'green', 'blue', 'purple', 'red'] as HighlightColor[])[Number(e.code.slice(5)) - 1]);
+        return;
+      }
       const plain = !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey;
       if (plain && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
         e.preventDefault();
@@ -1216,7 +1234,6 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
             highlights: highlightRows,
             editing: editingNote,
             setEditing: setEditingNote,
-            highlightsNote: paintSupported ? undefined : 'Highlights need iOS 17.2 or newer to show on the page. They are saved and listed here.',
           }}
           words={{
             items: savedItems,
