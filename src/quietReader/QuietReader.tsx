@@ -874,6 +874,8 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
   }
 
   // --- Keys -------------------------------------------------------------------------------------------
+  const highlightRef = useRef(highlightSelection);
+  highlightRef.current = highlightSelection;
   const escapeRef = useRef<() => void>(() => {});
   escapeRef.current = () => {
     const l = lookupsRef.current;
@@ -908,6 +910,12 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
       if (isTyping(e.target) || lookupsRef.current.editing) return;
       // Space with a word's dictionary open saves it instead of turning the page.
       if (lookupsRef.current.handleSpaceSave(e)) return;
+      // Words selected: Shift+1 to Shift+5 are the five highlight colours (the argument layer keeps 1 to 8 for its roles).
+      if (selectionRef.current && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && /^Digit[1-5]$/.test(e.code)) {
+        e.preventDefault();
+        void highlightRef.current((['yellow', 'green', 'blue', 'purple', 'red'] as HighlightColor[])[Number(e.code.slice(5)) - 1]);
+        return;
+      }
       const plain = !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey;
       if (plain && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
         e.preventDefault();

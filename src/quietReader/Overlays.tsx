@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { HIGHLIGHT_FILL } from '../theme/tokens';
 import type { HighlightColor } from '../types';
+import { useSelectionExtras } from '../readerCore/selectionExtras';
 import { IconClose, IconPencil } from './icons';
 
 const COLORS: HighlightColor[] = ['yellow', 'green', 'blue', 'purple', 'red'];
@@ -33,6 +34,7 @@ function useAnchored(anchor: ViewportRect, gap: number) {
 /** Over selected text: five highlight colours and a note. */
 export function SelectionBar({ anchor, onPick, onNote }: { anchor: ViewportRect; onPick(color: HighlightColor): void; onNote(): void }) {
   const { ref, style } = useAnchored(anchor, 10);
+  const extras = useSelectionExtras();
   return (
     <div ref={ref} className="qr-selbar" role="toolbar" aria-label="Highlight colour" style={style} onPointerDown={(e) => e.preventDefault()}>
       {COLORS.map((c) => (
@@ -45,6 +47,9 @@ export function SelectionBar({ anchor, onPick, onNote }: { anchor: ViewportRect;
         <IconPencil />
         Note
       </button>
+      {extras.map(({ id, Row }) => (
+        <Row key={id} />
+      ))}
     </div>
   );
 }

@@ -1615,11 +1615,14 @@
   position: fixed;
   z-index: 50;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: min(420px, calc(100vw - 20px));
   align-items: center;
   gap: 2px;
   padding: 4px 6px;
   border: 1px solid var(--qr-line);
-  border-radius: 999px;
+  border-radius: 18px;
   background: var(--qr-surface);
   box-shadow: var(--qr-shadow);
 }

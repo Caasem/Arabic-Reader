@@ -45,6 +45,13 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.133.0 — 2026-10-19
+
+**One palette for every mark.** Select words and the bar over them now shows the five highlight colours and, with the
+argument layer on, the eight roles under them (Claim, Grounds, Warrant, Backing, Qualifier, Exception, Objection,
+Reply). Keys: **1 to 8** apply a role and **Shift+1 to Shift+5** apply a colour, with words selected. You no longer
+press Alt+A first; Alt+A now hides or shows the roles. To revert: `git revert`.
+
 ## v0.132.0 — 2026-10-19
 
 **Smooth highlights.** Highlights and argument marks are drawn as one clean block per line, behind the words, instead of

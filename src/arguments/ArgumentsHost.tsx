@@ -4,6 +4,8 @@ import { offsetWithin, rangeAt } from '../quietReader/textOffsets';
 import { formatCleanLocation, parseCleanLocation } from '../readerCore/location';
 import { useChordHotkey } from '../readerChords';
 import { clearBlocks, keepBlocksFresh, renderBlocks } from '../readerCore/markBlocks';
+import { registerSelectionExtra } from '../readerCore/selectionExtras';
+import { ArgumentRoleRow } from './ArgumentRoleRow';
 import { usePreferences } from '../state/PreferencesContext';
 import { bookDeskId, deleteItem, getDesk, getItem, listItems, patchItems, restoreItems, updateItem } from '../studyDesk/deskStore';
 import { currentDeskId } from '../studyDesk/deskMemory';
@@ -13,7 +15,7 @@ import { argItemsFor, argItemsOf, bookOf, spotOf, type SheetScope } from './brid
 import { ArgumentSheet, type SheetSize } from './ArgumentSheet';
 import { tieTo } from './actions';
 import { argState, popUndo, pushUndo, resetArg, setArg } from './store';
-import { ROLES, ROLE_BY_ID, numbering, roleForKey, rolesOf, type ArgumentRole } from './roles';
+import { ROLE_BY_ID, numbering, roleForKey, rolesOf, type ArgumentRole } from './roles';
 import { OVERLAP_TOAST, overlaps, snapSelection } from './selection';
 import { candidates, nothingToAttach, pickerList, pickerTitle } from './targets';
 import { useArg } from './store';
@@ -26,7 +28,6 @@ interface Pending {
   start: number;
   end: number;
   text: string;
-  rect: { left: number; top: number; bottom: number; width: number };
 }
 
 interface Pick {
@@ -51,8 +52,8 @@ export function ArgumentsHost({ book }: HostProps) {
   const layers = useMemo(() => layersOf(prefs), [prefs]);
   const on = prefs.argumentsEnabled && prefs.studyDeskEnabled;
   const data = useDeskData(book);
-  const [armed, setArmed] = useState(false);
-  const [pending, setPending] = useState<Pending | null>(null);
+  // On while the layer is on: the roles show in the selection bar and keys 1 to 8 work. Alt+A hides them (and shows them again).
+  const [armed, setArmed] = useState(true);
   const [pick, setPick] = useState<Pick | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const sheetOpen = layers.sheet !== 'off';
@@ -82,7 +83,6 @@ export function ArgumentsHost({ book }: HostProps) {
 
   useChordHotkey('KeyA', on, () => {
     setArmed((a) => !a);
-    setPending(null);
     setPick(null);
   });
 
@@ -142,57 +142,55 @@ export function ArgumentsHost({ book }: HostProps) {
     };
   }, [on, layers.marks, mine, prefs.markStyle]);
 
-  // --- a selection becomes a pending mark ---
+  // --- the words selected on the page, snapped to whole words (null, with a message, when they cannot be marked) ---
+  const readSelection = useCallback((): Pending | null => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+    const range = sel.getRangeAt(0);
+    const section = sectionOf(range.startContainer);
+    if (!section || section !== sectionOf(range.endContainer)) return null;
+    const text = section.textContent ?? '';
+    const snapped = snapSelection(text, offsetWithin(section, range.startContainer, range.startOffset), offsetWithin(section, range.endContainer, range.endOffset));
+    if (!snapped) return null;
+    const chapter = Number(section.dataset.chapter);
+    const taken = mine.flatMap((i) => {
+      const at = parseCleanLocation(i.source?.location);
+      return at && at.chapter === chapter ? [{ start: at.start, end: at.end }] : [];
+    });
+    if (overlaps(taken, snapped)) {
+      say(OVERLAP_TOAST);
+      sel.removeAllRanges();
+      return null;
+    }
+    return { chapter, ...snapped, text: text.slice(snapped.start, snapped.end) };
+  }, [mine, say]);
+
+  // Tie to words: the next selection becomes the note's words.
   const tieId = useArgTie();
   useEffect(() => {
-    if (!on || (!armed && !tieId)) return;
-    const read = () => {
-      const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || !sel.rangeCount) return;
-      const r = sel.getRangeAt(0);
-      const section = sectionOf(r.startContainer);
-      if (!section || section !== sectionOf(r.endContainer)) return;
-      const text = section.textContent ?? '';
-      const snapped = snapSelection(text, offsetWithin(section, r.startContainer, r.startOffset), offsetWithin(section, r.endContainer, r.endOffset));
-      if (!snapped) return;
-      const chapter = Number(section.dataset.chapter);
-      const taken = mine.flatMap((i) => {
-        const at = parseCleanLocation(i.source?.location);
-        return at && at.chapter === chapter ? [{ start: at.start, end: at.end }] : [];
-      });
-      if (overlaps(taken, snapped)) {
-        say(OVERLAP_TOAST);
-        sel.removeAllRanges();
-        return;
-      }
-      const b = r.getBoundingClientRect();
-      const tie = argState().tie;
-      if (tie) {
-        sel.removeAllRanges();
-        void tieTo(tie, { chapter, ...snapped, text: text.slice(snapped.start, snapped.end) });
-        return;
-      }
-      setPick(null);
-      setPending({ chapter, ...snapped, text: text.slice(snapped.start, snapped.end), rect: { left: b.left, top: b.top, bottom: b.bottom, width: b.width } });
-    };
-    const onUp = (e: Event) => {
-      if ((e.target as HTMLElement | null)?.closest?.('.arg-pal, .arg-pick')) return;
-      window.setTimeout(read, 0);
-    };
+    if (!on || !tieId) return;
+    const onUp = () =>
+      window.setTimeout(() => {
+        const p = readSelection();
+        const tie = argState().tie;
+        if (!p || !tie) return;
+        window.getSelection()?.removeAllRanges();
+        void tieTo(tie, p);
+      }, 0);
     document.addEventListener('mouseup', onUp);
     document.addEventListener('touchend', onUp);
     return () => {
       document.removeEventListener('mouseup', onUp);
       document.removeEventListener('touchend', onUp);
     };
-  }, [on, armed, tieId, mine, say]);
+  }, [on, tieId, readSelection]);
 
   // --- apply a role ---
   const apply = useCallback(
     async (role: ArgumentRole) => {
-      if (!pending) return;
-      const p = pending;
-      setPending(null);
+      const p = readSelection();
+      if (!p) return;
+      setPick(null);
       window.getSelection()?.removeAllRanges();
       const made = await capture(book, currentDeskId(book.id) ?? bookDeskId(book.id), {
         type: 'quote',
@@ -214,8 +212,19 @@ export function ArgumentsHost({ book }: HostProps) {
         if (msg) say(msg);
       }
     },
-    [pending, book, argItems, byId, say]
+    [readSelection, book, argItems, byId, say]
   );
+
+  // The roles in the selection bar (one palette with the five colours), applying to the current selection.
+  useEffect(() => {
+    if (!on || !armed) return;
+    setArg({ applyRole: (role) => void apply(role) });
+    const unregister = registerSelectionExtra('arguments', ArgumentRoleRow);
+    return () => {
+      unregister();
+      setArg({ applyRole: null });
+    };
+  }, [on, armed, apply]);
 
   const choose = useCallback(
     async (i: number) => {
@@ -271,15 +280,10 @@ export function ArgumentsHost({ book }: HostProps) {
           e.preventDefault();
           void choose(Number(e.key) - 1);
         }
-      } else if (pending && !e.ctrlKey) {
-        const role = roleForKey(e.key);
-        if (role) {
-          e.preventDefault();
-          void apply(role);
-        } else if (e.key === 'Escape') {
-          setPending(null);
-          window.getSelection()?.removeAllRanges();
-        }
+      } else if (!e.ctrlKey && !e.shiftKey && roleForKey(e.key) && window.getSelection()?.isCollapsed === false) {
+        // Words are selected: 1 to 8 marks them.
+        e.preventDefault();
+        void apply(roleForKey(e.key)!);
       } else if (selected && (e.key === 'Delete' || e.key === 'Backspace')) {
         e.preventDefault();
         void remove(selected);
@@ -287,7 +291,7 @@ export function ArgumentsHost({ book }: HostProps) {
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [on, armed, pick, pending, selected, apply, choose, remove, undo]);
+  }, [on, armed, pick, selected, apply, choose, remove, undo]);
 
   // --- click a mark to select it (Delete removes it) ---
   useEffect(() => {
@@ -315,16 +319,6 @@ export function ArgumentsHost({ book }: HostProps) {
       {sheetOpen && <ArgumentSheet bookId={book.id} argItems={sheetItems} byId={allById} scope={scope} onScope={setScope} size={sheetSize} onSize={(s) => setSheet(s)} onClose={() => setSheet('off')} layers={layers} onLayers={(p) => updatePrefs(p)} />}
       {armed && (
       <>
-      {pending && (
-        <div className="arg-pal" role="toolbar" aria-label="Argument role" style={{ left: Math.max(8, pending.rect.left + pending.rect.width / 2 - 250), top: Math.max(8, pending.rect.top - 48) }}>
-          {ROLES.map((r) => (
-            <button key={r.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => void apply(r.id)} title={r.label}>
-              <kbd style={{ background: `var(--s-${r.id})` }}>{r.key}</kbd>
-              {r.label}
-            </button>
-          ))}
-        </div>
-      )}
       {pick && (
         <div className="arg-pick" role="listbox" aria-label={pick.title}>
           <h5>{pick.title}</h5>
@@ -346,7 +340,7 @@ export function ArgumentsHost({ book }: HostProps) {
       )}
       <div className="arg-bar" aria-live="polite">
         <LayersControl layers={layers} onChange={(p) => updatePrefs(p)} />
-        {toast ?? (chosen ? `#${nums.get(chosen.id)} ${ROLE_BY_ID[chosen.argument!.role].label} selected. Delete removes it.` : 'Argument layer on (Alt+A). Select words, then press 1 to 8.')}
+        {toast ?? (chosen ? `#${nums.get(chosen.id)} ${ROLE_BY_ID[chosen.argument!.role].label} selected. Delete removes it.` : 'Select words, then pick a role below the colours, or press 1 to 8. Alt+A hides this.')}
       </div>
       </>
       )}

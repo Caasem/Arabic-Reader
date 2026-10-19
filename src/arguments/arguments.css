@@ -1,34 +1,29 @@
-/* The argument layer's palette, target picker and status line (stage 2). Colours are the app's tokens. */
-.arg-pal {
-  position: fixed;
-  z-index: 90;
+/* The argument layer's target picker and status line. The roles themselves are a row in the reader's selection bar. */
+.arg-rolerow {
+  flex-basis: 100%;
   display: flex;
-  gap: 4px;
-  padding: 5px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--bg-elevated);
-  box-shadow: var(--ink-shadow);
-  direction: ltr;
   flex-wrap: wrap;
-  max-width: calc(100vw - 16px);
+  gap: 2px;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
 }
-.arg-pal button {
+.arg-rolerow button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   border: 0;
   border-radius: 8px;
-  padding: 4px 8px 4px 5px;
+  padding: 3px 7px 3px 5px;
   background: none;
   color: var(--ink);
   font: 600 12px var(--font-ui);
   cursor: pointer;
 }
-.arg-pal button:hover {
+.arg-rolerow button:hover {
   background: var(--accent-soft);
 }
-.arg-pal kbd {
+.arg-rolerow kbd {
   font: 700 10.5px var(--font-ui);
   min-width: 17px;
   text-align: center;
@@ -97,9 +92,8 @@
 .arg-bar {
   position: fixed;
   z-index: 80;
-  left: 50%;
+  left: 16px;
   bottom: 16px;
-  transform: translateX(-50%);
   max-width: calc(100vw - 32px);
   padding: 7px 14px;
   border-radius: 999px;

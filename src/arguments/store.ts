@@ -23,9 +23,11 @@ export interface ArgState {
   add: { id: string; role: Extract<ArgumentRole, 'warrant' | 'backing' | 'rebuttal'> } | null;
   deskId: string | null;
   layers: Layers;
+  /** Applies a role to the words selected in the page (set by the host; used by the selection bar's role row). */
+  applyRole: ((role: ArgumentRole) => void) | null;
 }
 
-const empty: ArgState = { book: null, mine: [], items: [], byId: new Map(), nums: new Map(), tie: null, add: null, deskId: null, layers: DEFAULT_LAYERS };
+const empty: ArgState = { book: null, mine: [], items: [], byId: new Map(), nums: new Map(), tie: null, add: null, deskId: null, layers: DEFAULT_LAYERS, applyRole: null };
 let state = empty;
 const listeners = new Set<() => void>();
 
