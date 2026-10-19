@@ -9,7 +9,10 @@
 // script and styles raised in 0.115.0 for nodes: the feature itself is a lazy chunk of 27 kB of script and
 // 12 kB of styles, about 50 kB more app code in all, and moving it out regrouped the modules the entry shares;
 // the app code total raised from 2.75 to 2.85 MB in 0.127.0, when the thinking desk joined nodes on main: both
-// are lazy chunks loaded only when switched on, about 95 kB together, so the entry is unchanged by them);
+// are lazy chunks loaded only when switched on, about 95 kB together, so the entry is unchanged by them;
+// entry script 735 -> 745 kB and styles 162 -> 165 kB in 0.131.3: the reader tools (Focus, about 8 kB of script and 3 kB of
+// styles) are preloaded at startup either way, but used to sit in their own chunk shared with another lazy chunk; the
+// argument layer's host changed which chunks share them, so they are now inside the entry. App code total unchanged);
 // raise one on purpose, in the same commit that explains why. The dictionary data rules go away when
 // the dictionaries become packs (refactor phase 3).
 import { readdirSync, statSync } from 'node:fs';
@@ -25,8 +28,8 @@ const RULES = [
   ['AraMorph worker', /^aramorph\.worker-[\w-]+\.js$/, 4.8 * MB, false],
   ['pdf.js worker', /^pdf\.worker\.min-[\w-]+\.m?js$/, 1.3 * MB, false],
   ['WebAssembly', /\.wasm$/, 15.7 * MB, false],
-  ['entry script', /^index-[\w-]+\.js$/, 735 * KB, true],
-  ['entry styles', /^index-[\w-]+\.css$/, 162 * KB, true],
+  ['entry script', /^index-[\w-]+\.js$/, 745 * KB, true],
+  ['entry styles', /^index-[\w-]+\.css$/, 165 * KB, true],
   ['other script', /\.m?js$/, 480 * KB, true],
   ['other styles', /\.css$/, 60 * KB, true],
 ];
