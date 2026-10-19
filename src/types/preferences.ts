@@ -146,7 +146,7 @@ export interface ReaderPreferences {
   /** Margin notes go to the inbox when you leave them (auto) or only when you send them (ask). */
   studyDeskMarginsToInbox: 'ask' | 'auto';
   /** The thinking desk (src/thinking): threads, argument moves, backlinks, masāʾil, Revisit, Today. Off by default. */
-  /** The argument layer (src/arguments): Toulmin roles on words, with margin cards and a sheet. Off by default; while on it replaces the thinking desk's moves. */
+  /** The argument layer (src/arguments): Toulmin roles on words, with margin cards and a sheet. On by default; while on it replaces the thinking desk's moves. */
   /** How highlights and argument marks look on the page: a line under the words, a soft wash, or a marker. */
   markStyle: 'underline' | 'wash' | 'marker';
   argumentsEnabled: boolean;
