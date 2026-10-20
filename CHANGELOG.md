@@ -45,6 +45,13 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.136.0 — 2026-10-20
+
+**A role label inside each argument mark.** A small label with a coloured dot ("● 2 Grounds", "● 3 Claim · Grounds") now sits
+inside the upper-left corner of every argument mark, in a little headroom above the first line, so it never covers a word.
+It works on reader text and on PDF pages. Settings → Reading → Argument layer → "Role label on argument marks" switches
+it to a tinted chip, just the initial, or none. To revert: `git revert`.
+
 ## v0.135.0 — 2026-10-19
 
 **The argument layer is on by default.** Select words and the bar shows the eight argument roles under the five colours
