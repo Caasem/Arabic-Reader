@@ -3,7 +3,7 @@ import type { HostProps } from '../features/registry';
 import { offsetWithin, rangeAt } from '../quietReader/textOffsets';
 import { formatCleanLocation, parseCleanLocation } from '../readerCore/location';
 import { useChordHotkey } from '../readerChords';
-import { clearBlocks, keepBlocksFresh, renderBlocks } from '../readerCore/markBlocks';
+import { clearBlocks, keepBlocksFresh, renderBlocks, type BlockSpec } from '../readerCore/markBlocks';
 import { registerSelectionExtra } from '../readerCore/selectionExtras';
 import { registerPdfPageExtension } from '../pdf/pages/extensions';
 import { pdfDeskState, usePdfDesk } from '../studyDesk/pdfDesk';
@@ -18,7 +18,7 @@ import { argItemsFor, argItemsOf, bookOf, spotOf, type SheetScope } from './brid
 import { ArgumentSheet, type SheetSize } from './ArgumentSheet';
 import { tieTo } from './actions';
 import { argState, popUndo, pushUndo, resetArg, setArg } from './store';
-import { ROLE_BY_ID, numbering, roleForKey, rolesOf, type ArgumentRole } from './roles';
+import { ROLE_BY_ID, numbering, roleForKey, rolesOf, tagOf, type ArgumentRole } from './roles';
 import { OVERLAP_TOAST, overlaps, snapSelection } from './selection';
 import { candidates, nothingToAttach, pickerList, pickerTitle } from './targets';
 import { useArg } from './store';
@@ -127,7 +127,7 @@ export function ArgumentsHost({ book }: HostProps) {
   useEffect(() => {
     if (!on || !layers.marks) return;
     const draw = () => {
-      const specs: { key: string; cls: string; ranges: Range[] }[] = [];
+      const specs: BlockSpec[] = [];
       for (const item of mine) {
         const at = parseCleanLocation(item.source?.location);
         if (!at) continue;
@@ -135,9 +135,14 @@ export function ArgumentsHost({ book }: HostProps) {
         const range = section && rangeAt(section, at.start, at.end);
         if (!range) continue;
         const roles = rolesOf({ role: item.argument!.role, for: item.argument!.for });
-        specs.push({ key: item.id, cls: `qr-block--${roles[0]}${roles[1] ? ` qr-block--under-${roles[1]}` : ''}`, ranges: [range] });
+        specs.push({
+          key: item.id,
+          cls: `qr-block--${roles[0]}${roles[1] ? ` qr-block--under-${roles[1]}` : ''}`,
+          ranges: [range],
+          tag: { text: `${nums.get(item.id) ?? ''} ${tagOf(item.argument!)}`.trim(), ini: ROLE_BY_ID[item.argument!.role].label[0] },
+        });
       }
-      renderBlocks('arguments', specs, prefs.markStyle);
+      renderBlocks('arguments', specs, prefs.markStyle, prefs.argumentsTag);
     };
     draw();
     const stop = keepBlocksFresh(draw);
@@ -145,7 +150,7 @@ export function ArgumentsHost({ book }: HostProps) {
       stop();
       clearBlocks('arguments');
     };
-  }, [on, layers.marks, mine, prefs.markStyle]);
+  }, [on, layers.marks, mine, nums, prefs.markStyle, prefs.argumentsTag]);
 
   // --- the words selected on the page, snapped to whole words (null, with a message, when they cannot be marked) ---
   const readSelection = useCallback((): Pending | null => {

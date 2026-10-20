@@ -1,7 +1,8 @@
 import type { PdfPageContext } from '../pdf/pages/extensions';
 import { usePreferences } from '../state/PreferencesContext';
 import { parsePdfLocation } from '../studyDesk/pageGeometry';
-import { rolesOf } from './roles';
+import { TAG_BAND } from '../readerCore/markBlocks';
+import { ROLE_BY_ID, rolesOf, tagOf } from './roles';
 import { useArg } from './store';
 
 /**
@@ -10,7 +11,7 @@ import { useArg } from './store';
  * (Settings → Reading → Argument layer). Taps go through to the page.
  */
 export function ArgumentPdfLayer({ book, page, width, height }: PdfPageContext) {
-  const { mine, layers } = useArg();
+  const { mine, layers, nums } = useArg();
   const { prefs } = usePreferences();
   if (!layers.marks) return null;
   const here = mine.flatMap((item) => {
@@ -19,11 +20,31 @@ export function ArgumentPdfLayer({ book, page, width, height }: PdfPageContext) 
   });
   if (!here.length) return null;
   return (
-    <div className="qr-blocks qr-blocks--page" data-style={prefs.markStyle} aria-hidden="true">
+    <div className="qr-blocks qr-blocks--page" data-style={prefs.markStyle} data-tag={prefs.argumentsTag} aria-hidden="true">
       {here.map(({ item, at }) => {
         const roles = rolesOf({ role: item.argument!.role, for: item.argument!.for });
-        return <div key={item.id} className={`qr-block qr-block--${roles[0]}${roles[1] ? ` qr-block--under-${roles[1]}` : ''}`} style={{ left: at.x * width, top: at.y * height, width: at.w * width, height: at.h * height }} />;
+        // The box grows upward to make room for the label (not past the top of the page).
+        const band = prefs.argumentsTag === 'off' ? 0 : Math.min(TAG_BAND, at.y * height);
+        return (
+          <div
+            key={item.id}
+            className={`qr-block qr-block--${roles[0]}${roles[1] ? ` qr-block--under-${roles[1]}` : ''}`}
+            style={{ left: at.x * width, top: at.y * height - band, width: at.w * width, height: at.h * height + band }}
+          >
+            {band > 0 && <PdfTag text={`${nums.get(item.id) ?? ''} ${tagOf(item.argument!)}`.trim()} ini={ROLE_BY_ID[item.argument!.role].label[0]} />}
+          </div>
+        );
       })}
     </div>
+  );
+}
+
+/** The label's markup is shared with the reader text (markBlocks.ts); this renders the same element in React. */
+function PdfTag({ text, ini }: { text: string; ini: string }) {
+  return (
+    <span className="qr-tag">
+      <span className="qr-tag__ini">{ini}</span>
+      <span className="qr-tag__txt">{text}</span>
+    </span>
   );
 }

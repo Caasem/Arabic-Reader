@@ -7,6 +7,13 @@ const STYLES = [
   { id: 'marker', label: 'Marker' },
 ] as const;
 
+const TAGS = [
+  { id: 'label', label: 'Label' },
+  { id: 'chip', label: 'Chip' },
+  { id: 'letter', label: 'Initial only' },
+  { id: 'off', label: 'None' },
+] as const;
+
 export function ArgumentsSettings() {
   const { prefs, updatePrefs } = usePreferences();
   return (
@@ -24,6 +31,7 @@ export function ArgumentsSettings() {
             : undefined}
       </ToggleRow>
       <SelectRow label="How highlights and marks look" options={STYLES} value={prefs.markStyle} onChange={(markStyle) => updatePrefs({ markStyle })} />
+      <SelectRow label="Role label on argument marks" options={TAGS} value={prefs.argumentsTag} onChange={(argumentsTag) => updatePrefs({ argumentsTag })} />
     </SettingsSection>
   );
 }

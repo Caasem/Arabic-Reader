@@ -7,11 +7,28 @@ import { lineBlocks } from './lineBlocks';
  */
 export type MarkStyle = 'underline' | 'wash' | 'marker';
 
+export type MarkTag = 'label' | 'chip' | 'letter' | 'off';
+
+/** Headroom, in px, added above a marked passage's first line for its role label: the label sits inside the highlight, above the words. */
+export const TAG_BAND = 12;
+
 export interface BlockSpec {
   key: string;
   /** Classes that colour the block (qr-block--yellow, qr-block--claim ...). */
   cls: string;
   ranges: Range[];
+  /** A small label at the upper-left corner of the first line (an argument mark's number and role). */
+  tag?: { text: string; ini: string };
+}
+
+/** The label element for a block: a dot and text (or the initial, in the letter look), styled by the layer's data-tag. */
+export function tagElement(tag: { text: string; ini: string }): HTMLElement {
+  const el = document.createElement('span');
+  el.className = 'qr-tag';
+  el.innerHTML = '<span class="qr-tag__ini"></span><span class="qr-tag__txt"></span>';
+  (el.firstChild as HTMLElement).textContent = tag.ini;
+  (el.lastChild as HTMLElement).textContent = tag.text;
+  return el;
 }
 
 const stageOf = (): HTMLElement | null => document.querySelector<HTMLElement>('.qr-stage');
@@ -29,7 +46,7 @@ function layerOf(stage: HTMLElement, name: string): HTMLElement {
 }
 
 /** Draws `specs` in the layer called `name`, replacing what it held. Wash blocks fill the line spacing so wrapped lines meet. */
-export function renderBlocks(name: string, specs: readonly BlockSpec[], style: MarkStyle): void {
+export function renderBlocks(name: string, specs: readonly BlockSpec[], style: MarkStyle, tagLook: MarkTag = 'label'): void {
   const stage = stageOf();
   if (!stage) return;
   if (!specs.length) {
@@ -38,6 +55,7 @@ export function renderBlocks(name: string, specs: readonly BlockSpec[], style: M
   }
   const layer = layerOf(stage, name);
   layer.dataset.style = style;
+  layer.dataset.tag = tagLook;
   stage.classList.add('qr-iso');
   const sr = stage.getBoundingClientRect();
   const x0 = sr.left + stage.clientLeft - stage.scrollLeft;
@@ -56,11 +74,16 @@ export function renderBlocks(name: string, specs: readonly BlockSpec[], style: M
   };
   const frag = document.createDocumentFragment();
   for (const spec of specs) {
+    let tagged = false;
     for (const range of spec.ranges) {
       lineBlocks(Array.from(range.getClientRects()), pitch(range)).forEach((b) => {
         const el = document.createElement('div');
         el.className = `qr-block ${spec.cls}`;
-        el.style.cssText = `left:${b.left - x0}px;top:${b.top - y0}px;width:${b.right - b.left}px;height:${b.bottom - b.top}px`;
+        // The first line of a tagged mark grows upward to make room for its label.
+        const band = spec.tag && tagLook !== 'off' && !tagged ? TAG_BAND : 0;
+        el.style.cssText = `left:${b.left - x0}px;top:${b.top - y0 - band}px;width:${b.right - b.left}px;height:${b.bottom - b.top + band}px`;
+        if (band) el.appendChild(tagElement(spec.tag!));
+        tagged = tagged || !!band;
         frag.appendChild(el);
       });
     }

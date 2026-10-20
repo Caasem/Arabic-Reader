@@ -149,6 +149,8 @@ export interface ReaderPreferences {
   /** The argument layer (src/arguments): Toulmin roles on words, with margin cards and a sheet. On by default; while on it replaces the thinking desk's moves. */
   /** How highlights and argument marks look on the page: a line under the words, a soft wash, or a marker. */
   markStyle: 'underline' | 'wash' | 'marker';
+  /** The role label inside the upper-left corner of an argument mark: a dot and text, a tinted chip, just the initial, or none. */
+  argumentsTag: 'label' | 'chip' | 'letter' | 'off';
   argumentsEnabled: boolean;
   /** The argument layer's layers, each usable alone: marks on the page, cards in the margin, the sheet, and which reader's notes show in the margin. */
   argumentsMarks: boolean;

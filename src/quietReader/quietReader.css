@@ -275,6 +275,58 @@
   border-radius: 3px;
   background: linear-gradient(transparent 38%, color-mix(in srgb, var(--c) 42%, transparent) 38%, color-mix(in srgb, var(--c) 42%, transparent) 92%, transparent 92%);
 }
+/* The role label inside a mark's upper-left corner, in the band above its first line. */
+.qr-tag {
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  direction: ltr;
+  unicode-bidi: isolate;
+  white-space: nowrap;
+  font: 600 8px/9px var(--font-ui);
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--c) 55%, var(--ink));
+}
+.qr-tag::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--c);
+  flex: none;
+}
+.qr-tag__ini {
+  display: none;
+}
+.qr-blocks[data-tag='chip'] .qr-tag {
+  padding: 0 5px 0 4px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--c) 22%, transparent);
+}
+.qr-blocks[data-tag='letter'] .qr-tag {
+  width: 10px;
+  height: 10px;
+  justify-content: center;
+  padding: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--c) 26%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent);
+  font-size: 7px;
+  line-height: 10px;
+}
+.qr-blocks[data-tag='letter'] .qr-tag::before,
+.qr-blocks[data-tag='letter'] .qr-tag__txt {
+  display: none;
+}
+.qr-blocks[data-tag='letter'] .qr-tag__ini {
+  display: inline;
+}
+.qr-blocks[data-tag='off'] .qr-tag {
+  display: none;
+}
 .qr-blocks .qr-block--yellow { --c: var(--hl-yellow); }
 .qr-blocks .qr-block--green { --c: var(--hl-green); }
 .qr-blocks .qr-block--blue { --c: var(--hl-blue); }
