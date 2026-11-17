@@ -16,6 +16,7 @@ const { startAutoUpdate } = require('./autoUpdate.cjs');
 const { createDiskFiles } = require('./diskFiles.cjs');
 const { pickOpenablePaths, isInPlaceExt, BOOK_EXTS } = require('./fileArgs.cjs');
 const { createWindowRegistry } = require('./windowRegistry.cjs');
+const { createBookScan } = require('./bookScan.cjs');
 
 const APP_SCHEME = 'app';
 const APP_HOST = 'bundle';
@@ -383,7 +384,56 @@ handleSync('files:locate', async (event, hash) => {
   if (result.canceled || result.filePaths.length === 0) return 'cancelled';
   return (await diskFiles().locate(hash, result.filePaths[0])) ? 'found' : 'different';
 });
+// Files opened or added so far with their hashes, so the scan can tell which results are in the library.
+handleSync('files:known', () => diskFiles().knownFiles());
 handleSync('files:take-imports', () => pendingImports.splice(0).filter((token) => diskFiles().pathOfToken(token)));
+
+// --- Finding books on this computer -----------------------------------------------
+// Names, sizes and dates only (bookScan.cjs). A path the scan found is a path the reader may open or add; no other is.
+let bookScan = null;
+const scanner = () =>
+  (bookScan ??= createBookScan({
+    userDataDir: app.getPath('userData'),
+    getRoots() {
+      const place = (name) => {
+        try {
+          return app.getPath(name);
+        } catch {
+          return null;
+        }
+      };
+      const documents = place('documents');
+      const downloads = place('downloads');
+      const chat = [documents, downloads].flatMap((base) => (base ? [path.join(base, 'Telegram Desktop'), path.join(base, 'WhatsApp')] : []));
+      return [documents, downloads, place('desktop'), ...chat].filter(Boolean);
+    },
+  }));
+
+handleSync('scan:start', async (event, extra) => {
+  const sender = event.sender;
+  const send = (progress) => {
+    if (!sender.isDestroyed()) sender.send('scan:progress', progress);
+  };
+  return scanner().start({ extra: Array.isArray(extra) ? extra : undefined, onProgress: send });
+});
+handleSync('scan:stop', () => scanner().stop());
+handleSync('scan:results', () => scanner().state());
+handleSync('scan:add-folder', async (event) => {
+  const result = await dialog.showOpenDialog(windowOf(event), { title: 'Add a folder to look in', properties: ['openDirectory'] });
+  if (result.canceled || result.filePaths.length === 0) return (await scanner().state()).extraFolders;
+  return scanner().addFolder(result.filePaths[0]);
+});
+handleSync('scan:remove-folder', (_event, folder) => scanner().removeFolder(String(folder)));
+handleSync('scan:open-result', async (_event, file) => {
+  const entry = await scanner().resultOf(file);
+  if (!entry || !isInPlaceExt(entry.path)) throw new Error('That file cannot be opened here.');
+  openFileInLightWindow(entry.path);
+});
+handleSync('scan:read-result', async (_event, file) => {
+  const entry = await scanner().resultOf(file);
+  if (!entry) throw new Error('That file was not found by the scan.');
+  return diskFiles().readAndRecord(entry.path);
+});
 
 // --- Windows (the list, and who shows what) ---------------------------------------
 const broadcastWindows = (list) => {

@@ -48,6 +48,8 @@ contextBridge.exposeInMainWorld('arabicReaderDesktop', {
     /** Opens the dialog; resolves to 'found' (it was the same file), 'different' or 'cancelled'. */
     locate: (hash) => call('files:locate', hash),
     has: (hash) => call('files:has', hash),
+    /** Every file opened or added so far, as { path, hash }: the Library tells which scan results it already has. */
+    known: () => call('files:known'),
     /** Tokens of files the OS handed over that need the ordinary import (MOBI, AZW3, TXT, Markdown). */
     takeImports: () => call('files:take-imports'),
     onImports: (cb) => {
@@ -55,6 +57,29 @@ contextBridge.exposeInMainWorld('arabicReaderDesktop', {
       ipcRenderer.on('files:imports-available', listener);
       return () => ipcRenderer.removeListener('files:imports-available', listener);
     },
+  },
+  /**
+   * Finding books on this computer (electron/bookScan.cjs): names, sizes and dates only. The paths in its results are
+   * for showing and for asking back (openResult, readResult); the main process refuses any path the scan did not find.
+   */
+  scan: {
+    /** Starts a scan (of the usual places and the added folders). Resolves when done or stopped. */
+    start: (extra) => call('scan:start', extra),
+    stop: () => call('scan:stop'),
+    /** The last scan: { roots, extraFolders, results, scannedAt, running }. */
+    results: () => call('scan:results'),
+    onProgress: (cb) => {
+      const listener = (_event, progress) => cb(progress);
+      ipcRenderer.on('scan:progress', listener);
+      return () => ipcRenderer.removeListener('scan:progress', listener);
+    },
+    /** Opens the folder dialog; resolves to the added folders. */
+    addFolder: () => call('scan:add-folder'),
+    removeFolder: (folder) => call('scan:remove-folder', folder),
+    /** Opens a found PDF or EPUB in a light window. */
+    openResult: (file) => call('scan:open-result', file),
+    /** The bytes of a found file, for Add to library. */
+    readResult: (file) => call('scan:read-result', file),
   },
   /** The open windows, and which book each shows. */
   windows: {

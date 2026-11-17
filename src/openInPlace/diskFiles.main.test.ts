@@ -17,6 +17,8 @@ const { createDiskFiles } = req('../../electron/diskFiles.cjs') as {
     has(hash: string): Promise<boolean>;
     locate(hash: string, file: string): Promise<boolean>;
     knownPaths(): Promise<string[]>;
+    knownFiles(): Promise<{ path: string; hash: string }[]>;
+    readAndRecord(file: string): Promise<Uint8Array>;
   };
 };
 const { pickOpenablePaths, isInPlaceExt } = req('../../electron/fileArgs.cjs') as {
@@ -109,6 +111,15 @@ describe('diskFiles', () => {
     expect(await disk.locate(hash, file('moved.pdf', 'hello'))).toBe(true);
     expect(await disk.has(hash)).toBe(true);
     expect(await disk.knownPaths()).toEqual([path.join(dir, 'moved.pdf')]);
+  });
+
+  it('reads a scan result and remembers where it was, by the hash of what it read', async () => {
+    const full = file('found.pdf', 'scanned');
+    const disk = createDiskFiles({ userDataDir: userData });
+    expect(Buffer.from(await disk.readAndRecord(full)).toString()).toBe('scanned');
+    expect(await disk.knownFiles()).toEqual([{ path: path.resolve(full), hash: sha('scanned') }]);
+    expect(await disk.has(sha('scanned'))).toBe(true);
+    await expect(disk.readAndRecord(dir)).rejects.toThrow();
   });
 
   it('does not hash an unchanged file twice', async () => {

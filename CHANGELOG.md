@@ -45,6 +45,16 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.139.0 — 2026-11-17
+
+**Open in place, part 3: find the books on this computer.** In the desktop app, Library → **Find books on this computer**
+lists every PDF and EPUB (and MOBI, AZW3, TXT and Markdown, which are off by default for TXT and Markdown) in Documents,
+Downloads, Desktop and the Telegram and WhatsApp download folders, plus any folder you add. It reads only names, sizes
+and dates, with a live count and a Stop button. Filter by format, folder or file name, hide what is already in your
+library, and sort by name, folder, size or date. Click a PDF or EPUB to read it where it is; tick books and press **Add to
+library** to import them. The list is kept until you scan again. To revert: `git revert`; see
+`docs/changes/open-in-place-changes.md`.
+
 ## v0.138.0 — 2026-11-17
 
 **Open in place, part 2: books you open stay where they are.** A PDF or EPUB opened from your computer (double-click,

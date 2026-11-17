@@ -68,7 +68,50 @@ export interface DesktopFilesBridge {
   has(hash: string): Promise<boolean>;
   /** Tokens of files the OS handed over that need the ordinary import (MOBI, AZW3, TXT, Markdown). */
   takeImports(): Promise<string[]>;
+  /** Every file opened or added so far, as { path, hash }. */
+  known(): Promise<{ path: string; hash: string }[]>;
   onImports(cb: () => void): () => void;
+}
+
+/** A book file the scan found (electron/bookScan.cjs). */
+export interface ScanResult {
+  path: string;
+  name: string;
+  /** Lower case, without the dot: pdf, epub, mobi, azw3, txt or md. */
+  format: string;
+  size: number;
+  /** Modified time in whole milliseconds. */
+  mtime: number;
+}
+
+export interface ScanState {
+  /** The places the last scan looked in. */
+  roots: string[];
+  /** The folders the reader added. */
+  extraFolders: string[];
+  results: ScanResult[];
+  scannedAt: number | null;
+  running: boolean;
+}
+
+export interface ScanProgress {
+  checked: number;
+  found: number;
+  done: boolean;
+  /** The books found since the last progress message. */
+  added: ScanResult[];
+}
+
+/** Finding books on this computer. Paths are for showing and for asking back; the main process refuses any the scan did not find. */
+export interface DesktopScanBridge {
+  start(extra?: string[]): Promise<{ checked: number; found: number; cancelled: boolean }>;
+  stop(): Promise<void>;
+  results(): Promise<ScanState>;
+  onProgress(cb: (progress: ScanProgress) => void): () => void;
+  addFolder(): Promise<string[]>;
+  removeFolder(folder: string): Promise<string[]>;
+  openResult(path: string): Promise<void>;
+  readResult(path: string): Promise<Uint8Array>;
 }
 
 /** One open window, as the main process lists them. */
@@ -103,6 +146,8 @@ export interface DesktopBridge {
   files?: DesktopFilesBridge;
   /** The open windows (src/openInPlace). */
   windows?: DesktopWindowsBridge;
+  /** Finding books on this computer (src/openInPlace). */
+  scan?: DesktopScanBridge;
 }
 
 declare global {
@@ -113,6 +158,10 @@ declare global {
 
 export function getFilesBridge(): DesktopFilesBridge | undefined {
   return typeof window === 'undefined' ? undefined : window.arabicReaderDesktop?.files;
+}
+
+export function getScanBridge(): DesktopScanBridge | undefined {
+  return typeof window === 'undefined' ? undefined : window.arabicReaderDesktop?.scan;
 }
 
 export function getWindowsBridge(): DesktopWindowsBridge | undefined {

@@ -1,5 +1,5 @@
 import { hiddenDuplicateIds } from '../../library/duplicates';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { DuplicateBookError, libraryService } from '../../library/libraryService';
 import { onLibraryChanged } from '../../library/libraryChanged';
 import { pickContinueBook } from '../../look/continueBook';
@@ -22,7 +22,7 @@ import { GettingStartedCard } from '../../gettingStarted';
 import { FEATURES } from '../../features/registry';
 import { InPlaceNote } from '../../openInPlace/InPlaceNote';
 import { useInPlaceStatus } from '../../openInPlace/useInPlaceStatus';
-import { getFilesBridge, getWindowsBridge } from '../../sync/desktopBridge';
+import { getFilesBridge, getScanBridge, getWindowsBridge } from '../../sync/desktopBridge';
 import { BookCover } from './BookCover';
 import { BookDetails } from './BookDetails';
 import { ContinueReading } from './ContinueReading';
@@ -34,7 +34,10 @@ import { useLibraryInsights } from './useLibraryInsights';
 import './Library.css';
 import './libraryRedesign.css';
 
-const SORT_OPTIONS: { id: LibrarySort; label: string }[] = [
+// Finding books on this computer (src/openInPlace/scan): desktop only, loaded when opened.
+const ScanPanel = lazy(() => import('../../openInPlace/scan/ScanPanel'));
+
+const SORT_OPTIONS:{ id: LibrarySort; label: string }[] = [
   { id: 'lastRead', label: 'Recently read' },
   { id: 'added', label: 'Recently added' },
   { id: 'title', label: 'Title' },
@@ -108,6 +111,7 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
   // libraryService.removeBook) -- confirmed first since that's irreversible.
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [browsing, setBrowsing] = useState(false);
+  const [finding, setFinding] = useState(false);
   useEscapeKey(() => setConfirm(null), !!confirm);
   // Bumped whenever the books change, so highlights, words and sessions reload with them.
   const [insightsKey, setInsightsKey] = useState(0);
@@ -448,6 +452,11 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
           {getFilesBridge() && (
             <button className="btn btn--ghost" onClick={() => void getFilesBridge()?.open()} title="Open a PDF or EPUB without adding it (Ctrl+O)">
               Open file…
+            </button>
+          )}
+          {getScanBridge() && (
+            <button className="btn btn--ghost" onClick={() => setFinding(true)} title="List the PDFs and EPUBs on this computer">
+              Find books on this computer
             </button>
           )}
           <button className="btn btn--ghost" onClick={() => setBrowsing(true)}>
@@ -854,6 +863,12 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
           onBooksAdded={handleBrowseAdded}
           ownedIds={new Set(books.map((b) => b.id))}
         />
+      )}
+
+      {finding && (
+        <Suspense fallback={null}>
+          <ScanPanel onClose={() => setFinding(false)} onLibraryChanged={reloadLibrary} />
+        </Suspense>
       )}
 
       {detailsBook && !confirm && (

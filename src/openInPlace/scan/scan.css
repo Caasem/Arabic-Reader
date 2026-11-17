@@ -1,0 +1,213 @@
+/* Find books on this computer. Loaded with the panel, which is a lazy chunk. */
+
+.oip-scan__backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--c-browse-backdrop, rgba(0, 0, 0, 0.4));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+.oip-scan {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  width: 100%;
+  max-width: 980px;
+  height: min(88vh, 820px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  color: var(--ink);
+}
+.oip-scan__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.oip-scan__head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.oip-scan__status {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+.oip-scan__close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.oip-scan__places {
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.oip-scan__places summary {
+  cursor: pointer;
+}
+.oip-scan__places ul {
+  margin: 6px 0;
+  padding: 0;
+  list-style: none;
+  max-height: 120px;
+  overflow: auto;
+}
+.oip-scan__places li {
+  display: flex;
+  gap: 10px;
+  padding: 2px 0;
+  overflow-wrap: anywhere;
+}
+.oip-scan__link {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+}
+.oip-scan__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+.oip-scan__formats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.oip-scan__search {
+  flex: 1;
+  min-width: 160px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-elevated, transparent);
+  color: inherit;
+  font: inherit;
+}
+.oip-scan__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.oip-scan__table {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.oip-scan__cols {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 2.4fr) minmax(0, 1.4fr) 76px 92px 130px;
+  gap: 10px;
+  align-items: center;
+  padding: 0 12px;
+  height: 100%;
+  font-size: 13.5px;
+}
+.oip-scan__cols--head {
+  height: 34px;
+  flex: none;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+.oip-scan__sort {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  padding: 0;
+  cursor: pointer;
+}
+.oip-scan__sort--size {
+  text-align: end;
+}
+.oip-vlist {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.oip-vrow {
+  border-bottom: 1px solid var(--border);
+}
+.oip-vrow:hover {
+  background: var(--accent-soft);
+}
+.oip-scan__name {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.oip-scan__name:hover {
+  text-decoration: underline;
+}
+.oip-scan__folder {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-soft);
+}
+.oip-scan__num {
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.oip-scan__col-state {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.oip-scan__in {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 11px;
+}
+.oip-scan__empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--ink-soft);
+}
+.oip-scan__error {
+  color: var(--danger);
+  font-size: 13px;
+}
+.oip-scan__foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.oip-scan__note {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}

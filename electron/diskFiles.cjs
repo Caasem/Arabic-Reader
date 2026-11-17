@@ -171,9 +171,30 @@ function createDiskFiles({ userDataDir }) {
       return true;
     },
 
-    /** Every recorded path, for "In library" matching in the scan. */
+    /** Every recorded path. */
     async knownPaths() {
       return Object.values(await load()).map((entry) => entry.path);
+    },
+
+    /** Every recorded file as { path, hash }, so a scan result can be matched to a book by its hash ("In library"). */
+    async knownFiles() {
+      return Object.entries(await load()).map(([hash, entry]) => ({ path: entry.path, hash }));
+    },
+
+    /**
+     * Reads a file the scan found, for Add to library, and remembers where it was (its hash comes from the bytes
+     * already in hand), so the scan can say the file is in the library afterwards.
+     */
+    async readAndRecord(file) {
+      const full = path.resolve(file);
+      const stat = await fs.stat(full);
+      if (!stat.isFile()) throw new Error('Not a file.');
+      const bytes = await fs.readFile(full);
+      const hash = crypto.createHash('sha256').update(bytes).digest('hex');
+      await load();
+      hashCache.set(`${full}|${stat.size}|${Math.floor(stat.mtimeMs)}`, hash);
+      await record(hash, full, stat);
+      return new Uint8Array(bytes);
     },
   };
 }
