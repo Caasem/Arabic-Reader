@@ -45,6 +45,35 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.139.0 — 2026-11-17
+
+**Open in place, part 3: find the books on this computer.** In the desktop app, Library → **Find books on this computer**
+lists every PDF and EPUB (and MOBI, AZW3, TXT and Markdown, which are off by default for TXT and Markdown) in Documents,
+Downloads, Desktop and the Telegram and WhatsApp download folders, plus any folder you add. It reads only names, sizes
+and dates, with a live count and a Stop button. Filter by format, folder or file name, hide what is already in your
+library, and sort by name, folder, size or date. Click a PDF or EPUB to read it where it is; tick books and press **Add to
+library** to import them. The list is kept until you scan again. To revert: `git revert`; see
+`docs/changes/open-in-place-changes.md`.
+
+## v0.138.0 — 2026-11-17
+
+**Open in place, part 2: books you open stay where they are.** A PDF or EPUB opened from your computer (double-click,
+Open with, or the new **Open file…** button and Ctrl+O in the Library) appears in its own light window: the reader alone,
+with the dictionary, highlights, notes and shortcuts. Nothing is copied. The app remembers the file by its contents, so
+highlights, notes and your place survive if you rename or move it. **Library** in the window's header brings up the main
+window. **Add to library** in the header keeps a copy when you want one. In the Library such books carry "On this
+computer"; if the file is gone the card says "File not found", with **Find it…** and **Remove**. "Open now" lists the
+books open in other windows. A MOBI, AZW3, TXT or Markdown file handed to the app is added the usual way. Settings made
+in one window now reach the others. To revert: `git revert`; see `docs/changes/open-in-place-changes.md`.
+
+## v0.137.0 — 2026-11-17
+
+**Open in place, part 1: the desktop app opens files you give it.** Double-click a PDF or EPUB (or choose Arabic Reader
+under Open with) and it opens in its own small window, with several files side by side. Opening a file that is already
+open brings its window forward. The app now runs once: starting it again with a file hands the file to the copy that is
+running. The installer registers the app for PDF and EPUB so it shows under Open with. The windows are bare for now; the
+reader inside them comes in the next versions (0.138.0). To revert: `git revert`; see `docs/changes/open-in-place-changes.md`.
+
 ## v0.136.0 — 2026-10-20
 
 **A role label inside each argument mark.** A small label with a coloured dot ("● 2 Grounds", "● 3 Claim · Grounds") now sits

@@ -35,6 +35,12 @@ export interface BookMeta {
    * volume of it. The Library's book details use it to offer the volumes of the same book that are not added yet.
    */
   browse?: { key: string; format: 'txt' | 'pdf'; volume: number };
+  /**
+   * Opened in place (src/openInPlace): the file stays where it is on this computer and the app keeps only this
+   * record, found again by the file's hash. A PDF has `pdf.originalHash` and no `fileHash`; an EPUB has `fileHash`.
+   * Cleared by "Add to library", which copies the file in. Synced, so another device shows a book without its file.
+   */
+  inPlace?: true;
 }
 
 /** The one automatic "where I left off" per book. */

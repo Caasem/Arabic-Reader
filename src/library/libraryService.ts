@@ -3,6 +3,7 @@ import { sha256Hex } from '../blobStore';
 import { persistenceService } from '../persistence';
 import type { BookFormat, BookMeta } from '../types';
 import { newId } from '../utils/id';
+import { inPlaceHash, promoteInPlace } from '../openInPlace/promote';
 import { notifyLibraryChanged } from './libraryChanged';
 
 export interface BookReadingInfo {
@@ -37,6 +38,11 @@ export class LibraryService {
     const format = formatOf(file.name);
     if (!format) throw new Error(`"${file.name}" isn't a book type Arabic Reader can open. Add an EPUB, PDF, TXT, Markdown, MOBI or AZW3 file.`);
     if (format === 'epub') return { meta: await this.importEpub(file, options) };
+    // A PDF already opened in place becomes a library book with the file it was opened from, as it is.
+    if (format === 'pdf') {
+      const opened = await persistenceService.getBookByPdfOriginalHash(await sha256Hex(file));
+      if (opened?.inPlace) return { meta: await promoteInPlace(opened, file) };
+    }
     // PDFs open as their pages unless Settings → PDF asks for their text to be converted (the caller passes it).
     const { pdfConvert, ...importOptions } = options;
     const converted = await convertToEpub(file, { pdfConvert });
@@ -53,6 +59,7 @@ export class LibraryService {
   async importEpub(file: File, options: { id?: string; format?: BookFormat; originalFileName?: string; browse?: BookMeta['browse'] } = {}): Promise<BookMeta> {
     if (!options.id) {
       const existing = await persistenceService.getBookByFileHash(await sha256Hex(file));
+      if (existing?.inPlace) return promoteInPlace(existing, file);
       if (existing) {
         if (await persistenceService.getBookFile(existing.id)) throw new DuplicateBookError(existing);
         // A book that arrived by sync without its file: these are its bytes, so attach them instead of adding a second book.
@@ -60,27 +67,7 @@ export class LibraryService {
         return existing;
       }
     }
-    const buf = await file.arrayBuffer();
-    // Opened by hand so its asset-URL pass can be switched off: this read only wants the title, author and cover, and
-    // epub.js runs that pass in the background after opening, so destroying the book below used to end it with a
-    // "reading 'replaceCss'" TypeError on every import.
-    const book = ePub();
-    (book as unknown as { replacements(): Promise<void> }).replacements = () => Promise.resolve();
-    void book.open(buf.slice(0)).catch(() => {}); // epub.js may detach the buffer
-    let coverDataUrl: string | undefined;
-    let metadata: { title?: string; creator?: string; language?: string };
-    try {
-      await book.ready;
-      metadata = await book.loaded.metadata;
-      try {
-        const coverUrl = await book.coverUrl();
-        if (coverUrl) coverDataUrl = await blobUrlToDataUrl(coverUrl);
-      } catch {
-        // no cover -- the library shows a generated placeholder
-      }
-    } finally {
-      book.destroy();
-    }
+    const { metadata, coverDataUrl } = await readEpubInfo(file);
 
     const meta: BookMeta = {
       id: options.id ?? newId('book'),
@@ -113,6 +100,14 @@ export class LibraryService {
 
   /** Give a book that arrived without its file (via sync) the file, keeping its id and history. */
   async attachBookFile(id: string, file: File): Promise<void> {
+    const book = await persistenceService.getBook(id);
+    // A book opened in place on another computer: its record is here, and this is its file (found by its hash).
+    if (book?.inPlace) {
+      const hash = inPlaceHash(book);
+      if (hash && (await sha256Hex(file)) !== hash) throw new Error('That is not the file this book was opened from.');
+      await promoteInPlace(book, file);
+      return;
+    }
     if (!file.name.toLowerCase().endsWith('.epub')) throw new Error('Choose the EPUB file for this book.');
     await persistenceService.saveBookFile(id, file);
   }
@@ -138,6 +133,35 @@ export class LibraryService {
       })
     );
   }
+}
+
+/**
+ * An EPUB's title, author, language and cover, read without saving anything (also used to open an EPUB in place,
+ * src/openInPlace).
+ */
+export async function readEpubInfo(file: Blob): Promise<{ metadata: { title?: string; creator?: string; language?: string }; coverDataUrl?: string }> {
+  const buf = await file.arrayBuffer();
+  // Opened by hand so its asset-URL pass can be switched off: this read only wants the title, author and cover, and
+  // epub.js runs that pass in the background after opening, so destroying the book below used to end it with a
+  // "reading 'replaceCss'" TypeError on every import.
+  const book = ePub();
+  (book as unknown as { replacements(): Promise<void> }).replacements = () => Promise.resolve();
+  void book.open(buf.slice(0)).catch(() => {}); // epub.js may detach the buffer
+  let coverDataUrl: string | undefined;
+  let metadata: { title?: string; creator?: string; language?: string };
+  try {
+    await book.ready;
+    metadata = await book.loaded.metadata;
+    try {
+      const coverUrl = await book.coverUrl();
+      if (coverUrl) coverDataUrl = await blobUrlToDataUrl(coverUrl);
+    } catch {
+      // no cover -- the library shows a generated placeholder
+    }
+  } finally {
+    book.destroy();
+  }
+  return { metadata, coverDataUrl };
 }
 
 async function blobUrlToDataUrl(url: string): Promise<string> {

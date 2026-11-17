@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatRoute, parseRoute, type Route } from './route';
+import { formatRoute, formatWindowRoute, parseRoute, parseWindowRoute, type Route } from './route';
 
 const ROUTES: [Route, string][] = [
   [{ view: 'library' }, '#/library'],
@@ -60,5 +60,24 @@ describe('routes', () => {
 
   it('ignores q on other screens', () => {
     expect(parseRoute('#/review?q=x')).toEqual({ view: 'review' });
+  });
+});
+
+describe('light window routes', () => {
+  it('round-trips a file token and a book', () => {
+    expect(formatWindowRoute({ token: 'a1-b2' })).toBe('#/window/a1-b2');
+    expect(parseWindowRoute('#/window/a1-b2')).toEqual({ token: 'a1-b2' });
+    expect(formatWindowRoute({ bookId: 'book 1/x' })).toBe('#/window/book/book%201%2Fx');
+    expect(parseWindowRoute('#/window/book/book%201%2Fx')).toEqual({ bookId: 'book 1/x' });
+  });
+
+  it('is not a window route when it is anything else, or garbled', () => {
+    for (const hash of ['', '#/library', '#/read/b1', '#/window', '#/window/', '#/window/book', '#/window/book/', '#/window/a/b', '#/window/%E0%A4%A']) {
+      expect(parseWindowRoute(hash), hash).toBeNull();
+    }
+  });
+
+  it('reads a window address as the Library in the main window', () => {
+    expect(parseRoute('#/window/abc')).toEqual({ view: 'library' });
   });
 });

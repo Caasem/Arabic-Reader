@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-18",
+  "updated": "2026-11-17",
   "note": "Effort is a rough estimate in working weeks of remaining work. Status: done | in-progress | built-local | planned | idea. Edit this file; the site reads it.",
   "areas": {
     "foundation": "Foundation",
@@ -371,8 +371,22 @@
         "watch-folder",
         "formats-pdf"
       ],
-      "notes": "One-tap scan that finds every EPUB and PDF (later MOBI/TXT) and lists them in a \"Found on this device\" view, with filters by format, folder, size, date and already-imported, and a multi-select import. The user chooses which to import; nothing is imported silently. Platform limits: desktop can walk chosen drives or folders; Android needs MediaStore or all-files access (store policy review); iOS cannot scan the whole device, only user-picked folders. Needs a spec covering permissions and what is read (paths and metadata only until a file is chosen). Builds on the watched-folder scanner.",
+      "notes": "The desktop scan shipped in open-in-place (v0.139.0): Library -> Find books on this computer. What remains here is Android, iOS and the web. One-tap scan that finds every EPUB and PDF (later MOBI/TXT) and lists them in a \"Found on this device\" view, with filters by format, folder, size, date and already-imported, and a multi-select import. The user chooses which to import; nothing is imported silently. Platform limits: desktop can walk chosen drives or folders; Android needs MediaStore or all-files access (store policy review); iOS cannot scan the whole device, only user-picked folders. Needs a spec covering permissions and what is read (paths and metadata only until a file is chosen). Builds on the watched-folder scanner.",
       "brief": "features/device-scan.md",
+      "milestone": "M3"
+    },
+    {
+      "id": "open-in-place",
+      "title": "Open in place: double-click a PDF, light windows, find every book on the computer",
+      "area": "interop",
+      "status": "done",
+      "effort": 0,
+      "deps": [
+        "blob-store"
+      ],
+      "branch": "feat/open-in-place",
+      "notes": "Desktop only. Built in v0.137.0 to v0.139.0: PDF and EPUB open in their own light window from a double-click, Open with, Open file... (Ctrl+O) or a second launch, with no import (the record is found again by the file's hash; Add to library keeps a copy); one running copy of the app; an Open now list; and Library -> Find books on this computer (names, sizes and dates only, filters, sort, Add to library). Covers the desktop part of device-scan; watch-folder stays an idea. Revert matrix: docs/changes/open-in-place-changes.md.",
+      "brief": "features/open-in-place.md",
       "milestone": "M3"
     },
     {

@@ -1,5 +1,6 @@
 import { getBlobStore } from '../blobStore';
 import type { BookMeta, ReadingPosition } from '../types';
+import { getFilesBridge } from '../sync/desktopBridge';
 import { db } from './schema';
 import { deleteSynced, putSynced, syncScope, updateSynced } from './writeLayer';
 
@@ -12,6 +13,18 @@ import { deleteSynced, putSynced, syncScope, updateSynced } from './writeLayer';
 const NS = 'book';
 const PDF_NS = 'pdf';
 const blobs = getBlobStore;
+
+/**
+ * A book opened in place has no copy in the BlobStore: its bytes are the file where it sits (src/openInPlace). The
+ * desktop app finds that file by hash, if it is still there and unchanged. Anywhere else there is no bridge, and the
+ * book is a book without its file, as one that arrived by sync is.
+ */
+async function readFromDisk(hash: string | undefined, type: string): Promise<Blob | undefined> {
+  const files = getFilesBridge();
+  if (!hash || !files) return undefined;
+  const bytes = await files.readByHash(hash).catch(() => null);
+  return bytes ? new Blob([bytes as Uint8Array<ArrayBuffer>], { type }) : undefined;
+}
 
 export async function saveBook(meta: BookMeta, file: Blob): Promise<void> {
   const previous = (await db.books.get(meta.id))?.fileHash;
@@ -37,10 +50,27 @@ export async function getBook(id: string): Promise<BookMeta | undefined> {
 export async function getBookByFileHash(hash: string): Promise<BookMeta | undefined> {
   return db.books.where('fileHash').equals(hash).first();
 }
+/** The book that was made from the PDF with this hash (`pdf.originalHash`, not indexed, so the rows are read). */
+export async function getBookByPdfOriginalHash(hash: string): Promise<BookMeta | undefined> {
+  return db.books.filter((book) => book.pdf?.originalHash === hash).first();
+}
+/** Adds a book's record without a file: a book opened in place, whose file stays where it is. */
+export async function saveBookRecord(meta: BookMeta): Promise<void> {
+  await putSynced('books', meta);
+}
+/** A book opened in place now has a copy in the library: the record stays, only the mark goes. */
+export async function clearBookInPlace(id: string): Promise<void> {
+  const book = await db.books.get(id);
+  if (!book?.inPlace) return;
+  const rest = { ...book };
+  delete rest.inPlace;
+  await putSynced('books', rest);
+}
 export async function getBookFile(id: string): Promise<Blob | undefined> {
-  const hash = (await db.books.get(id))?.fileHash;
+  const book = await db.books.get(id);
+  const hash = book?.fileHash;
   const file = hash ? await blobs().get(hash) : undefined;
-  return file ?? (await db.bookFiles.get(id))?.data;
+  return file ?? (await db.bookFiles.get(id))?.data ?? (book?.inPlace ? await readFromDisk(hash, 'application/epub+zip') : undefined);
 }
 /** Ids of the books whose file is on this device (a synced book may arrive without one). */
 export async function getBookFileIds(): Promise<string[]> {
@@ -89,8 +119,10 @@ export async function removeBookFile(id: string): Promise<void> {
 }
 /** The PDF a book was converted from, when this device has it. */
 export async function getPdfOriginal(id: string): Promise<Blob | undefined> {
-  const hash = (await db.books.get(id))?.pdf?.originalHash;
-  return hash ? blobs().get(hash) : undefined;
+  const book = await db.books.get(id);
+  const hash = book?.pdf?.originalHash;
+  if (!hash) return undefined;
+  return (await blobs().get(hash)) ?? (book?.inPlace ? await readFromDisk(hash, 'application/pdf') : undefined);
 }
 /** Keeps the PDF a book came from and records it on the book (`pdf.originalHash`). */
 export async function savePdfOriginal(id: string, file: Blob, pdf: { pages: number; reflow: 'ok' | 'broken' | 'none' | 'skipped' }): Promise<void> {

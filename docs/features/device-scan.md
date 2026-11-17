@@ -1,5 +1,7 @@
 # Scan the device for books, with in-app filtering
 
+> **Desktop shipped.** The desktop (Electron) half of this scan was built in `open-in-place` (v0.139.0, Library -> Find books on this computer; see `docs/features/open-in-place.md`). This spec still covers Android, iOS and the web.
+
 Roadmap id: `device-scan` · Area: Formats and export · Status: idea · Depends on: `watch-folder` (scanner and platform adapters); PDF results need `formats-pdf`, but the scan can ship for EPUB first
 
 ## 1. Purpose

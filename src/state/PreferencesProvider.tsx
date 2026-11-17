@@ -61,6 +61,20 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     };
   }, [initialMirror]);
 
+  // The desktop app can have several windows on one storage (src/openInPlace): a change made in another window
+  // arrives as a `storage` event. Taking it over keeps theme, font and the rest in step. A copy that equals what
+  // this window already has is ignored, so the two windows do not keep writing the same thing back and forth.
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== STORAGE_KEYS.preferencesMirror || event.storageArea !== window.localStorage) return;
+      const next = readMirror();
+      if (!next) return;
+      setPrefs((prev) => (prev && JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
   const flushSave = useCallback(() => {
     if (saveTimerRef.current !== null) {
       window.clearTimeout(saveTimerRef.current);
