@@ -159,9 +159,12 @@ export function BookDetails(props: Props) {
                 Add the file from this device…
               </button>
             ) : (
-              <button type="button" className="lib-sheet__item" onClick={props.onFreeSpace}>
-                Free up space (keep progress and notes)
-              </button>
+              // A book opened in place keeps no copy, so there is no space to free.
+              !book.inPlace && (
+                <button type="button" className="lib-sheet__item" onClick={props.onFreeSpace}>
+                  Free up space (keep progress and notes)
+                </button>
+              )
             )}
             <button type="button" className="lib-sheet__item lib-sheet__item--danger" onClick={props.onRemove}>
               Remove from library…

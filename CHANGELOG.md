@@ -45,6 +45,17 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.138.0 — 2026-11-17
+
+**Open in place, part 2: books you open stay where they are.** A PDF or EPUB opened from your computer (double-click,
+Open with, or the new **Open file…** button and Ctrl+O in the Library) appears in its own light window: the reader alone,
+with the dictionary, highlights, notes and shortcuts. Nothing is copied. The app remembers the file by its contents, so
+highlights, notes and your place survive if you rename or move it. **Library** in the window's header brings up the main
+window. **Add to library** in the header keeps a copy when you want one. In the Library such books carry "On this
+computer"; if the file is gone the card says "File not found", with **Find it…** and **Remove**. "Open now" lists the
+books open in other windows. A MOBI, AZW3, TXT or Markdown file handed to the app is added the usual way. Settings made
+in one window now reach the others. To revert: `git revert`; see `docs/changes/open-in-place-changes.md`.
+
 ## v0.137.0 — 2026-11-17
 
 **Open in place, part 1: the desktop app opens files you give it.** Double-click a PDF or EPUB (or choose Arabic Reader

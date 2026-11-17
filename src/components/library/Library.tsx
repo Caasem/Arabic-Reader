@@ -20,6 +20,9 @@ import { saveFile } from '../../utils/saveFile';
 import { hasPdfChoice, rememberPdfView, type PdfView } from '../../pdf/pages/pdfView';
 import { GettingStartedCard } from '../../gettingStarted';
 import { FEATURES } from '../../features/registry';
+import { InPlaceNote } from '../../openInPlace/InPlaceNote';
+import { useInPlaceStatus } from '../../openInPlace/useInPlaceStatus';
+import { getFilesBridge, getWindowsBridge } from '../../sync/desktopBridge';
 import { BookCover } from './BookCover';
 import { BookDetails } from './BookDetails';
 import { ContinueReading } from './ContinueReading';
@@ -108,6 +111,8 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
   useEscapeKey(() => setConfirm(null), !!confirm);
   // Bumped whenever the books change, so highlights, words and sessions reload with them.
   const [insightsKey, setInsightsKey] = useState(0);
+  // Books opened in place (src/openInPlace): whether each one's file is still where it was.
+  const inPlace = useInPlaceStatus(books);
   const { insights } = useLibraryInsights(insightsKey);
 
   function reloadLibrary() {
@@ -215,10 +220,24 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
     }
   }
 
-  const isMissingFile = (book: BookMeta) => fileIds !== null && !fileIds.has(book.id);
+  /** A book opened in place, on the computer that can read it (the desktop app). Elsewhere it is a book without its file. */
+  const isOnThisComputer = (book: BookMeta) => book.inPlace === true && getFilesBridge() !== undefined;
+  const isMissingFile = (book: BookMeta) => fileIds !== null && !fileIds.has(book.id) && !isOnThisComputer(book);
 
   /** Open a book, unless its file isn't on this device yet. */
   function openBook(book: BookMeta, cfi?: string) {
+    if (isOnThisComputer(book)) {
+      if (inPlace.found.get(book.id) === false) {
+        setError(`“${book.title}” is not where it was. Use Find it… on its card.`);
+        return;
+      }
+      // A book opened in place has its own window; a jump to a place in it stays in this one.
+      const windows = getWindowsBridge();
+      if (!cfi && windows) {
+        void windows.openBook(book.id);
+        return;
+      }
+    }
     if (isMissingFile(book)) {
       setError(`"${book.title}" came from another device and its file isn't here yet. Use "Add file" on its card.`);
       return;
@@ -383,7 +402,7 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
       <input
         ref={attachInputRef}
         type="file"
-        accept=".epub"
+        accept=".epub,.pdf"
         hidden
         aria-label="Choose the file for this book"
         onChange={(e) => handleAttach(e.target.files)}
@@ -426,6 +445,11 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
           </div>
         )}
         <div className="library__actions">
+          {getFilesBridge() && (
+            <button className="btn btn--ghost" onClick={() => void getFilesBridge()?.open()} title="Open a PDF or EPUB without adding it (Ctrl+O)">
+              Open file…
+            </button>
+          )}
           <button className="btn btn--ghost" onClick={() => setBrowsing(true)}>
             Browse library
           </button>
@@ -660,6 +684,9 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
                           )}
                           {missing && <span className="lib-list__missing">On another device · Add file</span>}
                         </button>
+                        {isOnThisComputer(book) && (
+                          <InPlaceNote book={book} found={inPlace.found.get(book.id)} onFound={inPlace.refresh} onRemove={() => setConfirm({ kind: 'remove', book })} />
+                        )}
                       </span>
                       <span role="cell" className="lib-list__progress">
                         <span className="lib-progress">
@@ -739,6 +766,9 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
                         </div>
                       )}
                       {missing ? <div className="book-card__missing">File not on this device</div> : <div className="book-card__meta">{meta}</div>}
+                      {isOnThisComputer(book) && (
+                        <InPlaceNote book={book} found={inPlace.found.get(book.id)} onFound={inPlace.refresh} onRemove={() => setConfirm({ kind: 'remove', book })} />
+                      )}
                       {hasPdfChoice(book) && !missing && (
                         <span className="lib-open-as" role="group" aria-label={`Open ${book.title} as`}>
                           <button type="button" className="lib-open-as__btn" onClick={() => openBookAs(book, 'pages')}>
@@ -859,7 +889,7 @@ export function Library({ onOpenBook, onNavigate }: { onOpenBook: (book: BookMet
             <h2 id="library-confirm-title">{confirm.kind === 'remove' ? 'Remove this book?' : 'Free up the space this book takes?'}</h2>
             <p dir="auto">
               {confirm.kind === 'remove'
-                ? `“${confirm.book.title}” and its reading position will be removed from this device. Any saved vocabulary and highlights from it are kept.`
+                ? `“${confirm.book.title}” and its reading position will be removed from this device. Any saved vocabulary and highlights from it are kept.${confirm.book.inPlace ? ' The file on your computer is not touched.' : ''}`
                 : `The file of “${confirm.book.title}” is removed from this device. The book stays on your shelf with its progress, highlights and notes, and you can add the file again later.`}
             </p>
             <div className="library__confirm-actions">

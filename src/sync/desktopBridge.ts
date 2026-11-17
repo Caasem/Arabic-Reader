@@ -111,6 +111,14 @@ declare global {
   }
 }
 
+export function getFilesBridge(): DesktopFilesBridge | undefined {
+  return typeof window === 'undefined' ? undefined : window.arabicReaderDesktop?.files;
+}
+
+export function getWindowsBridge(): DesktopWindowsBridge | undefined {
+  return typeof window === 'undefined' ? undefined : window.arabicReaderDesktop?.windows;
+}
+
 export function getSyncFolderBridge(): SyncFolderBridge | undefined {
   return typeof window === 'undefined' ? undefined : window.arabicReaderDesktop?.syncFolder;
 }

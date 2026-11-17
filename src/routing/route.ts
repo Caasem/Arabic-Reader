@@ -66,3 +66,28 @@ export function formatRoute(route: Route): string {
       return `#/${route.view}`;
   }
 }
+
+/**
+ * A light window (src/openInPlace): the reader alone. `#/window/<token>` opens a file the desktop app handed over
+ * (an opaque token for this run); `#/window/book/<bookId>` opens a book the app already knows. These are not screens
+ * of the main window, so `parseRoute` reads them as the Library.
+ */
+export type WindowRoute = { token: string; bookId?: undefined } | { bookId: string; token?: undefined };
+
+export function parseWindowRoute(hash: string): WindowRoute | null {
+  const parts = hash.replace(/^#/, '').split('?')[0].replace(/^\/+/, '').replace(/\/+$/, '').split('/');
+  if (parts[0] !== 'window') return null;
+  if (parts.length === 2 && parts[1] !== 'book') {
+    const token = decode(parts[1]);
+    return token ? { token } : null;
+  }
+  if (parts.length === 3 && parts[1] === 'book') {
+    const bookId = decode(parts[2]);
+    return bookId ? { bookId } : null;
+  }
+  return null;
+}
+
+export function formatWindowRoute(route: WindowRoute): string {
+  return route.bookId !== undefined ? `#/window/book/${encodeURIComponent(route.bookId)}` : `#/window/${encodeURIComponent(route.token)}`;
+}

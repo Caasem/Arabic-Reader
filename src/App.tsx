@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { NavBar, type ViewName } from './components/shared/NavBar';
 import { Library } from './components/library/Library';
 import { ReaderSwitch } from './readerCore/ReaderSwitch';
+import { LightWindow } from './openInPlace/LightWindow';
 import { BackupReminder } from './components/shared/BackupReminder';
 import { PomodoroNotifier } from './components/pomodoro/PomodoroNotifier';
 import { PreferencesProvider } from './state/PreferencesProvider';
@@ -12,7 +13,7 @@ import { onOpenDictionaryPage, type DictionaryPageRequest } from './dictionaryPa
 import { fullscreen, isDesktopApp } from './utils/desktop';
 import { libraryService } from './library/libraryService';
 import { Onboarding, shouldShowOnboarding } from './onboarding';
-import { parseRoute, useHashRoute, type Route } from './routing';
+import { parseRoute, parseWindowRoute, useHashRoute, type Route } from './routing';
 import { setInkUi } from './annotate/inkUi';
 import type { BookMeta, Highlight } from './types';
 import './App.css';
@@ -26,7 +27,21 @@ const SpeedReader = lazy(() => import('./components/speedReader/SpeedReader').th
 const DictionaryPage = lazy(() => import('./dictionaryPage/DictionaryPage').then((m) => ({ default: m.DictionaryPage })));
 const SettingsPanel = lazy(() => import('./components/shared/SettingsPanel').then((m) => ({ default: m.SettingsPanel })));
 
+/**
+ * A light window (`#/window/...`, src/openInPlace) shows the reader alone; every other address is the whole app.
+ * Decided once at start-up, before either mounts any state.
+ */
 function App() {
+  const [windowRoute] = useState(() => parseWindowRoute(window.location.hash));
+  if (windowRoute) {
+    return (
+      <LightWindow route={windowRoute} />
+    );
+  }
+  return <MainApp />;
+}
+
+function MainApp() {
   // Read before the PreferencesProvider mounts and remembers anything.
   const [firstRun, setFirstRun] = useState(shouldShowOnboarding);
   // The address (src/routing) the app opened on; not used during the first-run screens.

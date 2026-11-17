@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { AddToLibraryButton } from '../openInPlace/AddToLibraryButton';
 import { openDictionaryPage } from '../dictionaryPage/events';
 import { DictionaryBubble } from '../components/reader/DictionaryBubble';
 import { DictionaryPopup } from '../components/reader/DictionaryPopup';
@@ -1112,6 +1113,7 @@ export function QuietReader({ book, onBack, onFocusChromeChange, initialLocation
           onBack={onBack}
           onToggleBookmark={() => void toggleBookmark()}
           onOpenSettings={() => onOpenSettings?.()}
+          extra={<AddToLibraryButton book={book} />}
         />
       )}
 

@@ -88,7 +88,8 @@ async function openOrExplain(deps: PdfDeps, data: Uint8Array): Promise<PdfDocume
   }
 }
 
-function readInfo(info: unknown): { title?: string; author?: string } {
+/** Title and author from a PDF's metadata, when they are real (also used to open a PDF in place, src/openInPlace). */
+export function readPdfInfo(info: unknown): { title?: string; author?: string } {
   const record = (info ?? {}) as Record<string, unknown>;
   const clean = (v: unknown) => (typeof v === 'string' ? v.replace(/\0/g, '').trim() : '');
   const title = clean(record.Title);
@@ -111,7 +112,7 @@ export async function openPdfPages(data: Uint8Array, deps: PdfDeps, fallbackTitl
   if (data.length > MAX_PDF_BYTES) throw new PdfImportError(PDF_MESSAGES.tooLarge);
   const doc = await openOrExplain(deps, data);
   try {
-    const info = readInfo((await doc.getMetadata().catch(() => ({ info: undefined }))).info);
+    const info = readPdfInfo((await doc.getMetadata().catch(() => ({ info: undefined }))).info);
     return { ...info, title: info.title ?? fallbackTitle, rtl: false, chapters: [], pages: doc.numPages, reflow: 'skipped', notice: PDF_MESSAGES.asPages, warnings: [] };
   } finally {
     await doc.destroy().catch(() => {});
@@ -143,7 +144,7 @@ export async function convertPdf(data: Uint8Array, deps: PdfDeps, fallbackTitle:
     }
 
     const textPages = pages.filter((p) => chars(p) >= MIN_PAGE_CHARS);
-    const info = readInfo((await doc.getMetadata().catch(() => ({ info: undefined }))).info);
+    const info = readPdfInfo((await doc.getMetadata().catch(() => ({ info: undefined }))).info);
     const pagesOnly = (reflow: PdfReflow, notice: string, quality?: TextQuality): ConvertedPdf => ({
       ...info,
       rtl: false,

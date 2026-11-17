@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { AddToLibraryButton } from '../../openInPlace/AddToLibraryButton';
 import { DictionaryBubble } from '../../components/reader/DictionaryBubble';
 import { DictionaryPopup } from '../../components/reader/DictionaryPopup';
 import { VocabularyEditModal } from '../../components/reader/VocabularyEditModal';
@@ -617,7 +618,12 @@ export function PdfPagesReader({ book, onBack, onShowText, onOpenSettings, initi
           onBack={onBack}
           onToggleBookmark={() => void toggleBookmark()}
           onOpenSettings={() => onOpenSettings?.()}
-          extra={<span className="pdfp__extensions">{extensionBar}</span>}
+          extra={
+            <>
+              <AddToLibraryButton book={book} />
+              <span className="pdfp__extensions">{extensionBar}</span>
+            </>
+          }
         />
       ) : (
         <span className="pdfp__extensions" hidden>
