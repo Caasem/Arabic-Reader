@@ -286,9 +286,15 @@ export default function ScanPanel({ onClose, onLibraryChanged }: { onClose(): vo
                 const row = shown[i];
                 const inPlace = OPENS_IN_PLACE.includes(row.format);
                 return (
-                  <div className="oip-scan__cols" role="presentation">
-                    <input type="checkbox" role="cell" aria-label={`Select ${row.name}`} checked={selected.has(row.path)} onChange={() => toggleSelected(row.path)} />
-                    <button type="button" role="cell" className="oip-scan__name" dir="auto" title={inPlace ? `Open ${row.path}` : `${row.path} (can only be added to the library)`} onClick={() => (inPlace ? void open(row.path) : toggleSelected(row.path))}>
+                  // The whole row opens the book; a book that cannot be opened in place is ticked instead.
+                  <div className="oip-scan__cols oip-scan__cols--row" role="presentation" onClick={() => (inPlace ? void open(row.path) : toggleSelected(row.path))}>
+                    <input type="checkbox" role="cell" aria-label={`Select ${row.name}`} checked={selected.has(row.path)} onClick={(e) => e.stopPropagation()} onChange={() => toggleSelected(row.path)} />
+                    <button type="button" role="cell" className="oip-scan__name" dir="auto" title={inPlace ? `Open ${row.path}` : `${row.path} (can only be added to the library)`} onClick={(e) => {
+                        e.stopPropagation();
+                        if (inPlace) void open(row.path);
+                        else toggleSelected(row.path);
+                      }}
+                    >
                       {row.name}
                     </button>
                     <span role="cell" className="oip-scan__folder" dir="auto" title={row.folder}>

@@ -149,6 +149,9 @@
 .oip-vrow {
   border-bottom: 1px solid var(--border);
 }
+.oip-scan__cols--row {
+  cursor: pointer;
+}
 .oip-vrow:hover {
   background: var(--accent-soft);
 }

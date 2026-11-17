@@ -1,6 +1,6 @@
 # Open in place: double-click a PDF, many light windows, find every book on the computer
 
-Roadmap id: `open-in-place` · Area: Formats and export · Status: in progress (branch `feat/open-in-place`) · Desktop (Electron) only · Replaces the desktop half of `device-scan`; `watch-folder` stays an idea
+Roadmap id: `open-in-place` · Area: Formats and export · Status: merged (v0.137.0 to v0.139.0) · Desktop (Electron) only · Replaces the desktop half of `device-scan`; `watch-folder` stays an idea
 
 Level: none of Adler's four. This is how books reach the reader. The light window suits Level 2 (skimming several books at once), and the scan is the first step of Level 4 (gathering every book on a question).
 

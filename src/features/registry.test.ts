@@ -97,6 +97,7 @@ describe('feature registry', () => {
       'sync',
       'crowdSync',
       'gettingStarted',
+      'openInPlace',
     ]);
   });
 });

@@ -11,15 +11,18 @@
 import type { FeatureDescriptor } from '../features/registry';
 import './openInPlace.css';
 import { OpenInPlaceAppHost, OpenNowTop } from './LazyHosts';
+import { OpenWithSettings } from './OpenWithSettings';
 
 export const openInPlaceFeature: FeatureDescriptor = {
   id: 'openInPlace',
   AppHost: OpenInPlaceAppHost,
   LibraryTop: OpenNowTop,
+  SettingsSection: OpenWithSettings,
+  settingsGroup: 'library',
   touchPoints: [
     'the main process: single-instance lock, windows, `files:*` and `windows:*` handlers (electron/main.cjs, electron/preload.cjs)',
     'the desktop bridge types (src/sync/desktopBridge.ts)',
-    'the light window route: App renders `LightWindow` (lazy) for `#/window/...` and the address parsers in src/routing (src/App.tsx, src/routing/route.ts)',
+    'the light window route: App renders `LightWindow` for `#/window/...` and the address parsers in src/routing (src/App.tsx, src/routing/route.ts)',
     'the `inPlace` field of a book (src/types/book.ts) and the persistence calls for it: `saveBookRecord`, `getBookByPdfOriginalHash`, `clearBookInPlace`, and the fall-back to the file on disk in `getBookFile` and `getPdfOriginal` (src/persistence/booksRepo.ts, src/persistence/db.ts)',
     'importing a file that is already open in place copies it in instead of adding a second book, and `readEpubInfo` was split out of `importEpub` (src/library/libraryService.ts); `readPdfInfo` is exported (src/pdf/import/convert.ts)',
     'the Add to library button in the header of both readers (src/quietReader/QuietReader.tsx, src/pdf/pages/PdfPagesReader.tsx)',
