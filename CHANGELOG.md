@@ -45,6 +45,14 @@ merging. Per-phase detail and how to revert each one: `docs/changes/refactor-cha
 
 Not done: phase 3, dictionaries as downloadable packs (dropped).
 
+## v0.137.0 — 2026-11-17
+
+**Open in place, part 1: the desktop app opens files you give it.** Double-click a PDF or EPUB (or choose Arabic Reader
+under Open with) and it opens in its own small window, with several files side by side. Opening a file that is already
+open brings its window forward. The app now runs once: starting it again with a file hands the file to the copy that is
+running. The installer registers the app for PDF and EPUB so it shows under Open with. The windows are bare for now; the
+reader inside them comes in the next versions (0.138.0). To revert: `git revert`; see `docs/changes/open-in-place-changes.md`.
+
 ## v0.136.0 — 2026-10-20
 
 **A role label inside each argument mark.** A small label with a coloured dot ("● 2 Grounds", "● 3 Claim · Grounds") now sits

@@ -19,6 +19,7 @@ import { lookFeature } from '../look';
 import { readerFontFeature } from '../readerFont';
 import { crowdSyncFeature } from '../crowdSync';
 import { gettingStartedFeature } from '../gettingStarted';
+import { openInPlaceFeature } from '../openInPlace';
 
 /** What a reader Host gets: the open book, and a way to open another one at a place (capture trips, links). */
 export interface HostProps {
@@ -90,4 +91,5 @@ export const FEATURES: FeatureDescriptor[] = [
   readerFontFeature,
   crowdSyncFeature,
   gettingStartedFeature,
+  openInPlaceFeature,
 ];

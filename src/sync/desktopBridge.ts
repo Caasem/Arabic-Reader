@@ -42,6 +42,56 @@ export interface DesktopOcrBridge {
   http(url: string, bytes: Uint8Array, language: string): Promise<unknown>;
 }
 
+/** What the main process knows of a file opened in place (electron/diskFiles.cjs). */
+export interface DiskFileInfo {
+  name: string;
+  size: number;
+  /** Modified time in whole milliseconds. */
+  mtime: number;
+  /** SHA-256 of the bytes, hex. */
+  hash: string;
+  /** Lower case, without the dot. */
+  ext: string;
+}
+
+/** Files opened in place. A file is named by an opaque token for this run, or by its hash; never by a path. */
+export interface DesktopFilesBridge {
+  describe(token: string): Promise<DiskFileInfo>;
+  read(token: string): Promise<Uint8Array>;
+  /** The bytes of the file last seen with this hash, or null when it is gone or changed. */
+  readByHash(hash: string): Promise<Uint8Array | null>;
+  /** Opens the system dialog and each chosen book in a light window. Resolves to how many were chosen. */
+  open(): Promise<number>;
+  /** Opens the dialog; accepts only a file with this hash. */
+  locate(hash: string): Promise<'found' | 'different' | 'cancelled'>;
+  /** True when the recorded file is still there, unchanged. */
+  has(hash: string): Promise<boolean>;
+  /** Tokens of files the OS handed over that need the ordinary import (MOBI, AZW3, TXT, Markdown). */
+  takeImports(): Promise<string[]>;
+  onImports(cb: () => void): () => void;
+}
+
+/** One open window, as the main process lists them. */
+export interface DesktopWindowInfo {
+  id: number;
+  /** The main window (Library and the rest) or a light window (the reader alone). */
+  kind: 'main' | 'light';
+  bookId: string | null;
+  title: string;
+}
+
+export interface DesktopWindowsBridge {
+  openBook(bookId: string): Promise<void>;
+  /** Brings up the main window, making it when there is none. */
+  openLibrary(): Promise<void>;
+  focus(windowId: number): Promise<void>;
+  list(): Promise<DesktopWindowInfo[]>;
+  /** Calls back with the whole list whenever it changes. Returns the unsubscribe. */
+  onChange(cb: (windows: DesktopWindowInfo[]) => void): () => void;
+  /** Each window says which book it shows (null for none) and its title. */
+  setBook(bookId: string | null, title?: string): Promise<void>;
+}
+
 export interface DesktopBridge {
   syncFolder: SyncFolderBridge;
   window: WindowBridge;
@@ -49,6 +99,10 @@ export interface DesktopBridge {
   ocr?: DesktopOcrBridge;
   /** BlobStore files (src/blobStore/fsBackend.ts). Optional so a page never assumes it. */
   blobs?: BlobFilesBridge;
+  /** Books opened where they are (src/openInPlace). */
+  files?: DesktopFilesBridge;
+  /** The open windows (src/openInPlace). */
+  windows?: DesktopWindowsBridge;
 }
 
 declare global {
